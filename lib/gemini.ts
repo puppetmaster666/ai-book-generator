@@ -58,6 +58,63 @@ function getGeminiImage(): GenerativeModel {
   return _geminiImage;
 }
 
+// NEW: Expand a simple idea into a full book plan
+export async function expandIdea(idea: string): Promise<{
+  title: string;
+  genre: string;
+  bookType: 'fiction' | 'non-fiction';
+  premise: string;
+  characters: { name: string; description: string }[];
+  beginning: string;
+  middle: string;
+  ending: string;
+  writingStyle: string;
+  targetWords: number;
+  targetChapters: number;
+}> {
+  const prompt = `You are a professional book development editor. Analyze this book idea and create a complete book plan.
+
+USER'S IDEA:
+"${idea}"
+
+Based on this idea, create a detailed book plan. Determine:
+1. The best title (catchy, marketable)
+2. Genre (romance, mystery, fantasy, sci-fi, thriller, horror, ya, literary, self-help, memoir, how-to, business)
+3. Whether it's fiction or non-fiction
+4. A compelling premise (2-3 sentences)
+5. Main characters (2-5 characters with names and brief descriptions)
+6. Plot structure: beginning, middle/key events, ending
+7. Appropriate writing style (literary, commercial, conversational, academic, journalistic)
+8. Target word count and chapter count based on genre conventions
+
+Output ONLY valid JSON in this exact format:
+{
+  "title": "Book Title Here",
+  "genre": "genre-key",
+  "bookType": "fiction",
+  "premise": "A compelling 2-3 sentence premise",
+  "characters": [
+    {"name": "Character Name", "description": "Brief description"}
+  ],
+  "beginning": "How the story starts",
+  "middle": "Key plot points and conflicts",
+  "ending": "How it resolves",
+  "writingStyle": "commercial",
+  "targetWords": 70000,
+  "targetChapters": 20
+}`;
+
+  const result = await getGeminiFlash().generateContent(prompt);
+  const response = result.response.text();
+
+  const jsonMatch = response.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) {
+    throw new Error('Failed to parse idea expansion');
+  }
+
+  return JSON.parse(jsonMatch[0]);
+}
+
 export async function generateOutline(bookData: {
   title: string;
   genre: string;

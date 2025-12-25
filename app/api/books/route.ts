@@ -11,6 +11,7 @@ export async function POST(request: NextRequest) {
       title,
       authorName,
       genre,
+      bookType,
       premise,
       characters,
       beginning,
@@ -19,6 +20,8 @@ export async function POST(request: NextRequest) {
       writingStyle,
       chapterFormat,
       fontStyle,
+      targetWords,
+      targetChapters,
       email,
       userId,
     } = body;
@@ -31,14 +34,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get genre settings
+    // Get genre settings as fallback
     const genreConfig = GENRES[genre as GenreKey];
-    if (!genreConfig) {
-      return NextResponse.json(
-        { error: 'Invalid genre' },
-        { status: 400 }
-      );
-    }
 
     // Create book record
     const book = await prisma.book.create({
@@ -47,7 +44,7 @@ export async function POST(request: NextRequest) {
         title,
         authorName: authorName || 'Anonymous',
         genre,
-        bookType: genreConfig.type,
+        bookType: bookType || genreConfig?.type || 'fiction',
         premise,
         characters: characters || [],
         beginning,
@@ -56,15 +53,15 @@ export async function POST(request: NextRequest) {
         writingStyle: writingStyle || 'literary',
         chapterFormat: chapterFormat || 'both',
         fontStyle: fontStyle || 'classic',
-        targetWords: genreConfig.targetWords,
-        targetChapters: genreConfig.chapters,
+        targetWords: targetWords || genreConfig?.targetWords || 60000,
+        targetChapters: targetChapters || genreConfig?.chapters || 20,
         email: email || null,
         userId: userId || null,
         status: 'pending',
       },
     });
 
-    return NextResponse.json({ bookId: book.id, book });
+    return NextResponse.json({ id: book.id, book });
   } catch (error) {
     console.error('Error creating book:', error);
     return NextResponse.json(
