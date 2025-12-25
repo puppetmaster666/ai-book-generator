@@ -1,32 +1,62 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { GoogleGenerativeAI, GenerativeModel } from '@google/generative-ai';
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
+// Lazy initialization to avoid errors during build
+let genAI: GoogleGenerativeAI | null = null;
+let _geminiPro: GenerativeModel | null = null;
+let _geminiFlash: GenerativeModel | null = null;
+let _geminiImage: GenerativeModel | null = null;
+
+function getGenAI(): GoogleGenerativeAI {
+  if (!genAI) {
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      throw new Error('GEMINI_API_KEY environment variable is not set');
+    }
+    genAI = new GoogleGenerativeAI(apiKey);
+  }
+  return genAI;
+}
 
 // Gemini 3 Pro for main generation
-export const geminiPro = genAI.getGenerativeModel({
-  model: 'gemini-3-pro-preview',
-  generationConfig: {
-    temperature: 0.8,
-    topP: 0.95,
-    topK: 40,
-    maxOutputTokens: 8192,
-  },
-});
+function getGeminiPro(): GenerativeModel {
+  if (!_geminiPro) {
+    _geminiPro = getGenAI().getGenerativeModel({
+      model: 'gemini-3-pro-preview',
+      generationConfig: {
+        temperature: 0.8,
+        topP: 0.95,
+        topK: 40,
+        maxOutputTokens: 8192,
+      },
+    });
+  }
+  return _geminiPro;
+}
 
 // Gemini 3 Flash for summarization (cheaper)
-export const geminiFlash = genAI.getGenerativeModel({
-  model: 'gemini-3-flash-preview',
-  generationConfig: {
-    temperature: 0.3,
-    topP: 0.9,
-    maxOutputTokens: 1024,
-  },
-});
+function getGeminiFlash(): GenerativeModel {
+  if (!_geminiFlash) {
+    _geminiFlash = getGenAI().getGenerativeModel({
+      model: 'gemini-3-flash-preview',
+      generationConfig: {
+        temperature: 0.3,
+        topP: 0.9,
+        maxOutputTokens: 1024,
+      },
+    });
+  }
+  return _geminiFlash;
+}
 
 // Gemini 3 Pro Image for cover generation
-export const geminiImage = genAI.getGenerativeModel({
-  model: 'gemini-3-pro-image-preview',
-});
+function getGeminiImage(): GenerativeModel {
+  if (!_geminiImage) {
+    _geminiImage = getGenAI().getGenerativeModel({
+      model: 'gemini-3-pro-image-preview',
+    });
+  }
+  return _geminiImage;
+}
 
 export async function generateOutline(bookData: {
   title: string;
@@ -83,7 +113,7 @@ Output ONLY valid JSON in this exact format:
   ]
 }`;
 
-  const result = await geminiPro.generateContent(prompt);
+  const result = await getGeminiPro().generateContent(prompt);
   const response = result.response.text();
 
   // Extract JSON from response
@@ -147,7 +177,7 @@ Write the complete chapter. Include:
 
 Write approximately ${data.targetWords} words. Do NOT include any meta-commentary or notes - only the actual chapter content.`;
 
-  const result = await geminiPro.generateContent(prompt);
+  const result = await getGeminiPro().generateContent(prompt);
   return result.response.text();
 }
 
@@ -163,7 +193,7 @@ Be factual and precise. This summary will be used to maintain story continuity.
 CHAPTER TEXT:
 ${chapterContent}`;
 
-  const result = await geminiFlash.generateContent(prompt);
+  const result = await getGeminiFlash().generateContent(prompt);
   return result.response.text();
 }
 
@@ -188,7 +218,7 @@ For each character that appeared or was mentioned, update their state with:
 
 Output ONLY valid JSON with the updated character states.`;
 
-  const result = await geminiFlash.generateContent(prompt);
+  const result = await getGeminiFlash().generateContent(prompt);
   const response = result.response.text();
 
   const jsonMatch = response.match(/\{[\s\S]*\}/);
@@ -234,14 +264,14 @@ ${bookData.bookType === 'non-fiction' ? 'For this non-fiction book, a subtitle m
 
 Output ONLY the image generation prompt, nothing else.`;
 
-  const result = await geminiFlash.generateContent(prompt);
+  const result = await getGeminiFlash().generateContent(prompt);
   return result.response.text();
 }
 
 export async function generateCoverImage(coverPrompt: string): Promise<string> {
   const fullPrompt = `Professional book cover, high quality, 1600x2560 aspect ratio, suitable for Amazon KDP. ${coverPrompt}`;
 
-  const result = await geminiImage.generateContent(fullPrompt);
+  const result = await getGeminiImage().generateContent(fullPrompt);
 
   // Extract image URL or base64 from response
   const response = result.response;

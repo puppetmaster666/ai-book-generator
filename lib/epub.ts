@@ -1,4 +1,4 @@
-import Epub from 'epub-gen-memory';
+import epub from 'epub-gen-memory';
 import { FONT_STYLES } from './constants';
 
 interface Chapter {
@@ -50,10 +50,6 @@ export async function generateEpub(bookData: BookData): Promise<Buffer> {
     author: bookData.authorName,
     publisher: 'AI Book Generator',
     cover: bookData.coverImageUrl,
-    content: bookData.chapters.map(chapter => ({
-      title: chapter.title,
-      data: formatChapterContent(chapter.content, bookData.fontStyle),
-    })),
     css: `
       body {
         font-family: '${FONT_STYLES[bookData.fontStyle].body}', Georgia, serif;
@@ -76,8 +72,13 @@ export async function generateEpub(bookData: BookData): Promise<Buffer> {
     `,
   };
 
-  const epub = await new Epub(options).genEpub();
-  return Buffer.from(epub);
+  const chapters = bookData.chapters.map(chapter => ({
+    title: chapter.title,
+    content: formatChapterContent(chapter.content, bookData.fontStyle),
+  }));
+
+  const epubBuffer = await epub(options, chapters);
+  return Buffer.from(epubBuffer);
 }
 
 export function countWords(text: string): number {

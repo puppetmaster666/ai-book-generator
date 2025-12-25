@@ -35,7 +35,7 @@ export async function GET(
       title: book.title,
       authorName: book.authorName,
       genre: book.genre,
-      chapters: book.chapters.map(ch => ({
+      chapters: book.chapters.map((ch: { number: number; title: string; content: string }) => ({
         number: ch.number,
         title: ch.title,
         content: ch.content,
@@ -47,7 +47,7 @@ export async function GET(
     // Return as downloadable file
     const filename = `${book.title.replace(/[^a-z0-9]/gi, '_')}.epub`;
 
-    return new NextResponse(epubBuffer, {
+    return new NextResponse(new Uint8Array(epubBuffer), {
       headers: {
         'Content-Type': 'application/epub+zip',
         'Content-Disposition': `attachment; filename="${filename}"`,
