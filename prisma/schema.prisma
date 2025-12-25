@@ -1,0 +1,117 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  passwordHash  String?
+
+  // Subscription
+  plan          String    @default("free") // free, monthly, yearly
+  credits       Int       @default(0)
+  stripeCustomerId String?
+  stripeSubscriptionId String?
+
+  books         Book[]
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model Book {
+  id              String    @id @default(cuid())
+
+  // Optional user association (anonymous purchases have null)
+  userId          String?
+  user            User?     @relation(fields: [userId], references: [id])
+
+  // For anonymous users
+  email           String?
+
+  // User inputs
+  title           String
+  authorName      String    @default("Anonymous")
+  genre           String
+  bookType        String    // fiction, non-fiction
+  premise         String    @db.Text
+  characters      Json      // Array of {name, description}
+  beginning       String    @db.Text
+  middle          String    @db.Text
+  ending          String    @db.Text
+  writingStyle    String
+  chapterFormat   String    // numbers, titles, both, pov
+  fontStyle       String    @default("classic")
+
+  // Target settings
+  targetWords     Int
+  targetChapters  Int
+
+  // Generated content
+  outline         Json?     // Array of {chapterNum, title, summary, pov, targetWords}
+  storySoFar      String?   @db.Text
+  characterStates Json?     // Current state of each character
+
+  // Cover
+  coverImageUrl   String?
+  coverPrompt     String?   @db.Text
+
+  // Status
+  status          String    @default("pending") // pending, outlining, generating, completed, failed
+  currentChapter  Int       @default(0)
+  totalChapters   Int       @default(0)
+  totalWords      Int       @default(0)
+  errorMessage    String?   @db.Text
+
+  // Payment
+  paymentId       String?
+  paymentStatus   String    @default("pending") // pending, completed, failed
+
+  chapters        Chapter[]
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  completedAt     DateTime?
+}
+
+model Chapter {
+  id        String   @id @default(cuid())
+  bookId    String
+  book      Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+
+  number    Int
+  title     String
+  content   String   @db.Text
+  summary   String   @db.Text
+  wordCount Int
+
+  createdAt DateTime @default(now())
+
+  @@unique([bookId, number])
+  @@index([bookId])
+}
+
+model Payment {
+  id              String   @id @default(cuid())
+
+  // Stripe
+  stripePaymentId String   @unique
+  stripeCustomerId String?
+
+  // Details
+  email           String
+  amount          Int      // in cents
+  currency        String   @default("usd")
+  status          String   // pending, completed, failed, refunded
+
+  // What was purchased
+  productType     String   // one-time, monthly, yearly
+  bookId          String?  // for one-time purchases
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
