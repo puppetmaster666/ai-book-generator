@@ -100,7 +100,7 @@ export default function RefundPolicy() {
               <h2 className="text-2xl font-semibold mb-4" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>How to Request a Refund</h2>
               <div className="bg-neutral-50 border border-neutral-200 rounded-xl p-6">
                 <ol className="list-decimal pl-6 text-neutral-600 space-y-3">
-                  <li>Email <a href="mailto:support@draftmybook.com" className="text-neutral-900 underline">support@draftmybook.com</a> with the subject &quot;Refund Request&quot;</li>
+                  <li>Email <a href="mailto:lhllparis@gmail.com" className="text-neutral-900 underline">lhllparis@gmail.com</a> with the subject &quot;Refund Request&quot;</li>
                   <li>Include your order email and the book title</li>
                   <li>Describe the issue you experienced</li>
                   <li>We&apos;ll respond within 2 business days</li>
@@ -120,8 +120,8 @@ export default function RefundPolicy() {
               <h2 className="text-2xl font-semibold mb-4" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>Contact Us</h2>
               <p className="text-neutral-600 leading-relaxed">
                 Questions about refunds? Contact us at{' '}
-                <a href="mailto:support@draftmybook.com" className="text-neutral-900 underline">
-                  support@draftmybook.com
+                <a href="mailto:lhllparis@gmail.com" className="text-neutral-900 underline">
+                  lhllparis@gmail.com
                 </a>
               </p>
             </section>

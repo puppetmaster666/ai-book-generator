@@ -1,9 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import Header from '@/components/Header';
+import Link from 'next/link';
 import Footer from '@/components/Footer';
-import { ChevronDown, ChevronUp } from 'lucide-react';
+import { ChevronDown, ChevronUp, ArrowRight, HelpCircle } from 'lucide-react';
 
 const faqs = [
   {
@@ -19,7 +19,7 @@ const faqs = [
       },
       {
         q: 'How long does it take to generate a book?',
-        a: 'Typically 15-30 minutes depending on the target length. A 50,000 word book takes about 15-20 minutes, while a 100,000 word epic fantasy might take 30-40 minutes. You can watch progress in real-time.'
+        a: 'Typically 30-60 minutes depending on the target length. A 50,000 word book takes about 30-40 minutes, while a 100,000 word epic fantasy might take 45-60 minutes. You can watch progress in real-time.'
       },
       {
         q: 'Can I edit the book after generation?',
@@ -92,35 +92,48 @@ function FAQItem({ question, answer }: { question: string; answer: string }) {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
-    <div className="border-b border-[#E8E4DC] last:border-0">
+    <div className="border-b border-neutral-200 last:border-0">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center justify-between py-4 text-left"
+        className="w-full flex items-center justify-between py-5 text-left group"
       >
-        <span className="font-medium text-[#0F1A2A]">{question}</span>
+        <span className="font-medium text-neutral-900 group-hover:text-neutral-600 transition-colors">{question}</span>
         {isOpen ? (
-          <ChevronUp className="h-5 w-5 text-[#4A5568]" />
+          <ChevronUp className="h-5 w-5 text-neutral-400 flex-shrink-0" />
         ) : (
-          <ChevronDown className="h-5 w-5 text-[#4A5568]" />
+          <ChevronDown className="h-5 w-5 text-neutral-400 flex-shrink-0" />
         )}
       </button>
-      {isOpen && (
-        <p className="pb-4 text-[#4A5568]">{answer}</p>
-      )}
+      <div className={`overflow-hidden transition-all duration-300 ${isOpen ? 'max-h-96 pb-5' : 'max-h-0'}`}>
+        <p className="text-neutral-600 leading-relaxed">{answer}</p>
+      </div>
     </div>
   );
 }
 
 export default function FAQContent() {
   return (
-    <div className="min-h-screen flex flex-col">
-      <Header />
+    <div className="min-h-screen bg-[#FAFAFA]">
+      {/* Header */}
+      <header className="border-b border-neutral-200 bg-white">
+        <div className="max-w-4xl mx-auto px-6 py-6">
+          <Link href="/" className="text-2xl font-bold tracking-tight" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>
+            draftmybook
+          </Link>
+        </div>
+      </header>
 
-      <main className="flex-1 pt-24 pb-20">
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
-            <h1 className="text-4xl font-bold text-[#0F1A2A] mb-4">Frequently Asked Questions</h1>
-            <p className="text-xl text-[#4A5568]">
+      <main className="py-16 px-6">
+        <div className="max-w-3xl mx-auto">
+          <div className="text-center mb-16">
+            <div className="inline-flex items-center gap-2 bg-neutral-100 text-neutral-700 px-4 py-2 rounded-full text-sm mb-6">
+              <HelpCircle className="h-4 w-4" />
+              Get Answers
+            </div>
+            <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-6" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>
+              Frequently Asked Questions
+            </h1>
+            <p className="text-xl text-neutral-600">
               Everything you need to know about Draft My Book
             </p>
           </div>
@@ -128,8 +141,10 @@ export default function FAQContent() {
           <div className="space-y-8">
             {faqs.map((section) => (
               <div key={section.category}>
-                <h2 className="text-xl font-semibold text-[#0F1A2A] mb-4">{section.category}</h2>
-                <div className="bg-white rounded-xl border border-[#E8E4DC] px-6">
+                <h2 className="text-lg font-semibold mb-4" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>
+                  {section.category}
+                </h2>
+                <div className="bg-white rounded-2xl border border-neutral-200 px-6">
                   {section.questions.map((faq) => (
                     <FAQItem key={faq.q} question={faq.q} answer={faq.a} />
                   ))}
@@ -138,15 +153,27 @@ export default function FAQContent() {
             ))}
           </div>
 
-          <div className="mt-12 text-center p-8 bg-[#F7F5F0] rounded-xl">
-            <h3 className="text-xl font-semibold text-[#0F1A2A] mb-2">Still have questions?</h3>
-            <p className="text-[#4A5568] mb-4">We are here to help. Reach out anytime.</p>
+          <div className="mt-16 text-center p-8 bg-neutral-900 text-white rounded-2xl">
+            <h3 className="text-xl font-semibold mb-2" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>
+              Still have questions?
+            </h3>
+            <p className="text-neutral-300 mb-4">We are here to help. Reach out anytime.</p>
             <a
-              href="mailto:support@draftmybook.com"
-              className="text-[#1E3A5F] font-medium hover:underline"
+              href="mailto:lhllparis@gmail.com"
+              className="text-white font-medium hover:underline"
             >
-              support@draftmybook.com
+              lhllparis@gmail.com
             </a>
+          </div>
+
+          {/* CTA */}
+          <div className="mt-12 text-center">
+            <Link
+              href="/"
+              className="bg-neutral-900 text-white px-8 py-4 rounded-full text-base font-medium hover:bg-neutral-800 transition-all hover:scale-105 inline-flex items-center gap-2"
+            >
+              Start Creating <ArrowRight className="h-5 w-5" />
+            </Link>
           </div>
         </div>
       </main>

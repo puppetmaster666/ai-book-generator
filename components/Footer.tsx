@@ -59,14 +59,19 @@ export default function Footer() {
             </ul>
           </div>
 
-          {/* Support */}
+          {/* Contact */}
           <div>
-            <h4 className="font-medium mb-4 text-sm">Support</h4>
+            <h4 className="font-medium mb-4 text-sm">Contact</h4>
             <ul className="space-y-3">
               <li>
-                <a href="mailto:support@draftmybook.com" className="text-sm text-neutral-400 hover:text-white transition-colors">
-                  Contact
+                <a href="mailto:lhllparis@gmail.com" className="text-sm text-neutral-400 hover:text-white transition-colors">
+                  lhllparis@gmail.com
                 </a>
+              </li>
+              <li className="text-sm text-neutral-400">
+                1901 Avenue of the Stars<br />
+                Suite 1950<br />
+                Los Angeles, CA 90067
               </li>
             </ul>
           </div>
@@ -77,7 +82,7 @@ export default function Footer() {
             &copy; {new Date().getFullYear()} draftmybook. All rights reserved.
           </p>
           <p className="text-neutral-500 text-sm">
-            Made with care for authors everywhere.
+            Los Angeles, California
           </p>
         </div>
       </div>

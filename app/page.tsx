@@ -74,20 +74,16 @@ export default function Home() {
     <div className="min-h-screen bg-[#FAFAFA]">
       {/* Hero Section with Background */}
       <section className="relative min-h-screen flex flex-col">
-        {/* Background Image - Add your hero image here */}
+        {/* Background Image */}
         <div className="absolute inset-0 z-0">
-          {/* Replace with your hero image: vintage typewriter, open book with pages, writing desk, or library aesthetic */}
-          <div className="absolute inset-0 bg-gradient-to-b from-white/95 via-white/90 to-white" />
-          {/* Uncomment when you have a hero image:
           <Image
-            src="/images/hero-bg.jpg"
+            src="/images/pexels-karola-g-5993566.jpg"
             alt=""
             fill
             className="object-cover"
             priority
           />
-          <div className="absolute inset-0 bg-gradient-to-b from-white/95 via-white/90 to-white" />
-          */}
+          <div className="absolute inset-0 bg-gradient-to-b from-white/90 via-white/85 to-white" />
         </div>
 
         {/* Navigation */}
@@ -158,7 +154,7 @@ export default function Home() {
             {/* Badge */}
             <div className="inline-flex items-center gap-2 bg-neutral-100/80 backdrop-blur px-4 py-2 rounded-full text-sm text-neutral-600 mb-8">
               <Zap className="h-4 w-4 text-amber-500" />
-              <span>50,000+ words in under 30 minutes</span>
+              <span>50,000+ words in 30-60 minutes</span>
             </div>
 
             {/* Headline */}
@@ -246,17 +242,17 @@ export default function Home() {
             {/* Book Cover */}
             <div className="flex justify-center">
               <a
-                href="https://www.amazon.com/dp/B0DQFQLQBR"
+                href="https://a.co/d/f9GkEr9"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="group relative"
+                className="group relative block"
               >
-                <div className="relative w-64 h-96 rounded-lg overflow-hidden shadow-2xl transform group-hover:scale-105 transition-transform duration-300">
+                <div className="relative w-72 md:w-80 aspect-[2/3] rounded-lg overflow-hidden shadow-2xl transform group-hover:scale-105 transition-transform duration-300">
                   <Image
                     src="/images/cover.jpg"
                     alt="Blood & Silver by Freddie Fabrevoie"
                     fill
-                    className="object-cover"
+                    className="object-contain"
                   />
                 </div>
                 <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg">
@@ -281,11 +277,11 @@ export default function Home() {
               </p>
               <p className="text-neutral-400 mb-8 leading-relaxed">
                 A complete 10-chapter historical fiction exploring history&apos;s most ruthless untold betrayals.
-                Created with draftmybook, formatted to Amazon KDP specifications, and published in minutes.
+                Created with draftmybook, formatted to Amazon KDP specifications, and published in under an hour.
               </p>
               <div className="flex flex-wrap gap-4">
                 <a
-                  href="https://www.amazon.com/dp/B0DQFQLQBR"
+                  href="https://a.co/d/f9GkEr9"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-2 bg-white text-neutral-900 px-6 py-3 rounded-full font-medium hover:bg-neutral-100 transition-colors"

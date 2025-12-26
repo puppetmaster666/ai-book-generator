@@ -27,7 +27,7 @@ const faqJsonLd = {
       name: 'How long does it take to generate a book?',
       acceptedAnswer: {
         '@type': 'Answer',
-        text: 'Typically 15-30 minutes depending on the target length. A 50,000 word book takes about 15-20 minutes, while a 100,000 word epic fantasy might take 30-40 minutes.',
+        text: 'Typically 30-60 minutes depending on the target length. A 50,000 word book takes about 30-40 minutes, while a 100,000 word epic fantasy might take 45-60 minutes.',
       },
     },
     {

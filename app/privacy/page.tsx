@@ -116,8 +116,8 @@ export default function PrivacyPolicy() {
               <h2 className="text-2xl font-semibold mb-4" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>9. Contact Us</h2>
               <p className="text-neutral-600 leading-relaxed">
                 For privacy-related questions, contact us at{' '}
-                <a href="mailto:support@draftmybook.com" className="text-neutral-900 underline">
-                  support@draftmybook.com
+                <a href="mailto:lhllparis@gmail.com" className="text-neutral-900 underline">
+                  lhllparis@gmail.com
                 </a>
               </p>
             </section>
