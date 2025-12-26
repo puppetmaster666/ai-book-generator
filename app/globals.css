@@ -1,18 +1,18 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=MuseoModerno:wght@400;500;600;700&display=swap');
 @import "tailwindcss";
 
 :root {
-  --background: #111827;
-  --background-card: #1F2937;
-  --background-alt: #0F172A;
-  --foreground: #FFFFFF;
-  --foreground-secondary: #9CA3AF;
-  --primary: #3B82F6;
-  --primary-hover: #2563EB;
-  --accent: #3B82F6;
-  --border: #374151;
+  --background: #FFFFFF;
+  --background-card: #FFFFFF;
+  --background-alt: #F5F5F5;
+  --foreground: #212121;
+  --foreground-secondary: #545454;
+  --primary: #DE3723;
+  --primary-hover: #BF2D1B;
+  --accent: #DE3723;
+  --border: #E0E0E0;
   --success: #10B981;
-  --error: #EF4444;
+  --error: #D32F2F;
 }
 
 @theme inline {
@@ -28,7 +28,7 @@
   --color-success: var(--success);
   --color-error: var(--error);
   --font-sans: 'Inter', system-ui, sans-serif;
-  --font-mono: 'monospace';
+  --font-display: 'MuseoModerno', system-ui, sans-serif;
 }
 
 body {
@@ -38,7 +38,7 @@ body {
 }
 
 h1, h2, h3, h4, h5, h6 {
-  font-family: 'Poppins', sans-serif;
+  font-family: 'MuseoModerno', sans-serif;
 }
 
 ::-webkit-scrollbar {
@@ -50,10 +50,10 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--border);
+  background: #C1C1C1;
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--foreground-secondary);
+  background: #A8A8A8;
 }
