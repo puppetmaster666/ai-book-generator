@@ -3,13 +3,14 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Header from '@/components/Header';
-import { Check, CreditCard, Loader2 } from 'lucide-react';
+import { Check, CreditCard, Loader2, Tag, X } from 'lucide-react';
 import { PRICING } from '@/lib/constants';
 
 function CheckoutContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const bookId = searchParams.get('bookId');
+  const urlPromoCode = searchParams.get('promo');
 
   const [email, setEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -17,8 +18,59 @@ function CheckoutContent() {
   const [applyDiscount, setApplyDiscount] = useState(false);
   const [idleTime, setIdleTime] = useState(0);
 
-  // Discount popup after 30 seconds of inactivity
+  // Promo code state
+  const [promoCode, setPromoCode] = useState(urlPromoCode || '');
+  const [promoDiscount, setPromoDiscount] = useState<number | null>(null);
+  const [promoError, setPromoError] = useState('');
+  const [isValidatingPromo, setIsValidatingPromo] = useState(false);
+
+  // Auto-validate promo code from URL
   useEffect(() => {
+    if (urlPromoCode) {
+      validatePromoCode(urlPromoCode);
+    }
+  }, [urlPromoCode]);
+
+  const validatePromoCode = async (code: string) => {
+    if (!code.trim()) {
+      setPromoDiscount(null);
+      setPromoError('');
+      return;
+    }
+
+    setIsValidatingPromo(true);
+    setPromoError('');
+
+    try {
+      const response = await fetch('/api/validate-promo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ promoCode: code }),
+      });
+
+      const data = await response.json();
+
+      if (data.valid) {
+        setPromoDiscount(data.discount);
+        setPromoError('');
+        // If promo code is valid, disable the idle discount
+        setApplyDiscount(false);
+      } else {
+        setPromoDiscount(null);
+        setPromoError(data.error || 'Invalid promo code');
+      }
+    } catch (error) {
+      setPromoDiscount(null);
+      setPromoError('Failed to validate promo code');
+    } finally {
+      setIsValidatingPromo(false);
+    }
+  };
+
+  // Discount popup after 30 seconds of inactivity (only if no promo applied)
+  useEffect(() => {
+    if (promoDiscount) return; // Don't show idle discount if promo is applied
+
     const interval = setInterval(() => {
       setIdleTime(prev => prev + 1);
     }, 1000);
@@ -28,7 +80,7 @@ function CheckoutContent() {
     }
 
     return () => clearInterval(interval);
-  }, [idleTime, showDiscount, applyDiscount]);
+  }, [idleTime, showDiscount, applyDiscount, promoDiscount]);
 
   // Reset idle time on activity
   useEffect(() => {
@@ -56,7 +108,8 @@ function CheckoutContent() {
           bookId,
           email,
           productType: 'one-time',
-          applyDiscount,
+          applyDiscount: !promoDiscount && applyDiscount, // Only apply idle discount if no promo
+          promoCode: promoDiscount ? promoCode : undefined,
         }),
       });
 
@@ -73,7 +126,24 @@ function CheckoutContent() {
   };
 
   const originalPrice = PRICING.ONE_TIME.price / 100;
-  const discountedPrice = applyDiscount ? originalPrice * 0.85 : originalPrice;
+
+  // Calculate final price
+  let finalPrice = originalPrice;
+  let discountLabel = '';
+
+  if (promoDiscount) {
+    finalPrice = originalPrice * (1 - promoDiscount);
+    discountLabel = `${Math.round(promoDiscount * 100)}% off (${promoCode.toUpperCase()})`;
+  } else if (applyDiscount) {
+    finalPrice = originalPrice * 0.85;
+    discountLabel = '15% off';
+  }
+
+  const clearPromoCode = () => {
+    setPromoCode('');
+    setPromoDiscount(null);
+    setPromoError('');
+  };
 
   return (
     <div className="min-h-screen bg-[#FAFAFA]">
@@ -94,10 +164,10 @@ function CheckoutContent() {
               <h3 className="font-medium mb-4" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>Order Summary</h3>
               <div className="flex justify-between text-sm">
                 <span className="text-neutral-600">AI Book Generation</span>
-                {applyDiscount ? (
+                {(promoDiscount || applyDiscount) ? (
                   <span>
                     <span className="line-through text-neutral-400 mr-2">${originalPrice.toFixed(2)}</span>
-                    <span className="font-medium text-green-600">${discountedPrice.toFixed(2)}</span>
+                    <span className="font-medium text-green-600">${finalPrice.toFixed(2)}</span>
                   </span>
                 ) : (
                   <span className="font-medium">${originalPrice.toFixed(2)}</span>
@@ -114,10 +184,56 @@ function CheckoutContent() {
               <hr className="my-4 border-neutral-200" />
               <div className="flex justify-between font-medium text-lg">
                 <span>Total</span>
-                <span>${discountedPrice.toFixed(2)}</span>
+                <span>${finalPrice.toFixed(2)}</span>
               </div>
-              {applyDiscount && (
-                <p className="text-xs text-green-600 mt-2">15% discount applied!</p>
+              {discountLabel && (
+                <p className="text-xs text-green-600 mt-2">{discountLabel} applied!</p>
+              )}
+            </div>
+
+            {/* Promo Code Input */}
+            <div className="mb-6">
+              <label className="block text-sm font-medium mb-2">Promo Code</label>
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <Tag className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-400" />
+                  <input
+                    type="text"
+                    value={promoCode}
+                    onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
+                    placeholder="Enter code"
+                    className="w-full pl-10 pr-10 py-3 border border-neutral-200 rounded-xl focus:border-neutral-900 focus:outline-none transition-colors uppercase"
+                    disabled={!!promoDiscount}
+                  />
+                  {promoCode && !promoDiscount && (
+                    <button
+                      onClick={clearPromoCode}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
+                {promoDiscount ? (
+                  <button
+                    onClick={clearPromoCode}
+                    className="px-4 py-3 bg-green-100 text-green-700 rounded-xl font-medium flex items-center gap-2"
+                  >
+                    <Check className="h-4 w-4" />
+                    Applied
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => validatePromoCode(promoCode)}
+                    disabled={!promoCode.trim() || isValidatingPromo}
+                    className="px-4 py-3 bg-neutral-900 text-white rounded-xl font-medium hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    {isValidatingPromo ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Apply'}
+                  </button>
+                )}
+              </div>
+              {promoError && (
+                <p className="text-xs text-red-600 mt-1">{promoError}</p>
               )}
             </div>
 
@@ -166,7 +282,7 @@ function CheckoutContent() {
               {isLoading ? (
                 <><Loader2 className="h-5 w-5 animate-spin" /> Processing...</>
               ) : (
-                <><CreditCard className="h-5 w-5" /> Pay ${discountedPrice.toFixed(2)}</>
+                <><CreditCard className="h-5 w-5" /> Pay ${finalPrice.toFixed(2)}</>
               )}
             </button>
 
@@ -177,8 +293,8 @@ function CheckoutContent() {
         </div>
       </main>
 
-      {/* Discount Popup */}
-      {showDiscount && !applyDiscount && (
+      {/* Discount Popup (only shows if no promo code applied) */}
+      {showDiscount && !applyDiscount && !promoDiscount && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl p-8 max-w-md w-full animate-scale-in">
             <h3 className="text-xl font-bold mb-2" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>Wait! Special Offer</h3>

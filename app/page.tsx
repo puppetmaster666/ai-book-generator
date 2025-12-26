@@ -6,6 +6,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { ArrowRight, Loader2, Sparkles, Menu, X, Check, ChevronRight, Zap, BookOpen, Download, ExternalLink, FileCheck } from 'lucide-react';
 import Footer from '@/components/Footer';
+import NewYearPopup from '@/components/NewYearPopup';
 
 export default function Home() {
   const router = useRouter();
@@ -628,6 +629,9 @@ export default function Home() {
           </p>
         </div>
       )}
+
+      {/* New Year Promo Popup */}
+      <NewYearPopup />
     </div>
   );
 }

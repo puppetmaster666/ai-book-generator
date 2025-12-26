@@ -3,6 +3,15 @@ import Stripe from 'stripe';
 import { prisma } from '@/lib/db';
 import { PRICING } from '@/lib/constants';
 
+// Promo codes configuration
+const PROMO_CODES: Record<string, { discount: number; validUntil: Date; description: string }> = {
+  'NEWYEAR2026': {
+    discount: 0.50, // 50% off
+    validUntil: new Date('2026-01-02T00:00:00Z'), // Valid until Jan 1, 2026 midnight
+    description: 'New Year 2026 Special - 50% Off',
+  },
+};
+
 function getStripe() {
   const secretKey = process.env.STRIPE_SECRET_KEY;
   if (!secretKey) {
@@ -17,7 +26,7 @@ export async function POST(request: NextRequest) {
   try {
     const stripe = getStripe();
     const body = await request.json();
-    const { bookId, email, productType, applyDiscount } = body;
+    const { bookId, email, productType, applyDiscount, promoCode } = body;
 
     if (!email || !productType) {
       return NextResponse.json(
@@ -55,8 +64,16 @@ export async function POST(request: NextRequest) {
         );
     }
 
-    // Apply 15% discount if applicable
-    if (applyDiscount) {
+    // Apply promo code discount if valid
+    let appliedPromo = '';
+    if (promoCode && PROMO_CODES[promoCode.toUpperCase()]) {
+      const promo = PROMO_CODES[promoCode.toUpperCase()];
+      if (new Date() <= promo.validUntil) {
+        amount = Math.round(amount * (1 - promo.discount));
+        appliedPromo = promoCode.toUpperCase();
+      }
+    } else if (applyDiscount) {
+      // Apply 15% idle discount if no promo code
       amount = Math.round(amount * 0.85);
     }
 
@@ -88,6 +105,7 @@ export async function POST(request: NextRequest) {
         bookId: bookId || '',
         productType,
         applyDiscount: applyDiscount ? 'true' : 'false',
+        promoCode: appliedPromo,
       },
     });
 
