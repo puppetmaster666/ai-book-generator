@@ -1,0 +1,25 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install:*)",
+      "Bash(gh auth status:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nInitial commit: AI Book Generator \\(BookForge\\)\n\nFeatures:\n- Multi-step book creation form with genre, style, and format options\n- Gemini 3 Pro integration for AI book generation\n- Chapter-by-chapter generation with memory system for consistency\n- AI cover generation with Amazon KDP dimensions\n- EPUB export ready for publishing\n- Stripe payment integration \\($19.99 one-time, $69/mo, $499/yr\\)\n- Progress tracking and real-time updates\n- Responsive design with cream/white theme\n\nTech stack: Next.js 14, TypeScript, Tailwind CSS, Prisma, Stripe\n\n🤖 Generated with [Claude Code]\\(https://claude.com/claude-code\\)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(where gh:*)",
+      "Bash(winget install:*)",
+      "Bash(\"/c/Program Files/GitHub CLI/gh.exe\" auth status)",
+      "Bash(gh auth login:*)",
+      "Bash(\"/c/Program Files/GitHub CLI/gh.exe\" auth login --hostname github.com --git-protocol https --web)",
+      "Bash(\"/c/Program Files/GitHub CLI/gh.exe\" repo create ai-book-generator --public --source=. --remote=origin --push --description \"AI-powered book generation platform - create complete books with Gemini AI\")",
+      "Bash(npx vercel --version)",
+      "Bash(npx vercel:*)",
+      "Bash(npm run build:*)",
+      "Bash(npm info:*)",
+      "Bash(cat:*)",
+      "Bash(npx prisma generate:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(powershell -Command \"Get-Content app/page.tsx | Select-Object -First 5\")"
+    ]
+  }
+}
