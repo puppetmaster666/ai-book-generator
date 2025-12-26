@@ -1,18 +1,18 @@
 import Link from 'next/link';
-import { BookOpen } from 'lucide-react';
+import { BookText } from 'lucide-react';
 
 export default function Footer() {
   return (
-    <footer className="bg-[#F7F5F0] border-t border-[#E8E4DC]">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+    <footer className="bg-gray-900 border-t border-gray-800">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-12">
           {/* Brand */}
           <div className="col-span-1 md:col-span-2">
-            <div className="flex items-center gap-2 mb-4">
-              <BookOpen className="h-8 w-8 text-[#1E3A5F]" />
-              <span className="text-xl font-semibold text-[#0F1A2A]">BookForge</span>
+            <div className="flex items-center gap-3 mb-4">
+              <BookText className="h-8 w-8 text-blue-500" />
+              <span className="text-2xl font-bold text-white">Writer AI</span>
             </div>
-            <p className="text-[#4A5568] max-w-md">
+            <p className="text-gray-400 max-w-md">
               Transform your ideas into professionally written books with the power of AI.
               Ready for Amazon KDP and all major publishing platforms.
             </p>
@@ -20,20 +20,20 @@ export default function Footer() {
 
           {/* Links */}
           <div>
-            <h3 className="font-semibold text-[#0F1A2A] mb-4">Product</h3>
-            <ul className="space-y-2">
+            <h3 className="font-semibold text-white mb-5">Product</h3>
+            <ul className="space-y-3">
               <li>
-                <Link href="/how-it-works" className="text-[#4A5568] hover:text-[#0F1A2A] transition-colors">
+                <Link href="/how-it-works" className="text-gray-400 hover:text-white transition-colors">
                   How It Works
                 </Link>
               </li>
               <li>
-                <Link href="/pricing" className="text-[#4A5568] hover:text-[#0F1A2A] transition-colors">
+                <Link href="/pricing" className="text-gray-400 hover:text-white transition-colors">
                   Pricing
                 </Link>
               </li>
               <li>
-                <Link href="/faq" className="text-[#4A5568] hover:text-[#0F1A2A] transition-colors">
+                <Link href="/faq" className="text-gray-400 hover:text-white transition-colors">
                   FAQ
                 </Link>
               </li>
@@ -41,20 +41,20 @@ export default function Footer() {
           </div>
 
           <div>
-            <h3 className="font-semibold text-[#0F1A2A] mb-4">Legal</h3>
-            <ul className="space-y-2">
+            <h3 className="font-semibold text-white mb-5">Legal</h3>
+            <ul className="space-y-3">
               <li>
-                <Link href="/privacy" className="text-[#4A5568] hover:text-[#0F1A2A] transition-colors">
+                <Link href="/privacy" className="text-gray-400 hover:text-white transition-colors">
                   Privacy Policy
                 </Link>
               </li>
               <li>
-                <Link href="/terms" className="text-[#4A5568] hover:text-[#0F1A2A] transition-colors">
+                <Link href="/terms" className="text-gray-400 hover:text-white transition-colors">
                   Terms of Service
                 </Link>
               </li>
               <li>
-                <Link href="/refund" className="text-[#4A5568] hover:text-[#0F1A2A] transition-colors">
+                <Link href="/refund" className="text-gray-400 hover:text-white transition-colors">
                   Refund Policy
                 </Link>
               </li>
@@ -62,9 +62,12 @@ export default function Footer() {
           </div>
         </div>
 
-        <div className="mt-12 pt-8 border-t border-[#E8E4DC]">
-          <p className="text-center text-[#4A5568] text-sm">
-            &copy; {new Date().getFullYear()} BookForge. All rights reserved.
+        <div className="mt-16 pt-8 border-t border-gray-800 flex justify-between items-center">
+          <p className="text-gray-500 text-sm">
+            &copy; {new Date().getFullYear()} Writer AI. All rights reserved.
+          </p>
+          <p className="text-gray-500 text-sm">
+            Designed by <a href="https://gemini.google.com" target="_blank" rel="noopener noreferrer" className="hover:text-white">Gemini</a>
           </p>
         </div>
       </div>

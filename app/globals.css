@@ -1,15 +1,16 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@600;700;800&display=swap');
 @import "tailwindcss";
 
 :root {
-  --background: #FFFDF8;
-  --background-card: #FFFFFF;
-  --background-alt: #F7F5F0;
-  --foreground: #0F1A2A;
-  --foreground-secondary: #4A5568;
-  --primary: #1E3A5F;
-  --primary-hover: #2D4A73;
-  --accent: #4F7FFF;
-  --border: #E8E4DC;
+  --background: #111827;
+  --background-card: #1F2937;
+  --background-alt: #0F172A;
+  --foreground: #FFFFFF;
+  --foreground-secondary: #9CA3AF;
+  --primary: #3B82F6;
+  --primary-hover: #2563EB;
+  --accent: #3B82F6;
+  --border: #374151;
   --success: #10B981;
   --error: #EF4444;
 }
@@ -26,14 +27,18 @@
   --color-border: var(--border);
   --color-success: var(--success);
   --color-error: var(--error);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: 'Inter', system-ui, sans-serif;
+  --font-mono: 'monospace';
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: 'Inter', system-ui, sans-serif;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Poppins', sans-serif;
 }
 
 ::-webkit-scrollbar {
