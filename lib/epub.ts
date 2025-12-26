@@ -45,19 +45,30 @@ function formatChapterContent(content: string, fontStyle: keyof typeof FONT_STYL
 }
 
 export async function generateEpub(bookData: BookData): Promise<Buffer> {
+  const fonts = FONT_STYLES[bookData.fontStyle];
+
+  // Create title page HTML
+  const titlePageHtml = `
+    <div style="text-align: center; margin-top: 30%; font-family: '${fonts.heading}', Georgia, serif;">
+      <h1 style="font-size: 2.5em; margin-bottom: 0.5em; font-weight: bold;">${bookData.title}</h1>
+      <p style="font-size: 1.2em; margin-top: 2em; font-style: italic;">A Novel</p>
+      <p style="font-size: 1.5em; margin-top: 3em;">by</p>
+      <p style="font-size: 1.8em; margin-top: 0.5em; font-weight: bold;">${bookData.authorName}</p>
+    </div>
+  `;
+
   const options = {
     title: bookData.title,
     author: bookData.authorName,
-    publisher: 'AI Book Generator',
     cover: bookData.coverImageUrl,
     css: `
       body {
-        font-family: '${FONT_STYLES[bookData.fontStyle].body}', Georgia, serif;
+        font-family: '${fonts.body}', Georgia, serif;
         line-height: 1.6;
         margin: 1em;
       }
       h1, h2, h3 {
-        font-family: '${FONT_STYLES[bookData.fontStyle].heading}', Georgia, serif;
+        font-family: '${fonts.heading}', Georgia, serif;
         text-align: center;
       }
       p {
@@ -72,10 +83,18 @@ export async function generateEpub(bookData: BookData): Promise<Buffer> {
     `,
   };
 
-  const chapters = bookData.chapters.map(chapter => ({
-    title: chapter.title,
-    content: formatChapterContent(chapter.content, bookData.fontStyle),
-  }));
+  // Start with title page, then add chapters
+  const chapters = [
+    {
+      title: 'Title Page',
+      content: titlePageHtml,
+      excludeFromToc: true,
+    },
+    ...bookData.chapters.map(chapter => ({
+      title: chapter.title,
+      content: formatChapterContent(chapter.content, bookData.fontStyle),
+    })),
+  ];
 
   const epubBuffer = await epub(options, chapters);
   return Buffer.from(epubBuffer);

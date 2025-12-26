@@ -1,5 +1,45 @@
 import { GoogleGenerativeAI, GenerativeModel } from '@google/generative-ai';
 
+// Helper to clean and parse JSON from LLM responses
+function parseJSONFromResponse(response: string): object {
+  console.log('Raw LLM response length:', response.length);
+  console.log('Raw LLM response start:', response.substring(0, 300));
+  console.log('Raw LLM response end:', response.substring(response.length - 200));
+
+  // Remove markdown code blocks if present
+  let cleaned = response
+    .replace(/```json\s*/gi, '')
+    .replace(/```\s*/g, '')
+    .trim();
+
+  // Extract JSON object or array
+  const jsonMatch = cleaned.match(/\{[\s\S]*\}|\[[\s\S]*\]/);
+  if (!jsonMatch) {
+    console.error('No JSON found. Full response:', response);
+    throw new Error('No JSON found in response');
+  }
+
+  cleaned = jsonMatch[0];
+
+  // Fix common LLM JSON errors
+  cleaned = cleaned
+    // Fix trailing commas before } or ]
+    .replace(/,(\s*[}\]])/g, '$1');
+
+  try {
+    return JSON.parse(cleaned);
+  } catch (e) {
+    // Try with newline cleanup
+    cleaned = cleaned.replace(/[\r\n]+/g, ' ').replace(/\s+/g, ' ');
+    try {
+      return JSON.parse(cleaned);
+    } catch (e2) {
+      console.error('JSON parse failed. Cleaned:', cleaned.substring(0, 1500));
+      throw e2;
+    }
+  }
+}
+
 // Lazy initialization to avoid errors during build
 let genAI: GoogleGenerativeAI | null = null;
 let _geminiPro: GenerativeModel | null = null;
@@ -41,7 +81,7 @@ function getGeminiFlash(): GenerativeModel {
       generationConfig: {
         temperature: 0.3,
         topP: 0.9,
-        maxOutputTokens: 1024,
+        maxOutputTokens: 8192,
       },
     });
   }
@@ -58,6 +98,51 @@ function getGeminiImage(): GenerativeModel {
   return _geminiImage;
 }
 
+// Check if text ends with proper punctuation (complete sentence)
+function isCompleteSentence(text: string): boolean {
+  const trimmed = text.trim();
+  return /[.!?]$/.test(trimmed) && trimmed.length > 50;
+}
+
+// Generate a random book idea with retry logic
+export async function generateBookIdea(): Promise<string> {
+  const prompt = `Generate a 2-sentence book idea. End with a period.
+
+Examples:
+- A marine biologist discovers an underwater city older than any known civilization. When she tries to document it, she realizes the inhabitants are still watching.
+- A retired hitman opens a bakery in a small town. His past catches up when a former target walks in asking for a wedding cake.
+
+Write ONE new idea (2 sentences, end with period):`;
+
+  const maxRetries = 3;
+
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    const result = await getGeminiFlash().generateContent(prompt);
+    let idea = result.response.text().trim();
+
+    // Remove any quotes or prefixes
+    idea = idea.replace(/^["']|["']$/g, '').trim();
+    idea = idea.replace(/^(Here's an idea:|Book idea:|Idea:)\s*/i, '').trim();
+
+    // Check if it's a complete sentence
+    if (isCompleteSentence(idea)) {
+      return idea;
+    }
+
+    // If incomplete, try to salvage by finding the last complete sentence
+    const sentences = idea.match(/[^.!?]*[.!?]/g);
+    if (sentences && sentences.length >= 1) {
+      const salvaged = sentences.join('').trim();
+      if (salvaged.length > 50) {
+        return salvaged;
+      }
+    }
+  }
+
+  // Fallback if all retries fail
+  return "A bookstore owner discovers that the rare first editions in her shop contain hidden messages from authors who predicted the future. When the next prediction points to an imminent catastrophe, she must decide whether to warn the world or protect the secret.";
+}
+
 // NEW: Expand a simple idea into a full book plan
 export async function expandIdea(idea: string): Promise<{
   title: string;
@@ -72,47 +157,34 @@ export async function expandIdea(idea: string): Promise<{
   targetWords: number;
   targetChapters: number;
 }> {
-  const prompt = `You are a professional book development editor. Analyze this book idea and create a complete book plan.
+  const prompt = `Create a book plan from this idea: "${idea}"
 
-USER'S IDEA:
-"${idea}"
+STRICT RULES:
+- Output ONLY valid JSON, no other text
+- Keep ALL string values under 100 words each
+- Use exactly 2-3 characters, not more
+- No special characters that break JSON
+- Complete the entire JSON structure
 
-Based on this idea, create a detailed book plan. Determine:
-1. The best title (catchy, marketable)
-2. Genre (romance, mystery, fantasy, sci-fi, thriller, horror, ya, literary, self-help, memoir, how-to, business)
-3. Whether it's fiction or non-fiction
-4. A compelling premise (2-3 sentences)
-5. Main characters (2-5 characters with names and brief descriptions)
-6. Plot structure: beginning, middle/key events, ending
-7. Appropriate writing style (literary, commercial, conversational, academic, journalistic)
-8. Target word count and chapter count based on genre conventions
-
-Output ONLY valid JSON in this exact format:
-{
-  "title": "Book Title Here",
-  "genre": "genre-key",
-  "bookType": "fiction",
-  "premise": "A compelling 2-3 sentence premise",
-  "characters": [
-    {"name": "Character Name", "description": "Brief description"}
-  ],
-  "beginning": "How the story starts",
-  "middle": "Key plot points and conflicts",
-  "ending": "How it resolves",
-  "writingStyle": "commercial",
-  "targetWords": 70000,
-  "targetChapters": 20
-}`;
+JSON format:
+{"title":"Title","genre":"mystery","bookType":"fiction","premise":"Short premise","characters":[{"name":"Name","description":"Brief desc"}],"beginning":"Start","middle":"Middle","ending":"End","writingStyle":"commercial","targetWords":70000,"targetChapters":20}`;
 
   const result = await getGeminiFlash().generateContent(prompt);
   const response = result.response.text();
 
-  const jsonMatch = response.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) {
-    throw new Error('Failed to parse idea expansion');
-  }
-
-  return JSON.parse(jsonMatch[0]);
+  return parseJSONFromResponse(response) as {
+    title: string;
+    genre: string;
+    bookType: 'fiction' | 'non-fiction';
+    premise: string;
+    characters: { name: string; description: string }[];
+    beginning: string;
+    middle: string;
+    ending: string;
+    writingStyle: string;
+    targetWords: number;
+    targetChapters: number;
+  };
 }
 
 export async function generateOutline(bookData: {
@@ -173,13 +245,15 @@ Output ONLY valid JSON in this exact format:
   const result = await getGeminiPro().generateContent(prompt);
   const response = result.response.text();
 
-  // Extract JSON from response
-  const jsonMatch = response.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) {
-    throw new Error('Failed to parse outline response');
-  }
-
-  return JSON.parse(jsonMatch[0]);
+  return parseJSONFromResponse(response) as {
+    chapters: {
+      number: number;
+      title: string;
+      summary: string;
+      pov?: string;
+      targetWords: number;
+    }[];
+  };
 }
 
 export async function generateChapter(data: {
@@ -232,10 +306,31 @@ Write the complete chapter. Include:
 - Scene transitions
 - End at a natural breaking point
 
-Write approximately ${data.targetWords} words. Do NOT include any meta-commentary or notes - only the actual chapter content.`;
+STRICT STYLE RULES:
+- NEVER use em dashes (—) or en dashes (–). Use commas, periods, or rewrite sentences instead.
+- NEVER add "[END OF BOOK]", "[THE END]", or any ending markers
+- NEVER add author notes, meta-commentary, or markdown formatting
+- Use simple, natural punctuation only
+
+Write approximately ${data.targetWords} words. Output ONLY the chapter text.`;
 
   const result = await getGeminiPro().generateContent(prompt);
-  return result.response.text();
+  let content = result.response.text();
+
+  // Post-process: remove AI artifacts
+  content = content
+    // Remove end markers
+    .replace(/\*?\*?\[?(THE )?END( OF BOOK)?\]?\*?\*?/gi, '')
+    .replace(/\*\*\[END OF BOOK\]\*\*/gi, '')
+    // Replace em dashes and en dashes with commas or nothing
+    .replace(/—/g, ', ')
+    .replace(/–/g, ', ')
+    .replace(/ , /g, ', ')
+    .replace(/,\s*,/g, ',')
+    // Clean up any trailing whitespace
+    .trim();
+
+  return content;
 }
 
 export async function summarizeChapter(chapterContent: string): Promise<string> {
@@ -278,12 +373,11 @@ Output ONLY valid JSON with the updated character states.`;
   const result = await getGeminiFlash().generateContent(prompt);
   const response = result.response.text();
 
-  const jsonMatch = response.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) {
+  try {
+    return parseJSONFromResponse(response) as Record<string, object>;
+  } catch {
     return currentStates;
   }
-
-  return JSON.parse(jsonMatch[0]);
 }
 
 export async function generateCoverPrompt(bookData: {

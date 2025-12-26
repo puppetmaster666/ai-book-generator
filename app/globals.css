@@ -1,18 +1,21 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=MuseoModerno:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap');
 @import "tailwindcss";
 
 :root {
   --background: #FFFFFF;
   --background-card: #FFFFFF;
-  --background-alt: #F5F5F5;
-  --foreground: #212121;
-  --foreground-secondary: #545454;
-  --primary: #DE3723;
-  --primary-hover: #BF2D1B;
-  --accent: #DE3723;
-  --border: #E0E0E0;
-  --success: #10B981;
-  --error: #D32F2F;
+  --background-alt: #FAFAFA;
+  --foreground: #1a1a1a;
+  --foreground-secondary: #555555;
+  --ink: #1a1a1a;
+  --ink-light: #333333;
+  --primary: #1a1a1a;
+  --primary-hover: #000000;
+  --accent: #1a1a1a;
+  --border: #e8e8e8;
+  --border-light: #f0f0f0;
+  --success: #1a1a1a;
+  --error: #b91c1c;
 }
 
 @theme inline {
@@ -21,39 +24,69 @@
   --color-background-alt: var(--background-alt);
   --color-foreground: var(--foreground);
   --color-foreground-secondary: var(--foreground-secondary);
+  --color-ink: var(--ink);
+  --color-ink-light: var(--ink-light);
   --color-primary: var(--primary);
   --color-primary-hover: var(--primary-hover);
   --color-accent: var(--accent);
   --color-border: var(--border);
+  --color-border-light: var(--border-light);
   --color-success: var(--success);
   --color-error: var(--error);
-  --font-sans: 'Inter', system-ui, sans-serif;
-  --font-display: 'MuseoModerno', system-ui, sans-serif;
+  --font-sans: 'DM Sans', system-ui, sans-serif;
+  --font-display: 'Space Grotesk', system-ui, sans-serif;
+  --radius-sm: 3px;
+  --radius-md: 4px;
+  --radius-lg: 6px;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: 'DM Sans', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 h1, h2, h3, h4, h5, h6 {
-  font-family: 'MuseoModerno', sans-serif;
+  font-family: 'Space Grotesk', sans-serif;
+  color: var(--ink);
 }
 
+/* Subtle scrollbar */
 ::-webkit-scrollbar {
-  width: 8px;
+  width: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--background-alt);
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #C1C1C1;
-  border-radius: 4px;
+  background: #d4d4d4;
+  border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #A8A8A8;
+  background: #a3a3a3;
+}
+
+/* Form elements */
+input, textarea, select {
+  border-radius: var(--radius-sm);
+}
+
+input:focus, textarea:focus, select:focus {
+  outline: none;
+  border-color: var(--ink);
+}
+
+/* Buttons - subtle rounding */
+button {
+  border-radius: var(--radius-sm);
+}
+
+/* Cards and containers - subtle rounding */
+.card {
+  border-radius: var(--radius-md);
 }

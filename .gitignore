@@ -36,6 +36,12 @@ yarn-error.log*
 # vercel
 .vercel
 
+# generated test files
+*.epub
+
+# personal/test files
+public/PM/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
