@@ -4,9 +4,10 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
-import { ArrowRight, Loader2, Sparkles, Menu, X, Check, ChevronRight, Zap, BookOpen, Download, ExternalLink, FileCheck } from 'lucide-react';
+import { ArrowRight, Loader2, Sparkles, X, Check, ChevronRight, Zap, BookOpen, Download, ExternalLink, FileCheck } from 'lucide-react';
 import Footer from '@/components/Footer';
 import NewYearPopup from '@/components/NewYearPopup';
+import Header from '@/components/Header';
 
 export default function Home() {
   const router = useRouter();
@@ -14,7 +15,6 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [isGeneratingIdea, setIsGeneratingIdea] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<'single' | 'monthly' | 'yearly'>('monthly');
   const [lightboxImage, setLightboxImage] = useState<{ src: string; label: string } | null>(null);
 
@@ -73,83 +73,10 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-[#FAFAFA]">
+      <Header />
+
       {/* Hero Section */}
-      <section className="relative min-h-screen flex flex-col">
-        {/* Navigation */}
-        <nav className="w-full px-6 py-6">
-          <div className="max-w-7xl mx-auto flex items-center justify-between">
-            {/* Left Nav */}
-            <div className="hidden md:flex items-center gap-8 flex-1">
-              <Link href="/how-it-works" className="text-sm text-neutral-600 hover:text-neutral-900 animated-underline">
-                How it works
-              </Link>
-              <Link href="/pricing" className="text-sm text-neutral-600 hover:text-neutral-900 animated-underline">
-                Pricing
-              </Link>
-            </div>
-
-            {/* Center Logo */}
-            <div className="absolute left-1/2 -translate-x-1/2">
-              <Link href="/" className="text-2xl md:text-3xl font-bold tracking-tight" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>
-                draftmybook
-              </Link>
-            </div>
-
-            {/* Right Nav */}
-            <div className="hidden md:flex items-center gap-6 flex-1 justify-end">
-              <Link href="/faq" className="text-sm text-neutral-600 hover:text-neutral-900 animated-underline">
-                FAQ
-              </Link>
-              <Link href="/login" className="text-sm text-neutral-600 hover:text-neutral-900 animated-underline">
-                Log in
-              </Link>
-              <Link
-                href="/signup"
-                className="text-sm bg-neutral-900 text-white px-5 py-2.5 rounded-full hover:bg-neutral-800 transition-colors font-medium"
-              >
-                Get Started
-              </Link>
-            </div>
-
-            {/* Mobile */}
-            <button
-              onClick={() => setMenuOpen(true)}
-              className="md:hidden p-2 hover:bg-neutral-100 rounded-full"
-            >
-              <Menu className="h-5 w-5" />
-            </button>
-            <div className="md:hidden w-10" /> {/* Spacer for balance */}
-          </div>
-        </nav>
-
-        {/* Mobile Menu */}
-        {menuOpen && (
-          <>
-            <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-50" onClick={() => setMenuOpen(false)} />
-            <div className="fixed top-0 right-0 bottom-0 w-72 bg-white z-50 p-6 shadow-2xl">
-              <div className="flex justify-end mb-8">
-                <button onClick={() => setMenuOpen(false)} className="p-2 hover:bg-neutral-100 rounded-full">
-                  <X className="h-5 w-5" />
-                </button>
-              </div>
-              <div className="flex flex-col gap-4">
-                <Link href="/how-it-works" className="text-lg font-medium" onClick={() => setMenuOpen(false)}>How it works</Link>
-                <Link href="/pricing" className="text-lg font-medium" onClick={() => setMenuOpen(false)}>Pricing</Link>
-                <Link href="/faq" className="text-lg font-medium" onClick={() => setMenuOpen(false)}>FAQ</Link>
-                <div className="h-px bg-neutral-200 my-4" />
-                <Link href="/login" className="text-lg font-medium" onClick={() => setMenuOpen(false)}>Log in</Link>
-                <Link
-                  href="/signup"
-                  className="text-lg bg-neutral-900 text-white px-5 py-3 rounded-full text-center font-medium"
-                  onClick={() => setMenuOpen(false)}
-                >
-                  Get Started
-                </Link>
-              </div>
-            </div>
-          </>
-        )}
-
+      <section className="relative min-h-screen flex flex-col pt-0">
         {/* Hero Content */}
         <div className="flex-1 flex items-center justify-center px-6 py-16">
           <div className="max-w-4xl mx-auto text-center">
