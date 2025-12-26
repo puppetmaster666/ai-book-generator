@@ -261,12 +261,9 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
                   className="w-32 h-48 object-cover rounded-xl shadow-lg"
                 />
               ) : (
-                <div className="w-32 h-48 bg-gradient-to-br from-neutral-100 to-neutral-200 rounded-xl flex items-center justify-center relative overflow-hidden">
+                <div className="w-32 h-48 bg-neutral-100 rounded-xl flex items-center justify-center relative overflow-hidden border border-neutral-200">
                   {isGenerating ? (
-                    <>
-                      <div className="absolute inset-0 bg-gradient-to-t from-blue-100/50 to-transparent animate-pulse" />
-                      <PenTool className="h-12 w-12 text-neutral-400" />
-                    </>
+                    <PenTool className="h-12 w-12 text-neutral-400" />
                   ) : (
                     <BookOpen className="h-12 w-12 text-neutral-400" />
                   )}
@@ -281,12 +278,12 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
                 {/* Status Badge */}
                 <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium ${
                   book.status === 'completed'
-                    ? 'bg-green-100 text-green-700'
+                    ? 'bg-neutral-900 text-white'
                     : book.status === 'failed'
-                    ? 'bg-red-100 text-red-700'
+                    ? 'bg-red-50 text-red-700 border border-red-200'
                     : isPending
-                    ? 'bg-amber-100 text-amber-700'
-                    : 'bg-blue-100 text-blue-700'
+                    ? 'bg-neutral-100 text-neutral-600'
+                    : 'bg-neutral-100 text-neutral-700'
                 }`}>
                   {book.status === 'completed' && <Check className="h-4 w-4" />}
                   {isGenerating && <Loader2 className="h-4 w-4 animate-spin" />}
@@ -299,7 +296,7 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
 
                 {isIllustrated && book.artStyle && (
                   <div className="mt-3">
-                    <span className="inline-flex items-center gap-1 px-3 py-1 bg-purple-50 text-purple-700 rounded-full text-xs font-medium">
+                    <span className="inline-flex items-center gap-1 px-3 py-1 bg-neutral-100 text-neutral-600 rounded-full text-xs font-medium border border-neutral-200">
                       <Palette className="h-3 w-3" />
                       {book.artStyle.charAt(0).toUpperCase() + book.artStyle.slice(1)} Style
                     </span>
@@ -316,9 +313,9 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
                 <div className="text-center">
                   <div className="relative w-16 h-16 mx-auto mb-4">
                     <div className="absolute inset-0 rounded-full border-4 border-neutral-100" />
-                    <div className="absolute inset-0 rounded-full border-4 border-t-blue-500 animate-spin" />
+                    <div className="absolute inset-0 rounded-full border-4 border-t-neutral-900 animate-spin" />
                     <div className="absolute inset-0 flex items-center justify-center">
-                      <Zap className="h-6 w-6 text-blue-500" />
+                      <Zap className="h-6 w-6 text-neutral-700" />
                     </div>
                   </div>
                   <h2 className="text-xl font-semibold text-neutral-900 mb-2">
@@ -328,7 +325,7 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
                     Your book is being prepared. This page updates automatically.
                   </p>
                   <div className="inline-flex items-center gap-2 text-sm text-neutral-500">
-                    <div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-pulse" />
+                    <div className="w-1.5 h-1.5 bg-neutral-500 rounded-full animate-pulse" />
                     <span>Connecting to AI</span>
                   </div>
                 </div>
@@ -403,10 +400,10 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-3">
                   <div className="relative">
-                    <div className="w-12 h-12 bg-blue-50 rounded-full flex items-center justify-center">
-                      <PenTool className="h-6 w-6 text-blue-600" />
+                    <div className="w-12 h-12 bg-neutral-100 rounded-full flex items-center justify-center">
+                      <PenTool className="h-6 w-6 text-neutral-700" />
                     </div>
-                    <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full border-2 border-white" />
+                    <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-neutral-900 rounded-full border-2 border-white" />
                   </div>
                   <div>
                     <h2 className="text-lg font-semibold text-neutral-900">
@@ -435,13 +432,11 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
                   </span>
                   <span className="font-medium text-neutral-900">{progress}%</span>
                 </div>
-                <div className="h-3 bg-neutral-100 rounded-full overflow-hidden">
+                <div className="h-2 bg-neutral-100 rounded-full overflow-hidden">
                   <div
-                    className="h-full bg-gradient-to-r from-blue-500 to-indigo-500 transition-all duration-700 ease-out rounded-full relative"
+                    className="h-full bg-neutral-900 transition-all duration-700 ease-out rounded-full"
                     style={{ width: `${Math.max(progress, 2)}%` }}
-                  >
-                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-shimmer" />
-                  </div>
+                  />
                 </div>
               </div>
 
@@ -492,7 +487,7 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
                 <div className="mt-6 border-t border-neutral-100 pt-6">
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-2">
-                      <Palette className="h-4 w-4 text-purple-600" />
+                      <Palette className="h-4 w-4 text-neutral-600" />
                       <p className="text-sm font-medium text-neutral-900">Illustrations</p>
                     </div>
                     <span className="text-sm text-neutral-500">
@@ -514,13 +509,13 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
                         </div>
                       ))}
                       {isGenerating && (
-                        <div className="aspect-square rounded-lg bg-purple-50 border border-purple-200 flex items-center justify-center">
-                          <Loader2 className="h-4 w-4 text-purple-500 animate-spin" />
+                        <div className="aspect-square rounded-lg bg-neutral-50 border border-neutral-200 flex items-center justify-center">
+                          <Loader2 className="h-4 w-4 text-neutral-500 animate-spin" />
                         </div>
                       )}
                     </div>
                   ) : (
-                    <div className="flex items-center gap-3 text-sm text-purple-600 bg-purple-50 rounded-xl px-4 py-3 border border-purple-100">
+                    <div className="flex items-center gap-3 text-sm text-neutral-600 bg-neutral-50 rounded-xl px-4 py-3 border border-neutral-200">
                       <Loader2 className="h-4 w-4 animate-spin" />
                       <span>Generating first illustration...</span>
                     </div>
@@ -532,25 +527,25 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
 
           {/* Completed Section */}
           {book.status === 'completed' && (
-            <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl border border-green-200 p-6 sm:p-8 mb-6">
+            <div className="bg-white rounded-2xl border border-neutral-200 p-6 sm:p-8 mb-6">
               <div className="text-center mb-6">
-                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Check className="h-8 w-8 text-green-600" />
+                <div className="w-16 h-16 bg-neutral-900 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Check className="h-8 w-8 text-white" />
                 </div>
                 <h2 className="text-2xl font-bold text-neutral-900 mb-2">Your Book is Ready!</h2>
                 <p className="text-neutral-600">Download your masterpiece below</p>
               </div>
 
               <div className="grid grid-cols-3 gap-4 mb-6">
-                <div className="bg-white/60 rounded-xl p-4 text-center">
+                <div className="bg-neutral-50 rounded-xl p-4 text-center border border-neutral-100">
                   <p className="text-2xl font-bold text-neutral-900">{book.totalChapters}</p>
                   <p className="text-sm text-neutral-600">Chapters</p>
                 </div>
-                <div className="bg-white/60 rounded-xl p-4 text-center">
+                <div className="bg-neutral-50 rounded-xl p-4 text-center border border-neutral-100">
                   <p className="text-2xl font-bold text-neutral-900">{book.totalWords.toLocaleString()}</p>
                   <p className="text-sm text-neutral-600">Words</p>
                 </div>
-                <div className="bg-white/60 rounded-xl p-4 text-center">
+                <div className="bg-neutral-50 rounded-xl p-4 text-center border border-neutral-100">
                   <p className="text-2xl font-bold text-neutral-900">~{Math.round(book.totalWords / 250)}</p>
                   <p className="text-sm text-neutral-600">Pages</p>
                 </div>
@@ -559,7 +554,7 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
               <div className="space-y-3">
                 <button
                   onClick={handleDownload}
-                  className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-neutral-900 text-white rounded-xl hover:bg-black font-medium transition-all hover:scale-[1.02]"
+                  className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-neutral-900 text-white rounded-xl hover:bg-black font-medium transition-colors"
                 >
                   <Download className="h-5 w-5" /> Download EPUB
                 </button>
@@ -567,7 +562,7 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
                 {book.coverImageUrl && (
                   <button
                     onClick={handleCoverDownload}
-                    className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-white text-neutral-900 border border-neutral-200 rounded-xl hover:bg-neutral-50 font-medium transition-all"
+                    className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-white text-neutral-900 border border-neutral-200 rounded-xl hover:bg-neutral-50 font-medium transition-colors"
                   >
                     <ImageIcon className="h-5 w-5" /> Download Cover Image
                   </button>
@@ -588,15 +583,15 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
                     key={chapter.id}
                     className={`flex items-center justify-between p-4 rounded-xl transition-all ${
                       index === book.chapters.length - 1 && isGenerating
-                        ? 'bg-blue-50 border border-blue-200'
+                        ? 'bg-neutral-100 border border-neutral-300'
                         : 'bg-neutral-50'
                     }`}
                   >
                     <div className="flex items-center gap-3">
                       <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
                         index === book.chapters.length - 1 && isGenerating
-                          ? 'bg-blue-100 text-blue-700'
-                          : 'bg-green-100 text-green-700'
+                          ? 'bg-neutral-200 text-neutral-700'
+                          : 'bg-neutral-900 text-white'
                       }`}>
                         {index === book.chapters.length - 1 && isGenerating ? (
                           <Loader2 className="h-4 w-4 animate-spin" />
@@ -624,7 +619,7 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
             <div className="bg-white rounded-2xl border border-neutral-200 p-6 sm:p-8 mb-6">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg font-semibold text-neutral-900 flex items-center gap-2">
-                  <Palette className="h-5 w-5 text-purple-600" />
+                  <Palette className="h-5 w-5 text-neutral-600" />
                   Illustrations
                 </h2>
                 <span className="text-sm text-neutral-500">{book.illustrations.length} images</span>
@@ -633,7 +628,7 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
                 {book.illustrations.map((illustration, index) => (
                   <div
                     key={illustration.id}
-                    className="aspect-square rounded-xl overflow-hidden bg-neutral-100 border border-neutral-200 hover:border-purple-300 transition-colors cursor-pointer group"
+                    className="aspect-square rounded-xl overflow-hidden bg-neutral-100 border border-neutral-200 hover:border-neutral-400 transition-colors cursor-pointer group"
                     onClick={() => window.open(illustration.imageUrl, '_blank')}
                   >
                     <img
