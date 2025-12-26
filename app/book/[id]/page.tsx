@@ -10,6 +10,7 @@ interface Chapter {
   id: string;
   number: number;
   title: string;
+  content: string;
   wordCount: number;
   createdAt: string;
 }
@@ -18,6 +19,9 @@ interface Illustration {
   id: string;
   chapterId: string;
   imageUrl: string;
+  altText: string;
+  position: number;
+  createdAt: string;
 }
 
 interface Book {
@@ -404,10 +408,60 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
                 </div>
               </div>
 
+              {/* Live Content Preview - Text Only Books */}
+              {!isIllustrated && book.chapters.length > 0 && (
+                <div className="mt-6 border-t border-neutral-100 pt-6">
+                  <div className="flex items-center justify-between mb-3">
+                    <p className="text-xs uppercase tracking-wide text-neutral-400">Live Preview</p>
+                    <span className="text-xs text-neutral-400">Chapter {book.chapters[book.chapters.length - 1].number}</span>
+                  </div>
+                  <div className="bg-neutral-50 rounded-xl p-4 border border-neutral-100 max-h-48 overflow-y-auto">
+                    <p className="text-sm text-neutral-700 leading-relaxed whitespace-pre-wrap">
+                      {book.chapters[book.chapters.length - 1].content.substring(0, 800)}
+                      {book.chapters[book.chapters.length - 1].content.length > 800 && '...'}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Illustration Progress - Illustrated Books */}
               {isIllustrated && (
-                <div className="mt-4 flex items-center gap-2 text-sm text-purple-700 bg-purple-50 rounded-xl px-4 py-3 border border-purple-100">
-                  <Palette className="h-4 w-4" />
-                  <span>Generating illustrations with each chapter</span>
+                <div className="mt-6 border-t border-neutral-100 pt-6">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <Palette className="h-4 w-4 text-purple-600" />
+                      <p className="text-sm font-medium text-neutral-900">Illustrations</p>
+                    </div>
+                    <span className="text-sm text-neutral-500">
+                      {book.illustrations?.length || 0} generated
+                    </span>
+                  </div>
+                  {book.illustrations && book.illustrations.length > 0 ? (
+                    <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
+                      {book.illustrations.slice(-12).map((illustration, index) => (
+                        <div
+                          key={illustration.id}
+                          className="aspect-square rounded-lg overflow-hidden bg-neutral-100 border border-neutral-200"
+                        >
+                          <img
+                            src={illustration.imageUrl}
+                            alt={illustration.altText || `Illustration ${index + 1}`}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                      ))}
+                      {isGenerating && (
+                        <div className="aspect-square rounded-lg bg-purple-50 border border-purple-200 flex items-center justify-center">
+                          <Loader2 className="h-4 w-4 text-purple-500 animate-spin" />
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-3 text-sm text-purple-600 bg-purple-50 rounded-xl px-4 py-3 border border-purple-100">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <span>Generating first illustration...</span>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -499,6 +553,35 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
                   </div>
                 ))}
               </div>
+            </div>
+          )}
+
+          {/* Illustration Gallery - Completed Illustrated Books */}
+          {book.status === 'completed' && isIllustrated && book.illustrations && book.illustrations.length > 0 && (
+            <div className="bg-white rounded-2xl border border-neutral-200 p-6 sm:p-8 mb-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold text-neutral-900 flex items-center gap-2">
+                  <Palette className="h-5 w-5 text-purple-600" />
+                  Illustrations
+                </h2>
+                <span className="text-sm text-neutral-500">{book.illustrations.length} images</span>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                {book.illustrations.map((illustration, index) => (
+                  <div
+                    key={illustration.id}
+                    className="aspect-square rounded-xl overflow-hidden bg-neutral-100 border border-neutral-200 hover:border-purple-300 transition-colors cursor-pointer group"
+                    onClick={() => window.open(illustration.imageUrl, '_blank')}
+                  >
+                    <img
+                      src={illustration.imageUrl}
+                      alt={illustration.altText || `Illustration ${index + 1}`}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    />
+                  </div>
+                ))}
+              </div>
+              <p className="text-xs text-neutral-400 mt-3 text-center">Click any image to view full size</p>
             </div>
           )}
 
