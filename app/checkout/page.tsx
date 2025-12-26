@@ -6,6 +6,13 @@ import Header from '@/components/Header';
 import { Check, CreditCard, Loader2, Tag, X } from 'lucide-react';
 import { PRICING } from '@/lib/constants';
 
+interface BookDetails {
+  title: string;
+  bookFormat: string;
+  premise: string;
+  artStyle?: string;
+}
+
 function CheckoutContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -17,12 +24,29 @@ function CheckoutContent() {
   const [showDiscount, setShowDiscount] = useState(false);
   const [applyDiscount, setApplyDiscount] = useState(false);
   const [idleTime, setIdleTime] = useState(0);
+  const [bookDetails, setBookDetails] = useState<BookDetails | null>(null);
+  const [isLoadingBook, setIsLoadingBook] = useState(true);
 
   // Promo code state
   const [promoCode, setPromoCode] = useState(urlPromoCode || '');
   const [promoDiscount, setPromoDiscount] = useState<number | null>(null);
   const [promoError, setPromoError] = useState('');
   const [isValidatingPromo, setIsValidatingPromo] = useState(false);
+
+  // Fetch book details
+  useEffect(() => {
+    if (bookId) {
+      fetch(`/api/books/${bookId}`)
+        .then(res => res.json())
+        .then(data => {
+          setBookDetails(data.book);
+          setIsLoadingBook(false);
+        })
+        .catch(() => setIsLoadingBook(false));
+    } else {
+      setIsLoadingBook(false);
+    }
+  }, [bookId]);
 
   // Auto-validate promo code from URL
   useEffect(() => {
@@ -125,7 +149,22 @@ function CheckoutContent() {
     }
   };
 
-  const originalPrice = PRICING.ONE_TIME.price / 100;
+  // Get price based on book format
+  const getBasePrice = () => {
+    if (!bookDetails) return PRICING.ONE_TIME.price;
+    if (bookDetails.bookFormat === 'picture_book') return PRICING.CHILDRENS.price;
+    if (bookDetails.bookFormat === 'illustrated') return PRICING.ILLUSTRATED.price;
+    return PRICING.ONE_TIME.price;
+  };
+
+  const getProductLabel = () => {
+    if (!bookDetails) return 'AI Book Generation';
+    if (bookDetails.bookFormat === 'picture_book') return 'Picture Book';
+    if (bookDetails.bookFormat === 'illustrated') return 'Illustrated Book';
+    return 'Novel';
+  };
+
+  const originalPrice = getBasePrice() / 100;
 
   // Calculate final price
   let finalPrice = originalPrice;
@@ -159,11 +198,30 @@ function CheckoutContent() {
           </div>
 
           <div className="bg-white rounded-2xl border border-neutral-200 p-8">
+            {/* Book Preview */}
+            {isLoadingBook ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin text-neutral-400" />
+              </div>
+            ) : bookDetails && (
+              <div className="mb-6 pb-6 border-b border-neutral-200">
+                <h3 className="font-semibold text-lg mb-2" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>
+                  {bookDetails.title}
+                </h3>
+                <p className="text-sm text-neutral-600 line-clamp-3">{bookDetails.premise}</p>
+                {bookDetails.artStyle && (
+                  <span className="inline-block mt-2 text-xs bg-neutral-100 text-neutral-600 px-2 py-1 rounded-full capitalize">
+                    {bookDetails.artStyle} style
+                  </span>
+                )}
+              </div>
+            )}
+
             {/* Order Summary */}
             <div className="bg-neutral-50 rounded-xl p-5 mb-6">
               <h3 className="font-medium mb-4" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>Order Summary</h3>
               <div className="flex justify-between text-sm">
-                <span className="text-neutral-600">AI Book Generation</span>
+                <span className="text-neutral-600">{getProductLabel()}</span>
                 {(promoDiscount || applyDiscount) ? (
                   <span>
                     <span className="line-through text-neutral-400 mr-2">${originalPrice.toFixed(2)}</span>
@@ -177,6 +235,12 @@ function CheckoutContent() {
                 <span className="text-neutral-600">AI-Generated Cover</span>
                 <span className="font-medium text-green-600">Included</span>
               </div>
+              {bookDetails?.bookFormat !== 'text_only' && (
+                <div className="flex justify-between text-sm mt-2">
+                  <span className="text-neutral-600">Illustrations</span>
+                  <span className="font-medium text-green-600">Included</span>
+                </div>
+              )}
               <div className="flex justify-between text-sm mt-2">
                 <span className="text-neutral-600">EPUB Download</span>
                 <span className="font-medium text-green-600">Included</span>

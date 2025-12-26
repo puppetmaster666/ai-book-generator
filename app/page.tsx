@@ -319,7 +319,7 @@ export default function Home() {
 
       {/* Pricing */}
       <section className="py-24 px-6 bg-white">
-        <div className="max-w-5xl mx-auto">
+        <div className="max-w-6xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-4xl md:text-5xl font-bold tracking-tight mb-4" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>
               Simple pricing
@@ -329,24 +329,98 @@ export default function Home() {
             </p>
           </div>
 
-          {/* Plan Toggle */}
-          <div className="flex justify-center mb-12">
-            <div className="inline-flex bg-neutral-100 p-1 rounded-full">
-              {(['single', 'monthly', 'yearly'] as const).map((plan) => (
-                <button
-                  key={plan}
-                  onClick={() => setSelectedPlan(plan)}
-                  className={`px-6 py-2 rounded-full text-sm font-medium transition-all ${
-                    selectedPlan === plan
-                      ? 'bg-white text-neutral-900 shadow-sm'
-                      : 'text-neutral-600 hover:text-neutral-900'
-                  }`}
-                >
-                  {plan === 'single' ? 'One Book' : plan === 'monthly' ? 'Monthly' : 'Yearly'}
-                </button>
-              ))}
+          {/* Illustrated Books - One-time only */}
+          <div className="mb-16">
+            <div className="flex items-center gap-3 mb-6">
+              <h3 className="text-2xl font-bold" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>
+                Illustrated Books
+              </h3>
+              <span className="bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-xs font-medium">
+                New
+              </span>
             </div>
+            <div className="grid md:grid-cols-2 gap-6 mb-4">
+              {/* Illustrated Chapter Book */}
+              <div className="bg-gradient-to-br from-blue-50 to-purple-50 rounded-2xl p-6 border border-blue-100">
+                <h4 className="text-lg font-semibold mb-2">Illustrated Chapter Book</h4>
+                <div className="flex items-baseline gap-1 mb-3">
+                  <span className="text-3xl font-bold">$29.99</span>
+                  <span className="text-neutral-500">one-time</span>
+                </div>
+                <p className="text-sm text-neutral-600 mb-4">
+                  5,000-15,000 words with 1 illustration per chapter
+                </p>
+                <ul className="space-y-2 text-sm text-neutral-600">
+                  <li className="flex items-center gap-2">
+                    <Check className="h-4 w-4 text-green-600" />
+                    AI-generated chapter illustrations
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <Check className="h-4 w-4 text-green-600" />
+                    Custom cover design
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <Check className="h-4 w-4 text-green-600" />
+                    8 art styles to choose from
+                  </li>
+                </ul>
+              </div>
+
+              {/* Picture Book */}
+              <div className="bg-gradient-to-br from-pink-50 to-orange-50 rounded-2xl p-6 border border-pink-100">
+                <h4 className="text-lg font-semibold mb-2">Children&apos;s Picture Book</h4>
+                <div className="flex items-baseline gap-1 mb-3">
+                  <span className="text-3xl font-bold">$39.99</span>
+                  <span className="text-neutral-500">one-time</span>
+                </div>
+                <p className="text-sm text-neutral-600 mb-4">
+                  500-1,500 words with full-page illustrations throughout
+                </p>
+                <ul className="space-y-2 text-sm text-neutral-600">
+                  <li className="flex items-center gap-2">
+                    <Check className="h-4 w-4 text-green-600" />
+                    2 illustrations per spread
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <Check className="h-4 w-4 text-green-600" />
+                    Child-friendly art styles
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <Check className="h-4 w-4 text-green-600" />
+                    Perfect for ages 3-8
+                  </li>
+                </ul>
+              </div>
+            </div>
+            <p className="text-sm text-neutral-500 text-center">
+              Illustrated books are one-time purchases only. AI illustration is cutting-edge technology and not yet available for subscriptions.
+            </p>
           </div>
+
+          {/* Text-Only Books */}
+          <div>
+            <h3 className="text-2xl font-bold mb-6" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>
+              Text-Only Novels
+            </h3>
+
+            {/* Plan Toggle */}
+            <div className="flex justify-center mb-8">
+              <div className="inline-flex bg-neutral-100 p-1 rounded-full">
+                {(['single', 'monthly', 'yearly'] as const).map((plan) => (
+                  <button
+                    key={plan}
+                    onClick={() => setSelectedPlan(plan)}
+                    className={`px-6 py-2 rounded-full text-sm font-medium transition-all ${
+                      selectedPlan === plan
+                        ? 'bg-white text-neutral-900 shadow-sm'
+                        : 'text-neutral-600 hover:text-neutral-900'
+                    }`}
+                  >
+                    {plan === 'single' ? 'One Book' : plan === 'monthly' ? 'Monthly' : 'Yearly'}
+                  </button>
+                ))}
+              </div>
+            </div>
 
           {/* Pricing Cards */}
           <div className="grid md:grid-cols-3 gap-6">
@@ -491,6 +565,7 @@ export default function Home() {
                 Get started
               </button>
             </div>
+          </div>
           </div>
         </div>
       </section>

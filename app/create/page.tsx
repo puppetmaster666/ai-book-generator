@@ -111,7 +111,7 @@ export default function CreateBook() {
       if (!response.ok) throw new Error('Failed to create book');
 
       const { bookId } = await response.json();
-      router.push(`/checkout?bookId=${bookId}`);
+      router.push(`/review?bookId=${bookId}`);
     } catch (err) {
       console.error('Error:', err);
       setError('Something went wrong. Please try again.');
@@ -174,7 +174,7 @@ export default function CreateBook() {
       if (!response.ok) throw new Error('Failed to create book');
 
       const { bookId } = await response.json();
-      router.push(`/checkout?bookId=${bookId}`);
+      router.push(`/review?bookId=${bookId}`);
     } catch (err) {
       console.error('Error:', err);
       setError('Something went wrong. Please try again.');

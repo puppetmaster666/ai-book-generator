@@ -1,145 +1,205 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { BookOpen, Users, FileText, Loader2, ArrowLeft, CreditCard } from 'lucide-react';
+import { useState, useEffect, Suspense } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import Header from '@/components/Header';
+import Footer from '@/components/Footer';
+import { ArrowLeft, ArrowRight, Loader2, BookOpen, Palette, FileText, Check, Users, Tag, X } from 'lucide-react';
+import { PRICING, BOOK_FORMATS, ART_STYLES } from '@/lib/constants';
 
-interface BookPlan {
+interface BookData {
+  id: string;
   title: string;
+  authorName: string;
   genre: string;
-  bookType: 'fiction' | 'non-fiction';
+  bookType: string;
   premise: string;
-  characters: { name: string; description: string }[];
+  characters: Array<{ name: string; description: string }>;
   beginning: string;
   middle: string;
   ending: string;
   writingStyle: string;
+  bookFormat: string;
+  artStyle: string | null;
   targetWords: number;
   targetChapters: number;
+  outline?: Array<{
+    chapterNum: number;
+    title: string;
+    summary: string;
+  }>;
 }
 
-export default function Review() {
+function ReviewContent() {
+  const searchParams = useSearchParams();
   const router = useRouter();
-  const [bookPlan, setBookPlan] = useState<BookPlan | null>(null);
-  const [authorName, setAuthorName] = useState('');
-  const [email, setEmail] = useState('');
-  const [promoCode, setPromoCode] = useState('');
-  const [promoApplied, setPromoApplied] = useState(false);
-  const [promoError, setPromoError] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
+  const bookId = searchParams.get('bookId');
+  const urlPromoCode = searchParams.get('promo');
 
-  // Valid promo codes - FREEBOK gives 100% off
-  const VALID_PROMO_CODES: Record<string, number> = {
-    'FREEBOK': 100,
-    'FOUNDER2024': 100,
-  };
+  const [book, setBook] = useState<BookData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Promo code state
+  const [promoCode, setPromoCode] = useState(urlPromoCode || '');
+  const [promoDiscount, setPromoDiscount] = useState<number | null>(null);
+  const [promoError, setPromoError] = useState('');
+  const [isValidatingPromo, setIsValidatingPromo] = useState(false);
 
   useEffect(() => {
-    const stored = sessionStorage.getItem('bookPlan');
-    if (!stored) {
-      router.push('/');
+    if (!bookId) {
+      router.push('/create');
       return;
     }
-    setBookPlan(JSON.parse(stored));
-  }, [router]);
 
-  const applyPromoCode = () => {
-    const code = promoCode.trim().toUpperCase();
-    if (VALID_PROMO_CODES[code]) {
-      setPromoApplied(true);
+    fetch(`/api/books/${bookId}`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.error) {
+          setError('Book not found');
+        } else {
+          setBook(data.book);
+        }
+        setIsLoading(false);
+      })
+      .catch(() => {
+        setError('Failed to load book details');
+        setIsLoading(false);
+      });
+  }, [bookId, router]);
+
+  // Auto-validate promo code from URL
+  useEffect(() => {
+    if (urlPromoCode) {
+      validatePromoCode(urlPromoCode);
+    }
+  }, [urlPromoCode]);
+
+  const validatePromoCode = async (code: string) => {
+    if (!code.trim()) {
+      setPromoDiscount(null);
       setPromoError('');
-    } else {
-      setPromoApplied(false);
-      setPromoError('Invalid promo code');
+      return;
+    }
+
+    setIsValidatingPromo(true);
+    setPromoError('');
+
+    try {
+      const response = await fetch('/api/validate-promo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ promoCode: code }),
+      });
+
+      const data = await response.json();
+
+      if (data.valid) {
+        setPromoDiscount(data.discount);
+        setPromoError('');
+      } else {
+        setPromoDiscount(null);
+        setPromoError(data.error || 'Invalid promo code');
+      }
+    } catch {
+      setPromoDiscount(null);
+      setPromoError('Failed to validate promo code');
+    } finally {
+      setIsValidatingPromo(false);
     }
   };
 
-  const handleCheckout = async () => {
-    if (!email) {
-      setError('Please enter your email');
-      return;
-    }
-    if (!authorName) {
-      setError('Please enter your author name');
-      return;
-    }
+  const clearPromoCode = () => {
+    setPromoCode('');
+    setPromoDiscount(null);
+    setPromoError('');
+  };
 
-    setIsLoading(true);
-    setError('');
+  const getBasePrice = () => {
+    if (!book) return PRICING.ONE_TIME.price;
+    if (book.bookFormat === 'picture_book') return PRICING.CHILDRENS.price;
+    if (book.bookFormat === 'illustrated') return PRICING.ILLUSTRATED.price;
+    return PRICING.ONE_TIME.price;
+  };
 
-    try {
-      // First create the book record
-      const bookResponse = await fetch('/api/books', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...bookPlan,
-          authorName,
-          email,
-          chapterFormat: 'both',
-          fontStyle: 'classic',
-        }),
-      });
+  const getFormatLabel = () => {
+    if (!book) return 'Book';
+    return BOOK_FORMATS[book.bookFormat as keyof typeof BOOK_FORMATS]?.label || 'Book';
+  };
 
-      if (!bookResponse.ok) {
-        throw new Error('Failed to create book');
-      }
+  const originalPrice = getBasePrice() / 100;
+  let finalPrice = originalPrice;
+  let discountLabel = '';
+  const isFree = promoDiscount === 1;
 
-      const { id: bookId } = await bookResponse.json();
+  if (promoDiscount) {
+    finalPrice = originalPrice * (1 - promoDiscount);
+    discountLabel = promoDiscount === 1 ? 'FREE' : `${Math.round(promoDiscount * 100)}% off`;
+  }
 
-      // If promo code applied with 100% off, skip payment and go to generation
-      if (promoApplied) {
-        // Mark as paid and redirect to generation
-        const freeOrderResponse = await fetch('/api/free-order', {
+  const handleContinueToCheckout = async () => {
+    // If 100% discount, use free-order flow
+    if (isFree) {
+      setIsSubmitting(true);
+      try {
+        const response = await fetch('/api/free-order', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             bookId,
-            promoCode: promoCode.trim().toUpperCase(),
+            promoCode: promoCode.toUpperCase(),
+            email: book?.authorName, // Will use book email if available
           }),
         });
 
-        if (!freeOrderResponse.ok) {
-          throw new Error('Failed to process free order');
+        const data = await response.json();
+        if (data.success) {
+          router.push(`/book/${bookId}`);
+        } else {
+          setError(data.error || 'Failed to process free order');
+          setIsSubmitting(false);
         }
-
-        // Redirect to book page to watch generation
-        router.push(`/book/${bookId}`);
-        return;
+      } catch {
+        setError('Something went wrong. Please try again.');
+        setIsSubmitting(false);
       }
-
-      // Otherwise create checkout session for paid orders
-      const checkoutResponse = await fetch('/api/checkout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          bookId,
-          email,
-          productType: 'one-time',
-        }),
-      });
-
-      if (!checkoutResponse.ok) {
-        throw new Error('Failed to create checkout');
-      }
-
-      const { url } = await checkoutResponse.json();
-
-      if (url) {
-        window.location.href = url;
-      }
-    } catch (err) {
-      setError('Something went wrong. Please try again.');
-      setIsLoading(false);
+    } else {
+      // Normal checkout flow
+      const checkoutUrl = promoDiscount
+        ? `/checkout?bookId=${bookId}&promo=${promoCode}`
+        : `/checkout?bookId=${bookId}`;
+      router.push(checkoutUrl);
     }
   };
 
-  if (!bookPlan) {
+  if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: '#F5F3EF' }}>
-        <Loader2 className="h-8 w-8 animate-spin text-gray-900" />
+      <div className="min-h-screen bg-[#FAFAFA] flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="h-12 w-12 animate-spin mx-auto mb-4 text-neutral-900" />
+          <p className="text-neutral-600">Loading your book...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !book) {
+    return (
+      <div className="min-h-screen bg-[#FAFAFA]">
+        <Header />
+        <main className="py-16 px-6">
+          <div className="max-w-2xl mx-auto text-center">
+            <h1 className="text-2xl font-bold mb-4">Something went wrong</h1>
+            <p className="text-neutral-600 mb-8">{error || 'Book not found'}</p>
+            <button
+              onClick={() => router.push('/create')}
+              className="px-6 py-3 bg-neutral-900 text-white rounded-full hover:bg-neutral-800"
+            >
+              Start Over
+            </button>
+          </div>
+        </main>
       </div>
     );
   }
@@ -148,219 +208,292 @@ export default function Review() {
     romance: 'Romance',
     mystery: 'Mystery/Thriller',
     fantasy: 'Fantasy',
-    'sci-fi': 'Science Fiction',
-    thriller: 'Thriller',
+    scifi: 'Science Fiction',
     horror: 'Horror',
     ya: 'Young Adult',
     literary: 'Literary Fiction',
-    'self-help': 'Self-Help',
+    childrens: "Children's",
+    selfhelp: 'Self-Help',
     memoir: 'Memoir',
-    'how-to': 'How-To Guide',
+    howto: 'How-To Guide',
     business: 'Business',
   };
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: '#F5F3EF' }}>
+    <div className="min-h-screen bg-[#FAFAFA]">
       <Header />
 
-      <main className="py-12 px-4 sm:px-6 lg:px-8">
+      <main className="py-12 px-6">
         <div className="max-w-4xl mx-auto">
+          {/* Back Button */}
           <button
-            onClick={() => router.push('/')}
-            className="flex items-center gap-2 text-neutral-500 hover:text-neutral-900 mb-6 text-sm"
+            onClick={() => router.push('/create')}
+            className="flex items-center gap-2 text-neutral-600 hover:text-neutral-900 mb-8 transition-colors"
           >
-            <ArrowLeft className="h-4 w-4" /> Start over
+            <ArrowLeft className="h-5 w-5" /> Back to book types
           </button>
 
-          <div className="bg-white rounded-sm border border-neutral-200 overflow-hidden">
-            {/* Header */}
-            <div className="bg-neutral-900 p-8 text-white">
-              <p className="text-sm opacity-70 mb-2">Your Book</p>
-              <h1 className="text-3xl font-bold mb-2 text-white">{bookPlan.title}</h1>
-              <div className="flex flex-wrap gap-3 mt-4">
-                <span className="px-3 py-1 bg-white/10 rounded-sm text-sm">
-                  {genreLabels[bookPlan.genre] || bookPlan.genre}
-                </span>
-                <span className="px-3 py-1 bg-white/10 rounded-sm text-sm capitalize">
-                  {bookPlan.bookType}
-                </span>
-                <span className="px-3 py-1 bg-white/10 rounded-sm text-sm">
-                  ~{bookPlan.targetWords.toLocaleString()} words
-                </span>
-                <span className="px-3 py-1 bg-white/10 rounded-sm text-sm">
-                  {bookPlan.targetChapters} chapters
-                </span>
+          {/* Header */}
+          <div className="text-center mb-10">
+            <h1 className="text-3xl md:text-4xl font-bold tracking-tight mb-3" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>
+              Review Your Book
+            </h1>
+            <p className="text-lg text-neutral-600">
+              Here&apos;s what we&apos;ll create based on your idea
+            </p>
+          </div>
+
+          {/* Book Overview Card */}
+          <div className="bg-white rounded-2xl border border-neutral-200 p-8 mb-6">
+            <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 mb-6">
+              <div>
+                <h2 className="text-2xl font-bold mb-2" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>
+                  {book.title}
+                </h2>
+                <p className="text-neutral-500">by {book.authorName}</p>
+              </div>
+              <div className="text-left md:text-right">
+                {promoDiscount ? (
+                  <>
+                    <span className="text-lg text-neutral-400 line-through mr-2">${originalPrice.toFixed(2)}</span>
+                    <span className="text-2xl font-bold text-green-600">
+                      {isFree ? 'FREE' : `$${finalPrice.toFixed(2)}`}
+                    </span>
+                  </>
+                ) : (
+                  <span className="text-2xl font-bold">${originalPrice.toFixed(2)}</span>
+                )}
+                <p className="text-sm text-neutral-500">{getFormatLabel()}</p>
               </div>
             </div>
 
-            {/* Content */}
-            <div className="p-8 space-y-8">
-              {/* Premise */}
-              <div>
-                <div className="flex items-center gap-2 text-neutral-900 mb-3">
-                  <FileText className="h-5 w-5" />
-                  <h2 className="font-semibold">Premise</h2>
-                </div>
-                <p className="text-neutral-600">{bookPlan.premise}</p>
-              </div>
-
-              {/* Characters */}
-              {bookPlan.characters.length > 0 && (
-                <div>
-                  <div className="flex items-center gap-2 text-neutral-900 mb-3">
-                    <Users className="h-5 w-5" />
-                    <h2 className="font-semibold">Characters</h2>
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {bookPlan.characters.map((char, i) => (
-                      <div key={i} className="bg-neutral-50 p-3 rounded-sm border border-neutral-100">
-                        <p className="font-medium text-neutral-900">{char.name}</p>
-                        <p className="text-sm text-neutral-600">{char.description}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+            {/* Tags */}
+            <div className="flex flex-wrap gap-2 mb-6">
+              <span className="px-3 py-1 bg-neutral-100 text-neutral-700 rounded-full text-sm">
+                {genreLabels[book.genre] || book.genre}
+              </span>
+              <span className="px-3 py-1 bg-neutral-100 text-neutral-700 rounded-full text-sm capitalize">
+                {book.bookType}
+              </span>
+              {book.artStyle && (
+                <span className="px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-sm flex items-center gap-1">
+                  <Palette className="h-3 w-3" />
+                  {ART_STYLES[book.artStyle as keyof typeof ART_STYLES]?.label || book.artStyle}
+                </span>
               )}
+              <span className="px-3 py-1 bg-neutral-100 text-neutral-700 rounded-full text-sm">
+                ~{book.targetWords.toLocaleString()} words
+              </span>
+            </div>
 
-              {/* Plot Structure */}
-              <div>
-                <div className="flex items-center gap-2 text-neutral-900 mb-3">
-                  <BookOpen className="h-5 w-5" />
-                  <h2 className="font-semibold">Story Arc</h2>
+            {/* Premise */}
+            <div className="mb-6">
+              <h3 className="font-semibold text-lg mb-2 flex items-center gap-2">
+                <BookOpen className="h-5 w-5 text-neutral-400" />
+                Story Premise
+              </h3>
+              <p className="text-neutral-700 leading-relaxed">{book.premise}</p>
+            </div>
+
+            {/* Story Arc */}
+            <div className="mb-6">
+              <h3 className="font-semibold text-lg mb-3 flex items-center gap-2">
+                <FileText className="h-5 w-5 text-neutral-400" />
+                Story Arc
+              </h3>
+              <div className="grid md:grid-cols-3 gap-4">
+                <div className="bg-neutral-50 rounded-xl p-4">
+                  <h4 className="font-medium text-sm text-neutral-500 mb-2">Beginning</h4>
+                  <p className="text-sm text-neutral-700">{book.beginning}</p>
                 </div>
-                <div className="space-y-3">
-                  <div className="bg-neutral-50 p-4 rounded-sm border border-neutral-100">
-                    <p className="text-sm font-medium text-neutral-900 mb-1">Beginning</p>
-                    <p className="text-sm text-neutral-600">{bookPlan.beginning}</p>
-                  </div>
-                  <div className="bg-neutral-50 p-4 rounded-sm border border-neutral-100">
-                    <p className="text-sm font-medium text-neutral-900 mb-1">Middle</p>
-                    <p className="text-sm text-neutral-600">{bookPlan.middle}</p>
-                  </div>
-                  <div className="bg-neutral-50 p-4 rounded-sm border border-neutral-100">
-                    <p className="text-sm font-medium text-neutral-900 mb-1">Ending</p>
-                    <p className="text-sm text-neutral-600">{bookPlan.ending}</p>
-                  </div>
+                <div className="bg-neutral-50 rounded-xl p-4">
+                  <h4 className="font-medium text-sm text-neutral-500 mb-2">Middle</h4>
+                  <p className="text-sm text-neutral-700">{book.middle}</p>
+                </div>
+                <div className="bg-neutral-50 rounded-xl p-4">
+                  <h4 className="font-medium text-sm text-neutral-500 mb-2">Ending</h4>
+                  <p className="text-sm text-neutral-700">{book.ending}</p>
                 </div>
               </div>
+            </div>
 
-              {/* Checkout Form */}
-              <div className="border-t border-neutral-200 pt-8">
-                <h2 className="text-xl font-semibold text-neutral-900 mb-6">Complete Your Order</h2>
-
-                <div className="space-y-4 mb-6">
-                  <div>
-                    <label className="block text-sm font-medium text-neutral-900 mb-2">
-                      Author Name (for the book cover)
-                    </label>
-                    <input
-                      type="text"
-                      value={authorName}
-                      onChange={(e) => setAuthorName(e.target.value)}
-                      placeholder="Your pen name or real name"
-                      className="w-full px-4 py-3 border border-neutral-200 rounded-sm focus:border-neutral-900 focus:outline-none bg-white"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-neutral-900 mb-2">
-                      Email (for download link)
-                    </label>
-                    <input
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="your@email.com"
-                      className="w-full px-4 py-3 border border-neutral-200 rounded-sm focus:border-neutral-900 focus:outline-none bg-white"
-                    />
-                  </div>
+            {/* Characters */}
+            {book.characters && book.characters.length > 0 && (
+              <div className="mb-6">
+                <h3 className="font-semibold text-lg mb-3 flex items-center gap-2">
+                  <Users className="h-5 w-5 text-neutral-400" />
+                  Characters
+                </h3>
+                <div className="grid md:grid-cols-2 gap-3">
+                  {book.characters.map((char, idx) => (
+                    <div key={idx} className="bg-neutral-50 rounded-lg p-3">
+                      <span className="font-medium">{char.name}</span>
+                      <p className="text-sm text-neutral-600 mt-1">{char.description}</p>
+                    </div>
+                  ))}
                 </div>
+              </div>
+            )}
 
-                {error && (
-                  <p className="text-red-700 text-sm mb-4">{error}</p>
-                )}
-
-                {/* Promo Code Section */}
-                <div className="mb-6">
-                  <label className="block text-sm font-medium text-neutral-900 mb-2">
-                    Promo Code (optional)
-                  </label>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={promoCode}
-                      onChange={(e) => {
-                        setPromoCode(e.target.value);
-                        setPromoApplied(false);
-                        setPromoError('');
-                      }}
-                      placeholder="Enter promo code"
-                      className="flex-1 px-4 py-3 border border-neutral-200 rounded-sm focus:border-neutral-900 focus:outline-none bg-white uppercase"
-                    />
-                    <button
-                      type="button"
-                      onClick={applyPromoCode}
-                      disabled={!promoCode.trim()}
-                      className="px-6 py-3 border border-neutral-900 text-neutral-900 rounded-sm hover:bg-neutral-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      Apply
-                    </button>
-                  </div>
-                  {promoError && (
-                    <p className="text-red-700 text-sm mt-2">{promoError}</p>
-                  )}
-                  {promoApplied && (
-                    <p className="text-green-700 text-sm mt-2">Promo code applied - 100% off!</p>
-                  )}
+            {/* Book Details */}
+            <div className="border-t border-neutral-200 pt-6">
+              <h3 className="font-semibold text-lg mb-3">Book Details</h3>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                <div>
+                  <span className="text-neutral-500">Chapters</span>
+                  <p className="font-medium">{book.targetChapters}</p>
                 </div>
-
-                <div className="bg-neutral-50 p-4 rounded-sm border border-neutral-100 mb-6">
-                  <div className="flex justify-between items-center">
-                    <span className="text-neutral-600">One complete book with AI cover</span>
-                    {promoApplied ? (
-                      <div className="text-right">
-                        <span className="text-sm text-neutral-400 line-through mr-2">$19.99</span>
-                        <span className="text-2xl font-bold text-green-700">FREE</span>
-                      </div>
-                    ) : (
-                      <span className="text-2xl font-bold text-neutral-900">$19.99</span>
-                    )}
-                  </div>
+                <div>
+                  <span className="text-neutral-500">Target Words</span>
+                  <p className="font-medium">{book.targetWords.toLocaleString()}</p>
                 </div>
-
-                <button
-                  onClick={handleCheckout}
-                  disabled={isLoading}
-                  className="w-full bg-neutral-900 text-white py-4 rounded-sm text-lg font-medium hover:bg-black transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-                >
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="h-5 w-5 animate-spin" />
-                      Processing...
-                    </>
-                  ) : promoApplied ? (
-                    <>
-                      <BookOpen className="h-5 w-5" />
-                      Generate Book Free
-                    </>
-                  ) : (
-                    <>
-                      <CreditCard className="h-5 w-5" />
-                      Pay & Generate Book
-                    </>
-                  )}
-                </button>
-
-                <p className="text-center text-sm text-neutral-500 mt-4">
-                  {promoApplied
-                    ? 'Book generation starts immediately'
-                    : 'Book generation starts immediately after payment'
-                  }
-                </p>
+                <div>
+                  <span className="text-neutral-500">Writing Style</span>
+                  <p className="font-medium capitalize">{book.writingStyle}</p>
+                </div>
+                <div>
+                  <span className="text-neutral-500">Format</span>
+                  <p className="font-medium">{getFormatLabel()}</p>
+                </div>
               </div>
             </div>
           </div>
+
+          {/* Promo Code */}
+          <div className="bg-white rounded-2xl border border-neutral-200 p-6 mb-6">
+            <h3 className="font-semibold text-lg mb-4">Have a promo code?</h3>
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <Tag className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-400" />
+                <input
+                  type="text"
+                  value={promoCode}
+                  onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
+                  placeholder="Enter code"
+                  className="w-full pl-10 pr-10 py-3 border border-neutral-200 rounded-xl focus:border-neutral-900 focus:outline-none transition-colors uppercase"
+                  disabled={!!promoDiscount}
+                />
+                {promoCode && !promoDiscount && (
+                  <button
+                    onClick={clearPromoCode}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
+              {promoDiscount ? (
+                <button
+                  onClick={clearPromoCode}
+                  className="px-4 py-3 bg-green-100 text-green-700 rounded-xl font-medium flex items-center gap-2"
+                >
+                  <Check className="h-4 w-4" />
+                  {discountLabel}
+                </button>
+              ) : (
+                <button
+                  onClick={() => validatePromoCode(promoCode)}
+                  disabled={!promoCode.trim() || isValidatingPromo}
+                  className="px-4 py-3 bg-neutral-900 text-white rounded-xl font-medium hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  {isValidatingPromo ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Apply'}
+                </button>
+              )}
+            </div>
+            {promoError && (
+              <p className="text-xs text-red-600 mt-2">{promoError}</p>
+            )}
+          </div>
+
+          {/* What's Included */}
+          <div className="bg-white rounded-2xl border border-neutral-200 p-6 mb-8">
+            <h3 className="font-semibold text-lg mb-4">What&apos;s Included</h3>
+            <div className="grid md:grid-cols-2 gap-3">
+              <div className="flex items-center gap-2 text-sm text-neutral-700">
+                <Check className="h-4 w-4 text-green-600 flex-shrink-0" />
+                Complete {book.targetChapters}-chapter book
+              </div>
+              <div className="flex items-center gap-2 text-sm text-neutral-700">
+                <Check className="h-4 w-4 text-green-600 flex-shrink-0" />
+                AI-generated cover design
+              </div>
+              {book.bookFormat !== 'text_only' && (
+                <div className="flex items-center gap-2 text-sm text-neutral-700">
+                  <Check className="h-4 w-4 text-green-600 flex-shrink-0" />
+                  {book.bookFormat === 'picture_book' ? 'Full-page illustrations' : 'Chapter illustrations'}
+                </div>
+              )}
+              <div className="flex items-center gap-2 text-sm text-neutral-700">
+                <Check className="h-4 w-4 text-green-600 flex-shrink-0" />
+                EPUB download (Amazon KDP ready)
+              </div>
+              <div className="flex items-center gap-2 text-sm text-neutral-700">
+                <Check className="h-4 w-4 text-green-600 flex-shrink-0" />
+                Full commercial rights
+              </div>
+              <div className="flex items-center gap-2 text-sm text-neutral-700">
+                <Check className="h-4 w-4 text-green-600 flex-shrink-0" />
+                30-day money-back guarantee
+              </div>
+            </div>
+          </div>
+
+          {/* CTA */}
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-neutral-900 text-white rounded-2xl p-6">
+            <div>
+              <p className="text-neutral-400 text-sm mb-1">Total</p>
+              {promoDiscount ? (
+                <div className="flex items-center gap-2">
+                  <span className="text-lg text-neutral-400 line-through">${originalPrice.toFixed(2)}</span>
+                  <span className="text-3xl font-bold text-green-400">
+                    {isFree ? 'FREE' : `$${finalPrice.toFixed(2)}`}
+                  </span>
+                </div>
+              ) : (
+                <p className="text-3xl font-bold">${originalPrice.toFixed(2)}</p>
+              )}
+            </div>
+            <button
+              onClick={handleContinueToCheckout}
+              disabled={isSubmitting}
+              className="flex items-center gap-2 px-8 py-4 bg-white text-neutral-900 rounded-full hover:bg-neutral-100 font-medium transition-all hover:scale-105 disabled:opacity-50"
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                  Processing...
+                </>
+              ) : isFree ? (
+                <>
+                  Generate Book Free <ArrowRight className="h-5 w-5" />
+                </>
+              ) : (
+                <>
+                  Continue to Checkout <ArrowRight className="h-5 w-5" />
+                </>
+              )}
+            </button>
+          </div>
+
+          {error && (
+            <p className="text-red-600 text-center mt-4">{error}</p>
+          )}
         </div>
       </main>
+
+      <Footer />
     </div>
+  );
+}
+
+export default function ReviewPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-[#FAFAFA] flex items-center justify-center">
+        <Loader2 className="h-12 w-12 animate-spin text-neutral-900" />
+      </div>
+    }>
+      <ReviewContent />
+    </Suspense>
   );
 }

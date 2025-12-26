@@ -3,12 +3,11 @@ import Stripe from 'stripe';
 import { prisma } from '@/lib/db';
 import { PRICING } from '@/lib/constants';
 
-// Promo codes configuration
-const PROMO_CODES: Record<string, { discount: number; validUntil: Date; description: string }> = {
+// Fallback hardcoded promos (for codes not in DB)
+const HARDCODED_PROMOS: Record<string, { discount: number; validUntil: Date }> = {
   'NY26': {
-    discount: 0.50, // 50% off
-    validUntil: new Date('2026-01-02T00:00:00Z'), // Valid until Jan 1, 2026 midnight
-    description: 'New Year 2026 Special - 50% Off',
+    discount: 0.50,
+    validUntil: new Date('2026-01-02T00:00:00Z'),
   },
 };
 
@@ -81,13 +80,27 @@ export async function POST(request: NextRequest) {
 
     // Apply promo code discount if valid
     let appliedPromo = '';
-    if (promoCode && PROMO_CODES[promoCode.toUpperCase()]) {
-      const promo = PROMO_CODES[promoCode.toUpperCase()];
-      if (new Date() <= promo.validUntil) {
-        amount = Math.round(amount * (1 - promo.discount));
-        appliedPromo = promoCode.toUpperCase();
+    if (promoCode) {
+      const code = promoCode.toUpperCase();
+
+      // Check database first
+      const dbPromo = await prisma.promoCode.findUnique({
+        where: { code },
+      });
+
+      if (dbPromo && dbPromo.isActive &&
+          (!dbPromo.validUntil || new Date() <= dbPromo.validUntil) &&
+          dbPromo.currentUses < dbPromo.maxUses) {
+        amount = Math.round(amount * (1 - dbPromo.discount));
+        appliedPromo = code;
+      } else if (HARDCODED_PROMOS[code] && new Date() <= HARDCODED_PROMOS[code].validUntil) {
+        // Fallback to hardcoded promos
+        amount = Math.round(amount * (1 - HARDCODED_PROMOS[code].discount));
+        appliedPromo = code;
       }
-    } else if (applyDiscount) {
+    }
+
+    if (!appliedPromo && applyDiscount) {
       // Apply 15% idle discount if no promo code
       amount = Math.round(amount * 0.85);
     }
