@@ -134,9 +134,11 @@ async function attemptIllustrationGeneration(data: {
   bookFormat?: string;
 }): Promise<IllustrationAttemptResult> {
   try {
+    // Build base URL - check multiple env vars in order of preference
     // VERCEL_URL doesn't include protocol, so we need to add it
     const vercelUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null;
-    const baseUrl = process.env.NEXTAUTH_URL || vercelUrl || 'http://localhost:3000';
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL || vercelUrl || 'http://localhost:3000';
+    console.log('Using base URL for illustration:', baseUrl);
 
     // Create abort controller for timeout
     const controller = new AbortController();
