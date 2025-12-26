@@ -4,7 +4,7 @@ import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
-import { ArrowLeft, ArrowRight, Loader2, BookOpen, Palette, FileText, Check, Users, Tag, X } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Loader2, BookOpen, Palette, FileText, Check, Users, Tag, X, Mail, Pencil } from 'lucide-react';
 import { PRICING, BOOK_FORMATS, ART_STYLES } from '@/lib/constants';
 
 interface BookData {
@@ -41,6 +41,10 @@ function ReviewContent() {
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // User details
+  const [email, setEmail] = useState('');
+  const [authorName, setAuthorName] = useState('');
+
   // Promo code state
   const [promoCode, setPromoCode] = useState(urlPromoCode || '');
   const [promoDiscount, setPromoDiscount] = useState<number | null>(null);
@@ -60,6 +64,7 @@ function ReviewContent() {
           setError('Book not found');
         } else {
           setBook(data.book);
+          setAuthorName(data.book.authorName || '');
         }
         setIsLoading(false);
       })
@@ -139,9 +144,31 @@ function ReviewContent() {
   }
 
   const handleContinueToCheckout = async () => {
+    // Validate email
+    if (!email.trim() || !email.includes('@')) {
+      setError('Please enter a valid email address');
+      return;
+    }
+
+    setIsSubmitting(true);
+    setError('');
+
+    // First, update the book with email and author name
+    try {
+      await fetch(`/api/books/${bookId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: email.trim().toLowerCase(),
+          authorName: authorName.trim() || 'Anonymous',
+        }),
+      });
+    } catch {
+      // Continue even if update fails
+    }
+
     // If 100% discount, use free-order flow
     if (isFree) {
-      setIsSubmitting(true);
       try {
         const response = await fetch('/api/free-order', {
           method: 'POST',
@@ -149,13 +176,13 @@ function ReviewContent() {
           body: JSON.stringify({
             bookId,
             promoCode: promoCode.toUpperCase(),
-            email: book?.authorName, // Will use book email if available
+            email: email.trim().toLowerCase(),
           }),
         });
 
         const data = await response.json();
         if (data.success) {
-          router.push(`/book/${bookId}`);
+          router.push(`/book/${bookId}?success=true`);
         } else {
           setError(data.error || 'Failed to process free order');
           setIsSubmitting(false);
@@ -403,6 +430,52 @@ function ReviewContent() {
             {promoError && (
               <p className="text-xs text-red-600 mt-2">{promoError}</p>
             )}
+          </div>
+
+          {/* Your Details */}
+          <div className="bg-white rounded-2xl border border-neutral-200 p-6 mb-6">
+            <h3 className="font-semibold text-lg mb-4">Your Details</h3>
+            <div className="space-y-4">
+              {/* Email */}
+              <div>
+                <label className="block text-sm font-medium text-neutral-700 mb-1">
+                  Email Address <span className="text-red-500">*</span>
+                </label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-400" />
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="you@example.com"
+                    className="w-full pl-10 pr-4 py-3 border border-neutral-200 rounded-xl focus:border-neutral-900 focus:outline-none transition-colors"
+                  />
+                </div>
+                <p className="text-xs text-neutral-500 mt-1">
+                  We&apos;ll send you a link when your book is ready
+                </p>
+              </div>
+
+              {/* Author Name */}
+              <div>
+                <label className="block text-sm font-medium text-neutral-700 mb-1">
+                  Author Name
+                </label>
+                <div className="relative">
+                  <Pencil className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-400" />
+                  <input
+                    type="text"
+                    value={authorName}
+                    onChange={(e) => setAuthorName(e.target.value)}
+                    placeholder="Your pen name or real name"
+                    className="w-full pl-10 pr-4 py-3 border border-neutral-200 rounded-xl focus:border-neutral-900 focus:outline-none transition-colors"
+                  />
+                </div>
+                <p className="text-xs text-neutral-500 mt-1">
+                  This will appear on your book cover
+                </p>
+              </div>
+            </div>
           </div>
 
           {/* What's Included */}

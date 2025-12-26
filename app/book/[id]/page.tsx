@@ -1,9 +1,9 @@
 'use client';
 
 import { useState, useEffect, use } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import Header from '@/components/Header';
-import { Download, BookOpen, Loader2, Check, AlertCircle, ImageIcon, Mail, User } from 'lucide-react';
+import { Download, BookOpen, Loader2, Check, AlertCircle, ImageIcon, Mail, User, Sparkles, Palette, PenTool } from 'lucide-react';
 import Link from 'next/link';
 
 interface Chapter {
@@ -12,6 +12,12 @@ interface Chapter {
   title: string;
   wordCount: number;
   createdAt: string;
+}
+
+interface Illustration {
+  id: string;
+  chapterId: string;
+  imageUrl: string;
 }
 
 interface Book {
@@ -25,25 +31,69 @@ interface Book {
   totalWords: number;
   coverImageUrl: string | null;
   chapters: Chapter[];
+  illustrations?: Illustration[];
   completedAt: string | null;
+  bookFormat: string;
+  artStyle: string | null;
+  outline?: {
+    chapters: Array<{
+      number: number;
+      title: string;
+      summary: string;
+    }>;
+  };
 }
+
+const WRITING_MESSAGES = [
+  "Crafting compelling prose...",
+  "Developing character arcs...",
+  "Building narrative tension...",
+  "Weaving plot threads...",
+  "Adding descriptive details...",
+  "Perfecting dialogue...",
+  "Creating memorable scenes...",
+];
+
+const ILLUSTRATION_MESSAGES = [
+  "Painting your world...",
+  "Bringing characters to life...",
+  "Adding visual magic...",
+  "Rendering scenes...",
+  "Creating artwork...",
+];
 
 export default function BookProgress({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const router = useRouter();
   const searchParams = useSearchParams();
   const success = searchParams.get('success');
 
   const [book, setBook] = useState<Book | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [writingMessage, setWritingMessage] = useState(WRITING_MESSAGES[0]);
+  const [generationStarted, setGenerationStarted] = useState(false);
 
   // Start generation if payment successful
   useEffect(() => {
-    if (success === 'true') {
+    if (success === 'true' && !generationStarted) {
+      setGenerationStarted(true);
       fetch(`/api/books/${id}/generate`, { method: 'POST' }).catch(console.error);
     }
-  }, [success, id]);
+  }, [success, id, generationStarted]);
+
+  // Rotate writing messages
+  useEffect(() => {
+    if (book?.status === 'generating') {
+      const interval = setInterval(() => {
+        setWritingMessage(prev => {
+          const messages = book.bookFormat !== 'text_only' ? [...WRITING_MESSAGES, ...ILLUSTRATION_MESSAGES] : WRITING_MESSAGES;
+          const currentIndex = messages.indexOf(prev);
+          return messages[(currentIndex + 1) % messages.length];
+        });
+      }, 3000);
+      return () => clearInterval(interval);
+    }
+  }, [book?.status, book?.bookFormat]);
 
   // Poll for book status
   useEffect(() => {
@@ -63,12 +113,12 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
 
     fetchBook();
 
-    // Poll every 5 seconds if still generating
+    // Poll every 3 seconds if still generating (faster updates)
     const interval = setInterval(() => {
-      if (book?.status === 'generating' || book?.status === 'outlining') {
+      if (book?.status === 'generating' || book?.status === 'outlining' || book?.status === 'pending') {
         fetchBook();
       }
-    }, 5000);
+    }, 3000);
 
     return () => clearInterval(interval);
   }, [id, book?.status]);
@@ -90,21 +140,30 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-neutral-900" />
+      <div className="min-h-screen bg-[#FAFAFA] flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="h-12 w-12 animate-spin text-neutral-900 mx-auto mb-4" />
+          <p className="text-neutral-600">Loading your book...</p>
+        </div>
       </div>
     );
   }
 
   if (error || !book) {
     return (
-      <div className="min-h-screen bg-white">
+      <div className="min-h-screen bg-[#FAFAFA]">
         <Header />
         <main className="pt-24 px-4">
           <div className="max-w-2xl mx-auto text-center">
-            <AlertCircle className="h-16 w-16 text-red-700 mx-auto mb-4" />
+            <AlertCircle className="h-16 w-16 text-red-600 mx-auto mb-4" />
             <h1 className="text-2xl font-bold text-neutral-900 mb-2">Book Not Found</h1>
-            <p className="text-neutral-600">{error}</p>
+            <p className="text-neutral-600 mb-6">{error}</p>
+            <Link
+              href="/create"
+              className="inline-flex items-center gap-2 px-6 py-3 bg-neutral-900 text-white rounded-full hover:bg-neutral-800"
+            >
+              Create a New Book
+            </Link>
           </div>
         </main>
       </div>
@@ -115,99 +174,188 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
     ? Math.round((book.currentChapter / book.totalChapters) * 100)
     : 0;
 
+  const isGenerating = book.status === 'generating' || book.status === 'outlining';
+  const isPending = book.status === 'pending';
+  const isIllustrated = book.bookFormat !== 'text_only';
+  const currentChapterOutline = book.outline?.chapters?.[book.currentChapter];
+
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-[#FAFAFA]">
       <Header />
 
       <main className="pt-24 pb-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-3xl mx-auto">
           {/* Book Header */}
-          <div className="bg-white rounded-sm border border-neutral-200 p-6 sm:p-8 mb-6">
-            <div className="flex items-start gap-6">
+          <div className="bg-white rounded-2xl border border-neutral-200 p-6 sm:p-8 mb-6">
+            <div className="flex flex-col sm:flex-row items-start gap-6">
               {book.coverImageUrl ? (
                 <img
                   src={book.coverImageUrl}
                   alt={book.title}
-                  className="w-32 h-48 object-cover rounded-sm shadow-md"
+                  className="w-32 h-48 object-cover rounded-xl shadow-lg"
                 />
               ) : (
-                <div className="w-32 h-48 bg-neutral-100 rounded-sm flex items-center justify-center">
-                  <BookOpen className="h-12 w-12 text-neutral-500" />
+                <div className="w-32 h-48 bg-gradient-to-br from-neutral-100 to-neutral-200 rounded-xl flex items-center justify-center">
+                  {isGenerating ? (
+                    <Sparkles className="h-12 w-12 text-neutral-400 animate-pulse" />
+                  ) : (
+                    <BookOpen className="h-12 w-12 text-neutral-400" />
+                  )}
                 </div>
               )}
               <div className="flex-1">
-                <h1 className="text-2xl font-bold text-neutral-900 mb-1">{book.title}</h1>
+                <h1 className="text-2xl font-bold text-neutral-900 mb-1" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>
+                  {book.title}
+                </h1>
                 <p className="text-neutral-600 mb-4">by {book.authorName}</p>
 
                 {/* Status Badge */}
-                <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-sm text-sm ${
+                <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium ${
                   book.status === 'completed'
-                    ? 'bg-green-50 text-green-700'
+                    ? 'bg-green-100 text-green-700'
                     : book.status === 'failed'
-                    ? 'bg-red-50 text-red-700'
-                    : 'bg-neutral-100 text-neutral-900'
+                    ? 'bg-red-100 text-red-700'
+                    : isPending
+                    ? 'bg-yellow-100 text-yellow-700'
+                    : 'bg-blue-100 text-blue-700'
                 }`}>
                   {book.status === 'completed' && <Check className="h-4 w-4" />}
-                  {book.status === 'generating' && <Loader2 className="h-4 w-4 animate-spin" />}
-                  {book.status === 'outlining' && <Loader2 className="h-4 w-4 animate-spin" />}
+                  {isGenerating && <Loader2 className="h-4 w-4 animate-spin" />}
+                  {isPending && <Sparkles className="h-4 w-4" />}
                   {book.status === 'failed' && <AlertCircle className="h-4 w-4" />}
-                  <span className="capitalize">{book.status}</span>
+                  <span className="capitalize">
+                    {isPending ? 'Ready to Generate' : book.status}
+                  </span>
                 </div>
+
+                {isIllustrated && book.artStyle && (
+                  <div className="mt-3">
+                    <span className="inline-flex items-center gap-1 px-3 py-1 bg-purple-50 text-purple-700 rounded-full text-xs font-medium">
+                      <Palette className="h-3 w-3" />
+                      {book.artStyle.charAt(0).toUpperCase() + book.artStyle.slice(1)} Style
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
           </div>
 
+          {/* Pending - Waiting for Generation */}
+          {isPending && (
+            <div className="bg-gradient-to-br from-yellow-50 to-orange-50 rounded-2xl border border-yellow-200 p-8 mb-6 text-center">
+              <Sparkles className="h-12 w-12 text-yellow-600 mx-auto mb-4" />
+              <h2 className="text-xl font-semibold text-neutral-900 mb-2">
+                Your Book is Queued
+              </h2>
+              <p className="text-neutral-600 mb-4">
+                Generation will start shortly. This page will update automatically.
+              </p>
+              <div className="flex justify-center gap-2">
+                <div className="w-2 h-2 bg-yellow-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                <div className="w-2 h-2 bg-yellow-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                <div className="w-2 h-2 bg-yellow-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+              </div>
+            </div>
+          )}
+
           {/* Progress Section */}
-          {(book.status === 'generating' || book.status === 'outlining') && (
-            <div className="bg-white rounded-sm border border-neutral-200 p-6 sm:p-8 mb-6">
-              <h2 className="text-lg font-semibold text-neutral-900 mb-4">Generation Progress</h2>
+          {isGenerating && (
+            <div className="bg-white rounded-2xl border border-neutral-200 p-6 sm:p-8 mb-6">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="relative">
+                  <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                    <PenTool className="h-6 w-6 text-blue-600" />
+                  </div>
+                  <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white animate-pulse" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-semibold text-neutral-900">
+                    {book.status === 'outlining' ? 'Creating Your Story Outline' : 'Writing Your Book'}
+                  </h2>
+                  <p className="text-sm text-neutral-500">{writingMessage}</p>
+                </div>
+              </div>
 
               {/* Progress Bar */}
-              <div className="mb-4">
+              <div className="mb-6">
                 <div className="flex justify-between text-sm mb-2">
                   <span className="text-neutral-600">
-                    {book.status === 'outlining' ? 'Creating outline...' : `Chapter ${book.currentChapter} of ${book.totalChapters}`}
+                    {book.status === 'outlining'
+                      ? 'Preparing chapters...'
+                      : `Chapter ${book.currentChapter} of ${book.totalChapters}`
+                    }
                   </span>
                   <span className="font-medium text-neutral-900">{progress}%</span>
                 </div>
-                <div className="h-3 bg-neutral-200 rounded-sm overflow-hidden">
+                <div className="h-4 bg-neutral-100 rounded-full overflow-hidden">
                   <div
-                    className="h-full bg-neutral-900 transition-all duration-500"
-                    style={{ width: `${progress}%` }}
+                    className="h-full bg-gradient-to-r from-blue-500 to-purple-500 transition-all duration-500 rounded-full"
+                    style={{ width: `${Math.max(progress, 2)}%` }}
                   />
                 </div>
               </div>
 
-              <p className="text-sm text-neutral-600">
-                {book.totalWords.toLocaleString()} words written so far
-              </p>
+              {/* Current Chapter Info */}
+              {currentChapterOutline && book.status === 'generating' && (
+                <div className="bg-neutral-50 rounded-xl p-4 mb-4">
+                  <p className="text-sm text-neutral-500 mb-1">Currently writing:</p>
+                  <p className="font-medium text-neutral-900">
+                    Chapter {book.currentChapter + 1}: {currentChapterOutline.title}
+                  </p>
+                </div>
+              )}
+
+              {/* Stats */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-neutral-50 rounded-xl p-4 text-center">
+                  <p className="text-2xl font-bold text-neutral-900">{book.totalWords.toLocaleString()}</p>
+                  <p className="text-sm text-neutral-500">Words Written</p>
+                </div>
+                <div className="bg-neutral-50 rounded-xl p-4 text-center">
+                  <p className="text-2xl font-bold text-neutral-900">{book.chapters.length}</p>
+                  <p className="text-sm text-neutral-500">Chapters Complete</p>
+                </div>
+              </div>
+
+              {isIllustrated && (
+                <div className="mt-4 flex items-center gap-2 text-sm text-purple-600 bg-purple-50 rounded-lg px-4 py-2">
+                  <Palette className="h-4 w-4" />
+                  <span>Illustrations will be generated with each chapter</span>
+                </div>
+              )}
             </div>
           )}
 
           {/* Completed Section */}
           {book.status === 'completed' && (
-            <div className="bg-white rounded-sm border border-neutral-200 p-6 sm:p-8 mb-6">
-              <h2 className="text-lg font-semibold text-neutral-900 mb-4">Your Book is Ready!</h2>
+            <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl border border-green-200 p-6 sm:p-8 mb-6">
+              <div className="text-center mb-6">
+                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Check className="h-8 w-8 text-green-600" />
+                </div>
+                <h2 className="text-2xl font-bold text-neutral-900 mb-2">Your Book is Ready!</h2>
+                <p className="text-neutral-600">Download your masterpiece below</p>
+              </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-6">
-                <div className="bg-neutral-50 rounded-sm p-4 text-center">
+              <div className="grid grid-cols-3 gap-4 mb-6">
+                <div className="bg-white/60 rounded-xl p-4 text-center">
                   <p className="text-2xl font-bold text-neutral-900">{book.totalChapters}</p>
                   <p className="text-sm text-neutral-600">Chapters</p>
                 </div>
-                <div className="bg-neutral-50 rounded-sm p-4 text-center">
+                <div className="bg-white/60 rounded-xl p-4 text-center">
                   <p className="text-2xl font-bold text-neutral-900">{book.totalWords.toLocaleString()}</p>
                   <p className="text-sm text-neutral-600">Words</p>
                 </div>
-                <div className="bg-neutral-50 rounded-sm p-4 text-center">
-                  <p className="text-2xl font-bold text-neutral-900">{Math.round(book.totalWords / 250)}</p>
-                  <p className="text-sm text-neutral-600">Pages (approx)</p>
+                <div className="bg-white/60 rounded-xl p-4 text-center">
+                  <p className="text-2xl font-bold text-neutral-900">~{Math.round(book.totalWords / 250)}</p>
+                  <p className="text-sm text-neutral-600">Pages</p>
                 </div>
               </div>
 
               <div className="space-y-3">
                 <button
                   onClick={handleDownload}
-                  className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-neutral-900 text-white rounded-sm hover:bg-black font-medium"
+                  className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-neutral-900 text-white rounded-xl hover:bg-black font-medium transition-all hover:scale-[1.02]"
                 >
                   <Download className="h-5 w-5" /> Download EPUB
                 </button>
@@ -215,7 +363,7 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
                 {book.coverImageUrl && (
                   <button
                     onClick={handleCoverDownload}
-                    className="w-full flex items-center justify-center gap-2 px-6 py-4 border border-neutral-900 text-neutral-900 rounded-sm hover:bg-neutral-100 font-medium"
+                    className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-white text-neutral-900 border border-neutral-200 rounded-xl hover:bg-neutral-50 font-medium transition-all"
                   >
                     <ImageIcon className="h-5 w-5" /> Download Cover Image
                   </button>
@@ -226,23 +374,41 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
 
           {/* Chapters List */}
           {book.chapters.length > 0 && (
-            <div className="bg-white rounded-sm border border-neutral-200 p-6 sm:p-8 mb-6">
-              <h2 className="text-lg font-semibold text-neutral-900 mb-4">Chapters</h2>
-              <div className="space-y-3">
-                {book.chapters.map((chapter) => (
+            <div className="bg-white rounded-2xl border border-neutral-200 p-6 sm:p-8 mb-6">
+              <h2 className="text-lg font-semibold text-neutral-900 mb-4">
+                Chapters {isGenerating && <span className="text-sm font-normal text-neutral-500">(updating live)</span>}
+              </h2>
+              <div className="space-y-2">
+                {book.chapters.map((chapter, index) => (
                   <div
                     key={chapter.id}
-                    className="flex items-center justify-between p-3 bg-neutral-50 rounded-sm"
+                    className={`flex items-center justify-between p-4 rounded-xl transition-all ${
+                      index === book.chapters.length - 1 && isGenerating
+                        ? 'bg-blue-50 border border-blue-200'
+                        : 'bg-neutral-50'
+                    }`}
                   >
-                    <div>
-                      <p className="font-medium text-neutral-900">
-                        Chapter {chapter.number}: {chapter.title}
-                      </p>
-                      <p className="text-sm text-neutral-600">
-                        {chapter.wordCount.toLocaleString()} words
-                      </p>
+                    <div className="flex items-center gap-3">
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+                        index === book.chapters.length - 1 && isGenerating
+                          ? 'bg-blue-100 text-blue-700'
+                          : 'bg-green-100 text-green-700'
+                      }`}>
+                        {index === book.chapters.length - 1 && isGenerating ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Check className="h-4 w-4" />
+                        )}
+                      </div>
+                      <div>
+                        <p className="font-medium text-neutral-900">
+                          Chapter {chapter.number}: {chapter.title}
+                        </p>
+                        <p className="text-sm text-neutral-500">
+                          {chapter.wordCount.toLocaleString()} words
+                        </p>
+                      </div>
                     </div>
-                    <Check className="h-5 w-5 text-green-700" />
                   </div>
                 ))}
               </div>
@@ -251,7 +417,7 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
 
           {/* Sign Up Section - show when book is completed */}
           {book.status === 'completed' && (
-            <div className="bg-neutral-50 rounded-sm border border-neutral-200 p-6 sm:p-8">
+            <div className="bg-white rounded-2xl border border-neutral-200 p-6 sm:p-8">
               <div className="text-center mb-6">
                 <User className="h-10 w-10 text-neutral-900 mx-auto mb-3" />
                 <h2 className="text-lg font-semibold text-neutral-900 mb-2">Create an Account</h2>
@@ -263,14 +429,14 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
               <div className="space-y-3">
                 <Link
                   href="/signup"
-                  className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-neutral-900 text-white rounded-sm hover:bg-black font-medium"
+                  className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-neutral-900 text-white rounded-xl hover:bg-black font-medium"
                 >
                   <Mail className="h-5 w-5" /> Sign up with Email
                 </Link>
 
                 <button
                   onClick={() => {/* TODO: Implement Google OAuth */}}
-                  className="w-full flex items-center justify-center gap-2 px-6 py-4 border border-neutral-300 text-neutral-900 rounded-sm hover:bg-neutral-100 font-medium"
+                  className="w-full flex items-center justify-center gap-2 px-6 py-4 border border-neutral-200 text-neutral-900 rounded-xl hover:bg-neutral-50 font-medium"
                 >
                   <svg className="h-5 w-5" viewBox="0 0 24 24">
                     <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>

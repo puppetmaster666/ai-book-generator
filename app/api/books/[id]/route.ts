@@ -40,3 +40,33 @@ export async function GET(
     );
   }
 }
+
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+    const body = await request.json();
+
+    const { email, authorName } = body;
+
+    // Only allow updating certain fields
+    const updateData: { email?: string; authorName?: string } = {};
+    if (email !== undefined) updateData.email = email;
+    if (authorName !== undefined) updateData.authorName = authorName;
+
+    const book = await prisma.book.update({
+      where: { id },
+      data: updateData,
+    });
+
+    return NextResponse.json({ book });
+  } catch (error) {
+    console.error('Error updating book:', error);
+    return NextResponse.json(
+      { error: 'Failed to update book' },
+      { status: 500 }
+    );
+  }
+}

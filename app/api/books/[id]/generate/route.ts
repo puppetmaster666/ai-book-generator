@@ -12,6 +12,7 @@ import {
 } from '@/lib/gemini';
 import { countWords } from '@/lib/epub';
 import { BOOK_FORMATS, ART_STYLES, type BookFormatKey, type ArtStyleKey } from '@/lib/constants';
+import { sendEmail, getBookReadyEmail } from '@/lib/email';
 
 // Helper function to generate an illustration image
 async function generateIllustrationImage(data: {
@@ -303,6 +304,17 @@ export async function POST(
         completedAt: new Date(),
       },
     });
+
+    // Send email notification if email is available
+    if (book.email) {
+      const bookUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/book/${id}`;
+      const emailContent = getBookReadyEmail(book.title, book.authorName, bookUrl);
+      await sendEmail({
+        to: book.email,
+        subject: emailContent.subject,
+        html: emailContent.html,
+      });
+    }
 
     return NextResponse.json({
       success: true,
