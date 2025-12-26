@@ -1,72 +1,83 @@
 import Link from 'next/link';
-import { BookText } from 'lucide-react';
 
 export default function Footer() {
   return (
-    <footer className="bg-white border-t border-neutral-200">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-12">
+    <footer className="bg-neutral-900 text-white">
+      <div className="max-w-7xl mx-auto px-6 py-16">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-12">
           {/* Brand */}
-          <div className="col-span-1 md:col-span-2">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="bg-neutral-100 p-2 rounded-sm">
-                <BookText className="h-7 w-7 text-neutral-900" />
-              </div>
-              <span className="text-xl font-bold text-neutral-900">Draft My Book</span>
-            </div>
-            <p className="text-neutral-600 max-w-md">
-              Transform your ideas into professionally written books.
-              Ready for Amazon KDP and all major publishing platforms.
+          <div className="col-span-2 md:col-span-1">
+            <Link href="/" className="text-xl font-semibold tracking-tight" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>
+              draftmybook
+            </Link>
+            <p className="text-neutral-400 text-sm mt-4 max-w-xs">
+              Turn your ideas into professionally written books, ready for publishing.
             </p>
           </div>
 
-          {/* Links */}
+          {/* Product */}
           <div>
-            <h3 className="font-semibold text-neutral-900 mb-5">Product</h3>
+            <h4 className="font-medium mb-4 text-sm">Product</h4>
             <ul className="space-y-3">
               <li>
-                <Link href="/how-it-works" className="text-neutral-600 hover:text-neutral-900 transition-colors">
-                  How It Works
+                <Link href="/how-it-works" className="text-sm text-neutral-400 hover:text-white transition-colors">
+                  How it works
                 </Link>
               </li>
               <li>
-                <Link href="/pricing" className="text-neutral-600 hover:text-neutral-900 transition-colors">
+                <Link href="/pricing" className="text-sm text-neutral-400 hover:text-white transition-colors">
                   Pricing
                 </Link>
               </li>
               <li>
-                <Link href="/faq" className="text-neutral-600 hover:text-neutral-900 transition-colors">
+                <Link href="/faq" className="text-sm text-neutral-400 hover:text-white transition-colors">
                   FAQ
                 </Link>
               </li>
             </ul>
           </div>
 
+          {/* Legal */}
           <div>
-            <h3 className="font-semibold text-neutral-900 mb-5">Legal</h3>
+            <h4 className="font-medium mb-4 text-sm">Legal</h4>
             <ul className="space-y-3">
               <li>
-                <Link href="/privacy" className="text-neutral-600 hover:text-neutral-900 transition-colors">
+                <Link href="/privacy" className="text-sm text-neutral-400 hover:text-white transition-colors">
                   Privacy Policy
                 </Link>
               </li>
               <li>
-                <Link href="/terms" className="text-neutral-600 hover:text-neutral-900 transition-colors">
+                <Link href="/terms" className="text-sm text-neutral-400 hover:text-white transition-colors">
                   Terms of Service
                 </Link>
               </li>
               <li>
-                <Link href="/refund" className="text-neutral-600 hover:text-neutral-900 transition-colors">
+                <Link href="/refund" className="text-sm text-neutral-400 hover:text-white transition-colors">
                   Refund Policy
                 </Link>
               </li>
             </ul>
           </div>
+
+          {/* Support */}
+          <div>
+            <h4 className="font-medium mb-4 text-sm">Support</h4>
+            <ul className="space-y-3">
+              <li>
+                <a href="mailto:support@draftmybook.com" className="text-sm text-neutral-400 hover:text-white transition-colors">
+                  Contact
+                </a>
+              </li>
+            </ul>
+          </div>
         </div>
 
-        <div className="mt-16 pt-8 border-t border-neutral-200 flex flex-col md:flex-row justify-between items-center gap-4">
+        <div className="pt-8 border-t border-neutral-800 flex flex-col md:flex-row justify-between items-center gap-4">
           <p className="text-neutral-500 text-sm">
-            &copy; {new Date().getFullYear()} Draft My Book. All rights reserved.
+            &copy; {new Date().getFullYear()} draftmybook. All rights reserved.
+          </p>
+          <p className="text-neutral-500 text-sm">
+            Made with care for authors everywhere.
           </p>
         </div>
       </div>

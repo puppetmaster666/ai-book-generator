@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
-import { ArrowRight, Loader2, Sparkles, Menu, X, Check } from 'lucide-react';
+import { ArrowRight, Loader2, Sparkles, Menu, X, Check, ChevronRight, Zap, BookOpen, Download, ExternalLink } from 'lucide-react';
 import Footer from '@/components/Footer';
 
 export default function Home() {
@@ -14,6 +14,7 @@ export default function Home() {
   const [error, setError] = useState('');
   const [isGeneratingIdea, setIsGeneratingIdea] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState<'single' | 'monthly' | 'yearly'>('monthly');
 
   const handleFindIdea = async () => {
     setIsGeneratingIdea(true);
@@ -69,310 +70,515 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ backgroundColor: '#F5F3EF' }}>
-      {/* Hero Section with Integrated Header */}
-      <section className="min-h-[90vh] flex flex-col">
-        {/* Navigation - Part of Hero */}
-        <nav className="w-full px-6 py-6">
-          <div className="max-w-6xl mx-auto flex items-center justify-between">
-            {/* Mobile Menu Button */}
-            <button
-              onClick={() => setMenuOpen(!menuOpen)}
-              className="md:hidden p-2 hover:bg-black/5 rounded transition-colors"
-            >
-              <Menu className="h-5 w-5" />
-            </button>
+    <div className="min-h-screen bg-[#FAFAFA]">
+      {/* Hero Section with Background */}
+      <section className="relative min-h-screen flex flex-col">
+        {/* Background Image - Add your hero image here */}
+        <div className="absolute inset-0 z-0">
+          {/* Replace with your hero image: vintage typewriter, open book with pages, writing desk, or library aesthetic */}
+          <div className="absolute inset-0 bg-gradient-to-b from-white/95 via-white/90 to-white" />
+          {/* Uncomment when you have a hero image:
+          <Image
+            src="/images/hero-bg.jpg"
+            alt=""
+            fill
+            className="object-cover"
+            priority
+          />
+          <div className="absolute inset-0 bg-gradient-to-b from-white/95 via-white/90 to-white" />
+          */}
+        </div>
 
-            {/* Desktop Left Nav */}
-            <div className="hidden md:flex items-center gap-8">
-              <Link href="/how-it-works" className="text-sm text-gray-600 hover:text-gray-900 transition-colors">
-                How It Works
+        {/* Navigation */}
+        <nav className="relative z-10 w-full px-6 py-6">
+          <div className="max-w-7xl mx-auto flex items-center justify-between">
+            {/* Left Nav */}
+            <div className="hidden md:flex items-center gap-8 flex-1">
+              <Link href="/how-it-works" className="text-sm text-neutral-600 hover:text-neutral-900 animated-underline">
+                How it works
               </Link>
-              <Link href="/pricing" className="text-sm text-gray-600 hover:text-gray-900 transition-colors">
+              <Link href="/pricing" className="text-sm text-neutral-600 hover:text-neutral-900 animated-underline">
                 Pricing
               </Link>
             </div>
 
             {/* Center Logo */}
-            <Link
-              href="/"
-              className="absolute left-1/2 -translate-x-1/2 font-bold text-2xl md:text-3xl tracking-wide text-center"
-              style={{ fontFamily: 'Cinzel, Georgia, serif' }}
-            >
-              Draft My Book
-            </Link>
-
-            {/* Desktop Right Nav */}
-            <div className="hidden md:flex items-center gap-8">
-              <Link href="/faq" className="text-sm text-gray-600 hover:text-gray-900 transition-colors">
-                FAQ
-              </Link>
-              <Link href="/login" className="text-sm text-gray-600 hover:text-gray-900 transition-colors">
-                Log In
+            <div className="absolute left-1/2 -translate-x-1/2">
+              <Link href="/" className="text-2xl md:text-3xl font-bold tracking-tight" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>
+                draftmybook
               </Link>
             </div>
 
-            {/* Mobile placeholder for balance */}
-            <div className="md:hidden w-9" />
+            {/* Right Nav */}
+            <div className="hidden md:flex items-center gap-8 flex-1 justify-end">
+              <Link href="/faq" className="text-sm text-neutral-600 hover:text-neutral-900 animated-underline">
+                FAQ
+              </Link>
+              <Link href="/login" className="text-sm text-neutral-600 hover:text-neutral-900">
+                Log in
+              </Link>
+            </div>
+
+            {/* Mobile */}
+            <button
+              onClick={() => setMenuOpen(true)}
+              className="md:hidden p-2 hover:bg-neutral-100 rounded-full"
+            >
+              <Menu className="h-5 w-5" />
+            </button>
+            <div className="md:hidden w-10" /> {/* Spacer for balance */}
           </div>
         </nav>
 
-        {/* Mobile Menu Drawer */}
+        {/* Mobile Menu */}
         {menuOpen && (
           <>
-            <div className="fixed inset-0 bg-black/30 z-40" onClick={() => setMenuOpen(false)} />
-            <div className="fixed top-0 left-0 bottom-0 w-64 bg-[#F5F3EF] z-50 p-6 shadow-xl">
-              <button onClick={() => setMenuOpen(false)} className="mb-8">
-                <X className="h-6 w-6" />
-              </button>
+            <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-50" onClick={() => setMenuOpen(false)} />
+            <div className="fixed top-0 right-0 bottom-0 w-72 bg-white z-50 p-6 shadow-2xl">
+              <div className="flex justify-end mb-8">
+                <button onClick={() => setMenuOpen(false)} className="p-2 hover:bg-neutral-100 rounded-full">
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
               <div className="flex flex-col gap-4">
-                <Link href="/how-it-works" className="text-lg text-gray-800 hover:text-black" onClick={() => setMenuOpen(false)}>
-                  How It Works
-                </Link>
-                <Link href="/pricing" className="text-lg text-gray-800 hover:text-black" onClick={() => setMenuOpen(false)}>
-                  Pricing
-                </Link>
-                <Link href="/faq" className="text-lg text-gray-800 hover:text-black" onClick={() => setMenuOpen(false)}>
-                  FAQ
-                </Link>
-                <div className="h-px bg-gray-300 my-2" />
-                <Link href="/login" className="text-lg text-gray-800 hover:text-black" onClick={() => setMenuOpen(false)}>
-                  Log In
-                </Link>
+                <Link href="/how-it-works" className="text-lg font-medium" onClick={() => setMenuOpen(false)}>How it works</Link>
+                <Link href="/pricing" className="text-lg font-medium" onClick={() => setMenuOpen(false)}>Pricing</Link>
+                <Link href="/faq" className="text-lg font-medium" onClick={() => setMenuOpen(false)}>FAQ</Link>
+                <div className="h-px bg-neutral-200 my-4" />
+                <Link href="/login" className="text-lg font-medium" onClick={() => setMenuOpen(false)}>Log in</Link>
               </div>
             </div>
           </>
         )}
 
         {/* Hero Content */}
-        <div className="flex-1 flex items-center justify-center px-6 py-12">
-          <div className="max-w-xl w-full text-center">
-            <h1 className="text-4xl md:text-5xl leading-tight mb-4" style={{ fontFamily: 'Cinzel, Georgia, serif' }}>
-              Write Your Book
+        <div className="relative z-10 flex-1 flex items-center justify-center px-6 py-16">
+          <div className="max-w-4xl mx-auto text-center">
+            {/* Badge */}
+            <div className="inline-flex items-center gap-2 bg-neutral-100/80 backdrop-blur px-4 py-2 rounded-full text-sm text-neutral-600 mb-8">
+              <Zap className="h-4 w-4 text-amber-500" />
+              <span>50,000+ words in under 30 minutes</span>
+            </div>
+
+            {/* Headline */}
+            <h1 className="text-5xl md:text-7xl font-bold tracking-tight mb-6 leading-[1.1]" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>
+              Turn your idea into
+              <br />
+              <span className="text-neutral-400">a complete book</span>
             </h1>
-            <p className="text-lg text-gray-600 mb-10" style={{ fontFamily: 'EB Garamond, Georgia, serif' }}>
-              From idea to complete manuscript, ready for publishing.
+
+            <p className="text-xl text-neutral-600 max-w-2xl mx-auto mb-12">
+              Describe your story, get a professionally formatted manuscript ready for Amazon KDP. No writing experience needed.
             </p>
 
-            <form onSubmit={handleSubmit}>
-              <div className="bg-white p-6 rounded-lg border shadow-sm text-left" style={{ borderColor: '#E0DDD6' }}>
-                <label className="block text-sm font-medium text-gray-900 mb-3">
-                  What&apos;s your book about?
-                </label>
+            {/* Form */}
+            <form id="hero-form" onSubmit={handleSubmit} className="max-w-2xl mx-auto">
+              <div className="bg-white/90 backdrop-blur rounded-2xl border border-neutral-200 shadow-lg p-2">
                 <textarea
                   value={bookIdea}
                   onChange={(e) => setBookIdea(e.target.value)}
-                  placeholder="A detective discovers her own name in an old cold case file..."
-                  className="w-full h-28 px-4 py-3 text-base border rounded-lg focus:border-gray-900 focus:outline-none resize-none placeholder-gray-400"
-                  style={{ borderColor: '#E0DDD6', backgroundColor: '#FAFAF8' }}
+                  placeholder="Describe your book idea... A mystery novel about a detective who discovers her own name in a cold case file from 1985..."
+                  className="w-full h-32 px-4 py-3 text-base bg-transparent focus:outline-none resize-none placeholder-neutral-400"
                   disabled={isLoading || isGeneratingIdea}
                 />
-                <div className="mt-4 flex items-center justify-between gap-4">
+                <div className="flex items-center justify-between gap-4 px-2 pb-2">
                   <button
                     type="button"
                     onClick={handleFindIdea}
                     disabled={isLoading || isGeneratingIdea}
-                    className="text-sm text-gray-500 hover:text-gray-900 transition-colors disabled:opacity-50 flex items-center gap-1.5"
+                    className="text-sm text-neutral-500 hover:text-neutral-900 disabled:opacity-50 flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-neutral-100 transition-colors"
                   >
                     {isGeneratingIdea ? (
-                      <>
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        Finding...
-                      </>
+                      <Loader2 className="h-4 w-4 animate-spin" />
                     ) : (
-                      <>
-                        <Sparkles className="h-4 w-4" />
-                        Surprise me
-                      </>
+                      <Sparkles className="h-4 w-4" />
                     )}
+                    {isGeneratingIdea ? 'Generating...' : 'Surprise me'}
                   </button>
                   <button
                     type="submit"
                     disabled={isLoading || !bookIdea.trim()}
-                    className="bg-gray-900 text-white px-6 py-3 rounded-lg text-sm font-medium hover:bg-black transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                    className="bg-neutral-900 text-white px-6 py-3 rounded-xl text-sm font-medium hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 transition-all hover:scale-105"
                   >
                     {isLoading ? (
                       <>
                         <Loader2 className="h-4 w-4 animate-spin" />
-                        Processing...
+                        Creating outline...
                       </>
                     ) : (
                       <>
-                        Get Started <ArrowRight className="h-4 w-4" />
+                        Start writing
+                        <ArrowRight className="h-4 w-4" />
                       </>
                     )}
                   </button>
                 </div>
               </div>
               {error && (
-                <p className="text-red-700 text-sm mt-3 bg-red-50 px-4 py-2 rounded-lg">{error}</p>
+                <p className="text-red-600 text-sm mt-3 bg-red-50 px-4 py-2 rounded-lg">{error}</p>
               )}
             </form>
 
-            <div className="mt-8 flex items-center justify-center gap-6 text-sm text-gray-500">
-              <span className="flex items-center gap-1.5"><Check className="h-4 w-4" /> Free to start</span>
-              <span className="flex items-center gap-1.5"><Check className="h-4 w-4" /> Full ownership</span>
+            {/* Trust signals */}
+            <div className="mt-8 flex items-center justify-center gap-8 text-sm text-neutral-500">
+              <span className="flex items-center gap-2">
+                <Check className="h-4 w-4 text-green-600" />
+                Full commercial rights
+              </span>
+              <span className="flex items-center gap-2">
+                <Check className="h-4 w-4 text-green-600" />
+                Ready for Amazon KDP
+              </span>
+              <span className="hidden sm:flex items-center gap-2">
+                <Check className="h-4 w-4 text-green-600" />
+                EPUB download
+              </span>
             </div>
           </div>
         </div>
       </section>
 
-      <main className="flex-1">
-        {/* How It Works */}
-        <section className="py-20 bg-white">
-          <div className="max-w-5xl mx-auto px-6">
-            <h2 className="text-3xl md:text-4xl text-center mb-16" style={{ fontFamily: 'Cinzel, Georgia, serif' }}>
-              How It Works
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
-              <div className="text-center">
-                <div className="w-12 h-12 bg-gray-900 text-white rounded-full flex items-center justify-center text-lg font-medium mx-auto mb-6">1</div>
-                <h3 className="font-semibold text-gray-900 mb-2">Describe your idea</h3>
-                <p className="text-gray-600 text-sm">Tell us your story concept in a few sentences.</p>
-              </div>
-              <div className="text-center">
-                <div className="w-12 h-12 bg-gray-900 text-white rounded-full flex items-center justify-center text-lg font-medium mx-auto mb-6">2</div>
-                <h3 className="font-semibold text-gray-900 mb-2">Review the outline</h3>
-                <p className="text-gray-600 text-sm">Get a detailed chapter outline before we write.</p>
-              </div>
-              <div className="text-center">
-                <div className="w-12 h-12 bg-gray-900 text-white rounded-full flex items-center justify-center text-lg font-medium mx-auto mb-6">3</div>
-                <h3 className="font-semibold text-gray-900 mb-2">Download your book</h3>
-                <p className="text-gray-600 text-sm">Get your EPUB ready for Amazon KDP.</p>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* Book Showcase */}
-        <section className="py-20" style={{ backgroundColor: '#F5F3EF' }}>
-          <div className="max-w-5xl mx-auto px-6">
-            <h2 className="text-3xl md:text-4xl text-center mb-4" style={{ fontFamily: 'Cinzel, Georgia, serif' }}>
-              Professional Quality
-            </h2>
-            <p className="text-gray-600 text-center mb-12 max-w-2xl mx-auto" style={{ fontFamily: 'EB Garamond, Georgia, serif', fontSize: '1.125rem' }}>
-              Formatted title page, table of contents, and beautifully typeset chapters.
-            </p>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="bg-white p-4 rounded-lg border shadow-sm" style={{ borderColor: '#E0DDD6' }}>
-                <div className="aspect-[3/4] relative overflow-hidden rounded-lg mb-4 bg-gray-50">
+      {/* Success Story - Blood & Silver */}
+      <section className="py-20 px-6 bg-neutral-900 text-white">
+        <div className="max-w-6xl mx-auto">
+          <div className="grid md:grid-cols-2 gap-12 items-center">
+            {/* Book Cover */}
+            <div className="flex justify-center">
+              <a
+                href="https://www.amazon.com/dp/B0DQFQLQBR"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="group relative"
+              >
+                <div className="relative w-64 h-96 rounded-lg overflow-hidden shadow-2xl transform group-hover:scale-105 transition-transform duration-300">
                   <Image
                     src="/images/screenshots/epub-cover.png"
-                    alt="Title page"
+                    alt="Blood & Silver by Freddie Fabrevoie"
                     fill
-                    className="object-contain"
+                    className="object-cover"
                   />
                 </div>
-                <p className="text-center text-sm text-gray-600">Title Page</p>
-              </div>
+                <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg">
+                  <span className="text-white flex items-center gap-2">
+                    View on Amazon <ExternalLink className="h-4 w-4" />
+                  </span>
+                </div>
+              </a>
+            </div>
 
-              <div className="bg-white p-4 rounded-lg border shadow-sm" style={{ borderColor: '#E0DDD6' }}>
-                <div className="aspect-[3/4] relative overflow-hidden rounded-lg mb-4 bg-gray-50">
-                  <Image
-                    src="/images/screenshots/epub-toc.png"
-                    alt="Table of contents"
-                    fill
-                    className="object-contain"
-                  />
-                </div>
-                <p className="text-center text-sm text-gray-600">Table of Contents</p>
+            {/* Content */}
+            <div>
+              <div className="inline-flex items-center gap-2 bg-white/10 px-4 py-2 rounded-full text-sm mb-6">
+                <span className="w-2 h-2 bg-green-400 rounded-full" />
+                Published on Amazon KDP
               </div>
-
-              <div className="bg-white p-4 rounded-lg border shadow-sm" style={{ borderColor: '#E0DDD6' }}>
-                <div className="aspect-[3/4] relative overflow-hidden rounded-lg mb-4 bg-gray-50">
-                  <Image
-                    src="/images/screenshots/epub-chapter-1.png"
-                    alt="Chapter content"
-                    fill
-                    className="object-contain"
-                  />
-                </div>
-                <p className="text-center text-sm text-gray-600">Chapter Content</p>
-              </div>
+              <h2 className="text-4xl md:text-5xl font-bold tracking-tight mb-6" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>
+                Blood & Silver
+              </h2>
+              <p className="text-xl text-neutral-300 mb-4">
+                by Freddie Fabrevoie
+              </p>
+              <p className="text-neutral-400 mb-8 leading-relaxed">
+                A complete 10-chapter historical fiction exploring history&apos;s most ruthless untold betrayals.
+                Written using draftmybook, formatted as EPUB, and published directly to Amazon KDP.
+              </p>
+              <a
+                href="https://www.amazon.com/dp/B0DQFQLQBR"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 bg-white text-neutral-900 px-6 py-3 rounded-full font-medium hover:bg-neutral-100 transition-colors"
+              >
+                View on Amazon
+                <ExternalLink className="h-4 w-4" />
+              </a>
             </div>
           </div>
-        </section>
+        </div>
+      </section>
 
-        {/* Pricing */}
-        <section className="py-20 bg-white">
-          <div className="max-w-5xl mx-auto px-6">
-            <h2 className="text-3xl md:text-4xl text-center mb-4" style={{ fontFamily: 'Cinzel, Georgia, serif' }}>
-              Simple Pricing
+      {/* How it works */}
+      <section className="py-24 px-6 bg-white">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl md:text-5xl font-bold tracking-tight mb-4" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>
+              Three steps to your book
             </h2>
-            <p className="text-gray-600 text-center mb-12" style={{ fontFamily: 'EB Garamond, Georgia, serif', fontSize: '1.125rem' }}>
-              Pay per book or subscribe for better value.
+            <p className="text-lg text-neutral-600">
+              From idea to published manuscript in minutes
             </p>
+          </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
-              {/* Single */}
-              <div className="bg-[#F5F3EF] p-8 rounded-lg">
-                <h3 className="font-semibold text-gray-900 mb-2">Single Book</h3>
-                <div className="mb-4">
-                  <span className="text-4xl font-bold">$19.99</span>
+          <div className="grid md:grid-cols-3 gap-8">
+            {[
+              {
+                icon: Sparkles,
+                title: 'Describe',
+                description: 'Tell us your book idea in a few sentences. Genre, characters, plot - whatever you have.',
+              },
+              {
+                icon: BookOpen,
+                title: 'Review',
+                description: 'Get a detailed chapter-by-chapter outline. Approve it or request changes.',
+              },
+              {
+                icon: Download,
+                title: 'Download',
+                description: 'Receive your complete EPUB manuscript, formatted and ready for publishing.',
+              },
+            ].map((step, i) => (
+              <div key={i} className="relative group">
+                <div className="bg-neutral-50 rounded-2xl p-8 h-full card-hover border border-transparent hover:border-neutral-200">
+                  <div className="w-12 h-12 bg-neutral-900 text-white rounded-xl flex items-center justify-center mb-6">
+                    <step.icon className="h-6 w-6" />
+                  </div>
+                  <h3 className="text-xl font-semibold mb-3" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>
+                    {step.title}
+                  </h3>
+                  <p className="text-neutral-600">
+                    {step.description}
+                  </p>
                 </div>
-                <p className="text-sm text-gray-500 mb-6">One-time</p>
-                <ul className="space-y-3 text-sm text-gray-600">
-                  <li className="flex items-center gap-2"><Check className="h-4 w-4" /> 50k+ word book</li>
-                  <li className="flex items-center gap-2"><Check className="h-4 w-4" /> EPUB download</li>
-                  <li className="flex items-center gap-2"><Check className="h-4 w-4" /> Commercial rights</li>
-                </ul>
+                {i < 2 && (
+                  <ChevronRight className="hidden md:block absolute top-1/2 -right-4 transform -translate-y-1/2 text-neutral-300 h-6 w-6" />
+                )}
               </div>
+            ))}
+          </div>
+        </div>
+      </section>
 
-              {/* Monthly */}
-              <div className="bg-gray-900 text-white p-8 rounded-lg relative">
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-white text-gray-900 px-3 py-1 rounded text-xs font-medium">
-                  Popular
-                </div>
-                <h3 className="font-semibold mb-2">Monthly</h3>
-                <div className="mb-4">
-                  <span className="text-4xl font-bold">$69</span>
-                  <span className="text-gray-400">/mo</span>
-                </div>
-                <p className="text-sm text-gray-400 mb-6">5 books/month</p>
-                <ul className="space-y-3 text-sm text-gray-300">
-                  <li className="flex items-center gap-2"><Check className="h-4 w-4" /> Everything in Single</li>
-                  <li className="flex items-center gap-2"><Check className="h-4 w-4" /> Priority generation</li>
-                  <li className="flex items-center gap-2"><Check className="h-4 w-4" /> Cancel anytime</li>
-                </ul>
-              </div>
+      {/* Showcase */}
+      <section className="py-24 px-6">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl md:text-5xl font-bold tracking-tight mb-4" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>
+              Professional output
+            </h2>
+            <p className="text-lg text-neutral-600">
+              Beautifully formatted, ready for e-readers and print
+            </p>
+          </div>
 
-              {/* Yearly */}
-              <div className="bg-[#F5F3EF] p-8 rounded-lg">
-                <h3 className="font-semibold text-gray-900 mb-2">Yearly</h3>
-                <div className="mb-4">
-                  <span className="text-4xl font-bold">$499</span>
-                  <span className="text-gray-500">/yr</span>
+          <div className="grid md:grid-cols-3 gap-6">
+            {[
+              { src: '/images/screenshots/epub-cover.png', label: 'Title Page' },
+              { src: '/images/screenshots/epub-toc.png', label: 'Table of Contents' },
+              { src: '/images/screenshots/epub-chapter-1.png', label: 'Chapter Content' },
+            ].map((item, i) => (
+              <div key={i} className="group">
+                <div className="bg-white rounded-2xl border border-neutral-200 p-4 card-hover">
+                  <div className="aspect-[3/4] relative overflow-hidden rounded-xl bg-neutral-100">
+                    <Image
+                      src={item.src}
+                      alt={item.label}
+                      fill
+                      className="object-contain group-hover:scale-105 transition-transform duration-500"
+                    />
+                  </div>
                 </div>
-                <p className="text-sm text-gray-500 mb-6">50 book credits</p>
-                <ul className="space-y-3 text-sm text-gray-600">
-                  <li className="flex items-center gap-2"><Check className="h-4 w-4" /> Best value</li>
-                  <li className="flex items-center gap-2"><Check className="h-4 w-4" /> Credits never expire</li>
-                  <li className="flex items-center gap-2"><Check className="h-4 w-4" /> Priority support</li>
-                </ul>
+                <p className="text-center text-sm text-neutral-600 mt-4">{item.label}</p>
               </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Pricing */}
+      <section className="py-24 px-6 bg-white">
+        <div className="max-w-5xl mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl md:text-5xl font-bold tracking-tight mb-4" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>
+              Simple pricing
+            </h2>
+            <p className="text-lg text-neutral-600">
+              Choose the plan that works for you
+            </p>
+          </div>
+
+          {/* Plan Toggle */}
+          <div className="flex justify-center mb-12">
+            <div className="inline-flex bg-neutral-100 p-1 rounded-full">
+              {(['single', 'monthly', 'yearly'] as const).map((plan) => (
+                <button
+                  key={plan}
+                  onClick={() => setSelectedPlan(plan)}
+                  className={`px-6 py-2 rounded-full text-sm font-medium transition-all ${
+                    selectedPlan === plan
+                      ? 'bg-white text-neutral-900 shadow-sm'
+                      : 'text-neutral-600 hover:text-neutral-900'
+                  }`}
+                >
+                  {plan === 'single' ? 'One Book' : plan === 'monthly' ? 'Monthly' : 'Yearly'}
+                </button>
+              ))}
             </div>
           </div>
-        </section>
 
-        {/* CTA */}
-        <section className="py-20" style={{ backgroundColor: '#F5F3EF' }}>
-          <div className="max-w-2xl mx-auto px-6 text-center">
-            <h2 className="text-3xl md:text-4xl mb-4" style={{ fontFamily: 'Cinzel, Georgia, serif' }}>
-              Ready to start?
-            </h2>
-            <p className="text-gray-600 mb-8" style={{ fontFamily: 'EB Garamond, Georgia, serif', fontSize: '1.125rem' }}>
-              Your book is waiting to be written.
-            </p>
-            <button
-              onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-              className="bg-gray-900 text-white px-8 py-4 rounded-lg font-medium hover:bg-black transition-colors inline-flex items-center gap-2"
+          {/* Pricing Cards */}
+          <div className="grid md:grid-cols-3 gap-6">
+            {/* Single */}
+            <div
+              onClick={() => setSelectedPlan('single')}
+              className={`relative rounded-2xl p-8 cursor-pointer transition-all card-hover ${
+                selectedPlan === 'single'
+                  ? 'bg-neutral-900 text-white ring-2 ring-neutral-900'
+                  : 'bg-neutral-50 hover:bg-neutral-100'
+              }`}
             >
-              Start Writing <ArrowRight className="h-4 w-4" />
-            </button>
+              <h3 className="text-lg font-semibold mb-2" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>Single Book</h3>
+              <div className="flex items-baseline gap-1 mb-4">
+                <span className="text-4xl font-bold">$19.99</span>
+              </div>
+              <p className={`text-sm mb-6 ${selectedPlan === 'single' ? 'text-neutral-300' : 'text-neutral-600'}`}>
+                One-time payment
+              </p>
+              <ul className={`space-y-3 text-sm ${selectedPlan === 'single' ? 'text-neutral-200' : 'text-neutral-600'}`}>
+                <li className="flex items-center gap-3">
+                  <Check className={`h-4 w-4 ${selectedPlan === 'single' ? 'text-green-400' : 'text-green-600'}`} />
+                  Complete 50k+ word book
+                </li>
+                <li className="flex items-center gap-3">
+                  <Check className={`h-4 w-4 ${selectedPlan === 'single' ? 'text-green-400' : 'text-green-600'}`} />
+                  EPUB + cover image
+                </li>
+                <li className="flex items-center gap-3">
+                  <Check className={`h-4 w-4 ${selectedPlan === 'single' ? 'text-green-400' : 'text-green-600'}`} />
+                  Full commercial rights
+                </li>
+              </ul>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
+                className={`w-full mt-8 py-3 rounded-xl text-sm font-medium transition-all ${
+                  selectedPlan === 'single'
+                    ? 'bg-white text-neutral-900 hover:bg-neutral-100'
+                    : 'bg-neutral-900 text-white hover:bg-neutral-800'
+                }`}
+              >
+                Get started
+              </button>
+            </div>
+
+            {/* Monthly */}
+            <div
+              onClick={() => setSelectedPlan('monthly')}
+              className={`relative rounded-2xl p-8 cursor-pointer transition-all card-hover ${
+                selectedPlan === 'monthly'
+                  ? 'bg-neutral-900 text-white ring-2 ring-neutral-900'
+                  : 'bg-neutral-50 hover:bg-neutral-100'
+              }`}
+            >
+              <div className={`absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full text-xs font-medium ${
+                selectedPlan === 'monthly' ? 'bg-white text-neutral-900' : 'bg-neutral-900 text-white'
+              }`}>
+                Most Popular
+              </div>
+              <h3 className="text-lg font-semibold mb-2" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>Monthly</h3>
+              <div className="flex items-baseline gap-1 mb-4">
+                <span className="text-4xl font-bold">$69</span>
+                <span className={selectedPlan === 'monthly' ? 'text-neutral-400' : 'text-neutral-500'}>/month</span>
+              </div>
+              <p className={`text-sm mb-6 ${selectedPlan === 'monthly' ? 'text-neutral-300' : 'text-neutral-600'}`}>
+                5 books per month
+              </p>
+              <ul className={`space-y-3 text-sm ${selectedPlan === 'monthly' ? 'text-neutral-200' : 'text-neutral-600'}`}>
+                <li className="flex items-center gap-3">
+                  <Check className={`h-4 w-4 ${selectedPlan === 'monthly' ? 'text-green-400' : 'text-green-600'}`} />
+                  Everything in Single
+                </li>
+                <li className="flex items-center gap-3">
+                  <Check className={`h-4 w-4 ${selectedPlan === 'monthly' ? 'text-green-400' : 'text-green-600'}`} />
+                  Priority generation
+                </li>
+                <li className="flex items-center gap-3">
+                  <Check className={`h-4 w-4 ${selectedPlan === 'monthly' ? 'text-green-400' : 'text-green-600'}`} />
+                  Cancel anytime
+                </li>
+              </ul>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
+                className={`w-full mt-8 py-3 rounded-xl text-sm font-medium transition-all ${
+                  selectedPlan === 'monthly'
+                    ? 'bg-white text-neutral-900 hover:bg-neutral-100'
+                    : 'bg-neutral-900 text-white hover:bg-neutral-800'
+                }`}
+              >
+                Subscribe
+              </button>
+            </div>
+
+            {/* Yearly */}
+            <div
+              onClick={() => setSelectedPlan('yearly')}
+              className={`relative rounded-2xl p-8 cursor-pointer transition-all card-hover ${
+                selectedPlan === 'yearly'
+                  ? 'bg-neutral-900 text-white ring-2 ring-neutral-900'
+                  : 'bg-neutral-50 hover:bg-neutral-100'
+              }`}
+            >
+              <h3 className="text-lg font-semibold mb-2" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>Yearly</h3>
+              <div className="flex items-baseline gap-1 mb-4">
+                <span className="text-4xl font-bold">$499</span>
+                <span className={selectedPlan === 'yearly' ? 'text-neutral-400' : 'text-neutral-500'}>/year</span>
+              </div>
+              <p className={`text-sm mb-6 ${selectedPlan === 'yearly' ? 'text-neutral-300' : 'text-neutral-600'}`}>
+                50 book credits
+              </p>
+              <ul className={`space-y-3 text-sm ${selectedPlan === 'yearly' ? 'text-neutral-200' : 'text-neutral-600'}`}>
+                <li className="flex items-center gap-3">
+                  <Check className={`h-4 w-4 ${selectedPlan === 'yearly' ? 'text-green-400' : 'text-green-600'}`} />
+                  Best value ($10/book)
+                </li>
+                <li className="flex items-center gap-3">
+                  <Check className={`h-4 w-4 ${selectedPlan === 'yearly' ? 'text-green-400' : 'text-green-600'}`} />
+                  Credits never expire
+                </li>
+                <li className="flex items-center gap-3">
+                  <Check className={`h-4 w-4 ${selectedPlan === 'yearly' ? 'text-green-400' : 'text-green-600'}`} />
+                  Priority support
+                </li>
+              </ul>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
+                className={`w-full mt-8 py-3 rounded-xl text-sm font-medium transition-all ${
+                  selectedPlan === 'yearly'
+                    ? 'bg-white text-neutral-900 hover:bg-neutral-100'
+                    : 'bg-neutral-900 text-white hover:bg-neutral-800'
+                }`}
+              >
+                Get started
+              </button>
+            </div>
           </div>
-        </section>
-      </main>
+        </div>
+      </section>
+
+      {/* CTA */}
+      <section className="py-24 px-6">
+        <div className="max-w-4xl mx-auto text-center">
+          <h2 className="text-4xl md:text-5xl font-bold tracking-tight mb-6" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>
+            Ready to write your book?
+          </h2>
+          <p className="text-lg text-neutral-600 mb-10">
+            Join thousands of authors who have brought their stories to life.
+          </p>
+          <button
+            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+            className="bg-neutral-900 text-white px-8 py-4 rounded-full text-base font-medium hover:bg-neutral-800 transition-all hover:scale-105 inline-flex items-center gap-2"
+          >
+            Start writing
+            <ArrowRight className="h-5 w-5" />
+          </button>
+        </div>
+      </section>
 
       <Footer />
     </div>
