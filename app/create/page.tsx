@@ -2,10 +2,23 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { ArrowLeft, ArrowRight, Sparkles, Loader2 } from 'lucide-react';
 import { BOOK_PRESETS, ART_STYLES, GENRES, type BookPresetKey, type ArtStyleKey } from '@/lib/constants';
+
+// Map art style keys to image filenames
+const ART_STYLE_IMAGES: Record<ArtStyleKey, string> = {
+  watercolor: '/images/illustrations/watercolor.png',
+  cartoon: '/images/illustrations/cartoon.png',
+  storybook: '/images/illustrations/classicstory.png',
+  modern: '/images/illustrations/modernminimal.png',
+  realistic: '/images/illustrations/realistic.png',
+  manga: '/images/illustrations/mangaanime.png',
+  vintage: '/images/illustrations/vintage.png',
+  fantasy: '/images/illustrations/fantasy.png',
+};
 
 export default function CreateBook() {
   const router = useRouter();
@@ -354,14 +367,27 @@ export default function CreateBook() {
                   <button
                     key={key}
                     onClick={() => setSelectedArtStyle(key)}
-                    className={`p-4 rounded-2xl border-2 transition-all text-left ${
+                    className={`group rounded-2xl border-2 transition-all overflow-hidden ${
                       selectedArtStyle === key
-                        ? 'border-neutral-900 bg-neutral-50'
+                        ? 'border-neutral-900 ring-2 ring-neutral-900 ring-offset-2'
                         : 'border-neutral-200 hover:border-neutral-400 bg-white'
                     }`}
                   >
-                    <h3 className="font-semibold text-sm mb-1">{style.label}</h3>
-                    <p className="text-xs text-neutral-500">{style.description}</p>
+                    <div className="relative aspect-square">
+                      <Image
+                        src={ART_STYLE_IMAGES[key]}
+                        alt={style.label}
+                        fill
+                        className="object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
+                      {selectedArtStyle === key && (
+                        <div className="absolute inset-0 bg-neutral-900/10" />
+                      )}
+                    </div>
+                    <div className="p-3 bg-white text-left">
+                      <h3 className="font-semibold text-sm mb-0.5">{style.label}</h3>
+                      <p className="text-xs text-neutral-500 line-clamp-1">{style.description}</p>
+                    </div>
                   </button>
                 ))}
               </div>
