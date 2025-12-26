@@ -26,7 +26,8 @@
       "Bash(powershell -Command:*)",
       "Bash(git reset:*)",
       "Bash(node -e:*)",
-      "Bash(npx prisma db push:*)"
+      "Bash(npx prisma db push:*)",
+      "Bash(git diff:*)"
     ]
   }
 }

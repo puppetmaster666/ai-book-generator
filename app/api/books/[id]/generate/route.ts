@@ -299,8 +299,9 @@ export async function POST(
       return NextResponse.json({ error: 'Book already generated' }, { status: 400 });
     }
 
-    // If resuming from failed or stuck generating, reset and clean up partial data
-    if (book.status === 'failed' || book.status === 'generating') {
+    // If resuming from any incomplete state, reset and clean up partial data
+    // This covers: outlining, generating, failed - any state except pending or completed
+    if (book.status !== 'pending' && book.status !== 'completed') {
       console.log(`Retrying ${book.status} book generation for book ${id}`);
 
       // Delete any existing chapters and illustrations from failed attempt
