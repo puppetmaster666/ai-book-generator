@@ -138,8 +138,8 @@ export default function Review() {
 
   if (!bookPlan) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-neutral-900" />
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: '#F5F3EF' }}>
+        <Loader2 className="h-8 w-8 animate-spin text-gray-900" />
       </div>
     );
   }
@@ -160,11 +160,11 @@ export default function Review() {
   };
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen" style={{ backgroundColor: '#F5F3EF' }}>
       {/* Simple Header */}
-      <header className="border-b border-neutral-200">
+      <header className="border-b" style={{ borderColor: '#E0DDD6' }}>
         <div className="max-w-4xl mx-auto px-6 py-4">
-          <Link href="/" className="text-xl font-bold text-neutral-900">
+          <Link href="/" className="text-xl font-bold" style={{ fontFamily: 'Cinzel, Georgia, serif' }}>
             Draft My Book
           </Link>
         </div>

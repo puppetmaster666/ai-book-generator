@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import Providers from "@/components/Providers";
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://draftmybook.com'),
@@ -83,7 +84,7 @@ export default function RootLayout({
         />
       </head>
       <body className={`antialiased`}>
-        {children}
+        <Providers>{children}</Providers>
       </body>
     </html>
   );

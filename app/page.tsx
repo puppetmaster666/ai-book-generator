@@ -95,12 +95,18 @@ export default function Home() {
             </div>
 
             {/* Right Nav */}
-            <div className="hidden md:flex items-center gap-8 flex-1 justify-end">
+            <div className="hidden md:flex items-center gap-6 flex-1 justify-end">
               <Link href="/faq" className="text-sm text-neutral-600 hover:text-neutral-900 animated-underline">
                 FAQ
               </Link>
-              <Link href="/login" className="text-sm text-neutral-600 hover:text-neutral-900">
+              <Link href="/login" className="text-sm text-neutral-600 hover:text-neutral-900 animated-underline">
                 Log in
+              </Link>
+              <Link
+                href="/signup"
+                className="text-sm bg-neutral-900 text-white px-5 py-2.5 rounded-full hover:bg-neutral-800 transition-colors font-medium"
+              >
+                Get Started
               </Link>
             </div>
 
@@ -131,6 +137,13 @@ export default function Home() {
                 <Link href="/faq" className="text-lg font-medium" onClick={() => setMenuOpen(false)}>FAQ</Link>
                 <div className="h-px bg-neutral-200 my-4" />
                 <Link href="/login" className="text-lg font-medium" onClick={() => setMenuOpen(false)}>Log in</Link>
+                <Link
+                  href="/signup"
+                  className="text-lg bg-neutral-900 text-white px-5 py-3 rounded-full text-center font-medium"
+                  onClick={() => setMenuOpen(false)}
+                >
+                  Get Started
+                </Link>
               </div>
             </div>
           </>
