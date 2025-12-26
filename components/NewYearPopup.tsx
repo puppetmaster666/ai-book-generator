@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { X, Gift, Copy, Check } from 'lucide-react';
 
-const PROMO_CODE = 'NEWYEAR2026';
+const PROMO_CODE = 'NY26';
 const POPUP_DELAY_MS = 60000; // 60 seconds
 const STORAGE_KEY = 'newyear2026_popup_dismissed';
 const EXPIRY_DATE = new Date('2026-01-02T00:00:00Z');

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 // Promo codes configuration (same as checkout)
 const PROMO_CODES: Record<string, { discount: number; validUntil: Date; description: string }> = {
-  'NEWYEAR2026': {
+  'NY26': {
     discount: 0.50, // 50% off
     validUntil: new Date('2026-01-02T00:00:00Z'),
     description: 'New Year 2026 Special - 50% Off',
