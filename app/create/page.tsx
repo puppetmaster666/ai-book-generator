@@ -13,16 +13,17 @@ export default function CreateBook() {
   const [selectedPreset, setSelectedPreset] = useState<BookPresetKey | null>(null);
   const [selectedArtStyle, setSelectedArtStyle] = useState<ArtStyleKey | null>(null);
   const [idea, setIdea] = useState('');
+  const [hasIdeaFromHomepage, setHasIdeaFromHomepage] = useState(false);
   const [isGeneratingIdea, setIsGeneratingIdea] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
 
   // Check if coming from homepage with an idea
   useEffect(() => {
-    // Check both possible storage keys (bookIdea from homepage, originalIdea from legacy)
     const savedIdea = sessionStorage.getItem('bookIdea') || sessionStorage.getItem('originalIdea');
     if (savedIdea) {
       setIdea(savedIdea);
+      setHasIdeaFromHomepage(true);
       sessionStorage.removeItem('bookIdea');
       sessionStorage.removeItem('originalIdea');
     }
@@ -46,13 +47,78 @@ export default function CreateBook() {
   const handleSelectPreset = (key: BookPresetKey) => {
     setSelectedPreset(key);
     const preset = BOOK_PRESETS[key];
+
     // Set default art style for illustrated books
     if (preset.artStyle) {
       setSelectedArtStyle(preset.artStyle as ArtStyleKey);
     } else {
       setSelectedArtStyle(null);
     }
-    setStep('idea');
+
+    // If idea already exists from homepage, skip the idea step
+    if (hasIdeaFromHomepage && idea.trim().length >= 20) {
+      if (preset.format !== 'text_only') {
+        // Illustrated book: go to art style selection
+        setStep('style');
+      } else {
+        // Text-only book: submit directly
+        setSelectedPreset(key);
+        // Need to wait for state update, then submit
+        setTimeout(() => handleSubmitWithPreset(key), 0);
+      }
+    } else {
+      setStep('idea');
+    }
+  };
+
+  // Separate submit function that takes preset key directly (for immediate submission)
+  const handleSubmitWithPreset = async (presetKey: BookPresetKey) => {
+    if (!idea.trim()) return;
+
+    setIsSubmitting(true);
+    setError('');
+
+    try {
+      const preset = BOOK_PRESETS[presetKey];
+      const genre = GENRES[preset.defaultGenre as keyof typeof GENRES];
+
+      const expandResponse = await fetch('/api/expand-idea', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          idea,
+          bookType: preset.format === 'picture_book' ? 'childrens' : genre?.type || 'fiction',
+          isIllustrated: preset.format !== 'text_only',
+        }),
+      });
+
+      if (!expandResponse.ok) throw new Error('Failed to expand idea');
+      const bookPlan = await expandResponse.json();
+
+      const response = await fetch('/api/books', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...bookPlan,
+          bookPreset: presetKey,
+          bookFormat: preset.format,
+          artStyle: preset.artStyle,
+          targetWords: preset.targetWords,
+          targetChapters: preset.chapters,
+        }),
+      });
+
+      if (!response.ok) throw new Error('Failed to create book');
+
+      const { bookId } = await response.json();
+      router.push(`/checkout?bookId=${bookId}`);
+    } catch (err) {
+      console.error('Error:', err);
+      setError('Something went wrong. Please try again.');
+      setStep('idea'); // Fall back to idea step on error
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleContinue = () => {
@@ -128,39 +194,49 @@ export default function CreateBook() {
           {/* Step 1: Choose Book Type */}
           {step === 'type' && (
             <>
-              <div className="text-center mb-12">
-                <h1 className="text-3xl md:text-4xl font-bold tracking-tight mb-4" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>
-                  What would you like to create?
-                </h1>
-                <p className="text-lg text-neutral-600">
-                  Choose a format and we&apos;ll help you bring your idea to life
-                </p>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {(Object.entries(BOOK_PRESETS) as [BookPresetKey, typeof BOOK_PRESETS[BookPresetKey]][]).map(([key, preset]) => (
-                  <button
-                    key={key}
-                    onClick={() => handleSelectPreset(key)}
-                    className="group p-6 bg-white rounded-2xl border border-neutral-200 hover:border-neutral-400 hover:shadow-lg transition-all text-left"
-                  >
-                    <h3 className="text-lg font-semibold mb-2" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>
-                      {preset.label}
-                    </h3>
-                    <p className="text-sm text-neutral-600 mb-4">
-                      {preset.description}
+              {isSubmitting ? (
+                <div className="text-center py-20">
+                  <Loader2 className="h-12 w-12 animate-spin mx-auto mb-4 text-neutral-900" />
+                  <h2 className="text-xl font-semibold mb-2">Creating your book...</h2>
+                  <p className="text-neutral-600">We&apos;re expanding your idea into a full outline</p>
+                </div>
+              ) : (
+                <>
+                  <div className="text-center mb-12">
+                    <h1 className="text-3xl md:text-4xl font-bold tracking-tight mb-4" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>
+                      What would you like to create?
+                    </h1>
+                    <p className="text-lg text-neutral-600">
+                      Choose a format and we&apos;ll help you bring your idea to life
                     </p>
-                    <div className="flex items-center justify-between">
-                      <span className="text-lg font-bold">{preset.priceDisplay}</span>
-                      {preset.format !== 'text_only' && (
-                        <span className="text-xs bg-neutral-100 text-neutral-600 px-2 py-1 rounded-full">
-                          Illustrated
-                        </span>
-                      )}
-                    </div>
-                  </button>
-                ))}
-              </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {(Object.entries(BOOK_PRESETS) as [BookPresetKey, typeof BOOK_PRESETS[BookPresetKey]][]).map(([key, preset]) => (
+                      <button
+                        key={key}
+                        onClick={() => handleSelectPreset(key)}
+                        className="group p-6 bg-white rounded-2xl border border-neutral-200 hover:border-neutral-400 hover:shadow-lg transition-all text-left"
+                      >
+                        <h3 className="text-lg font-semibold mb-2" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>
+                          {preset.label}
+                        </h3>
+                        <p className="text-sm text-neutral-600 mb-4">
+                          {preset.description}
+                        </p>
+                        <div className="flex items-center justify-between">
+                          <span className="text-lg font-bold">{preset.priceDisplay}</span>
+                          {preset.format !== 'text_only' && (
+                            <span className="text-xs bg-neutral-100 text-neutral-600 px-2 py-1 rounded-full">
+                              Illustrated
+                            </span>
+                          )}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
             </>
           )}
 
@@ -258,10 +334,10 @@ export default function CreateBook() {
           {step === 'style' && preset && (
             <>
               <button
-                onClick={() => setStep('idea')}
+                onClick={() => setStep(hasIdeaFromHomepage ? 'type' : 'idea')}
                 className="flex items-center gap-2 text-neutral-600 hover:text-neutral-900 mb-8 transition-colors"
               >
-                <ArrowLeft className="h-5 w-5" /> Back to idea
+                <ArrowLeft className="h-5 w-5" /> {hasIdeaFromHomepage ? 'Back to book types' : 'Back to idea'}
               </button>
 
               <div className="text-center mb-8">
