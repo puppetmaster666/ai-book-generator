@@ -90,6 +90,7 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
   const [writingMessage, setWritingMessage] = useState(WRITING_MESSAGES[0]);
   const [generationStarted, setGenerationStarted] = useState(false);
   const [elapsedTime, setElapsedTime] = useState(0);
+  const [retrying, setRetrying] = useState(false);
   const startTimeRef = useRef<number | null>(null);
 
   // Start generation if payment successful (either from URL param or from book status)
@@ -158,15 +159,15 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
 
     fetchBook();
 
-    // Poll every 3 seconds if still generating (faster updates)
+    // Poll every 3 seconds if still generating or if retrying (faster updates)
     const interval = setInterval(() => {
-      if (book?.status === 'generating' || book?.status === 'outlining' || book?.status === 'pending') {
+      if (book?.status === 'generating' || book?.status === 'outlining' || book?.status === 'pending' || retrying) {
         fetchBook();
       }
     }, 3000);
 
     return () => clearInterval(interval);
-  }, [id, book?.status]);
+  }, [id, book?.status, retrying]);
 
   const handleDownload = () => {
     window.open(`/api/books/${id}/download`, '_blank');
@@ -180,6 +181,26 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+    }
+  };
+
+  const handleRetry = async () => {
+    if (!book || retrying) return;
+
+    setRetrying(true);
+    startTimeRef.current = Date.now();
+    setElapsedTime(0);
+
+    try {
+      const res = await fetch(`/api/books/${id}/generate`, { method: 'POST' });
+      if (!res.ok) {
+        const data = await res.json();
+        console.error('Retry failed:', data.error);
+      }
+    } catch (err) {
+      console.error('Retry error:', err);
+    } finally {
+      setRetrying(false);
     }
   };
 
@@ -330,6 +351,48 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
                   </Link>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* Failed Section - Retry Available */}
+          {book.status === 'failed' && (
+            <div className="bg-white rounded-2xl border border-red-200 p-8 mb-6">
+              <div className="text-center">
+                <div className="w-16 h-16 mx-auto mb-4 bg-red-50 rounded-full flex items-center justify-center">
+                  <AlertCircle className="h-8 w-8 text-red-600" />
+                </div>
+                <h2 className="text-xl font-semibold text-neutral-900 mb-2">
+                  Generation Encountered an Issue
+                </h2>
+                <p className="text-neutral-600 mb-2">
+                  Don&apos;t worry - your progress has been saved.
+                </p>
+                {book.currentChapter > 0 && (
+                  <p className="text-sm text-green-600 mb-4">
+                    ✓ {book.currentChapter} chapter{book.currentChapter > 1 ? 's' : ''} already completed ({book.totalWords.toLocaleString()} words)
+                  </p>
+                )}
+                <p className="text-sm text-neutral-500 mb-6">
+                  Click retry to continue from where we left off. This is free - you&apos;ve already paid!
+                </p>
+                <button
+                  onClick={handleRetry}
+                  disabled={retrying}
+                  className="inline-flex items-center gap-2 px-6 py-3 bg-neutral-900 text-white rounded-full hover:bg-neutral-800 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {retrying ? (
+                    <>
+                      <Loader2 className="h-5 w-5 animate-spin" />
+                      Resuming...
+                    </>
+                  ) : (
+                    <>
+                      <Zap className="h-5 w-5" />
+                      Retry Generation
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
           )}
 

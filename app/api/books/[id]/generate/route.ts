@@ -111,8 +111,22 @@ export async function POST(
       return NextResponse.json({ error: 'Payment required' }, { status: 402 });
     }
 
+    // Allow retry for failed books, resume for stuck generating books
+    // Only block if truly completed
     if (book.status === 'completed') {
       return NextResponse.json({ error: 'Book already generated' }, { status: 400 });
+    }
+
+    // If resuming from failed, reset status to generating
+    if (book.status === 'failed') {
+      console.log(`Retrying failed book generation for book ${id}`);
+      await prisma.book.update({
+        where: { id },
+        data: {
+          status: 'generating',
+          errorMessage: null,
+        },
+      });
     }
 
     // Start generation process
