@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useEffect, use } from 'react';
+import { useState, useEffect, use, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Header from '@/components/Header';
-import { Download, BookOpen, Loader2, Check, AlertCircle, ImageIcon, Mail, User, Sparkles, Palette, PenTool } from 'lucide-react';
+import { Download, BookOpen, Loader2, Check, AlertCircle, ImageIcon, Mail, User, Palette, PenTool, Clock, Zap } from 'lucide-react';
 import Link from 'next/link';
 
 interface Chapter {
@@ -26,6 +26,7 @@ interface Book {
   authorName: string;
   genre: string;
   status: string;
+  paymentStatus: string;
   currentChapter: number;
   totalChapters: number;
   totalWords: number;
@@ -45,22 +46,34 @@ interface Book {
 }
 
 const WRITING_MESSAGES = [
-  "Crafting compelling prose...",
-  "Developing character arcs...",
-  "Building narrative tension...",
-  "Weaving plot threads...",
-  "Adding descriptive details...",
-  "Perfecting dialogue...",
-  "Creating memorable scenes...",
+  "Crafting compelling prose",
+  "Developing character arcs",
+  "Building narrative tension",
+  "Weaving plot threads",
+  "Adding descriptive details",
+  "Perfecting dialogue",
+  "Creating memorable scenes",
 ];
 
 const ILLUSTRATION_MESSAGES = [
-  "Painting your world...",
-  "Bringing characters to life...",
-  "Adding visual magic...",
-  "Rendering scenes...",
-  "Creating artwork...",
+  "Composing visual elements",
+  "Rendering character details",
+  "Applying art style",
+  "Generating scene artwork",
+  "Finalizing illustrations",
 ];
+
+// Format elapsed time as MM:SS or HH:MM:SS
+function formatElapsedTime(seconds: number): string {
+  const hrs = Math.floor(seconds / 3600);
+  const mins = Math.floor((seconds % 3600) / 60);
+  const secs = seconds % 60;
+
+  if (hrs > 0) {
+    return `${hrs}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  }
+  return `${mins}:${secs.toString().padStart(2, '0')}`;
+}
 
 export default function BookProgress({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -72,25 +85,53 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
   const [error, setError] = useState<string | null>(null);
   const [writingMessage, setWritingMessage] = useState(WRITING_MESSAGES[0]);
   const [generationStarted, setGenerationStarted] = useState(false);
+  const [elapsedTime, setElapsedTime] = useState(0);
+  const startTimeRef = useRef<number | null>(null);
 
-  // Start generation if payment successful
+  // Start generation if payment successful (either from URL param or from book status)
   useEffect(() => {
-    if (success === 'true' && !generationStarted) {
+    const shouldStartGeneration =
+      (success === 'true' || (book?.paymentStatus === 'completed' && book?.status === 'pending'))
+      && !generationStarted;
+
+    if (shouldStartGeneration) {
       setGenerationStarted(true);
+      startTimeRef.current = Date.now();
       fetch(`/api/books/${id}/generate`, { method: 'POST' }).catch(console.error);
     }
-  }, [success, id, generationStarted]);
+  }, [success, id, generationStarted, book?.paymentStatus, book?.status]);
+
+  // Timer for elapsed time during generation
+  useEffect(() => {
+    const isActive = book?.status === 'generating' || book?.status === 'outlining';
+
+    if (isActive) {
+      if (!startTimeRef.current) {
+        startTimeRef.current = Date.now();
+      }
+
+      const interval = setInterval(() => {
+        if (startTimeRef.current) {
+          setElapsedTime(Math.floor((Date.now() - startTimeRef.current) / 1000));
+        }
+      }, 1000);
+
+      return () => clearInterval(interval);
+    } else if (book?.status === 'completed' || book?.status === 'failed') {
+      startTimeRef.current = null;
+    }
+  }, [book?.status]);
 
   // Rotate writing messages
   useEffect(() => {
-    if (book?.status === 'generating') {
+    if (book?.status === 'generating' || book?.status === 'outlining') {
       const interval = setInterval(() => {
         setWritingMessage(prev => {
-          const messages = book.bookFormat !== 'text_only' ? [...WRITING_MESSAGES, ...ILLUSTRATION_MESSAGES] : WRITING_MESSAGES;
+          const messages = book?.bookFormat !== 'text_only' ? [...WRITING_MESSAGES, ...ILLUSTRATION_MESSAGES] : WRITING_MESSAGES;
           const currentIndex = messages.indexOf(prev);
           return messages[(currentIndex + 1) % messages.length];
         });
-      }, 3000);
+      }, 4000);
       return () => clearInterval(interval);
     }
   }, [book?.status, book?.bookFormat]);
@@ -195,9 +236,12 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
                   className="w-32 h-48 object-cover rounded-xl shadow-lg"
                 />
               ) : (
-                <div className="w-32 h-48 bg-gradient-to-br from-neutral-100 to-neutral-200 rounded-xl flex items-center justify-center">
+                <div className="w-32 h-48 bg-gradient-to-br from-neutral-100 to-neutral-200 rounded-xl flex items-center justify-center relative overflow-hidden">
                   {isGenerating ? (
-                    <Sparkles className="h-12 w-12 text-neutral-400 animate-pulse" />
+                    <>
+                      <div className="absolute inset-0 bg-gradient-to-t from-blue-100/50 to-transparent animate-pulse" />
+                      <PenTool className="h-12 w-12 text-neutral-400" />
+                    </>
                   ) : (
                     <BookOpen className="h-12 w-12 text-neutral-400" />
                   )}
@@ -216,15 +260,15 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
                     : book.status === 'failed'
                     ? 'bg-red-100 text-red-700'
                     : isPending
-                    ? 'bg-yellow-100 text-yellow-700'
+                    ? 'bg-amber-100 text-amber-700'
                     : 'bg-blue-100 text-blue-700'
                 }`}>
                   {book.status === 'completed' && <Check className="h-4 w-4" />}
                   {isGenerating && <Loader2 className="h-4 w-4 animate-spin" />}
-                  {isPending && <Sparkles className="h-4 w-4" />}
+                  {isPending && <Clock className="h-4 w-4" />}
                   {book.status === 'failed' && <AlertCircle className="h-4 w-4" />}
                   <span className="capitalize">
-                    {isPending ? 'Ready to Generate' : book.status}
+                    {isPending ? 'Queued' : book.status}
                   </span>
                 </div>
 
@@ -242,37 +286,74 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
 
           {/* Pending - Waiting for Generation */}
           {isPending && (
-            <div className="bg-gradient-to-br from-yellow-50 to-orange-50 rounded-2xl border border-yellow-200 p-8 mb-6 text-center">
-              <Sparkles className="h-12 w-12 text-yellow-600 mx-auto mb-4" />
-              <h2 className="text-xl font-semibold text-neutral-900 mb-2">
-                Your Book is Queued
-              </h2>
-              <p className="text-neutral-600 mb-4">
-                Generation will start shortly. This page will update automatically.
-              </p>
-              <div className="flex justify-center gap-2">
-                <div className="w-2 h-2 bg-yellow-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                <div className="w-2 h-2 bg-yellow-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                <div className="w-2 h-2 bg-yellow-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-              </div>
+            <div className="bg-white rounded-2xl border border-neutral-200 p-8 mb-6">
+              {book.paymentStatus === 'completed' ? (
+                <div className="text-center">
+                  <div className="relative w-16 h-16 mx-auto mb-4">
+                    <div className="absolute inset-0 rounded-full border-4 border-neutral-100" />
+                    <div className="absolute inset-0 rounded-full border-4 border-t-blue-500 animate-spin" />
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <Zap className="h-6 w-6 text-blue-500" />
+                    </div>
+                  </div>
+                  <h2 className="text-xl font-semibold text-neutral-900 mb-2">
+                    Initializing Generation
+                  </h2>
+                  <p className="text-neutral-600 mb-4">
+                    Your book is being prepared. This page updates automatically.
+                  </p>
+                  <div className="inline-flex items-center gap-2 text-sm text-neutral-500">
+                    <div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-pulse" />
+                    <span>Connecting to AI</span>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center">
+                  <div className="w-16 h-16 mx-auto mb-4 bg-amber-50 rounded-full flex items-center justify-center">
+                    <Clock className="h-8 w-8 text-amber-600" />
+                  </div>
+                  <h2 className="text-xl font-semibold text-neutral-900 mb-2">
+                    Awaiting Payment
+                  </h2>
+                  <p className="text-neutral-600 mb-6">
+                    Complete your purchase to start generating your book.
+                  </p>
+                  <Link
+                    href={`/review?bookId=${id}`}
+                    className="inline-flex items-center gap-2 px-6 py-3 bg-neutral-900 text-white rounded-full hover:bg-neutral-800 font-medium transition-colors"
+                  >
+                    Continue to Checkout
+                  </Link>
+                </div>
+              )}
             </div>
           )}
 
           {/* Progress Section */}
           {isGenerating && (
             <div className="bg-white rounded-2xl border border-neutral-200 p-6 sm:p-8 mb-6">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="relative">
-                  <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                    <PenTool className="h-6 w-6 text-blue-600" />
+              {/* Header with Timer */}
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-3">
+                  <div className="relative">
+                    <div className="w-12 h-12 bg-blue-50 rounded-full flex items-center justify-center">
+                      <PenTool className="h-6 w-6 text-blue-600" />
+                    </div>
+                    <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full border-2 border-white" />
                   </div>
-                  <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white animate-pulse" />
+                  <div>
+                    <h2 className="text-lg font-semibold text-neutral-900">
+                      {book.status === 'outlining' ? 'Creating Outline' : 'Writing Your Book'}
+                    </h2>
+                    <p className="text-sm text-neutral-500 transition-opacity duration-300">{writingMessage}</p>
+                  </div>
                 </div>
-                <div>
-                  <h2 className="text-lg font-semibold text-neutral-900">
-                    {book.status === 'outlining' ? 'Creating Your Story Outline' : 'Writing Your Book'}
-                  </h2>
-                  <p className="text-sm text-neutral-500">{writingMessage}</p>
+                <div className="text-right">
+                  <div className="flex items-center gap-1.5 text-neutral-500">
+                    <Clock className="h-4 w-4" />
+                    <span className="font-mono text-lg font-medium text-neutral-900">{formatElapsedTime(elapsedTime)}</span>
+                  </div>
+                  <p className="text-xs text-neutral-400">elapsed</p>
                 </div>
               </div>
 
@@ -287,18 +368,20 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
                   </span>
                   <span className="font-medium text-neutral-900">{progress}%</span>
                 </div>
-                <div className="h-4 bg-neutral-100 rounded-full overflow-hidden">
+                <div className="h-3 bg-neutral-100 rounded-full overflow-hidden">
                   <div
-                    className="h-full bg-gradient-to-r from-blue-500 to-purple-500 transition-all duration-500 rounded-full"
+                    className="h-full bg-gradient-to-r from-blue-500 to-indigo-500 transition-all duration-700 ease-out rounded-full relative"
                     style={{ width: `${Math.max(progress, 2)}%` }}
-                  />
+                  >
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-shimmer" />
+                  </div>
                 </div>
               </div>
 
               {/* Current Chapter Info */}
               {currentChapterOutline && book.status === 'generating' && (
-                <div className="bg-neutral-50 rounded-xl p-4 mb-4">
-                  <p className="text-sm text-neutral-500 mb-1">Currently writing:</p>
+                <div className="bg-neutral-50 rounded-xl p-4 mb-4 border border-neutral-100">
+                  <p className="text-xs uppercase tracking-wide text-neutral-400 mb-1">Currently writing</p>
                   <p className="font-medium text-neutral-900">
                     Chapter {book.currentChapter + 1}: {currentChapterOutline.title}
                   </p>
@@ -306,21 +389,25 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
               )}
 
               {/* Stats */}
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-3 gap-3">
                 <div className="bg-neutral-50 rounded-xl p-4 text-center">
                   <p className="text-2xl font-bold text-neutral-900">{book.totalWords.toLocaleString()}</p>
-                  <p className="text-sm text-neutral-500">Words Written</p>
+                  <p className="text-xs text-neutral-500">Words</p>
                 </div>
                 <div className="bg-neutral-50 rounded-xl p-4 text-center">
                   <p className="text-2xl font-bold text-neutral-900">{book.chapters.length}</p>
-                  <p className="text-sm text-neutral-500">Chapters Complete</p>
+                  <p className="text-xs text-neutral-500">Chapters</p>
+                </div>
+                <div className="bg-neutral-50 rounded-xl p-4 text-center">
+                  <p className="text-2xl font-bold text-neutral-900">~{Math.round(book.totalWords / 250)}</p>
+                  <p className="text-xs text-neutral-500">Pages</p>
                 </div>
               </div>
 
               {isIllustrated && (
-                <div className="mt-4 flex items-center gap-2 text-sm text-purple-600 bg-purple-50 rounded-lg px-4 py-2">
+                <div className="mt-4 flex items-center gap-2 text-sm text-purple-700 bg-purple-50 rounded-xl px-4 py-3 border border-purple-100">
                   <Palette className="h-4 w-4" />
-                  <span>Illustrations will be generated with each chapter</span>
+                  <span>Generating illustrations with each chapter</span>
                 </div>
               )}
             </div>

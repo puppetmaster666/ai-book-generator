@@ -309,3 +309,13 @@ a, button {
   background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
   animation: shimmer 2s ease-in-out infinite;
 }
+
+/* Shimmer animation for progress bars */
+.animate-shimmer {
+  animation: shimmer-slide 2s ease-in-out infinite;
+}
+
+@keyframes shimmer-slide {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(200%); }
+}
