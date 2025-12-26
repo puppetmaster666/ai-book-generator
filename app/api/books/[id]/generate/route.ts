@@ -16,6 +16,12 @@ import { countWords } from '@/lib/epub';
 import { BOOK_FORMATS, ART_STYLES, ILLUSTRATION_DIMENSIONS, type BookFormatKey, type ArtStyleKey } from '@/lib/constants';
 import { sendEmail, getBookReadyEmail } from '@/lib/email';
 
+// Genres that often trigger content policy blocks for image generation
+const SENSITIVE_GENRES = ['horror', 'thriller', 'mystery'];
+
+// Timeout for illustration generation (30 seconds) - prevents 504 Gateway Timeout
+const ILLUSTRATION_TIMEOUT_MS = 30000;
+
 // Types for visual guides
 type CharacterVisualGuide = {
   characters: Array<{
@@ -51,18 +57,29 @@ async function generateIllustrationImage(data: {
   bookFormat?: string;
 }): Promise<{ imageUrl: string; altText: string; width: number; height: number } | null> {
   try {
-    // Call our illustration API endpoint
+    // Call our illustration API endpoint with timeout
     const baseUrl = process.env.NEXTAUTH_URL || process.env.VERCEL_URL || 'http://localhost:3000';
-    const response = await fetch(`${baseUrl}/api/generate-illustration`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        ...data,
-        characterVisualGuide: data.characterVisualGuide,
-        visualStyleGuide: data.visualStyleGuide,
-        bookFormat: data.bookFormat,
-      }),
-    });
+
+    // Create abort controller for timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), ILLUSTRATION_TIMEOUT_MS);
+
+    let response: Response;
+    try {
+      response = await fetch(`${baseUrl}/api/generate-illustration`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...data,
+          characterVisualGuide: data.characterVisualGuide,
+          visualStyleGuide: data.visualStyleGuide,
+          bookFormat: data.bookFormat,
+        }),
+        signal: controller.signal,
+      });
+    } finally {
+      clearTimeout(timeoutId);
+    }
 
     if (!response.ok) {
       const errorText = await response.text();
@@ -98,7 +115,12 @@ async function generateIllustrationImage(data: {
 
     return null;
   } catch (error) {
-    console.error('Failed to generate illustration:', error);
+    // Check if this was a timeout abort
+    if (error instanceof Error && error.name === 'AbortError') {
+      console.warn('Illustration generation timed out after', ILLUSTRATION_TIMEOUT_MS / 1000, 'seconds');
+    } else {
+      console.error('Failed to generate illustration:', error);
+    }
     return null;
   }
 }
@@ -192,7 +214,9 @@ export async function POST(
     let visualStyleGuide = book.visualStyleGuide as VisualStyleGuide | null;
 
     // Generate visual guides for illustrated books if not already done
-    if (formatConfig && formatConfig.illustrationsPerChapter > 0 && book.artStyle && !characterVisualGuide) {
+    // Skip for sensitive genres that trigger content policy blocks
+    const genreIsSensitive = SENSITIVE_GENRES.includes(book.genre.toLowerCase());
+    if (formatConfig && formatConfig.illustrationsPerChapter > 0 && book.artStyle && !characterVisualGuide && !genreIsSensitive) {
       try {
         console.log('Generating character visual guide for consistency...');
         characterVisualGuide = await generateCharacterVisualGuide({
@@ -296,7 +320,12 @@ export async function POST(
       console.log(`Chapter ${i} saved successfully. Word count: ${wordCount}`);
 
       // Generate illustrations if book has illustrations enabled (using pre-generated visual guides)
-      if (formatConfig && formatConfig.illustrationsPerChapter > 0 && book.artStyle) {
+      // Skip illustrations for sensitive genres that trigger content policy blocks
+      const isSensitiveGenre = SENSITIVE_GENRES.includes(book.genre.toLowerCase());
+      if (isSensitiveGenre && formatConfig && formatConfig.illustrationsPerChapter > 0) {
+        console.log(`Skipping illustrations for chapter ${i} - genre '${book.genre}' often triggers content policy blocks`);
+      }
+      if (formatConfig && formatConfig.illustrationsPerChapter > 0 && book.artStyle && !isSensitiveGenre) {
         try {
           if (bookFormat === 'picture_book') {
             // Picture book: more detailed, full-page illustrations
