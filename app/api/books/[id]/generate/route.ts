@@ -65,7 +65,19 @@ async function generateIllustrationImage(data: {
     });
 
     if (!response.ok) {
-      console.error('Illustration API error:', await response.text());
+      const errorText = await response.text();
+      let errorData;
+      try {
+        errorData = JSON.parse(errorText);
+      } catch {
+        errorData = { error: errorText };
+      }
+
+      if (errorData.blocked) {
+        console.warn(`Illustration blocked by content policy for: ${data.scene.substring(0, 50)}...`);
+      } else {
+        console.error('Illustration API error:', errorData);
+      }
       return null;
     }
 
@@ -246,15 +258,26 @@ export async function POST(
       const wordCount = countWords(chapterContent);
       totalWords += wordCount;
 
-      // Generate chapter summary
-      const summary = await summarizeChapter(chapterContent);
+      // Generate chapter summary (with fallback)
+      let summary: string;
+      try {
+        summary = await summarizeChapter(chapterContent);
+      } catch (summaryError) {
+        console.error(`Failed to summarize chapter ${i}:`, summaryError);
+        summary = chapterContent.substring(0, 500) + '...'; // Fallback to truncated content
+      }
 
-      // Update character states
-      characterStates = await updateCharacterStates(
-        characterStates,
-        chapterContent,
-        i
-      );
+      // Update character states (with fallback)
+      try {
+        characterStates = await updateCharacterStates(
+          characterStates,
+          chapterContent,
+          i
+        );
+      } catch (stateError) {
+        console.error(`Failed to update character states for chapter ${i}:`, stateError);
+        // Continue with existing states
+      }
 
       // Update story so far
       storySoFar += `\n\nChapter ${i}: ${chapterPlan.title}\n${summary}`;
@@ -270,6 +293,7 @@ export async function POST(
           wordCount,
         },
       });
+      console.log(`Chapter ${i} saved successfully. Word count: ${wordCount}`);
 
       // Generate illustrations if book has illustrations enabled (using pre-generated visual guides)
       if (formatConfig && formatConfig.illustrationsPerChapter > 0 && book.artStyle) {

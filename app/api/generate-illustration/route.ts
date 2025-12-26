@@ -91,8 +91,39 @@ export async function POST(request: NextRequest) {
     const result = await model.generateContent(prompt);
     const response = result.response;
 
+    // Check for content policy blocks
+    const candidate = response.candidates?.[0];
+    if (!candidate) {
+      const blockReason = response.promptFeedback?.blockReason;
+      const safetyRatings = response.promptFeedback?.safetyRatings;
+      console.error('No candidates returned. Block reason:', blockReason);
+      console.error('Safety ratings:', JSON.stringify(safetyRatings, null, 2));
+      return NextResponse.json(
+        {
+          error: 'Content blocked by safety filter',
+          reason: blockReason || 'Unknown',
+          blocked: true
+        },
+        { status: 400 }
+      );
+    }
+
+    // Check if generation was blocked due to safety
+    if (candidate.finishReason === 'SAFETY') {
+      console.error('Generation blocked for safety. Safety ratings:',
+        JSON.stringify(candidate.safetyRatings, null, 2));
+      return NextResponse.json(
+        {
+          error: 'Image blocked by content policy',
+          reason: 'SAFETY',
+          blocked: true
+        },
+        { status: 400 }
+      );
+    }
+
     // Extract image from response
-    const parts = response.candidates?.[0]?.content?.parts || [];
+    const parts = candidate.content?.parts || [];
     let imageData = null;
     let altText = '';
 
@@ -108,8 +139,13 @@ export async function POST(request: NextRequest) {
     }
 
     if (!imageData) {
+      console.error('No image in response. Parts:', JSON.stringify(parts.map(p => ({
+        hasInlineData: !!p.inlineData,
+        mimeType: p.inlineData?.mimeType,
+        hasText: !!p.text
+      })), null, 2));
       return NextResponse.json(
-        { error: 'Failed to generate image' },
+        { error: 'No image generated - model returned text only' },
         { status: 500 }
       );
     }
@@ -120,9 +156,20 @@ export async function POST(request: NextRequest) {
       prompt,
     });
   } catch (error) {
-    console.error('Error generating illustration:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error('Error generating illustration:', errorMessage);
+    console.error('Full error:', error);
+
+    // Check if it's a content policy error from Gemini
+    if (errorMessage.includes('SAFETY') || errorMessage.includes('blocked')) {
+      return NextResponse.json(
+        { error: 'Content blocked by safety policy', blocked: true },
+        { status: 400 }
+      );
+    }
+
     return NextResponse.json(
-      { error: 'Failed to generate illustration' },
+      { error: `Failed to generate illustration: ${errorMessage}` },
       { status: 500 }
     );
   }
