@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
-import { ArrowRight, Loader2, Sparkles, Menu, X, Check, ChevronRight, Zap, BookOpen, Download, ExternalLink } from 'lucide-react';
+import { ArrowRight, Loader2, Sparkles, Menu, X, Check, ChevronRight, Zap, BookOpen, Download, ExternalLink, FileCheck } from 'lucide-react';
 import Footer from '@/components/Footer';
 
 export default function Home() {
@@ -15,6 +15,7 @@ export default function Home() {
   const [isGeneratingIdea, setIsGeneratingIdea] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<'single' | 'monthly' | 'yearly'>('monthly');
+  const [lightboxImage, setLightboxImage] = useState<{ src: string; label: string } | null>(null);
 
   const handleFindIdea = async () => {
     setIsGeneratingIdea(true);
@@ -252,7 +253,7 @@ export default function Home() {
               >
                 <div className="relative w-64 h-96 rounded-lg overflow-hidden shadow-2xl transform group-hover:scale-105 transition-transform duration-300">
                   <Image
-                    src="/images/screenshots/epub-cover.png"
+                    src="/images/cover.jpg"
                     alt="Blood & Silver by Freddie Fabrevoie"
                     fill
                     className="object-cover"
@@ -269,7 +270,7 @@ export default function Home() {
             {/* Content */}
             <div>
               <div className="inline-flex items-center gap-2 bg-white/10 px-4 py-2 rounded-full text-sm mb-6">
-                <span className="w-2 h-2 bg-green-400 rounded-full" />
+                <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
                 Published on Amazon KDP
               </div>
               <h2 className="text-4xl md:text-5xl font-bold tracking-tight mb-6" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>
@@ -280,17 +281,19 @@ export default function Home() {
               </p>
               <p className="text-neutral-400 mb-8 leading-relaxed">
                 A complete 10-chapter historical fiction exploring history&apos;s most ruthless untold betrayals.
-                Written using draftmybook, formatted as EPUB, and published directly to Amazon KDP.
+                Created with draftmybook, formatted to Amazon KDP specifications, and published in minutes.
               </p>
-              <a
-                href="https://www.amazon.com/dp/B0DQFQLQBR"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 bg-white text-neutral-900 px-6 py-3 rounded-full font-medium hover:bg-neutral-100 transition-colors"
-              >
-                View on Amazon
-                <ExternalLink className="h-4 w-4" />
-              </a>
+              <div className="flex flex-wrap gap-4">
+                <a
+                  href="https://www.amazon.com/dp/B0DQFQLQBR"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 bg-white text-neutral-900 px-6 py-3 rounded-full font-medium hover:bg-neutral-100 transition-colors"
+                >
+                  View on Amazon
+                  <ExternalLink className="h-4 w-4" />
+                </a>
+              </div>
             </div>
           </div>
         </div>
@@ -351,22 +354,31 @@ export default function Home() {
       <section className="py-24 px-6">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-16">
+            <div className="inline-flex items-center gap-2 bg-green-50 text-green-700 px-4 py-2 rounded-full text-sm mb-6">
+              <FileCheck className="h-4 w-4" />
+              Amazon KDP Ready
+            </div>
             <h2 className="text-4xl md:text-5xl font-bold tracking-tight mb-4" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>
-              Professional output
+              Publication-ready formatting
             </h2>
-            <p className="text-lg text-neutral-600">
-              Beautifully formatted, ready for e-readers and print
+            <p className="text-lg text-neutral-600 max-w-2xl mx-auto">
+              Every book meets Amazon KDP specifications. Proper chapter breaks, table of contents,
+              metadata, and cover dimensions included.
             </p>
           </div>
 
           <div className="grid md:grid-cols-3 gap-6">
             {[
-              { src: '/images/screenshots/epub-cover.png', label: 'Title Page' },
-              { src: '/images/screenshots/epub-toc.png', label: 'Table of Contents' },
-              { src: '/images/screenshots/epub-chapter-1.png', label: 'Chapter Content' },
+              { src: '/images/screenshots/epub-cover.png', label: 'Cover (1600x2560px)' },
+              { src: '/images/screenshots/epub-toc.png', label: 'Auto-generated TOC' },
+              { src: '/images/screenshots/epub-chapter-1.png', label: 'Formatted Chapters' },
             ].map((item, i) => (
-              <div key={i} className="group">
-                <div className="bg-white rounded-2xl border border-neutral-200 p-4 card-hover">
+              <button
+                key={i}
+                onClick={() => setLightboxImage(item)}
+                className="group text-left cursor-pointer"
+              >
+                <div className="bg-white rounded-2xl border border-neutral-200 p-4 card-hover hover:border-neutral-300">
                   <div className="aspect-[3/4] relative overflow-hidden rounded-xl bg-neutral-100">
                     <Image
                       src={item.src}
@@ -374,11 +386,22 @@ export default function Home() {
                       fill
                       className="object-contain group-hover:scale-105 transition-transform duration-500"
                     />
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center">
+                      <span className="opacity-0 group-hover:opacity-100 transition-opacity bg-white/90 backdrop-blur px-4 py-2 rounded-full text-sm font-medium text-neutral-900">
+                        Click to enlarge
+                      </span>
+                    </div>
                   </div>
                 </div>
                 <p className="text-center text-sm text-neutral-600 mt-4">{item.label}</p>
-              </div>
+              </button>
             ))}
+          </div>
+
+          <div className="mt-12 text-center">
+            <p className="text-sm text-neutral-500">
+              All exports include EPUB 3.0 format, reflowable text, and embedded fonts for consistent display across all devices.
+            </p>
           </div>
         </div>
       </section>
@@ -581,6 +604,33 @@ export default function Home() {
       </section>
 
       <Footer />
+
+      {/* Lightbox Modal */}
+      {lightboxImage && (
+        <div
+          className="fixed inset-0 bg-black/90 z-[100] flex items-center justify-center p-4 md:p-8"
+          onClick={() => setLightboxImage(null)}
+        >
+          <button
+            onClick={() => setLightboxImage(null)}
+            className="absolute top-4 right-4 text-white/80 hover:text-white p-2 rounded-full hover:bg-white/10 transition-colors"
+          >
+            <X className="h-8 w-8" />
+          </button>
+          <div className="relative w-full max-w-3xl max-h-[90vh] aspect-[3/4]">
+            <Image
+              src={lightboxImage.src}
+              alt={lightboxImage.label}
+              fill
+              className="object-contain"
+              sizes="(max-width: 768px) 100vw, 80vw"
+            />
+          </div>
+          <p className="absolute bottom-8 left-1/2 -translate-x-1/2 text-white/80 text-sm">
+            {lightboxImage.label}
+          </p>
+        </div>
+      )}
     </div>
   );
 }
