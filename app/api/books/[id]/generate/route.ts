@@ -299,9 +299,9 @@ export async function POST(
       return NextResponse.json({ error: 'Book already generated' }, { status: 400 });
     }
 
-    // If resuming from failed, reset and clean up partial data
-    if (book.status === 'failed') {
-      console.log(`Retrying failed book generation for book ${id}`);
+    // If resuming from failed or stuck generating, reset and clean up partial data
+    if (book.status === 'failed' || book.status === 'generating') {
+      console.log(`Retrying ${book.status} book generation for book ${id}`);
 
       // Delete any existing chapters and illustrations from failed attempt
       await prisma.illustration.deleteMany({ where: { bookId: id } });
