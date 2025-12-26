@@ -43,7 +43,7 @@ export default function Header() {
 
   return (
     <>
-      <nav className="w-full px-6 py-6 border-b border-neutral-200 bg-white">
+      <nav className="w-full px-6 py-6">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           {/* Left Nav - Hamburger Menu */}
           <div className="hidden md:flex items-center gap-8 flex-1">
