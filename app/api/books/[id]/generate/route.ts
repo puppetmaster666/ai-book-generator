@@ -293,14 +293,24 @@ export async function POST(
       return NextResponse.json({ error: 'Payment required' }, { status: 402 });
     }
 
-    // Allow retry for failed books, resume for stuck generating books
-    // Only block if truly completed
+    // Block if already completed
     if (book.status === 'completed') {
       return NextResponse.json({ error: 'Book already generated' }, { status: 400 });
     }
 
+    // RACE CONDITION GUARD: If generation is actively in progress (updated recently), skip
+    // This prevents duplicate generation from webhook + page load happening simultaneously
+    const twoMinutesAgo = new Date(Date.now() - 2 * 60 * 1000);
+    if ((book.status === 'outlining' || book.status === 'generating') && book.updatedAt > twoMinutesAgo) {
+      console.log(`Generation already in progress for book ${id}, skipping duplicate request`);
+      return NextResponse.json({
+        message: 'Generation already in progress',
+        status: book.status
+      });
+    }
+
     // If resuming from any incomplete state, reset and clean up partial data
-    // This covers: outlining, generating, failed - any state except pending or completed
+    // This covers: outlining, generating (stale), failed - any state except pending or completed
     if (book.status !== 'pending' && book.status !== 'completed') {
       console.log(`Retrying ${book.status} book generation for book ${id}`);
 
