@@ -134,7 +134,9 @@ async function attemptIllustrationGeneration(data: {
   bookFormat?: string;
 }): Promise<IllustrationAttemptResult> {
   try {
-    const baseUrl = process.env.NEXTAUTH_URL || process.env.VERCEL_URL || 'http://localhost:3000';
+    // VERCEL_URL doesn't include protocol, so we need to add it
+    const vercelUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null;
+    const baseUrl = process.env.NEXTAUTH_URL || vercelUrl || 'http://localhost:3000';
 
     // Create abort controller for timeout
     const controller = new AbortController();
