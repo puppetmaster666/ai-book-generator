@@ -42,8 +42,8 @@ export default function Home() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!bookIdea.trim() || bookIdea.length < 10) {
-      setError('Please describe your book idea in more detail');
+    if (!bookIdea.trim() || bookIdea.length < 20) {
+      setError('Please describe your book idea in at least 20 characters');
       return;
     }
 
@@ -89,22 +89,27 @@ export default function Home() {
                   disabled={isLoading || isGeneratingIdea}
                 />
                 <div className="flex items-center justify-between gap-4 px-2 pb-2">
-                  <button
-                    type="button"
-                    onClick={handleFindIdea}
-                    disabled={isLoading || isGeneratingIdea}
-                    className="text-sm text-neutral-500 hover:text-neutral-900 disabled:opacity-50 flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-neutral-100 transition-colors"
-                  >
-                    {isGeneratingIdea ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Sparkles className="h-4 w-4" />
-                    )}
-                    {isGeneratingIdea ? 'Generating...' : 'Surprise me'}
-                  </button>
+                  <div className="flex items-center gap-4">
+                    <button
+                      type="button"
+                      onClick={handleFindIdea}
+                      disabled={isLoading || isGeneratingIdea}
+                      className="text-sm text-neutral-500 hover:text-neutral-900 disabled:opacity-50 flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-neutral-100 transition-colors"
+                    >
+                      {isGeneratingIdea ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Sparkles className="h-4 w-4" />
+                      )}
+                      {isGeneratingIdea ? 'Generating...' : 'Surprise me'}
+                    </button>
+                    <span className={`text-xs ${bookIdea.length >= 20 ? 'text-green-600' : 'text-neutral-400'}`}>
+                      {bookIdea.length}/20 min
+                    </span>
+                  </div>
                   <button
                     type="submit"
-                    disabled={isLoading || !bookIdea.trim()}
+                    disabled={isLoading || bookIdea.length < 20}
                     className="bg-neutral-900 text-white px-6 py-3 rounded-xl text-sm font-medium hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 transition-all hover:scale-105"
                   >
                     {isLoading ? (

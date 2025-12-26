@@ -187,3 +187,31 @@ model Payment {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 }
+
+model PromoCode {
+  id          String   @id @default(cuid())
+  code        String   @unique
+  discount    Float    @default(1.0) // 1.0 = 100% off (free)
+  maxUses     Int
+  currentUses Int      @default(0)
+  validUntil  DateTime?
+  isActive    Boolean  @default(true)
+  onePerUser  Boolean  @default(false) // Limit to one use per email/IP
+  usages      PromoCodeUsage[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model PromoCodeUsage {
+  id          String    @id @default(cuid())
+  promoCodeId String
+  promoCode   PromoCode @relation(fields: [promoCodeId], references: [id], onDelete: Cascade)
+  email       String?
+  ipAddress   String?
+  bookId      String?
+  createdAt   DateTime  @default(now())
+
+  @@index([promoCodeId])
+  @@index([email])
+  @@index([ipAddress])
+}
