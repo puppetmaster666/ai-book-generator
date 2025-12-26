@@ -19,7 +19,14 @@
       "Bash(npx prisma generate:*)",
       "Bash(git commit:*)",
       "Bash(git push:*)",
-      "Bash(powershell -Command \"Get-Content app/page.tsx | Select-Object -First 5\")"
+      "Bash(powershell -Command \"Get-Content app/page.tsx | Select-Object -First 5\")",
+      "Bash(dir:*)",
+      "Bash(ren:*)",
+      "Bash(ren \"Screenshot 2025-12-26 125315.png\" \"epub-toc.png\")",
+      "Bash(powershell -Command:*)",
+      "Bash(git reset:*)",
+      "Bash(node -e:*)",
+      "Bash(npx prisma db push:*)"
     ]
   }
 }
