@@ -8,14 +8,19 @@ import { useSession, signOut } from 'next-auth/react';
 export default function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [navDropdownOpen, setNavDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const navDropdownRef = useRef<HTMLDivElement>(null);
   const { data: session, status } = useSession();
 
-  // Close dropdown when clicking outside
+  // Close dropdowns when clicking outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setDropdownOpen(false);
+      }
+      if (navDropdownRef.current && !navDropdownRef.current.contains(event.target as Node)) {
+        setNavDropdownOpen(false);
       }
     }
     document.addEventListener('mousedown', handleClickOutside);
@@ -40,14 +45,43 @@ export default function Header() {
     <>
       <nav className="w-full px-6 py-6 border-b border-neutral-200 bg-white">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
-          {/* Left Nav */}
+          {/* Left Nav - Hamburger Menu */}
           <div className="hidden md:flex items-center gap-8 flex-1">
-            <Link href="/how-it-works" className="text-sm text-neutral-600 hover:text-neutral-900 animated-underline">
-              How it works
-            </Link>
-            <Link href="/pricing" className="text-sm text-neutral-600 hover:text-neutral-900 animated-underline">
-              Pricing
-            </Link>
+            <div className="relative" ref={navDropdownRef}>
+              <button
+                onClick={() => setNavDropdownOpen(!navDropdownOpen)}
+                className="flex items-center gap-2 text-sm text-neutral-600 hover:text-neutral-900 transition-colors"
+              >
+                <Menu className="h-5 w-5" />
+                <span>Menu</span>
+              </button>
+
+              {navDropdownOpen && (
+                <div className="absolute left-0 mt-2 w-48 bg-white rounded-xl border border-neutral-200 shadow-lg py-2 z-50">
+                  <Link
+                    href="/how-it-works"
+                    className="block px-4 py-2.5 text-sm text-neutral-700 hover:bg-neutral-50 transition-colors"
+                    onClick={() => setNavDropdownOpen(false)}
+                  >
+                    How it works
+                  </Link>
+                  <Link
+                    href="/pricing"
+                    className="block px-4 py-2.5 text-sm text-neutral-700 hover:bg-neutral-50 transition-colors"
+                    onClick={() => setNavDropdownOpen(false)}
+                  >
+                    Pricing
+                  </Link>
+                  <Link
+                    href="/faq"
+                    className="block px-4 py-2.5 text-sm text-neutral-700 hover:bg-neutral-50 transition-colors"
+                    onClick={() => setNavDropdownOpen(false)}
+                  >
+                    FAQ
+                  </Link>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Center Logo */}
@@ -61,10 +95,6 @@ export default function Header() {
 
           {/* Right Nav */}
           <div className="hidden md:flex items-center gap-6 flex-1 justify-end">
-            <Link href="/faq" className="text-sm text-neutral-600 hover:text-neutral-900 animated-underline">
-              FAQ
-            </Link>
-
             {status === 'loading' ? (
               <div className="w-10 h-10 rounded-full bg-neutral-200 animate-pulse" />
             ) : session?.user ? (
