@@ -76,77 +76,82 @@ function CheckoutContent() {
   const discountedPrice = applyDiscount ? originalPrice * 0.85 : originalPrice;
 
   return (
-    <div className="min-h-screen bg-[#FFFDF8]">
+    <div className="min-h-screen bg-[#FAFAFA]">
       <Header />
 
-      <main className="pt-24 pb-12 px-4 sm:px-6 lg:px-8">
+      <main className="py-16 px-6">
         <div className="max-w-xl mx-auto">
-          <div className="bg-white rounded-xl border border-[#E8E4DC] p-6 sm:p-8">
-            <h1 className="text-2xl font-bold text-[#0F1A2A] mb-6">Complete Your Order</h1>
+          <div className="text-center mb-8">
+            <h1 className="text-3xl font-bold tracking-tight mb-2" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>
+              Complete Your Order
+            </h1>
+            <p className="text-neutral-600">Secure checkout powered by Stripe</p>
+          </div>
 
+          <div className="bg-white rounded-2xl border border-neutral-200 p-8">
             {/* Order Summary */}
-            <div className="bg-[#F7F5F0] rounded-lg p-4 mb-6">
-              <h3 className="font-medium text-[#0F1A2A] mb-3">Order Summary</h3>
+            <div className="bg-neutral-50 rounded-xl p-5 mb-6">
+              <h3 className="font-medium mb-4" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>Order Summary</h3>
               <div className="flex justify-between text-sm">
-                <span className="text-[#4A5568]">AI Book Generation</span>
+                <span className="text-neutral-600">AI Book Generation</span>
                 {applyDiscount ? (
                   <span>
-                    <span className="line-through text-[#4A5568] mr-2">${originalPrice.toFixed(2)}</span>
-                    <span className="font-medium text-[#10B981]">${discountedPrice.toFixed(2)}</span>
+                    <span className="line-through text-neutral-400 mr-2">${originalPrice.toFixed(2)}</span>
+                    <span className="font-medium text-green-600">${discountedPrice.toFixed(2)}</span>
                   </span>
                 ) : (
-                  <span className="font-medium text-[#0F1A2A]">${originalPrice.toFixed(2)}</span>
+                  <span className="font-medium">${originalPrice.toFixed(2)}</span>
                 )}
               </div>
               <div className="flex justify-between text-sm mt-2">
-                <span className="text-[#4A5568]">AI-Generated Cover</span>
-                <span className="font-medium text-[#10B981]">Included</span>
+                <span className="text-neutral-600">AI-Generated Cover</span>
+                <span className="font-medium text-green-600">Included</span>
               </div>
               <div className="flex justify-between text-sm mt-2">
-                <span className="text-[#4A5568]">EPUB Download</span>
-                <span className="font-medium text-[#10B981]">Included</span>
+                <span className="text-neutral-600">EPUB Download</span>
+                <span className="font-medium text-green-600">Included</span>
               </div>
-              <hr className="my-3 border-[#E8E4DC]" />
-              <div className="flex justify-between font-medium">
-                <span className="text-[#0F1A2A]">Total</span>
-                <span className="text-[#0F1A2A]">${discountedPrice.toFixed(2)}</span>
+              <hr className="my-4 border-neutral-200" />
+              <div className="flex justify-between font-medium text-lg">
+                <span>Total</span>
+                <span>${discountedPrice.toFixed(2)}</span>
               </div>
               {applyDiscount && (
-                <p className="text-xs text-[#10B981] mt-2">15% discount applied!</p>
+                <p className="text-xs text-green-600 mt-2">15% discount applied!</p>
               )}
             </div>
 
             {/* Email Input */}
             <div className="mb-6">
-              <label className="block text-sm font-medium text-[#0F1A2A] mb-2">Email Address</label>
+              <label className="block text-sm font-medium mb-2">Email Address</label>
               <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="your@email.com"
-                className="w-full px-4 py-3 border border-[#E8E4DC] rounded-lg focus:border-[#1E3A5F] focus:outline-none"
+                className="w-full px-4 py-3 border border-neutral-200 rounded-xl focus:border-neutral-900 focus:outline-none transition-colors"
               />
-              <p className="text-xs text-[#4A5568] mt-1">We will send your book download link to this email</p>
+              <p className="text-xs text-neutral-500 mt-1">We&apos;ll send your book download link to this email</p>
             </div>
 
             {/* What You Get */}
             <div className="mb-6">
-              <h3 className="font-medium text-[#0F1A2A] mb-3">What You Get</h3>
+              <h3 className="font-medium mb-3" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>What You Get</h3>
               <ul className="space-y-2">
-                <li className="flex items-center gap-2 text-sm text-[#4A5568]">
-                  <Check className="h-4 w-4 text-[#10B981]" />
+                <li className="flex items-center gap-2 text-sm text-neutral-600">
+                  <Check className="h-4 w-4 text-green-600" />
                   Complete book based on your specifications
                 </li>
-                <li className="flex items-center gap-2 text-sm text-[#4A5568]">
-                  <Check className="h-4 w-4 text-[#10B981]" />
+                <li className="flex items-center gap-2 text-sm text-neutral-600">
+                  <Check className="h-4 w-4 text-green-600" />
                   Professional AI-generated cover
                 </li>
-                <li className="flex items-center gap-2 text-sm text-[#4A5568]">
-                  <Check className="h-4 w-4 text-[#10B981]" />
+                <li className="flex items-center gap-2 text-sm text-neutral-600">
+                  <Check className="h-4 w-4 text-green-600" />
                   EPUB format ready for Amazon KDP
                 </li>
-                <li className="flex items-center gap-2 text-sm text-[#4A5568]">
-                  <Check className="h-4 w-4 text-[#10B981]" />
+                <li className="flex items-center gap-2 text-sm text-neutral-600">
+                  <Check className="h-4 w-4 text-green-600" />
                   Full commercial rights
                 </li>
               </ul>
@@ -156,7 +161,7 @@ function CheckoutContent() {
             <button
               onClick={handleCheckout}
               disabled={isLoading || !email}
-              className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-[#1E3A5F] text-white rounded-lg hover:bg-[#2D4A73] disabled:opacity-50 font-medium"
+              className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-neutral-900 text-white rounded-full hover:bg-neutral-800 disabled:opacity-50 font-medium transition-colors"
             >
               {isLoading ? (
                 <><Loader2 className="h-5 w-5 animate-spin" /> Processing...</>
@@ -165,7 +170,7 @@ function CheckoutContent() {
               )}
             </button>
 
-            <p className="text-xs text-center text-[#4A5568] mt-4">
+            <p className="text-xs text-center text-neutral-500 mt-4">
               Secure payment powered by Stripe. 30-day money-back guarantee.
             </p>
           </div>
@@ -175,9 +180,9 @@ function CheckoutContent() {
       {/* Discount Popup */}
       {showDiscount && !applyDiscount && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl p-6 max-w-md w-full">
-            <h3 className="text-xl font-bold text-[#0F1A2A] mb-2">Wait! Special Offer</h3>
-            <p className="text-[#4A5568] mb-4">
+          <div className="bg-white rounded-2xl p-8 max-w-md w-full animate-scale-in">
+            <h3 className="text-xl font-bold mb-2" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>Wait! Special Offer</h3>
+            <p className="text-neutral-600 mb-6">
               Get 15% off your book right now! This offer expires when you leave this page.
             </p>
             <div className="flex gap-3">
@@ -186,13 +191,13 @@ function CheckoutContent() {
                   setApplyDiscount(true);
                   setShowDiscount(false);
                 }}
-                className="flex-1 px-4 py-3 bg-[#1E3A5F] text-white rounded-lg hover:bg-[#2D4A73]"
+                className="flex-1 px-4 py-3 bg-neutral-900 text-white rounded-full hover:bg-neutral-800 font-medium transition-colors"
               >
                 Apply 15% Off
               </button>
               <button
                 onClick={() => setShowDiscount(false)}
-                className="px-4 py-3 border border-[#E8E4DC] rounded-lg hover:bg-[#F7F5F0]"
+                className="px-4 py-3 border border-neutral-200 rounded-full hover:bg-neutral-50 transition-colors"
               >
                 No Thanks
               </button>
@@ -206,7 +211,7 @@ function CheckoutContent() {
 
 export default function CheckoutPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-[#FFFDF8] flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-[#1E3A5F]" /></div>}>
+    <Suspense fallback={<div className="min-h-screen bg-[#FAFAFA] flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-neutral-900" /></div>}>
       <CheckoutContent />
     </Suspense>
   );

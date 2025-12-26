@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Header from '@/components/Header';
+import Footer from '@/components/Footer';
 import { ArrowLeft, ArrowRight, Plus, X } from 'lucide-react';
 import { GENRES, WRITING_STYLES, CHAPTER_FORMATS, FONT_STYLES } from '@/lib/constants';
 
@@ -118,75 +119,75 @@ export default function CreateBook() {
   };
 
   return (
-    <div className="min-h-screen bg-[#FFFDF8]">
+    <div className="min-h-screen bg-[#FAFAFA]">
       <Header />
 
-      <main className="pt-24 pb-12 px-4 sm:px-6 lg:px-8">
+      <main className="py-16 px-6">
         <div className="max-w-3xl mx-auto">
           {/* Progress Steps */}
-          <div className="mb-8">
+          <div className="mb-10">
             <div className="flex items-center justify-between">
               {STEPS.map((step, index) => (
                 <div key={step.id} className="flex items-center">
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-                    currentStep >= step.id ? 'bg-[#1E3A5F] text-white' : 'bg-[#E8E4DC] text-[#4A5568]'
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-medium transition-colors ${
+                    currentStep >= step.id ? 'bg-neutral-900 text-white' : 'bg-neutral-200 text-neutral-500'
                   }`}>
                     {step.id}
                   </div>
                   {index < STEPS.length - 1 && (
-                    <div className={`w-12 sm:w-24 h-1 mx-2 ${
-                      currentStep > step.id ? 'bg-[#1E3A5F]' : 'bg-[#E8E4DC]'
+                    <div className={`w-12 sm:w-24 h-1 mx-2 rounded transition-colors ${
+                      currentStep > step.id ? 'bg-neutral-900' : 'bg-neutral-200'
                     }`} />
                   )}
                 </div>
               ))}
             </div>
-            <div className="mt-2 text-center">
-              <span className="text-sm text-[#4A5568]">{STEPS[currentStep - 1].title}</span>
+            <div className="mt-4 text-center">
+              <span className="text-sm text-neutral-600">{STEPS[currentStep - 1].title}</span>
             </div>
           </div>
 
           {/* Form Content */}
-          <div className="bg-white rounded-xl border border-[#E8E4DC] p-6 sm:p-8">
+          <div className="bg-white rounded-2xl border border-neutral-200 p-8">
             {/* Step 1: Title & Genre */}
             {currentStep === 1 && (
               <div className="space-y-6">
                 <div>
-                  <label className="block text-sm font-medium text-[#0F1A2A] mb-2">Book Title</label>
+                  <label className="block text-sm font-medium mb-2">Book Title</label>
                   <input
                     type="text"
                     value={formData.title}
                     onChange={(e) => updateField('title', e.target.value)}
                     placeholder="Enter your book title"
-                    className="w-full px-4 py-3 border border-[#E8E4DC] rounded-lg focus:border-[#1E3A5F] focus:outline-none"
+                    className="w-full px-4 py-3 border border-neutral-200 rounded-xl focus:border-neutral-900 focus:outline-none transition-colors"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-[#0F1A2A] mb-2">Author Name</label>
+                  <label className="block text-sm font-medium mb-2">Author Name</label>
                   <input
                     type="text"
                     value={formData.authorName}
                     onChange={(e) => updateField('authorName', e.target.value)}
                     placeholder="Your name or pen name"
-                    className="w-full px-4 py-3 border border-[#E8E4DC] rounded-lg focus:border-[#1E3A5F] focus:outline-none"
+                    className="w-full px-4 py-3 border border-neutral-200 rounded-xl focus:border-neutral-900 focus:outline-none transition-colors"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-[#0F1A2A] mb-2">Genre</label>
+                  <label className="block text-sm font-medium mb-3">Genre</label>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                     {Object.entries(GENRES).map(([key, genre]) => (
                       <button
                         key={key}
                         type="button"
                         onClick={() => updateField('genre', key)}
-                        className={`p-3 rounded-lg border text-left ${
+                        className={`p-4 rounded-xl border text-left transition-all ${
                           formData.genre === key
-                            ? 'border-[#1E3A5F] bg-[#1E3A5F]/5'
-                            : 'border-[#E8E4DC] hover:border-[#1E3A5F]'
+                            ? 'border-neutral-900 bg-neutral-50'
+                            : 'border-neutral-200 hover:border-neutral-400'
                         }`}
                       >
-                        <span className="font-medium text-[#0F1A2A]">{genre.label}</span>
-                        <span className="block text-xs text-[#4A5568] mt-1">~{(genre.targetWords / 1000).toFixed(0)}K words</span>
+                        <span className="font-medium">{genre.label}</span>
+                        <span className="block text-xs text-neutral-500 mt-1">~{(genre.targetWords / 1000).toFixed(0)}K words</span>
                       </button>
                     ))}
                   </div>
@@ -198,19 +199,19 @@ export default function CreateBook() {
             {currentStep === 2 && (
               <div className="space-y-6">
                 <div>
-                  <label className="block text-sm font-medium text-[#0F1A2A] mb-2">Premise</label>
+                  <label className="block text-sm font-medium mb-2">Premise</label>
                   <textarea
                     value={formData.premise}
                     onChange={(e) => updateField('premise', e.target.value)}
                     placeholder="Describe your book idea in 2-3 sentences. What is the hook?"
                     rows={4}
-                    className="w-full px-4 py-3 border border-[#E8E4DC] rounded-lg focus:border-[#1E3A5F] focus:outline-none resize-none"
+                    className="w-full px-4 py-3 border border-neutral-200 rounded-xl focus:border-neutral-900 focus:outline-none resize-none transition-colors"
                   />
                 </div>
                 <div>
-                  <div className="flex justify-between items-center mb-2">
-                    <label className="text-sm font-medium text-[#0F1A2A]">Main Characters</label>
-                    <button type="button" onClick={addCharacter} className="text-[#1E3A5F] text-sm flex items-center gap-1 hover:underline">
+                  <div className="flex justify-between items-center mb-3">
+                    <label className="text-sm font-medium">Main Characters</label>
+                    <button type="button" onClick={addCharacter} className="text-neutral-900 text-sm flex items-center gap-1 hover:underline">
                       <Plus className="h-4 w-4" /> Add Character
                     </button>
                   </div>
@@ -223,18 +224,18 @@ export default function CreateBook() {
                             value={char.name}
                             onChange={(e) => updateCharacter(index, 'name', e.target.value)}
                             placeholder="Character name"
-                            className="w-full px-4 py-2 border border-[#E8E4DC] rounded-lg focus:border-[#1E3A5F] focus:outline-none"
+                            className="w-full px-4 py-2.5 border border-neutral-200 rounded-xl focus:border-neutral-900 focus:outline-none transition-colors"
                           />
                           <textarea
                             value={char.description}
                             onChange={(e) => updateCharacter(index, 'description', e.target.value)}
                             placeholder="Brief description (personality, role in story)"
                             rows={2}
-                            className="w-full px-4 py-2 border border-[#E8E4DC] rounded-lg focus:border-[#1E3A5F] focus:outline-none resize-none"
+                            className="w-full px-4 py-2.5 border border-neutral-200 rounded-xl focus:border-neutral-900 focus:outline-none resize-none transition-colors"
                           />
                         </div>
                         {formData.characters.length > 1 && (
-                          <button type="button" onClick={() => removeCharacter(index)} className="text-[#EF4444] self-start p-2">
+                          <button type="button" onClick={() => removeCharacter(index)} className="text-red-500 hover:text-red-600 self-start p-2">
                             <X className="h-5 w-5" />
                           </button>
                         )}
@@ -249,33 +250,33 @@ export default function CreateBook() {
             {currentStep === 3 && (
               <div className="space-y-6">
                 <div>
-                  <label className="block text-sm font-medium text-[#0F1A2A] mb-2">Beginning</label>
+                  <label className="block text-sm font-medium mb-2">Beginning</label>
                   <textarea
                     value={formData.beginning}
                     onChange={(e) => updateField('beginning', e.target.value)}
                     placeholder="How does the story open? What is the inciting incident?"
                     rows={4}
-                    className="w-full px-4 py-3 border border-[#E8E4DC] rounded-lg focus:border-[#1E3A5F] focus:outline-none resize-none"
+                    className="w-full px-4 py-3 border border-neutral-200 rounded-xl focus:border-neutral-900 focus:outline-none resize-none transition-colors"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-[#0F1A2A] mb-2">Middle / Key Plot Points</label>
+                  <label className="block text-sm font-medium mb-2">Middle / Key Plot Points</label>
                   <textarea
                     value={formData.middle}
                     onChange={(e) => updateField('middle', e.target.value)}
                     placeholder="Key events, conflicts, turning points. Be as detailed as you want."
                     rows={6}
-                    className="w-full px-4 py-3 border border-[#E8E4DC] rounded-lg focus:border-[#1E3A5F] focus:outline-none resize-none"
+                    className="w-full px-4 py-3 border border-neutral-200 rounded-xl focus:border-neutral-900 focus:outline-none resize-none transition-colors"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-[#0F1A2A] mb-2">Ending</label>
+                  <label className="block text-sm font-medium mb-2">Ending</label>
                   <textarea
                     value={formData.ending}
                     onChange={(e) => updateField('ending', e.target.value)}
                     placeholder="How does it conclude? What is the resolution?"
                     rows={4}
-                    className="w-full px-4 py-3 border border-[#E8E4DC] rounded-lg focus:border-[#1E3A5F] focus:outline-none resize-none"
+                    className="w-full px-4 py-3 border border-neutral-200 rounded-xl focus:border-neutral-900 focus:outline-none resize-none transition-colors"
                   />
                 </div>
               </div>
@@ -285,61 +286,61 @@ export default function CreateBook() {
             {currentStep === 4 && (
               <div className="space-y-6">
                 <div>
-                  <label className="block text-sm font-medium text-[#0F1A2A] mb-2">Writing Style</label>
+                  <label className="block text-sm font-medium mb-3">Writing Style</label>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {Object.entries(WRITING_STYLES).map(([key, style]) => (
                       <button
                         key={key}
                         type="button"
                         onClick={() => updateField('writingStyle', key)}
-                        className={`p-3 rounded-lg border text-left ${
+                        className={`p-4 rounded-xl border text-left transition-all ${
                           formData.writingStyle === key
-                            ? 'border-[#1E3A5F] bg-[#1E3A5F]/5'
-                            : 'border-[#E8E4DC] hover:border-[#1E3A5F]'
+                            ? 'border-neutral-900 bg-neutral-50'
+                            : 'border-neutral-200 hover:border-neutral-400'
                         }`}
                       >
-                        <span className="font-medium text-[#0F1A2A]">{style.label}</span>
-                        <span className="block text-xs text-[#4A5568] mt-1">{style.description}</span>
+                        <span className="font-medium">{style.label}</span>
+                        <span className="block text-xs text-neutral-500 mt-1">{style.description}</span>
                       </button>
                     ))}
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-[#0F1A2A] mb-2">Chapter Format</label>
+                  <label className="block text-sm font-medium mb-3">Chapter Format</label>
                   <div className="grid grid-cols-2 gap-3">
                     {Object.entries(CHAPTER_FORMATS).map(([key, format]) => (
                       <button
                         key={key}
                         type="button"
                         onClick={() => updateField('chapterFormat', key)}
-                        className={`p-3 rounded-lg border text-left ${
+                        className={`p-4 rounded-xl border text-left transition-all ${
                           formData.chapterFormat === key
-                            ? 'border-[#1E3A5F] bg-[#1E3A5F]/5'
-                            : 'border-[#E8E4DC] hover:border-[#1E3A5F]'
+                            ? 'border-neutral-900 bg-neutral-50'
+                            : 'border-neutral-200 hover:border-neutral-400'
                         }`}
                       >
-                        <span className="font-medium text-[#0F1A2A]">{format.label}</span>
-                        <span className="block text-xs text-[#4A5568] mt-1">{format.example}</span>
+                        <span className="font-medium">{format.label}</span>
+                        <span className="block text-xs text-neutral-500 mt-1">{format.example}</span>
                       </button>
                     ))}
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-[#0F1A2A] mb-2">Book Font Style</label>
+                  <label className="block text-sm font-medium mb-3">Book Font Style</label>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                     {Object.entries(FONT_STYLES).map(([key, style]) => (
                       <button
                         key={key}
                         type="button"
                         onClick={() => updateField('fontStyle', key)}
-                        className={`p-3 rounded-lg border text-left ${
+                        className={`p-4 rounded-xl border text-left transition-all ${
                           formData.fontStyle === key
-                            ? 'border-[#1E3A5F] bg-[#1E3A5F]/5'
-                            : 'border-[#E8E4DC] hover:border-[#1E3A5F]'
+                            ? 'border-neutral-900 bg-neutral-50'
+                            : 'border-neutral-200 hover:border-neutral-400'
                         }`}
                       >
-                        <span className="font-medium text-[#0F1A2A]">{style.label}</span>
-                        <span className="block text-xs text-[#4A5568] mt-1">{style.body}</span>
+                        <span className="font-medium">{style.label}</span>
+                        <span className="block text-xs text-neutral-500 mt-1">{style.body}</span>
                       </button>
                     ))}
                   </div>
@@ -350,29 +351,29 @@ export default function CreateBook() {
             {/* Step 5: Review */}
             {currentStep === 5 && (
               <div className="space-y-6">
-                <h3 className="text-xl font-semibold text-[#0F1A2A]">Review Your Book</h3>
+                <h3 className="text-xl font-semibold" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>Review Your Book</h3>
                 <div className="space-y-4">
-                  <div className="p-4 bg-[#F7F5F0] rounded-lg">
-                    <p className="text-sm text-[#4A5568]">Title</p>
-                    <p className="font-medium text-[#0F1A2A]">{formData.title}</p>
+                  <div className="p-4 bg-neutral-50 rounded-xl">
+                    <p className="text-sm text-neutral-500">Title</p>
+                    <p className="font-medium">{formData.title}</p>
                   </div>
-                  <div className="p-4 bg-[#F7F5F0] rounded-lg">
-                    <p className="text-sm text-[#4A5568]">Author</p>
-                    <p className="font-medium text-[#0F1A2A]">{formData.authorName || 'Anonymous'}</p>
+                  <div className="p-4 bg-neutral-50 rounded-xl">
+                    <p className="text-sm text-neutral-500">Author</p>
+                    <p className="font-medium">{formData.authorName || 'Anonymous'}</p>
                   </div>
-                  <div className="p-4 bg-[#F7F5F0] rounded-lg">
-                    <p className="text-sm text-[#4A5568]">Genre</p>
-                    <p className="font-medium text-[#0F1A2A]">{GENRES[formData.genre as keyof typeof GENRES]?.label}</p>
-                    <p className="text-sm text-[#4A5568]">~{(GENRES[formData.genre as keyof typeof GENRES]?.targetWords / 1000).toFixed(0)}K words, {GENRES[formData.genre as keyof typeof GENRES]?.chapters} chapters</p>
+                  <div className="p-4 bg-neutral-50 rounded-xl">
+                    <p className="text-sm text-neutral-500">Genre</p>
+                    <p className="font-medium">{GENRES[formData.genre as keyof typeof GENRES]?.label}</p>
+                    <p className="text-sm text-neutral-500">~{(GENRES[formData.genre as keyof typeof GENRES]?.targetWords / 1000).toFixed(0)}K words, {GENRES[formData.genre as keyof typeof GENRES]?.chapters} chapters</p>
                   </div>
-                  <div className="p-4 bg-[#F7F5F0] rounded-lg">
-                    <p className="text-sm text-[#4A5568]">Premise</p>
-                    <p className="font-medium text-[#0F1A2A]">{formData.premise}</p>
+                  <div className="p-4 bg-neutral-50 rounded-xl">
+                    <p className="text-sm text-neutral-500">Premise</p>
+                    <p className="font-medium">{formData.premise}</p>
                   </div>
-                  <div className="p-4 bg-[#F7F5F0] rounded-lg">
-                    <p className="text-sm text-[#4A5568]">Characters</p>
+                  <div className="p-4 bg-neutral-50 rounded-xl">
+                    <p className="text-sm text-neutral-500">Characters</p>
                     {formData.characters.map((char, i) => (
-                      <p key={i} className="font-medium text-[#0F1A2A]">{char.name}: {char.description}</p>
+                      <p key={i} className="font-medium">{char.name}: {char.description}</p>
                     ))}
                   </div>
                 </div>
@@ -380,12 +381,12 @@ export default function CreateBook() {
             )}
 
             {/* Navigation */}
-            <div className="mt-8 flex justify-between">
+            <div className="mt-10 flex justify-between">
               <button
                 type="button"
                 onClick={() => setCurrentStep(prev => Math.max(1, prev - 1))}
                 disabled={currentStep === 1}
-                className="flex items-center gap-2 px-4 py-2 text-[#4A5568] hover:text-[#0F1A2A] disabled:opacity-50"
+                className="flex items-center gap-2 px-4 py-2 text-neutral-600 hover:text-neutral-900 disabled:opacity-50 transition-colors"
               >
                 <ArrowLeft className="h-5 w-5" /> Back
               </button>
@@ -394,7 +395,7 @@ export default function CreateBook() {
                   type="button"
                   onClick={() => setCurrentStep(prev => prev + 1)}
                   disabled={!canProceed()}
-                  className="flex items-center gap-2 px-6 py-3 bg-[#1E3A5F] text-white rounded-lg hover:bg-[#2D4A73] disabled:opacity-50"
+                  className="flex items-center gap-2 px-6 py-3 bg-neutral-900 text-white rounded-full hover:bg-neutral-800 disabled:opacity-50 font-medium transition-colors"
                 >
                   Continue <ArrowRight className="h-5 w-5" />
                 </button>
@@ -403,7 +404,7 @@ export default function CreateBook() {
                   type="button"
                   onClick={handleSubmit}
                   disabled={isSubmitting}
-                  className="flex items-center gap-2 px-6 py-3 bg-[#1E3A5F] text-white rounded-lg hover:bg-[#2D4A73] disabled:opacity-50"
+                  className="flex items-center gap-2 px-6 py-3 bg-neutral-900 text-white rounded-full hover:bg-neutral-800 disabled:opacity-50 font-medium transition-colors"
                 >
                   {isSubmitting ? 'Creating...' : 'Proceed to Checkout'} <ArrowRight className="h-5 w-5" />
                 </button>
@@ -412,6 +413,8 @@ export default function CreateBook() {
           </div>
         </div>
       </main>
+
+      <Footer />
     </div>
   );
 }

@@ -25,7 +25,7 @@ export default function PricingContent() {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {/* One-Time */}
-            <div className="bg-white rounded-2xl border border-neutral-200 p-8 hover:shadow-lg transition-shadow">
+            <div className="bg-white rounded-2xl border border-neutral-200 p-8 hover:shadow-lg transition-shadow flex flex-col">
               <h3 className="text-xl font-semibold mb-2" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>
                 Single Book
               </h3>
@@ -33,7 +33,7 @@ export default function PricingContent() {
                 <span className="text-5xl font-bold tracking-tight" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>$19.99</span>
               </div>
               <p className="text-neutral-500 mb-6">One-time payment</p>
-              <ul className="space-y-4 mb-8">
+              <ul className="space-y-4 flex-grow">
                 <li className="flex items-start gap-3 text-neutral-600">
                   <Check className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
                   <span>1 complete book (up to 100K words)</span>
@@ -57,14 +57,14 @@ export default function PricingContent() {
               </ul>
               <button
                 onClick={() => router.push('/create')}
-                className="w-full bg-neutral-900 text-white py-3 rounded-full hover:bg-neutral-800 transition-colors font-medium"
+                className="w-full bg-neutral-900 text-white py-3 rounded-full hover:bg-neutral-800 transition-colors font-medium mt-8"
               >
                 Get Started
               </button>
             </div>
 
             {/* Monthly */}
-            <div className="bg-white rounded-2xl border-2 border-neutral-900 p-8 relative hover:shadow-lg transition-shadow">
+            <div className="bg-white rounded-2xl border-2 border-neutral-900 p-8 relative hover:shadow-lg transition-shadow flex flex-col">
               <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-neutral-900 text-white px-4 py-1 rounded-full text-sm font-medium">
                 Most Popular
               </div>
@@ -76,7 +76,7 @@ export default function PricingContent() {
                 <span className="text-neutral-500">/month</span>
               </div>
               <p className="text-neutral-500 mb-6">$13.80 per book</p>
-              <ul className="space-y-4 mb-8">
+              <ul className="space-y-4 flex-grow">
                 <li className="flex items-start gap-3 text-neutral-600">
                   <Check className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
                   <span><strong>5 books per month</strong></span>
@@ -100,14 +100,14 @@ export default function PricingContent() {
               </ul>
               <button
                 onClick={() => router.push('/signup?plan=monthly')}
-                className="w-full bg-neutral-900 text-white py-3 rounded-full hover:bg-neutral-800 transition-colors font-medium"
+                className="w-full bg-neutral-900 text-white py-3 rounded-full hover:bg-neutral-800 transition-colors font-medium mt-8"
               >
                 Subscribe Monthly
               </button>
             </div>
 
             {/* Yearly */}
-            <div className="bg-white rounded-2xl border border-neutral-200 p-8 hover:shadow-lg transition-shadow">
+            <div className="bg-white rounded-2xl border border-neutral-200 p-8 hover:shadow-lg transition-shadow flex flex-col">
               <h3 className="text-xl font-semibold mb-2" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>
                 Yearly
               </h3>
@@ -116,7 +116,7 @@ export default function PricingContent() {
                 <span className="text-neutral-500">/year</span>
               </div>
               <p className="text-neutral-500 mb-6">$9.98 per book</p>
-              <ul className="space-y-4 mb-8">
+              <ul className="space-y-4 flex-grow">
                 <li className="flex items-start gap-3 text-neutral-600">
                   <Check className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
                   <span><strong>50 book credits</strong> (use anytime)</span>
@@ -140,7 +140,7 @@ export default function PricingContent() {
               </ul>
               <button
                 onClick={() => router.push('/signup?plan=yearly')}
-                className="w-full bg-white text-neutral-900 py-3 rounded-full border-2 border-neutral-900 hover:bg-neutral-900 hover:text-white transition-colors font-medium"
+                className="w-full bg-white text-neutral-900 py-3 rounded-full border-2 border-neutral-900 hover:bg-neutral-900 hover:text-white transition-colors font-medium mt-8"
               >
                 Subscribe Yearly
               </button>
