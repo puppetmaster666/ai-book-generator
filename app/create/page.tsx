@@ -4,17 +4,8 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
-import { ArrowLeft, ArrowRight, Sparkles, Loader2, BookOpen, Palette, BookMarked, Image, Layers, Lightbulb } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Sparkles, Loader2 } from 'lucide-react';
 import { BOOK_PRESETS, ART_STYLES, GENRES, type BookPresetKey, type ArtStyleKey } from '@/lib/constants';
-
-const PRESET_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
-  BookOpen,
-  Palette,
-  BookMarked,
-  Image,
-  Layers,
-  Lightbulb,
-};
 
 export default function CreateBook() {
   const router = useRouter();
@@ -147,40 +138,28 @@ export default function CreateBook() {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {(Object.entries(BOOK_PRESETS) as [BookPresetKey, typeof BOOK_PRESETS[BookPresetKey]][]).map(([key, preset]) => {
-                  const IconComponent = PRESET_ICONS[preset.icon] || BookOpen;
-                  const isIllustrated = preset.format !== 'text_only';
-
-                  return (
-                    <button
-                      key={key}
-                      onClick={() => handleSelectPreset(key)}
-                      className="group p-6 bg-white rounded-2xl border border-neutral-200 hover:border-neutral-400 hover:shadow-lg transition-all text-left"
-                    >
-                      <div className={`w-14 h-14 rounded-xl flex items-center justify-center mb-4 transition-colors ${
-                        isIllustrated
-                          ? 'bg-gradient-to-br from-purple-100 to-pink-100 group-hover:from-purple-200 group-hover:to-pink-200'
-                          : 'bg-neutral-100 group-hover:bg-neutral-200'
-                      }`}>
-                        <IconComponent className={`h-7 w-7 ${isIllustrated ? 'text-purple-600' : 'text-neutral-700'}`} />
-                      </div>
-                      <h3 className="text-lg font-semibold mb-1" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>
-                        {preset.label}
-                      </h3>
-                      <p className="text-sm text-neutral-600 mb-3">
-                        {preset.description}
-                      </p>
-                      <div className="flex items-center justify-between">
-                        <span className="text-lg font-bold">{preset.priceDisplay}</span>
-                        {isIllustrated && (
-                          <span className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded-full">
-                            Illustrated
-                          </span>
-                        )}
-                      </div>
-                    </button>
-                  );
-                })}
+                {(Object.entries(BOOK_PRESETS) as [BookPresetKey, typeof BOOK_PRESETS[BookPresetKey]][]).map(([key, preset]) => (
+                  <button
+                    key={key}
+                    onClick={() => handleSelectPreset(key)}
+                    className="group p-6 bg-white rounded-2xl border border-neutral-200 hover:border-neutral-400 hover:shadow-lg transition-all text-left"
+                  >
+                    <h3 className="text-lg font-semibold mb-2" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>
+                      {preset.label}
+                    </h3>
+                    <p className="text-sm text-neutral-600 mb-4">
+                      {preset.description}
+                    </p>
+                    <div className="flex items-center justify-between">
+                      <span className="text-lg font-bold">{preset.priceDisplay}</span>
+                      {preset.format !== 'text_only' && (
+                        <span className="text-xs bg-neutral-100 text-neutral-600 px-2 py-1 rounded-full">
+                          Illustrated
+                        </span>
+                      )}
+                    </div>
+                  </button>
+                ))}
               </div>
             </>
           )}
@@ -197,9 +176,8 @@ export default function CreateBook() {
 
               <div className="text-center mb-8">
                 <div className="inline-flex items-center gap-2 bg-neutral-100 px-4 py-2 rounded-full text-sm mb-4">
-                  {preset.format !== 'text_only' && <Palette className="h-4 w-4 text-purple-600" />}
                   <span>{preset.label}</span>
-                  <span className="text-neutral-500">•</span>
+                  <span className="text-neutral-400">•</span>
                   <span className="font-semibold">{preset.priceDisplay}</span>
                 </div>
                 <h1 className="text-3xl md:text-4xl font-bold tracking-tight mb-4" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>
@@ -302,22 +280,12 @@ export default function CreateBook() {
                     onClick={() => setSelectedArtStyle(key)}
                     className={`p-4 rounded-2xl border-2 transition-all text-left ${
                       selectedArtStyle === key
-                        ? 'border-neutral-900 bg-neutral-50 shadow-md'
+                        ? 'border-neutral-900 bg-neutral-50'
                         : 'border-neutral-200 hover:border-neutral-400 bg-white'
                     }`}
                   >
-                    <div className={`w-full aspect-square rounded-xl mb-3 ${
-                      key === 'watercolor' ? 'bg-gradient-to-br from-blue-100 via-pink-100 to-yellow-100' :
-                      key === 'cartoon' ? 'bg-gradient-to-br from-yellow-200 to-orange-200' :
-                      key === 'storybook' ? 'bg-gradient-to-br from-amber-100 to-orange-100' :
-                      key === 'modern' ? 'bg-gradient-to-br from-gray-100 to-gray-200' :
-                      key === 'realistic' ? 'bg-gradient-to-br from-emerald-100 to-teal-100' :
-                      key === 'manga' ? 'bg-gradient-to-br from-pink-200 to-purple-200' :
-                      key === 'vintage' ? 'bg-gradient-to-br from-amber-200 to-yellow-100' :
-                      'bg-gradient-to-br from-indigo-200 to-purple-200'
-                    }`} />
                     <h3 className="font-semibold text-sm mb-1">{style.label}</h3>
-                    <p className="text-xs text-neutral-500 line-clamp-2">{style.description}</p>
+                    <p className="text-xs text-neutral-500">{style.description}</p>
                   </button>
                 ))}
               </div>
