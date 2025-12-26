@@ -314,8 +314,8 @@ export async function POST(
           errorMessage: null,
           currentChapter: 0,
           totalWords: 0,
-          storySoFar: null,
-          characterStates: null,
+          storySoFar: '',
+          characterStates: {},
         },
       });
     }
