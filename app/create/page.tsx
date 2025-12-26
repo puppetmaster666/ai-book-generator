@@ -28,15 +28,12 @@ export default function CreateBook() {
 
   // Check if coming from homepage with an idea
   useEffect(() => {
-    const savedPlan = sessionStorage.getItem('bookPlan');
-    const savedIdea = sessionStorage.getItem('originalIdea');
+    // Check both possible storage keys (bookIdea from homepage, originalIdea from legacy)
+    const savedIdea = sessionStorage.getItem('bookIdea') || sessionStorage.getItem('originalIdea');
     if (savedIdea) {
       setIdea(savedIdea);
+      sessionStorage.removeItem('bookIdea');
       sessionStorage.removeItem('originalIdea');
-      // If we have a plan, they've already expanded the idea
-      if (savedPlan) {
-        sessionStorage.removeItem('bookPlan');
-      }
     }
   }, []);
 

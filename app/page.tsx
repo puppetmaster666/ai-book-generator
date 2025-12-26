@@ -47,28 +47,9 @@ export default function Home() {
       return;
     }
 
-    setIsLoading(true);
-    setError('');
-
-    try {
-      const response = await fetch('/api/expand-idea', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ idea: bookIdea }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to process idea');
-      }
-
-      const bookPlan = await response.json();
-      sessionStorage.setItem('bookPlan', JSON.stringify(bookPlan));
-      sessionStorage.setItem('originalIdea', bookIdea);
-      router.push('/review');
-    } catch (err) {
-      setError('Something went wrong. Please try again.');
-      setIsLoading(false);
-    }
+    // Store the idea and redirect to /create where user can choose book type
+    sessionStorage.setItem('bookIdea', bookIdea);
+    router.push('/create');
   };
 
   return (
