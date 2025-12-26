@@ -1,5 +1,5 @@
 import { Metadata } from 'next';
-import Link from 'next/link';
+import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 
 export const metadata: Metadata = {
@@ -10,14 +10,7 @@ export const metadata: Metadata = {
 export default function RefundPolicy() {
   return (
     <div className="min-h-screen bg-[#FAFAFA]">
-      {/* Header */}
-      <header className="border-b border-neutral-200 bg-white">
-        <div className="max-w-4xl mx-auto px-6 py-6">
-          <Link href="/" className="text-2xl font-bold tracking-tight" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>
-            draftmybook
-          </Link>
-        </div>
-      </header>
+      <Header />
 
       <main className="py-16 px-6">
         <div className="max-w-3xl mx-auto">
