@@ -16,11 +16,80 @@ import { countWords } from '@/lib/epub';
 import { BOOK_FORMATS, ART_STYLES, ILLUSTRATION_DIMENSIONS, type BookFormatKey, type ArtStyleKey } from '@/lib/constants';
 import { sendEmail, getBookReadyEmail } from '@/lib/email';
 
-// Genres that often trigger content policy blocks for image generation
-const SENSITIVE_GENRES = ['horror', 'thriller', 'mystery'];
-
 // Timeout for illustration generation (30 seconds) - prevents 504 Gateway Timeout
 const ILLUSTRATION_TIMEOUT_MS = 30000;
+
+// Maximum retries for content-blocked illustrations
+const MAX_ILLUSTRATION_RETRIES = 3;
+
+// Sanitize a scene description by removing/replacing sensitive words
+function sanitizeSceneForRetry(scene: string, retryLevel: number): string {
+  let sanitized = scene;
+
+  if (retryLevel >= 1) {
+    // Level 1: Replace sensitive words with milder alternatives
+    const replacements: Record<string, string> = {
+      'blood': 'red liquid',
+      'bloody': 'stained',
+      'bleeding': 'injured',
+      'gore': 'mess',
+      'gory': 'intense',
+      'kill': 'confront',
+      'killing': 'confronting',
+      'murder': 'conflict',
+      'murderer': 'antagonist',
+      'dead': 'still',
+      'death': 'end',
+      'dying': 'fading',
+      'knife': 'object',
+      'weapon': 'tool',
+      'gun': 'device',
+      'stab': 'strike',
+      'stabbing': 'striking',
+      'horror': 'tension',
+      'terrifying': 'intense',
+      'terrified': 'startled',
+      'scary': 'mysterious',
+      'creepy': 'unusual',
+      'violent': 'dramatic',
+      'violence': 'conflict',
+      'attack': 'approach',
+      'attacking': 'approaching',
+      'corpse': 'figure',
+      'body': 'form',
+      'victim': 'person',
+      'scream': 'expression',
+      'screaming': 'calling out',
+      'dark': 'dim',
+      'darkness': 'shadows',
+      'sinister': 'mysterious',
+      'fear': 'concern',
+      'afraid': 'worried',
+      'panic': 'urgency',
+      'terror': 'suspense',
+    };
+
+    for (const [word, replacement] of Object.entries(replacements)) {
+      const regex = new RegExp(`\\b${word}\\b`, 'gi');
+      sanitized = sanitized.replace(regex, replacement);
+    }
+  }
+
+  if (retryLevel >= 2) {
+    // Level 2: Focus on atmosphere and setting, reduce character focus
+    sanitized = `A peaceful atmospheric scene: ${sanitized.substring(0, 200)}. Focus on the environment, lighting, and mood rather than specific actions or characters.`;
+  }
+
+  return sanitized;
+}
+
+// Generate a fallback atmospheric scene based on the chapter
+function generateFallbackScene(chapterTitle: string, bookTitle: string, setting: string): string {
+  return `A beautiful, peaceful illustration for a book chapter titled "${chapterTitle}" from "${bookTitle}".
+Show an atmospheric scene with: ${setting}.
+Focus on the environment - natural lighting, interesting composition, inviting atmosphere.
+No people or characters, just the setting and mood. Professional book illustration quality.`;
+}
 
 // Types for visual guides
 type CharacterVisualGuide = {
@@ -45,8 +114,16 @@ type VisualStyleGuide = {
   consistencyRules: string[];
 };
 
-// Helper function to generate an illustration image with consistency support
-async function generateIllustrationImage(data: {
+// Result type for illustration attempts
+type IllustrationAttemptResult = {
+  success: boolean;
+  blocked: boolean;
+  timedOut: boolean;
+  data: { imageUrl: string; altText: string; width: number; height: number } | null;
+};
+
+// Single attempt to generate an illustration
+async function attemptIllustrationGeneration(data: {
   scene: string;
   artStyle: string;
   characters: { name: string; description: string }[];
@@ -55,9 +132,8 @@ async function generateIllustrationImage(data: {
   characterVisualGuide?: CharacterVisualGuide;
   visualStyleGuide?: VisualStyleGuide;
   bookFormat?: string;
-}): Promise<{ imageUrl: string; altText: string; width: number; height: number } | null> {
+}): Promise<IllustrationAttemptResult> {
   try {
-    // Call our illustration API endpoint with timeout
     const baseUrl = process.env.NEXTAUTH_URL || process.env.VERCEL_URL || 'http://localhost:3000';
 
     // Create abort controller for timeout
@@ -90,39 +166,107 @@ async function generateIllustrationImage(data: {
         errorData = { error: errorText };
       }
 
-      if (errorData.blocked) {
-        console.warn(`Illustration blocked by content policy for: ${data.scene.substring(0, 50)}...`);
+      const isBlocked = !!errorData.blocked;
+      if (isBlocked) {
+        console.warn(`Illustration blocked by content policy`);
       } else {
         console.error('Illustration API error:', errorData);
       }
-      return null;
+      return { success: false, blocked: isBlocked, timedOut: false, data: null };
     }
 
     const result = await response.json();
 
     if (result.image?.base64 && result.image?.mimeType) {
-      // Get dimensions based on book format
       const formatKey = data.bookFormat as keyof typeof ILLUSTRATION_DIMENSIONS;
       const dimensions = ILLUSTRATION_DIMENSIONS[formatKey] || ILLUSTRATION_DIMENSIONS.illustrated;
 
       return {
-        imageUrl: `data:${result.image.mimeType};base64,${result.image.base64}`,
-        altText: result.altText || data.scene.substring(0, 100),
-        width: dimensions.width,
-        height: dimensions.height,
+        success: true,
+        blocked: false,
+        timedOut: false,
+        data: {
+          imageUrl: `data:${result.image.mimeType};base64,${result.image.base64}`,
+          altText: result.altText || data.scene.substring(0, 100),
+          width: dimensions.width,
+          height: dimensions.height,
+        },
       };
     }
 
-    return null;
+    return { success: false, blocked: false, timedOut: false, data: null };
   } catch (error) {
-    // Check if this was a timeout abort
     if (error instanceof Error && error.name === 'AbortError') {
-      console.warn('Illustration generation timed out after', ILLUSTRATION_TIMEOUT_MS / 1000, 'seconds');
-    } else {
-      console.error('Failed to generate illustration:', error);
+      console.warn('Illustration generation timed out');
+      return { success: false, blocked: false, timedOut: true, data: null };
     }
-    return null;
+    console.error('Failed to generate illustration:', error);
+    return { success: false, blocked: false, timedOut: false, data: null };
   }
+}
+
+// Helper function to generate an illustration with retry logic for content blocks
+async function generateIllustrationImage(data: {
+  scene: string;
+  artStyle: string;
+  characters: { name: string; description: string }[];
+  setting: string;
+  bookTitle: string;
+  chapterTitle?: string;
+  characterVisualGuide?: CharacterVisualGuide;
+  visualStyleGuide?: VisualStyleGuide;
+  bookFormat?: string;
+}): Promise<{ imageUrl: string; altText: string; width: number; height: number } | null> {
+  let currentScene = data.scene;
+
+  for (let attempt = 0; attempt <= MAX_ILLUSTRATION_RETRIES; attempt++) {
+    if (attempt > 0) {
+      console.log(`Retry attempt ${attempt} with sanitized prompt...`);
+    }
+
+    const result = await attemptIllustrationGeneration({
+      ...data,
+      scene: currentScene,
+    });
+
+    if (result.success && result.data) {
+      if (attempt > 0) {
+        console.log(`Illustration succeeded on retry attempt ${attempt}`);
+      }
+      return result.data;
+    }
+
+    // If blocked, try with sanitized version
+    if (result.blocked && attempt < MAX_ILLUSTRATION_RETRIES) {
+      if (attempt < 2) {
+        // Retries 1-2: Progressively sanitize the original prompt
+        currentScene = sanitizeSceneForRetry(data.scene, attempt + 1);
+        console.log(`Sanitizing prompt (level ${attempt + 1}) and retrying...`);
+      } else {
+        // Final retry: Use a completely safe fallback scene
+        currentScene = generateFallbackScene(
+          data.chapterTitle || 'Chapter',
+          data.bookTitle,
+          data.setting
+        );
+        console.log(`Using fallback atmospheric scene for final retry...`);
+      }
+      continue;
+    }
+
+    // If timed out, try one more time with simpler prompt
+    if (result.timedOut && attempt === 0) {
+      currentScene = sanitizeSceneForRetry(data.scene, 2);
+      console.log(`Timed out, retrying with simplified prompt...`);
+      continue;
+    }
+
+    // Other errors or final failure - stop retrying
+    break;
+  }
+
+  console.warn(`Failed to generate illustration after ${MAX_ILLUSTRATION_RETRIES + 1} attempts`);
+  return null;
 }
 
 export async function POST(
@@ -214,9 +358,7 @@ export async function POST(
     let visualStyleGuide = book.visualStyleGuide as VisualStyleGuide | null;
 
     // Generate visual guides for illustrated books if not already done
-    // Skip for sensitive genres that trigger content policy blocks
-    const genreIsSensitive = SENSITIVE_GENRES.includes(book.genre.toLowerCase());
-    if (formatConfig && formatConfig.illustrationsPerChapter > 0 && book.artStyle && !characterVisualGuide && !genreIsSensitive) {
+    if (formatConfig && formatConfig.illustrationsPerChapter > 0 && book.artStyle && !characterVisualGuide) {
       try {
         console.log('Generating character visual guide for consistency...');
         characterVisualGuide = await generateCharacterVisualGuide({
@@ -320,12 +462,8 @@ export async function POST(
       console.log(`Chapter ${i} saved successfully. Word count: ${wordCount}`);
 
       // Generate illustrations if book has illustrations enabled (using pre-generated visual guides)
-      // Skip illustrations for sensitive genres that trigger content policy blocks
-      const isSensitiveGenre = SENSITIVE_GENRES.includes(book.genre.toLowerCase());
-      if (isSensitiveGenre && formatConfig && formatConfig.illustrationsPerChapter > 0) {
-        console.log(`Skipping illustrations for chapter ${i} - genre '${book.genre}' often triggers content policy blocks`);
-      }
-      if (formatConfig && formatConfig.illustrationsPerChapter > 0 && book.artStyle && !isSensitiveGenre) {
+      // Uses smart retry with sanitized prompts if content policy blocks occur
+      if (formatConfig && formatConfig.illustrationsPerChapter > 0 && book.artStyle) {
         try {
           if (bookFormat === 'picture_book') {
             // Picture book: more detailed, full-page illustrations
@@ -345,6 +483,7 @@ export async function POST(
               characters,
               setting: illustrationPlan.backgroundDetails,
               bookTitle: book.title,
+              chapterTitle: chapterPlan.title,
               characterVisualGuide: characterVisualGuide || undefined,
               visualStyleGuide: visualStyleGuide || undefined,
               bookFormat: bookFormat,
@@ -387,6 +526,7 @@ export async function POST(
                 characters: characters.filter(c => illustPrompt.characters.includes(c.name)),
                 setting: book.premise.substring(0, 200),
                 bookTitle: book.title,
+                chapterTitle: chapterPlan.title,
                 characterVisualGuide: characterVisualGuide || undefined,
                 visualStyleGuide: visualStyleGuide || undefined,
                 bookFormat: bookFormat,
