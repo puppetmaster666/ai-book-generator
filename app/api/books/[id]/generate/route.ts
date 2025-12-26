@@ -9,26 +9,59 @@ import {
   generateCoverImage,
   generateIllustrationPrompts,
   generateChildrensIllustrationPrompts,
+  generateCharacterVisualGuide,
+  generateVisualStyleGuide,
 } from '@/lib/gemini';
 import { countWords } from '@/lib/epub';
-import { BOOK_FORMATS, ART_STYLES, type BookFormatKey, type ArtStyleKey } from '@/lib/constants';
+import { BOOK_FORMATS, ART_STYLES, ILLUSTRATION_DIMENSIONS, type BookFormatKey, type ArtStyleKey } from '@/lib/constants';
 import { sendEmail, getBookReadyEmail } from '@/lib/email';
 
-// Helper function to generate an illustration image
+// Types for visual guides
+type CharacterVisualGuide = {
+  characters: Array<{
+    name: string;
+    physicalDescription: string;
+    clothing: string;
+    distinctiveFeatures: string;
+    colorPalette: string;
+    expressionNotes: string;
+  }>;
+  styleNotes: string;
+};
+
+type VisualStyleGuide = {
+  overallStyle: string;
+  colorPalette: string;
+  lightingStyle: string;
+  lineWeight: string;
+  backgroundTreatment: string;
+  moodAndAtmosphere: string;
+  consistencyRules: string[];
+};
+
+// Helper function to generate an illustration image with consistency support
 async function generateIllustrationImage(data: {
   scene: string;
   artStyle: string;
   characters: { name: string; description: string }[];
   setting: string;
   bookTitle: string;
-}): Promise<{ imageUrl: string; altText: string } | null> {
+  characterVisualGuide?: CharacterVisualGuide;
+  visualStyleGuide?: VisualStyleGuide;
+  bookFormat?: string;
+}): Promise<{ imageUrl: string; altText: string; width: number; height: number } | null> {
   try {
     // Call our illustration API endpoint
     const baseUrl = process.env.NEXTAUTH_URL || process.env.VERCEL_URL || 'http://localhost:3000';
     const response = await fetch(`${baseUrl}/api/generate-illustration`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
+      body: JSON.stringify({
+        ...data,
+        characterVisualGuide: data.characterVisualGuide,
+        visualStyleGuide: data.visualStyleGuide,
+        bookFormat: data.bookFormat,
+      }),
     });
 
     if (!response.ok) {
@@ -39,9 +72,15 @@ async function generateIllustrationImage(data: {
     const result = await response.json();
 
     if (result.image?.base64 && result.image?.mimeType) {
+      // Get dimensions based on book format
+      const formatKey = data.bookFormat as keyof typeof ILLUSTRATION_DIMENSIONS;
+      const dimensions = ILLUSTRATION_DIMENSIONS[formatKey] || ILLUSTRATION_DIMENSIONS.illustrated;
+
       return {
         imageUrl: `data:${result.image.mimeType};base64,${result.image.base64}`,
         altText: result.altText || data.scene.substring(0, 100),
+        width: dimensions.width,
+        height: dimensions.height,
       };
     }
 
@@ -116,6 +155,53 @@ export async function POST(
       });
     }
 
+    // Step 1.5: Generate visual guides for illustrated books (before any illustrations)
+    const bookFormat = book.bookFormat as BookFormatKey || 'text_only';
+    const formatConfig = BOOK_FORMATS[bookFormat];
+    const artStyleKey = book.artStyle as ArtStyleKey | null;
+    const artStyleConfig = artStyleKey ? ART_STYLES[artStyleKey] : null;
+    const characters = book.characters as { name: string; description: string }[];
+
+    let characterVisualGuide = book.characterVisualGuide as CharacterVisualGuide | null;
+    let visualStyleGuide = book.visualStyleGuide as VisualStyleGuide | null;
+
+    // Generate visual guides for illustrated books if not already done
+    if (formatConfig && formatConfig.illustrationsPerChapter > 0 && book.artStyle && !characterVisualGuide) {
+      try {
+        console.log('Generating character visual guide for consistency...');
+        characterVisualGuide = await generateCharacterVisualGuide({
+          title: book.title,
+          genre: book.genre,
+          artStyle: book.artStyle,
+          characters,
+        });
+
+        console.log('Generating visual style guide for consistency...');
+        visualStyleGuide = await generateVisualStyleGuide({
+          title: book.title,
+          genre: book.genre,
+          artStyle: book.artStyle,
+          artStylePrompt: artStyleConfig?.prompt || 'professional illustration',
+          premise: book.premise,
+          bookFormat: book.bookFormat,
+        });
+
+        // Store the guides in the database
+        await prisma.book.update({
+          where: { id },
+          data: {
+            characterVisualGuide: characterVisualGuide as object,
+            visualStyleGuide: visualStyleGuide as object,
+          },
+        });
+
+        console.log('Visual guides generated and saved for book:', id);
+      } catch (guideError) {
+        console.error('Failed to generate visual guides:', guideError);
+        // Continue without guides - illustrations will use basic character descriptions
+      }
+    }
+
     // Step 2: Generate chapters
     let storySoFar = book.storySoFar || '';
     let characterStates = (book.characterStates as Record<string, object>) || {};
@@ -171,15 +257,8 @@ export async function POST(
         },
       });
 
-      // Generate illustrations if book has illustrations enabled
-      const bookFormat = book.bookFormat as BookFormatKey || 'text_only';
-      const formatConfig = BOOK_FORMATS[bookFormat];
-
+      // Generate illustrations if book has illustrations enabled (using pre-generated visual guides)
       if (formatConfig && formatConfig.illustrationsPerChapter > 0 && book.artStyle) {
-        const artStyleKey = book.artStyle as ArtStyleKey;
-        const artStyleConfig = ART_STYLES[artStyleKey];
-        const characters = book.characters as { name: string; description: string }[];
-
         try {
           if (bookFormat === 'picture_book') {
             // Picture book: more detailed, full-page illustrations
@@ -192,13 +271,16 @@ export async function POST(
               bookTitle: book.title,
             });
 
-            // Generate the illustration image
+            // Generate the illustration image with visual consistency guides
             const illustrationResponse = await generateIllustrationImage({
               scene: illustrationPlan.visualDescription,
               artStyle: book.artStyle,
               characters,
               setting: illustrationPlan.backgroundDetails,
               bookTitle: book.title,
+              characterVisualGuide: characterVisualGuide || undefined,
+              visualStyleGuide: visualStyleGuide || undefined,
+              bookFormat: bookFormat,
             });
 
             if (illustrationResponse) {
@@ -211,6 +293,8 @@ export async function POST(
                   altText: illustrationPlan.scene,
                   position: 0,
                   style: book.artStyle,
+                  width: illustrationResponse.width,
+                  height: illustrationResponse.height,
                 },
               });
             }
@@ -226,7 +310,7 @@ export async function POST(
               bookTitle: book.title,
             });
 
-            // Generate each illustration
+            // Generate each illustration with visual consistency guides
             for (let j = 0; j < illustrationPrompts.length; j++) {
               const illustPrompt = illustrationPrompts[j];
 
@@ -236,6 +320,9 @@ export async function POST(
                 characters: characters.filter(c => illustPrompt.characters.includes(c.name)),
                 setting: book.premise.substring(0, 200),
                 bookTitle: book.title,
+                characterVisualGuide: characterVisualGuide || undefined,
+                visualStyleGuide: visualStyleGuide || undefined,
+                bookFormat: bookFormat,
               });
 
               if (illustrationResponse) {
@@ -248,6 +335,8 @@ export async function POST(
                     altText: illustPrompt.scene,
                     position: j,
                     style: book.artStyle,
+                    width: illustrationResponse.width,
+                    height: illustrationResponse.height,
                   },
                 });
               }
@@ -271,11 +360,7 @@ export async function POST(
       });
     }
 
-    // Step 3: Generate cover
-    // Get art style prompt for cover if book has an art style
-    const artStyleKey = book.artStyle as ArtStyleKey | null;
-    const artStyleConfig = artStyleKey ? ART_STYLES[artStyleKey] : null;
-
+    // Step 3: Generate cover (using visual guides for consistency with interior)
     const coverPrompt = await generateCoverPrompt({
       title: book.title,
       genre: book.genre,
@@ -284,6 +369,8 @@ export async function POST(
       authorName: book.authorName,
       artStyle: book.artStyle || undefined,
       artStylePrompt: artStyleConfig?.coverStyle,
+      characterVisualGuide: characterVisualGuide || undefined,
+      visualStyleGuide: visualStyleGuide || undefined,
     });
 
     let coverImageUrl: string | null = null;

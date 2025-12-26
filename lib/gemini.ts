@@ -388,10 +388,49 @@ export async function generateCoverPrompt(bookData: {
   authorName: string;
   artStyle?: string;
   artStylePrompt?: string;
+  characterVisualGuide?: {
+    characters: Array<{
+      name: string;
+      physicalDescription: string;
+      clothing: string;
+      distinctiveFeatures: string;
+      colorPalette: string;
+    }>;
+    styleNotes: string;
+  };
+  visualStyleGuide?: {
+    overallStyle: string;
+    colorPalette: string;
+    lightingStyle: string;
+    moodAndAtmosphere: string;
+  };
 }): Promise<string> {
   const styleInstruction = bookData.artStylePrompt
     ? `Art Style: ${bookData.artStylePrompt}`
     : '';
+
+  // Build character descriptions for cover from visual guide
+  let characterSection = '';
+  if (bookData.characterVisualGuide && bookData.characterVisualGuide.characters.length > 0) {
+    characterSection = `
+MAIN CHARACTERS (if featuring characters on cover, use these EXACT descriptions):
+${bookData.characterVisualGuide.characters.slice(0, 2).map(c =>
+  `- ${c.name}: ${c.physicalDescription}. Wearing: ${c.clothing}. Distinctive: ${c.distinctiveFeatures}. Colors: ${c.colorPalette}`
+).join('\n')}
+`;
+  }
+
+  // Build style consistency section
+  let styleConsistencySection = '';
+  if (bookData.visualStyleGuide) {
+    styleConsistencySection = `
+STYLE CONSISTENCY (match interior illustrations):
+- Overall Style: ${bookData.visualStyleGuide.overallStyle}
+- Color Palette: ${bookData.visualStyleGuide.colorPalette}
+- Lighting: ${bookData.visualStyleGuide.lightingStyle}
+- Mood: ${bookData.visualStyleGuide.moodAndAtmosphere}
+`;
+  }
 
   const prompt = `Create a detailed image generation prompt for a professional book cover.
 
@@ -402,13 +441,16 @@ BOOK DETAILS:
 - Type: ${bookData.bookType}
 - Premise: ${bookData.premise}
 ${styleInstruction}
+${characterSection}
+${styleConsistencySection}
 
 Create a prompt for generating a book cover that:
 1. Visually represents the book's theme and genre
-2. Is professional and suitable for Amazon KDP
+2. Is professional and suitable for Amazon KDP (1600x2560 portrait)
 3. Works well at thumbnail size
 4. Has appropriate visual hierarchy
-${bookData.artStylePrompt ? `5. Uses the ${bookData.artStyle} art style consistently` : ''}
+${bookData.artStylePrompt ? `5. Uses the ${bookData.artStyle} art style CONSISTENTLY with interior illustrations` : ''}
+${bookData.visualStyleGuide ? '6. Matches the color palette and mood of the interior illustrations' : ''}
 
 The cover MUST include:
 - The title "${bookData.title}" prominently displayed
@@ -420,6 +462,8 @@ The cover must NOT include:
 - Copyright-infringing elements
 
 ${bookData.bookType === 'non-fiction' ? 'For this non-fiction book, a subtitle may be appropriate if it helps convey the value proposition.' : 'This is fiction - focus on mood, atmosphere, and genre conventions.'}
+
+CRITICAL: If this is an illustrated book, the cover art style MUST match the interior illustrations.
 
 Output ONLY the image generation prompt, nothing else.`;
 
@@ -584,4 +628,166 @@ export async function generateCoverImage(coverPrompt: string): Promise<string> {
   }
 
   throw new Error('Failed to generate cover image');
+}
+
+// Generate detailed visual character sheets for consistent illustrations
+export async function generateCharacterVisualGuide(data: {
+  title: string;
+  genre: string;
+  artStyle: string;
+  characters: { name: string; description: string }[];
+}): Promise<{
+  characters: Array<{
+    name: string;
+    physicalDescription: string;
+    clothing: string;
+    distinctiveFeatures: string;
+    colorPalette: string;
+    expressionNotes: string;
+  }>;
+  styleNotes: string;
+}> {
+  const prompt = `You are an art director creating a character design guide for a ${data.genre} book titled "${data.title}".
+
+The illustrations will be in ${data.artStyle} style.
+
+CHARACTERS TO DESIGN:
+${data.characters.map(c => `- ${c.name}: ${c.description}`).join('\n')}
+
+Create DETAILED visual descriptions for each character that an illustrator can follow consistently across all illustrations. For each character provide:
+
+1. Physical Description: Age appearance, height/build, face shape, hair (color, style, length), eye color, skin tone
+2. Clothing: Their typical outfit in detail (colors, style, accessories)
+3. Distinctive Features: Unique identifying marks, props they carry, signature poses/gestures
+4. Color Palette: 3-4 specific colors associated with this character
+5. Expression Notes: How this character typically expresses emotion, their default expression
+
+Also provide overall style notes for maintaining consistency across illustrations.
+
+CRITICAL: These descriptions will be used to generate AI illustrations. Be VERY specific about visual details. If a character is a child, specify apparent age. If they have a pet or companion, describe it too.
+
+Output ONLY valid JSON:
+{
+  "characters": [
+    {
+      "name": "Character Name",
+      "physicalDescription": "Detailed physical traits...",
+      "clothing": "Typical outfit description...",
+      "distinctiveFeatures": "Unique visual identifiers...",
+      "colorPalette": "Primary colors for this character...",
+      "expressionNotes": "How they show emotion..."
+    }
+  ],
+  "styleNotes": "Overall style guidance for consistency..."
+}`;
+
+  const result = await getGeminiFlash().generateContent(prompt);
+  const response = result.response.text();
+
+  try {
+    return parseJSONFromResponse(response) as {
+      characters: Array<{
+        name: string;
+        physicalDescription: string;
+        clothing: string;
+        distinctiveFeatures: string;
+        colorPalette: string;
+        expressionNotes: string;
+      }>;
+      styleNotes: string;
+    };
+  } catch {
+    // Return a basic guide if parsing fails
+    return {
+      characters: data.characters.map(c => ({
+        name: c.name,
+        physicalDescription: c.description,
+        clothing: 'Appropriate attire for the story setting',
+        distinctiveFeatures: 'As described in character description',
+        colorPalette: 'Warm, inviting colors',
+        expressionNotes: 'Natural, story-appropriate expressions',
+      })),
+      styleNotes: `Maintain consistent ${data.artStyle} style throughout all illustrations.`,
+    };
+  }
+}
+
+// Generate a visual style guide for the book's illustrations
+export async function generateVisualStyleGuide(data: {
+  title: string;
+  genre: string;
+  artStyle: string;
+  artStylePrompt: string;
+  premise: string;
+  bookFormat: string;
+}): Promise<{
+  overallStyle: string;
+  colorPalette: string;
+  lightingStyle: string;
+  lineWeight: string;
+  backgroundTreatment: string;
+  moodAndAtmosphere: string;
+  consistencyRules: string[];
+}> {
+  const prompt = `You are an art director creating a visual style guide for illustrated book.
+
+BOOK DETAILS:
+- Title: "${data.title}"
+- Genre: ${data.genre}
+- Art Style: ${data.artStyle} (${data.artStylePrompt})
+- Format: ${data.bookFormat}
+- Premise: ${data.premise}
+
+Create a comprehensive style guide that ensures ALL illustrations in this book look like they belong together.
+
+Define:
+1. Overall Style: How the ${data.artStyle} style should be interpreted for this specific book
+2. Color Palette: Primary, secondary, and accent colors to use throughout
+3. Lighting Style: How light and shadow should be rendered
+4. Line Weight: Thick/thin lines, outline style, edge treatment
+5. Background Treatment: How backgrounds should be handled
+6. Mood & Atmosphere: The emotional tone all illustrations should convey
+7. Consistency Rules: 5-7 specific rules to maintain visual consistency
+
+Output ONLY valid JSON:
+{
+  "overallStyle": "Description of the overall visual approach...",
+  "colorPalette": "Specific colors and their usage...",
+  "lightingStyle": "How to handle light and shadow...",
+  "lineWeight": "Line treatment approach...",
+  "backgroundTreatment": "How to handle backgrounds...",
+  "moodAndAtmosphere": "Emotional tone...",
+  "consistencyRules": ["Rule 1", "Rule 2", "Rule 3", "Rule 4", "Rule 5"]
+}`;
+
+  const result = await getGeminiFlash().generateContent(prompt);
+  const response = result.response.text();
+
+  try {
+    return parseJSONFromResponse(response) as {
+      overallStyle: string;
+      colorPalette: string;
+      lightingStyle: string;
+      lineWeight: string;
+      backgroundTreatment: string;
+      moodAndAtmosphere: string;
+      consistencyRules: string[];
+    };
+  } catch {
+    return {
+      overallStyle: `${data.artStyle} style illustration`,
+      colorPalette: 'Harmonious colors appropriate for the genre',
+      lightingStyle: 'Natural, consistent lighting',
+      lineWeight: 'Medium line weight with clean edges',
+      backgroundTreatment: 'Detailed but not distracting backgrounds',
+      moodAndAtmosphere: `Appropriate for ${data.genre}`,
+      consistencyRules: [
+        'Maintain consistent character proportions',
+        'Use the same color palette throughout',
+        'Keep lighting direction consistent within scenes',
+        `Apply ${data.artStyle} style consistently`,
+        'Ensure all characters are recognizable across illustrations',
+      ],
+    };
+  }
 }

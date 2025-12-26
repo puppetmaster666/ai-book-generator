@@ -270,3 +270,28 @@ export const COVER_DIMENSIONS = {
   height: 2560,
   aspectRatio: 1.6,
 } as const;
+
+// Illustration dimensions for different book formats
+export const ILLUSTRATION_DIMENSIONS = {
+  // Standard illustrated novel - portrait orientation
+  illustrated: {
+    width: 768,
+    height: 1024,
+    aspectRatio: '3:4',
+    prompt: 'portrait orientation (3:4 aspect ratio)',
+  },
+  // Picture book - full page/spread landscape
+  picture_book: {
+    width: 1024,
+    height: 768,
+    aspectRatio: '4:3',
+    prompt: 'landscape orientation (4:3 aspect ratio), full-page spread',
+  },
+  // Square format (alternative)
+  square: {
+    width: 1024,
+    height: 1024,
+    aspectRatio: '1:1',
+    prompt: 'square format (1:1 aspect ratio)',
+  },
+} as const;

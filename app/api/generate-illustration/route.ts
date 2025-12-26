@@ -1,6 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import { ART_STYLES, type ArtStyleKey } from '@/lib/constants';
+import { ART_STYLES, ILLUSTRATION_DIMENSIONS, type ArtStyleKey } from '@/lib/constants';
+
+// Types for visual consistency guides
+type CharacterVisualGuide = {
+  characters: Array<{
+    name: string;
+    physicalDescription: string;
+    clothing: string;
+    distinctiveFeatures: string;
+    colorPalette: string;
+    expressionNotes: string;
+  }>;
+  styleNotes: string;
+};
+
+type VisualStyleGuide = {
+  overallStyle: string;
+  colorPalette: string;
+  lightingStyle: string;
+  lineWeight: string;
+  backgroundTreatment: string;
+  moodAndAtmosphere: string;
+  consistencyRules: string[];
+};
 
 // Lazy initialization
 let genAI: GoogleGenerativeAI | null = null;
@@ -22,7 +45,16 @@ const NO_TEXT_INSTRUCTION = `CRITICAL: Do NOT include any text, words, letters, 
 
 export async function POST(request: NextRequest) {
   try {
-    const { scene, artStyle, characters, setting, bookTitle } = await request.json();
+    const {
+      scene,
+      artStyle,
+      characters,
+      setting,
+      bookTitle,
+      characterVisualGuide,
+      visualStyleGuide,
+      bookFormat,
+    } = await request.json();
 
     if (!scene) {
       return NextResponse.json(
@@ -35,13 +67,20 @@ export async function POST(request: NextRequest) {
     const styleConfig = artStyle ? ART_STYLES[artStyle as ArtStyleKey] : null;
     const stylePrompt = styleConfig?.prompt || 'professional book illustration';
 
-    // Build a detailed prompt for the illustration
+    // Get aspect ratio for this book format
+    const formatKey = bookFormat as keyof typeof ILLUSTRATION_DIMENSIONS;
+    const dimensions = ILLUSTRATION_DIMENSIONS[formatKey] || ILLUSTRATION_DIMENSIONS.illustrated;
+
+    // Build a detailed prompt for the illustration with consistency guides
     const prompt = buildIllustrationPrompt({
       scene,
       stylePrompt,
       characters,
       setting,
       bookTitle,
+      characterVisualGuide: characterVisualGuide as CharacterVisualGuide | undefined,
+      visualStyleGuide: visualStyleGuide as VisualStyleGuide | undefined,
+      aspectRatioPrompt: dimensions.prompt,
     });
 
     // Generate image using Gemini Image model
@@ -95,20 +134,43 @@ function buildIllustrationPrompt({
   characters,
   setting,
   bookTitle,
+  characterVisualGuide,
+  visualStyleGuide,
+  aspectRatioPrompt,
 }: {
   scene: string;
   stylePrompt: string;
   characters?: Array<{ name: string; description: string }>;
   setting?: string;
   bookTitle?: string;
+  characterVisualGuide?: CharacterVisualGuide;
+  visualStyleGuide?: VisualStyleGuide;
+  aspectRatioPrompt?: string;
 }): string {
   let prompt = `Create a beautiful book illustration in ${stylePrompt} style.\n\n`;
 
   prompt += `${NO_TEXT_INSTRUCTION}\n\n`;
 
+  // Add aspect ratio instruction
+  if (aspectRatioPrompt) {
+    prompt += `FORMAT: ${aspectRatioPrompt}\n\n`;
+  }
+
   prompt += `Scene to illustrate: ${scene}\n\n`;
 
-  if (characters && characters.length > 0) {
+  // Use detailed character visual guide if available, otherwise fall back to basic descriptions
+  if (characterVisualGuide && characterVisualGuide.characters.length > 0) {
+    prompt += `CHARACTERS (use these EXACT visual descriptions for consistency):\n`;
+    characterVisualGuide.characters.forEach((char) => {
+      prompt += `\n${char.name}:\n`;
+      prompt += `  - Physical: ${char.physicalDescription}\n`;
+      prompt += `  - Clothing: ${char.clothing}\n`;
+      prompt += `  - Distinctive Features: ${char.distinctiveFeatures}\n`;
+      prompt += `  - Color Palette: ${char.colorPalette}\n`;
+      prompt += `  - Expression Style: ${char.expressionNotes}\n`;
+    });
+    prompt += `\nStyle Notes: ${characterVisualGuide.styleNotes}\n\n`;
+  } else if (characters && characters.length > 0) {
     prompt += `Characters that may appear:\n`;
     characters.forEach((char) => {
       prompt += `- ${char.name}: ${char.description}\n`;
@@ -116,17 +178,38 @@ function buildIllustrationPrompt({
     prompt += '\n';
   }
 
+  // Add visual style guide for consistency
+  if (visualStyleGuide) {
+    prompt += `VISUAL STYLE GUIDE (maintain consistency with other illustrations):\n`;
+    prompt += `- Overall Style: ${visualStyleGuide.overallStyle}\n`;
+    prompt += `- Color Palette: ${visualStyleGuide.colorPalette}\n`;
+    prompt += `- Lighting: ${visualStyleGuide.lightingStyle}\n`;
+    prompt += `- Line Weight: ${visualStyleGuide.lineWeight}\n`;
+    prompt += `- Backgrounds: ${visualStyleGuide.backgroundTreatment}\n`;
+    prompt += `- Mood: ${visualStyleGuide.moodAndAtmosphere}\n`;
+    if (visualStyleGuide.consistencyRules.length > 0) {
+      prompt += `- Consistency Rules:\n`;
+      visualStyleGuide.consistencyRules.forEach((rule) => {
+        prompt += `  * ${rule}\n`;
+      });
+    }
+    prompt += '\n';
+  }
+
   if (setting) {
     prompt += `Setting/Environment: ${setting}\n\n`;
   }
 
-  prompt += `Requirements:
+  prompt += `CRITICAL REQUIREMENTS:
 - Create a single cohesive illustration that captures the emotional essence of the scene
 - Use expressive, dynamic composition
-- Maintain consistent character appearances if they appear in multiple illustrations
+- MAINTAIN ABSOLUTE CONSISTENCY in character appearances across all illustrations
+- Characters must look EXACTLY as described in the character guide
+- Use the SAME color palette and style throughout
 - The illustration should be suitable for a ${bookTitle ? `book titled "${bookTitle}"` : 'published book'}
 - Focus on visual storytelling without any text elements
-- High quality, professional book illustration suitable for print`;
+- High quality, professional book illustration suitable for print
+- Ensure characters are instantly recognizable from other illustrations in the book`;
 
   return prompt;
 }

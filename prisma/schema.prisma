@@ -103,6 +103,10 @@ model Book {
   storySoFar      String?   @db.Text
   characterStates Json?     // Current state of each character
 
+  // Visual consistency guides (for illustrated books)
+  characterVisualGuide Json?  // Detailed character descriptions for consistent illustrations
+  visualStyleGuide     Json?  // Style guide for maintaining illustration consistency
+
   // Cover
   coverImageUrl   String?
   coverPrompt     String?   @db.Text
