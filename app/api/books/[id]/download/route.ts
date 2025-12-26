@@ -15,6 +15,11 @@ export async function GET(
       include: {
         chapters: {
           orderBy: { number: 'asc' },
+          include: {
+            illustrations: {
+              orderBy: { position: 'asc' },
+            },
+          },
         },
       },
     });
@@ -30,18 +35,24 @@ export async function GET(
       );
     }
 
-    // Generate EPUB
+    // Generate EPUB with illustrations if available
     const epubBuffer = await generateEpub({
       title: book.title,
       authorName: book.authorName,
       genre: book.genre,
-      chapters: book.chapters.map((ch: { number: number; title: string; content: string }) => ({
+      chapters: book.chapters.map((ch) => ({
         number: ch.number,
         title: ch.title,
         content: ch.content,
+        illustrations: ch.illustrations?.map((ill) => ({
+          imageUrl: ill.imageUrl,
+          altText: ill.altText || undefined,
+          position: ill.position,
+        })),
       })),
       fontStyle: book.fontStyle as FontStyleKey,
       coverImageUrl: book.coverImageUrl || undefined,
+      bookFormat: book.bookFormat,
     });
 
     // Return as downloadable file

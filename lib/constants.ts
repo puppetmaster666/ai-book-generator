@@ -1,5 +1,6 @@
 // Pricing
 export const PRICING = {
+  // Text-only books
   ONE_TIME: {
     price: 1999, // cents
     priceDisplay: '$19.99',
@@ -17,7 +18,166 @@ export const PRICING = {
     credits: 50,
     interval: 'year',
   },
+  // Illustrated books
+  ILLUSTRATED: {
+    price: 2999, // cents - illustrated chapter book
+    priceDisplay: '$29.99',
+  },
+  CHILDRENS: {
+    price: 3999, // cents - full picture book
+    priceDisplay: '$39.99',
+  },
 } as const;
+
+// Book Formats (illustration level)
+export const BOOK_FORMATS = {
+  text_only: {
+    label: 'Text Only',
+    description: 'Traditional novel format',
+    illustrationsPerChapter: 0,
+    priceKey: 'ONE_TIME',
+  },
+  illustrated: {
+    label: 'Illustrated',
+    description: '1 illustration per chapter',
+    illustrationsPerChapter: 1,
+    priceKey: 'ILLUSTRATED',
+  },
+  picture_book: {
+    label: 'Picture Book',
+    description: 'Full-page illustrations throughout',
+    illustrationsPerChapter: 2, // 2 per spread
+    priceKey: 'CHILDRENS',
+  },
+} as const;
+
+export type BookFormatKey = keyof typeof BOOK_FORMATS;
+
+// Art Styles for Illustrations
+export const ART_STYLES = {
+  watercolor: {
+    label: 'Watercolor',
+    description: 'Soft, dreamy watercolor paintings',
+    prompt: 'watercolor illustration style, soft edges, flowing colors, artistic, hand-painted look',
+    coverStyle: 'watercolor painting style',
+  },
+  cartoon: {
+    label: 'Cartoon',
+    description: 'Fun, animated cartoon style',
+    prompt: 'cartoon illustration style, bold outlines, vibrant colors, expressive characters, animated look',
+    coverStyle: 'cartoon animated style',
+  },
+  storybook: {
+    label: 'Classic Storybook',
+    description: 'Traditional children\'s book illustrations',
+    prompt: 'classic storybook illustration, warm colors, gentle shading, whimsical, fairy tale aesthetic',
+    coverStyle: 'classic storybook illustration',
+  },
+  modern: {
+    label: 'Modern Minimal',
+    description: 'Clean, contemporary illustrations',
+    prompt: 'modern minimalist illustration, clean lines, limited color palette, geometric shapes, contemporary design',
+    coverStyle: 'modern minimalist design',
+  },
+  realistic: {
+    label: 'Realistic',
+    description: 'Detailed, lifelike artwork',
+    prompt: 'realistic detailed illustration, lifelike rendering, rich textures, photorealistic elements',
+    coverStyle: 'realistic detailed artwork',
+  },
+  manga: {
+    label: 'Manga/Anime',
+    description: 'Japanese manga-inspired art',
+    prompt: 'manga anime illustration style, expressive eyes, dynamic poses, Japanese comic aesthetic',
+    coverStyle: 'manga anime style artwork',
+  },
+  vintage: {
+    label: 'Vintage',
+    description: 'Retro, nostalgic artwork',
+    prompt: 'vintage retro illustration, muted colors, nostalgic feel, mid-century aesthetic, classic book art',
+    coverStyle: 'vintage retro book cover',
+  },
+  fantasy: {
+    label: 'Fantasy Art',
+    description: 'Epic, magical fantasy artwork',
+    prompt: 'fantasy art illustration, magical atmosphere, epic lighting, detailed fantasy world, enchanting',
+    coverStyle: 'epic fantasy book cover art',
+  },
+} as const;
+
+export type ArtStyleKey = keyof typeof ART_STYLES;
+
+// Quick Book Presets (simplified creation)
+export const BOOK_PRESETS = {
+  novel: {
+    label: 'Novel',
+    description: '50,000+ words, no illustrations',
+    icon: 'BookOpen',
+    format: 'text_only',
+    artStyle: null,
+    defaultGenre: 'literary',
+    targetWords: 60000,
+    chapters: 20,
+    priceDisplay: '$19.99',
+  },
+  childrens_picture: {
+    label: "Children's Picture Book",
+    description: '500-1,500 words with full illustrations',
+    icon: 'Palette',
+    format: 'picture_book',
+    artStyle: 'storybook',
+    defaultGenre: 'childrens',
+    targetWords: 1000,
+    chapters: 12, // pages/spreads
+    priceDisplay: '$39.99',
+  },
+  childrens_chapter: {
+    label: "Children's Chapter Book",
+    description: '5,000-15,000 words with illustrations',
+    icon: 'BookMarked',
+    format: 'illustrated',
+    artStyle: 'cartoon',
+    defaultGenre: 'childrens',
+    targetWords: 10000,
+    chapters: 10,
+    priceDisplay: '$29.99',
+  },
+  illustrated_novel: {
+    label: 'Illustrated Novel',
+    description: '30,000+ words with chapter art',
+    icon: 'Image',
+    format: 'illustrated',
+    artStyle: 'fantasy',
+    defaultGenre: 'fantasy',
+    targetWords: 40000,
+    chapters: 15,
+    priceDisplay: '$29.99',
+  },
+  comic_story: {
+    label: 'Comic/Graphic Story',
+    description: 'Visual storytelling with manga style',
+    icon: 'Layers',
+    format: 'picture_book',
+    artStyle: 'manga',
+    defaultGenre: 'ya',
+    targetWords: 3000,
+    chapters: 20,
+    priceDisplay: '$39.99',
+  },
+  self_help: {
+    label: 'Self-Help Book',
+    description: 'Practical advice, no illustrations',
+    icon: 'Lightbulb',
+    format: 'text_only',
+    artStyle: null,
+    defaultGenre: 'selfhelp',
+    targetWords: 45000,
+    chapters: 12,
+    priceDisplay: '$19.99',
+  },
+} as const;
+
+export type BookPresetKey = keyof typeof BOOK_PRESETS;
 
 // Book Types & Genres
 export const BOOK_TYPES = {
@@ -34,6 +194,8 @@ export const GENRES = {
   ya: { label: 'Young Adult', type: 'fiction', targetWords: 60000, chapters: 20 },
   horror: { label: 'Horror', type: 'fiction', targetWords: 75000, chapters: 23 },
   literary: { label: 'Literary Fiction', type: 'fiction', targetWords: 80000, chapters: 25 },
+  // Children's
+  childrens: { label: "Children's", type: 'fiction', targetWords: 5000, chapters: 10 },
   // Non-Fiction
   selfhelp: { label: 'Self-Help', type: 'non-fiction', targetWords: 50000, chapters: 14 },
   memoir: { label: 'Memoir', type: 'non-fiction', targetWords: 70000, chapters: 18 },

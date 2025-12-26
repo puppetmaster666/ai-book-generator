@@ -46,8 +46,23 @@ export async function POST(request: NextRequest) {
             { status: 400 }
           );
         }
-        amount = PRICING.ONE_TIME.price;
-        description = 'AI Book Generator - Single Book';
+        // Get book format to determine price
+        const book = await prisma.book.findUnique({
+          where: { id: bookId },
+          select: { bookFormat: true },
+        });
+
+        // Set price based on book format
+        if (book?.bookFormat === 'picture_book') {
+          amount = PRICING.CHILDRENS.price;
+          description = 'AI Book Generator - Picture Book';
+        } else if (book?.bookFormat === 'illustrated') {
+          amount = PRICING.ILLUSTRATED.price;
+          description = 'AI Book Generator - Illustrated Book';
+        } else {
+          amount = PRICING.ONE_TIME.price;
+          description = 'AI Book Generator - Single Book';
+        }
         break;
       case 'monthly':
         amount = PRICING.MONTHLY.price;

@@ -7,8 +7,49 @@ import {
   updateCharacterStates,
   generateCoverPrompt,
   generateCoverImage,
+  generateIllustrationPrompts,
+  generateChildrensIllustrationPrompts,
 } from '@/lib/gemini';
 import { countWords } from '@/lib/epub';
+import { BOOK_FORMATS, ART_STYLES, type BookFormatKey, type ArtStyleKey } from '@/lib/constants';
+
+// Helper function to generate an illustration image
+async function generateIllustrationImage(data: {
+  scene: string;
+  artStyle: string;
+  characters: { name: string; description: string }[];
+  setting: string;
+  bookTitle: string;
+}): Promise<{ imageUrl: string; altText: string } | null> {
+  try {
+    // Call our illustration API endpoint
+    const baseUrl = process.env.NEXTAUTH_URL || process.env.VERCEL_URL || 'http://localhost:3000';
+    const response = await fetch(`${baseUrl}/api/generate-illustration`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+      console.error('Illustration API error:', await response.text());
+      return null;
+    }
+
+    const result = await response.json();
+
+    if (result.image?.base64 && result.image?.mimeType) {
+      return {
+        imageUrl: `data:${result.image.mimeType};base64,${result.image.base64}`,
+        altText: result.altText || data.scene.substring(0, 100),
+      };
+    }
+
+    return null;
+  } catch (error) {
+    console.error('Failed to generate illustration:', error);
+    return null;
+  }
+}
 
 export async function POST(
   request: NextRequest,
@@ -118,7 +159,7 @@ export async function POST(
       storySoFar += `\n\nChapter ${i}: ${chapterPlan.title}\n${summary}`;
 
       // Save chapter
-      await prisma.chapter.create({
+      const chapter = await prisma.chapter.create({
         data: {
           bookId: id,
           number: i,
@@ -128,6 +169,94 @@ export async function POST(
           wordCount,
         },
       });
+
+      // Generate illustrations if book has illustrations enabled
+      const bookFormat = book.bookFormat as BookFormatKey || 'text_only';
+      const formatConfig = BOOK_FORMATS[bookFormat];
+
+      if (formatConfig && formatConfig.illustrationsPerChapter > 0 && book.artStyle) {
+        const artStyleKey = book.artStyle as ArtStyleKey;
+        const artStyleConfig = ART_STYLES[artStyleKey];
+        const characters = book.characters as { name: string; description: string }[];
+
+        try {
+          if (bookFormat === 'picture_book') {
+            // Picture book: more detailed, full-page illustrations
+            const illustrationPlan = await generateChildrensIllustrationPrompts({
+              pageNumber: i,
+              pageText: chapterContent.substring(0, 500),
+              characters,
+              setting: book.premise.substring(0, 200),
+              artStyle: artStyleConfig?.prompt || 'storybook illustration',
+              bookTitle: book.title,
+            });
+
+            // Generate the illustration image
+            const illustrationResponse = await generateIllustrationImage({
+              scene: illustrationPlan.visualDescription,
+              artStyle: book.artStyle,
+              characters,
+              setting: illustrationPlan.backgroundDetails,
+              bookTitle: book.title,
+            });
+
+            if (illustrationResponse) {
+              await prisma.illustration.create({
+                data: {
+                  bookId: id,
+                  chapterId: chapter.id,
+                  imageUrl: illustrationResponse.imageUrl,
+                  prompt: illustrationPlan.visualDescription,
+                  altText: illustrationPlan.scene,
+                  position: 0,
+                  style: book.artStyle,
+                },
+              });
+            }
+          } else {
+            // Illustrated book: 1 illustration per chapter
+            const illustrationPrompts = await generateIllustrationPrompts({
+              chapterNumber: i,
+              chapterTitle: chapterPlan.title,
+              chapterContent,
+              characters,
+              artStyle: artStyleConfig?.prompt || 'professional illustration',
+              illustrationsCount: formatConfig.illustrationsPerChapter,
+              bookTitle: book.title,
+            });
+
+            // Generate each illustration
+            for (let j = 0; j < illustrationPrompts.length; j++) {
+              const illustPrompt = illustrationPrompts[j];
+
+              const illustrationResponse = await generateIllustrationImage({
+                scene: illustPrompt.description,
+                artStyle: book.artStyle,
+                characters: characters.filter(c => illustPrompt.characters.includes(c.name)),
+                setting: book.premise.substring(0, 200),
+                bookTitle: book.title,
+              });
+
+              if (illustrationResponse) {
+                await prisma.illustration.create({
+                  data: {
+                    bookId: id,
+                    chapterId: chapter.id,
+                    imageUrl: illustrationResponse.imageUrl,
+                    prompt: illustPrompt.description,
+                    altText: illustPrompt.scene,
+                    position: j,
+                    style: book.artStyle,
+                  },
+                });
+              }
+            }
+          }
+        } catch (illustrationError) {
+          console.error(`Failed to generate illustrations for chapter ${i}:`, illustrationError);
+          // Continue without illustrations - don't fail the whole book
+        }
+      }
 
       // Update book progress
       await prisma.book.update({
@@ -142,12 +271,18 @@ export async function POST(
     }
 
     // Step 3: Generate cover
+    // Get art style prompt for cover if book has an art style
+    const artStyleKey = book.artStyle as ArtStyleKey | null;
+    const artStyleConfig = artStyleKey ? ART_STYLES[artStyleKey] : null;
+
     const coverPrompt = await generateCoverPrompt({
       title: book.title,
       genre: book.genre,
       bookType: book.bookType,
       premise: book.premise,
       authorName: book.authorName,
+      artStyle: book.artStyle || undefined,
+      artStylePrompt: artStyleConfig?.coverStyle,
     });
 
     let coverImageUrl: string | null = null;

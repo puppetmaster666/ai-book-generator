@@ -386,7 +386,13 @@ export async function generateCoverPrompt(bookData: {
   bookType: string;
   premise: string;
   authorName: string;
+  artStyle?: string;
+  artStylePrompt?: string;
 }): Promise<string> {
+  const styleInstruction = bookData.artStylePrompt
+    ? `Art Style: ${bookData.artStylePrompt}`
+    : '';
+
   const prompt = `Create a detailed image generation prompt for a professional book cover.
 
 BOOK DETAILS:
@@ -395,12 +401,14 @@ BOOK DETAILS:
 - Genre: ${bookData.genre}
 - Type: ${bookData.bookType}
 - Premise: ${bookData.premise}
+${styleInstruction}
 
 Create a prompt for generating a book cover that:
 1. Visually represents the book's theme and genre
 2. Is professional and suitable for Amazon KDP
 3. Works well at thumbnail size
 4. Has appropriate visual hierarchy
+${bookData.artStylePrompt ? `5. Uses the ${bookData.artStyle} art style consistently` : ''}
 
 The cover MUST include:
 - The title "${bookData.title}" prominently displayed
@@ -417,6 +425,147 @@ Output ONLY the image generation prompt, nothing else.`;
 
   const result = await getGeminiFlash().generateContent(prompt);
   return result.response.text();
+}
+
+// Generate illustration prompts for a chapter
+export async function generateIllustrationPrompts(data: {
+  chapterNumber: number;
+  chapterTitle: string;
+  chapterContent: string;
+  characters: { name: string; description: string }[];
+  artStyle: string;
+  illustrationsCount: number;
+  bookTitle: string;
+}): Promise<Array<{
+  scene: string;
+  description: string;
+  characters: string[];
+  emotion: string;
+}>> {
+  const prompt = `You are an illustrator planning illustrations for a book chapter.
+
+BOOK: "${data.bookTitle}"
+CHAPTER ${data.chapterNumber}: "${data.chapterTitle}"
+
+CHARACTERS:
+${data.characters.map(c => `- ${c.name}: ${c.description}`).join('\n')}
+
+ART STYLE: ${data.artStyle}
+
+CHAPTER CONTENT:
+${data.chapterContent.substring(0, 3000)}...
+
+Create ${data.illustrationsCount} illustration descriptions for key moments in this chapter.
+
+For each illustration, identify:
+1. A specific scene/moment to illustrate
+2. A detailed visual description (what to draw, composition, lighting)
+3. Which characters appear in the scene
+4. The emotional tone
+
+IMPORTANT: The illustrations will NOT have any text. Describe only visual elements.
+
+Output ONLY valid JSON:
+{
+  "illustrations": [
+    {
+      "scene": "Brief scene identifier (3-5 words)",
+      "description": "Detailed visual description for the artist (50-100 words)",
+      "characters": ["character names that appear"],
+      "emotion": "primary emotion (joyful, tense, mysterious, etc.)"
+    }
+  ]
+}`;
+
+  const result = await getGeminiFlash().generateContent(prompt);
+  const response = result.response.text();
+
+  try {
+    const parsed = parseJSONFromResponse(response) as { illustrations: Array<{
+      scene: string;
+      description: string;
+      characters: string[];
+      emotion: string;
+    }> };
+    return parsed.illustrations;
+  } catch {
+    // Return a single default illustration if parsing fails
+    return [{
+      scene: `Chapter ${data.chapterNumber} scene`,
+      description: `An illustration capturing the essence of chapter ${data.chapterNumber}: ${data.chapterTitle}`,
+      characters: data.characters.map(c => c.name),
+      emotion: 'engaging',
+    }];
+  }
+}
+
+// Generate illustration for children's book (more detailed, scene-focused)
+export async function generateChildrensIllustrationPrompts(data: {
+  pageNumber: number;
+  pageText: string;
+  characters: { name: string; description: string }[];
+  setting: string;
+  artStyle: string;
+  bookTitle: string;
+}): Promise<{
+  scene: string;
+  visualDescription: string;
+  characterPositions: string;
+  backgroundDetails: string;
+  colorMood: string;
+}> {
+  const prompt = `You are a children's book illustrator planning a full-page illustration.
+
+BOOK: "${data.bookTitle}"
+PAGE ${data.pageNumber}
+
+PAGE TEXT:
+"${data.pageText}"
+
+CHARACTERS:
+${data.characters.map(c => `- ${c.name}: ${c.description}`).join('\n')}
+
+SETTING: ${data.setting}
+ART STYLE: ${data.artStyle}
+
+Create a detailed illustration plan for this page. Children's book illustrations should:
+- Be visually engaging and age-appropriate
+- Support the text without duplicating it
+- Show characters with expressive faces and body language
+- Have clear, readable compositions
+- Use the full page effectively
+
+CRITICAL: NO TEXT should appear in the illustration. The text will be added separately.
+
+Output ONLY valid JSON:
+{
+  "scene": "Brief description of the moment (5-10 words)",
+  "visualDescription": "Detailed description of what to draw (100+ words)",
+  "characterPositions": "Where each character is positioned and what they're doing",
+  "backgroundDetails": "Setting elements, objects, environmental details",
+  "colorMood": "Color palette and emotional mood (warm, cool, vibrant, etc.)"
+}`;
+
+  const result = await getGeminiFlash().generateContent(prompt);
+  const response = result.response.text();
+
+  try {
+    return parseJSONFromResponse(response) as {
+      scene: string;
+      visualDescription: string;
+      characterPositions: string;
+      backgroundDetails: string;
+      colorMood: string;
+    };
+  } catch {
+    return {
+      scene: `Page ${data.pageNumber} illustration`,
+      visualDescription: `A charming illustration for page ${data.pageNumber} showing the scene described in the text`,
+      characterPositions: 'Characters centered in the scene',
+      backgroundDetails: data.setting,
+      colorMood: 'warm and inviting',
+    };
+  }
 }
 
 export async function generateCoverImage(coverPrompt: string): Promise<string> {

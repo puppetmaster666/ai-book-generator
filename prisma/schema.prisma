@@ -89,12 +89,17 @@ model Book {
   chapterFormat   String    // numbers, titles, both, pov
   fontStyle       String    @default("classic")
 
+  // Book format & illustrations
+  bookFormat      String    @default("text_only") // text_only, illustrated, picture_book
+  artStyle        String?   // watercolor, cartoon, storybook, etc.
+  bookPreset      String?   // novel, childrens_picture, etc.
+
   // Target settings
   targetWords     Int
   targetChapters  Int
 
   // Generated content
-  outline         Json?     // Array of {chapterNum, title, summary, pov, targetWords}
+  outline         Json?     // Array of {chapterNum, title, summary, pov, targetWords, illustrationPrompt?}
   storySoFar      String?   @db.Text
   characterStates Json?     // Current state of each character
 
@@ -114,6 +119,7 @@ model Book {
   paymentStatus   String    @default("pending") // pending, completed, failed
 
   chapters        Chapter[]
+  illustrations   Illustration[]
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
   completedAt     DateTime?
@@ -130,10 +136,35 @@ model Chapter {
   summary   String   @db.Text
   wordCount Int
 
-  createdAt DateTime @default(now())
+  illustrations Illustration[]
+  createdAt     DateTime @default(now())
 
   @@unique([bookId, number])
   @@index([bookId])
+}
+
+model Illustration {
+  id          String   @id @default(cuid())
+  bookId      String
+  book        Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  chapterId   String?
+  chapter     Chapter? @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+
+  // Image details
+  imageUrl    String   // URL to stored image
+  prompt      String   @db.Text  // The prompt used to generate
+  altText     String?  // Accessibility text
+  position    Int      @default(0) // Order within chapter (0 = chapter start)
+
+  // Metadata
+  width       Int      @default(1024)
+  height      Int      @default(1024)
+  style       String?  // Art style used
+
+  createdAt   DateTime @default(now())
+
+  @@index([bookId])
+  @@index([chapterId])
 }
 
 model Payment {

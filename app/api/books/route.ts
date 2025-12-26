@@ -24,6 +24,10 @@ export async function POST(request: NextRequest) {
       targetChapters,
       email,
       userId,
+      // New illustration fields
+      bookFormat,
+      artStyle,
+      bookPreset,
     } = body;
 
     // Validate required fields
@@ -58,10 +62,14 @@ export async function POST(request: NextRequest) {
         email: email || null,
         userId: userId || null,
         status: 'pending',
+        // Illustration settings
+        bookFormat: bookFormat || 'text_only',
+        artStyle: artStyle || null,
+        bookPreset: bookPreset || null,
       },
     });
 
-    return NextResponse.json({ id: book.id, book });
+    return NextResponse.json({ bookId: book.id, book });
   } catch (error) {
     console.error('Error creating book:', error);
     return NextResponse.json(

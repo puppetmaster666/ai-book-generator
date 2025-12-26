@@ -4,413 +4,351 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
-import { ArrowLeft, ArrowRight, Plus, X } from 'lucide-react';
-import { GENRES, WRITING_STYLES, CHAPTER_FORMATS, FONT_STYLES } from '@/lib/constants';
+import { ArrowLeft, ArrowRight, Sparkles, Loader2, BookOpen, Palette, BookMarked, Image, Layers, Lightbulb } from 'lucide-react';
+import { BOOK_PRESETS, ART_STYLES, GENRES, type BookPresetKey, type ArtStyleKey } from '@/lib/constants';
 
-type Character = { name: string; description: string };
-
-interface BookFormData {
-  title: string;
-  authorName: string;
-  genre: string;
-  premise: string;
-  characters: Character[];
-  beginning: string;
-  middle: string;
-  ending: string;
-  writingStyle: string;
-  chapterFormat: string;
-  fontStyle: string;
-}
-
-const STEPS = [
-  { id: 1, title: 'Title & Genre' },
-  { id: 2, title: 'Premise & Characters' },
-  { id: 3, title: 'Plot' },
-  { id: 4, title: 'Style & Format' },
-  { id: 5, title: 'Review' },
-];
+const PRESET_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
+  BookOpen,
+  Palette,
+  BookMarked,
+  Image,
+  Layers,
+  Lightbulb,
+};
 
 export default function CreateBook() {
   const router = useRouter();
-  const [currentStep, setCurrentStep] = useState(1);
+  const [step, setStep] = useState<'type' | 'idea' | 'style'>('type');
+  const [selectedPreset, setSelectedPreset] = useState<BookPresetKey | null>(null);
+  const [selectedArtStyle, setSelectedArtStyle] = useState<ArtStyleKey | null>(null);
+  const [idea, setIdea] = useState('');
+  const [isGeneratingIdea, setIsGeneratingIdea] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState('');
 
-  const [formData, setFormData] = useState<BookFormData>({
-    title: '',
-    authorName: '',
-    genre: '',
-    premise: '',
-    characters: [{ name: '', description: '' }],
-    beginning: '',
-    middle: '',
-    ending: '',
-    writingStyle: 'literary',
-    chapterFormat: 'both',
-    fontStyle: 'classic',
-  });
-
+  // Check if coming from homepage with an idea
   useEffect(() => {
-    const savedIdea = sessionStorage.getItem('bookIdea');
+    const savedPlan = sessionStorage.getItem('bookPlan');
+    const savedIdea = sessionStorage.getItem('originalIdea');
     if (savedIdea) {
-      setFormData(prev => ({ ...prev, premise: savedIdea }));
-      sessionStorage.removeItem('bookIdea');
+      setIdea(savedIdea);
+      sessionStorage.removeItem('originalIdea');
+      // If we have a plan, they've already expanded the idea
+      if (savedPlan) {
+        sessionStorage.removeItem('bookPlan');
+      }
     }
   }, []);
 
-  const updateField = (field: keyof BookFormData, value: string | Character[]) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-  };
-
-  const addCharacter = () => {
-    setFormData(prev => ({
-      ...prev,
-      characters: [...prev.characters, { name: '', description: '' }],
-    }));
-  };
-
-  const updateCharacter = (index: number, field: 'name' | 'description', value: string) => {
-    const newCharacters = [...formData.characters];
-    newCharacters[index][field] = value;
-    updateField('characters', newCharacters);
-  };
-
-  const removeCharacter = (index: number) => {
-    if (formData.characters.length > 1) {
-      const newCharacters = formData.characters.filter((_, i) => i !== index);
-      updateField('characters', newCharacters);
+  const handleGenerateIdea = async () => {
+    setIsGeneratingIdea(true);
+    setError('');
+    try {
+      const response = await fetch('/api/generate-idea', { method: 'POST' });
+      if (!response.ok) throw new Error('Failed to generate idea');
+      const data = await response.json();
+      setIdea(data.idea);
+    } catch {
+      setError('Failed to generate idea. Please try again.');
+    } finally {
+      setIsGeneratingIdea(false);
     }
   };
 
-  const canProceed = () => {
-    switch (currentStep) {
-      case 1:
-        return formData.title.trim() && formData.genre;
-      case 2:
-        return formData.premise.trim().length >= 20 && formData.characters[0].name.trim();
-      case 3:
-        return formData.beginning.trim() && formData.middle.trim() && formData.ending.trim();
-      case 4:
-        return formData.writingStyle && formData.chapterFormat && formData.fontStyle;
-      default:
-        return true;
+  const handleSelectPreset = (key: BookPresetKey) => {
+    setSelectedPreset(key);
+    const preset = BOOK_PRESETS[key];
+    // Set default art style for illustrated books
+    if (preset.artStyle) {
+      setSelectedArtStyle(preset.artStyle as ArtStyleKey);
+    } else {
+      setSelectedArtStyle(null);
+    }
+    setStep('idea');
+  };
+
+  const handleContinue = () => {
+    if (!selectedPreset) return;
+    const preset = BOOK_PRESETS[selectedPreset];
+
+    // If it's an illustrated book, show art style selection
+    if (preset.format !== 'text_only' && step === 'idea') {
+      setStep('style');
+    } else {
+      handleSubmit();
     }
   };
 
   const handleSubmit = async () => {
+    if (!selectedPreset || !idea.trim()) return;
+
     setIsSubmitting(true);
+    setError('');
+
     try {
+      const preset = BOOK_PRESETS[selectedPreset];
+      const genre = GENRES[preset.defaultGenre as keyof typeof GENRES];
+
+      // First expand the idea using AI
+      const expandResponse = await fetch('/api/expand-idea', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          idea,
+          bookType: preset.format === 'picture_book' ? 'childrens' : genre?.type || 'fiction',
+          isIllustrated: preset.format !== 'text_only',
+        }),
+      });
+
+      if (!expandResponse.ok) throw new Error('Failed to expand idea');
+      const bookPlan = await expandResponse.json();
+
+      // Create the book
       const response = await fetch('/api/books', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          ...bookPlan,
+          bookPreset: selectedPreset,
+          bookFormat: preset.format,
+          artStyle: selectedArtStyle,
+          targetWords: preset.targetWords,
+          targetChapters: preset.chapters,
+        }),
       });
 
       if (!response.ok) throw new Error('Failed to create book');
 
       const { bookId } = await response.json();
       router.push(`/checkout?bookId=${bookId}`);
-    } catch (error) {
-      console.error('Error:', error);
-      alert('Failed to create book. Please try again.');
+    } catch (err) {
+      console.error('Error:', err);
+      setError('Something went wrong. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
   };
+
+  const preset = selectedPreset ? BOOK_PRESETS[selectedPreset] : null;
 
   return (
     <div className="min-h-screen bg-[#FAFAFA]">
       <Header />
 
       <main className="py-16 px-6">
-        <div className="max-w-3xl mx-auto">
-          {/* Progress Steps */}
-          <div className="mb-10">
-            <div className="flex items-center justify-between">
-              {STEPS.map((step, index) => (
-                <div key={step.id} className="flex items-center">
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-medium transition-colors ${
-                    currentStep >= step.id ? 'bg-neutral-900 text-white' : 'bg-neutral-200 text-neutral-500'
-                  }`}>
-                    {step.id}
-                  </div>
-                  {index < STEPS.length - 1 && (
-                    <div className={`w-12 sm:w-24 h-1 mx-2 rounded transition-colors ${
-                      currentStep > step.id ? 'bg-neutral-900' : 'bg-neutral-200'
-                    }`} />
-                  )}
-                </div>
-              ))}
-            </div>
-            <div className="mt-4 text-center">
-              <span className="text-sm text-neutral-600">{STEPS[currentStep - 1].title}</span>
-            </div>
-          </div>
-
-          {/* Form Content */}
-          <div className="bg-white rounded-2xl border border-neutral-200 p-8">
-            {/* Step 1: Title & Genre */}
-            {currentStep === 1 && (
-              <div className="space-y-6">
-                <div>
-                  <label className="block text-sm font-medium mb-2">Book Title</label>
-                  <input
-                    type="text"
-                    value={formData.title}
-                    onChange={(e) => updateField('title', e.target.value)}
-                    placeholder="Enter your book title"
-                    className="w-full px-4 py-3 border border-neutral-200 rounded-xl focus:border-neutral-900 focus:outline-none transition-colors"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-2">Author Name</label>
-                  <input
-                    type="text"
-                    value={formData.authorName}
-                    onChange={(e) => updateField('authorName', e.target.value)}
-                    placeholder="Your name or pen name"
-                    className="w-full px-4 py-3 border border-neutral-200 rounded-xl focus:border-neutral-900 focus:outline-none transition-colors"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-3">Genre</label>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                    {Object.entries(GENRES).map(([key, genre]) => (
-                      <button
-                        key={key}
-                        type="button"
-                        onClick={() => updateField('genre', key)}
-                        className={`p-4 rounded-xl border text-left transition-all ${
-                          formData.genre === key
-                            ? 'border-neutral-900 bg-neutral-50'
-                            : 'border-neutral-200 hover:border-neutral-400'
-                        }`}
-                      >
-                        <span className="font-medium">{genre.label}</span>
-                        <span className="block text-xs text-neutral-500 mt-1">~{(genre.targetWords / 1000).toFixed(0)}K words</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
+        <div className="max-w-4xl mx-auto">
+          {/* Step 1: Choose Book Type */}
+          {step === 'type' && (
+            <>
+              <div className="text-center mb-12">
+                <h1 className="text-3xl md:text-4xl font-bold tracking-tight mb-4" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>
+                  What would you like to create?
+                </h1>
+                <p className="text-lg text-neutral-600">
+                  Choose a format and we&apos;ll help you bring your idea to life
+                </p>
               </div>
-            )}
 
-            {/* Step 2: Premise & Characters */}
-            {currentStep === 2 && (
-              <div className="space-y-6">
-                <div>
-                  <label className="block text-sm font-medium mb-2">Premise</label>
-                  <textarea
-                    value={formData.premise}
-                    onChange={(e) => updateField('premise', e.target.value)}
-                    placeholder="Describe your book idea in 2-3 sentences. What is the hook?"
-                    rows={4}
-                    className="w-full px-4 py-3 border border-neutral-200 rounded-xl focus:border-neutral-900 focus:outline-none resize-none transition-colors"
-                  />
-                </div>
-                <div>
-                  <div className="flex justify-between items-center mb-3">
-                    <label className="text-sm font-medium">Main Characters</label>
-                    <button type="button" onClick={addCharacter} className="text-neutral-900 text-sm flex items-center gap-1 hover:underline">
-                      <Plus className="h-4 w-4" /> Add Character
-                    </button>
-                  </div>
-                  <div className="space-y-4">
-                    {formData.characters.map((char, index) => (
-                      <div key={index} className="flex gap-3">
-                        <div className="flex-1 space-y-2">
-                          <input
-                            type="text"
-                            value={char.name}
-                            onChange={(e) => updateCharacter(index, 'name', e.target.value)}
-                            placeholder="Character name"
-                            className="w-full px-4 py-2.5 border border-neutral-200 rounded-xl focus:border-neutral-900 focus:outline-none transition-colors"
-                          />
-                          <textarea
-                            value={char.description}
-                            onChange={(e) => updateCharacter(index, 'description', e.target.value)}
-                            placeholder="Brief description (personality, role in story)"
-                            rows={2}
-                            className="w-full px-4 py-2.5 border border-neutral-200 rounded-xl focus:border-neutral-900 focus:outline-none resize-none transition-colors"
-                          />
-                        </div>
-                        {formData.characters.length > 1 && (
-                          <button type="button" onClick={() => removeCharacter(index)} className="text-red-500 hover:text-red-600 self-start p-2">
-                            <X className="h-5 w-5" />
-                          </button>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {(Object.entries(BOOK_PRESETS) as [BookPresetKey, typeof BOOK_PRESETS[BookPresetKey]][]).map(([key, preset]) => {
+                  const IconComponent = PRESET_ICONS[preset.icon] || BookOpen;
+                  const isIllustrated = preset.format !== 'text_only';
+
+                  return (
+                    <button
+                      key={key}
+                      onClick={() => handleSelectPreset(key)}
+                      className="group p-6 bg-white rounded-2xl border border-neutral-200 hover:border-neutral-400 hover:shadow-lg transition-all text-left"
+                    >
+                      <div className={`w-14 h-14 rounded-xl flex items-center justify-center mb-4 transition-colors ${
+                        isIllustrated
+                          ? 'bg-gradient-to-br from-purple-100 to-pink-100 group-hover:from-purple-200 group-hover:to-pink-200'
+                          : 'bg-neutral-100 group-hover:bg-neutral-200'
+                      }`}>
+                        <IconComponent className={`h-7 w-7 ${isIllustrated ? 'text-purple-600' : 'text-neutral-700'}`} />
+                      </div>
+                      <h3 className="text-lg font-semibold mb-1" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>
+                        {preset.label}
+                      </h3>
+                      <p className="text-sm text-neutral-600 mb-3">
+                        {preset.description}
+                      </p>
+                      <div className="flex items-center justify-between">
+                        <span className="text-lg font-bold">{preset.priceDisplay}</span>
+                        {isIllustrated && (
+                          <span className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded-full">
+                            Illustrated
+                          </span>
                         )}
                       </div>
-                    ))}
-                  </div>
-                </div>
+                    </button>
+                  );
+                })}
               </div>
-            )}
+            </>
+          )}
 
-            {/* Step 3: Plot */}
-            {currentStep === 3 && (
-              <div className="space-y-6">
-                <div>
-                  <label className="block text-sm font-medium mb-2">Beginning</label>
-                  <textarea
-                    value={formData.beginning}
-                    onChange={(e) => updateField('beginning', e.target.value)}
-                    placeholder="How does the story open? What is the inciting incident?"
-                    rows={4}
-                    className="w-full px-4 py-3 border border-neutral-200 rounded-xl focus:border-neutral-900 focus:outline-none resize-none transition-colors"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-2">Middle / Key Plot Points</label>
-                  <textarea
-                    value={formData.middle}
-                    onChange={(e) => updateField('middle', e.target.value)}
-                    placeholder="Key events, conflicts, turning points. Be as detailed as you want."
-                    rows={6}
-                    className="w-full px-4 py-3 border border-neutral-200 rounded-xl focus:border-neutral-900 focus:outline-none resize-none transition-colors"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-2">Ending</label>
-                  <textarea
-                    value={formData.ending}
-                    onChange={(e) => updateField('ending', e.target.value)}
-                    placeholder="How does it conclude? What is the resolution?"
-                    rows={4}
-                    className="w-full px-4 py-3 border border-neutral-200 rounded-xl focus:border-neutral-900 focus:outline-none resize-none transition-colors"
-                  />
-                </div>
-              </div>
-            )}
-
-            {/* Step 4: Style & Format */}
-            {currentStep === 4 && (
-              <div className="space-y-6">
-                <div>
-                  <label className="block text-sm font-medium mb-3">Writing Style</label>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {Object.entries(WRITING_STYLES).map(([key, style]) => (
-                      <button
-                        key={key}
-                        type="button"
-                        onClick={() => updateField('writingStyle', key)}
-                        className={`p-4 rounded-xl border text-left transition-all ${
-                          formData.writingStyle === key
-                            ? 'border-neutral-900 bg-neutral-50'
-                            : 'border-neutral-200 hover:border-neutral-400'
-                        }`}
-                      >
-                        <span className="font-medium">{style.label}</span>
-                        <span className="block text-xs text-neutral-500 mt-1">{style.description}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-3">Chapter Format</label>
-                  <div className="grid grid-cols-2 gap-3">
-                    {Object.entries(CHAPTER_FORMATS).map(([key, format]) => (
-                      <button
-                        key={key}
-                        type="button"
-                        onClick={() => updateField('chapterFormat', key)}
-                        className={`p-4 rounded-xl border text-left transition-all ${
-                          formData.chapterFormat === key
-                            ? 'border-neutral-900 bg-neutral-50'
-                            : 'border-neutral-200 hover:border-neutral-400'
-                        }`}
-                      >
-                        <span className="font-medium">{format.label}</span>
-                        <span className="block text-xs text-neutral-500 mt-1">{format.example}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-3">Book Font Style</label>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                    {Object.entries(FONT_STYLES).map(([key, style]) => (
-                      <button
-                        key={key}
-                        type="button"
-                        onClick={() => updateField('fontStyle', key)}
-                        className={`p-4 rounded-xl border text-left transition-all ${
-                          formData.fontStyle === key
-                            ? 'border-neutral-900 bg-neutral-50'
-                            : 'border-neutral-200 hover:border-neutral-400'
-                        }`}
-                      >
-                        <span className="font-medium">{style.label}</span>
-                        <span className="block text-xs text-neutral-500 mt-1">{style.body}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Step 5: Review */}
-            {currentStep === 5 && (
-              <div className="space-y-6">
-                <h3 className="text-xl font-semibold" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>Review Your Book</h3>
-                <div className="space-y-4">
-                  <div className="p-4 bg-neutral-50 rounded-xl">
-                    <p className="text-sm text-neutral-500">Title</p>
-                    <p className="font-medium">{formData.title}</p>
-                  </div>
-                  <div className="p-4 bg-neutral-50 rounded-xl">
-                    <p className="text-sm text-neutral-500">Author</p>
-                    <p className="font-medium">{formData.authorName || 'Anonymous'}</p>
-                  </div>
-                  <div className="p-4 bg-neutral-50 rounded-xl">
-                    <p className="text-sm text-neutral-500">Genre</p>
-                    <p className="font-medium">{GENRES[formData.genre as keyof typeof GENRES]?.label}</p>
-                    <p className="text-sm text-neutral-500">~{(GENRES[formData.genre as keyof typeof GENRES]?.targetWords / 1000).toFixed(0)}K words, {GENRES[formData.genre as keyof typeof GENRES]?.chapters} chapters</p>
-                  </div>
-                  <div className="p-4 bg-neutral-50 rounded-xl">
-                    <p className="text-sm text-neutral-500">Premise</p>
-                    <p className="font-medium">{formData.premise}</p>
-                  </div>
-                  <div className="p-4 bg-neutral-50 rounded-xl">
-                    <p className="text-sm text-neutral-500">Characters</p>
-                    {formData.characters.map((char, i) => (
-                      <p key={i} className="font-medium">{char.name}: {char.description}</p>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Navigation */}
-            <div className="mt-10 flex justify-between">
+          {/* Step 2: Write Your Idea */}
+          {step === 'idea' && preset && (
+            <>
               <button
-                type="button"
-                onClick={() => setCurrentStep(prev => Math.max(1, prev - 1))}
-                disabled={currentStep === 1}
-                className="flex items-center gap-2 px-4 py-2 text-neutral-600 hover:text-neutral-900 disabled:opacity-50 transition-colors"
+                onClick={() => setStep('type')}
+                className="flex items-center gap-2 text-neutral-600 hover:text-neutral-900 mb-8 transition-colors"
               >
-                <ArrowLeft className="h-5 w-5" /> Back
+                <ArrowLeft className="h-5 w-5" /> Back to book types
               </button>
-              {currentStep < 5 ? (
-                <button
-                  type="button"
-                  onClick={() => setCurrentStep(prev => prev + 1)}
-                  disabled={!canProceed()}
-                  className="flex items-center gap-2 px-6 py-3 bg-neutral-900 text-white rounded-full hover:bg-neutral-800 disabled:opacity-50 font-medium transition-colors"
-                >
-                  Continue <ArrowRight className="h-5 w-5" />
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={handleSubmit}
+
+              <div className="text-center mb-8">
+                <div className="inline-flex items-center gap-2 bg-neutral-100 px-4 py-2 rounded-full text-sm mb-4">
+                  {preset.format !== 'text_only' && <Palette className="h-4 w-4 text-purple-600" />}
+                  <span>{preset.label}</span>
+                  <span className="text-neutral-500">•</span>
+                  <span className="font-semibold">{preset.priceDisplay}</span>
+                </div>
+                <h1 className="text-3xl md:text-4xl font-bold tracking-tight mb-4" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>
+                  Describe your {preset.format === 'picture_book' ? 'story' : 'book'} idea
+                </h1>
+                <p className="text-lg text-neutral-600">
+                  {preset.format === 'picture_book'
+                    ? "Tell us about your children's story - the characters, setting, and message"
+                    : "Share your concept and we'll expand it into a full outline"}
+                </p>
+              </div>
+
+              <div className="bg-white rounded-2xl border border-neutral-200 p-6 md:p-8">
+                <textarea
+                  value={idea}
+                  onChange={(e) => setIdea(e.target.value)}
+                  placeholder={
+                    preset.format === 'picture_book'
+                      ? "A curious little fox named Pip who discovers that the stars in the sky are actually sleeping fireflies, and embarks on an adventure to wake them up..."
+                      : "A mystery novel about a detective who discovers her own name in a cold case file from 1985..."
+                  }
+                  rows={6}
+                  className="w-full px-4 py-4 text-lg bg-neutral-50 border border-neutral-200 rounded-xl focus:border-neutral-900 focus:outline-none resize-none transition-colors"
                   disabled={isSubmitting}
-                  className="flex items-center gap-2 px-6 py-3 bg-neutral-900 text-white rounded-full hover:bg-neutral-800 disabled:opacity-50 font-medium transition-colors"
-                >
-                  {isSubmitting ? 'Creating...' : 'Proceed to Checkout'} <ArrowRight className="h-5 w-5" />
-                </button>
+                />
+
+                <div className="flex items-center justify-between mt-4">
+                  <button
+                    type="button"
+                    onClick={handleGenerateIdea}
+                    disabled={isGeneratingIdea || isSubmitting}
+                    className="flex items-center gap-2 text-neutral-500 hover:text-neutral-900 disabled:opacity-50 px-3 py-2 rounded-lg hover:bg-neutral-100 transition-colors"
+                  >
+                    {isGeneratingIdea ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Sparkles className="h-4 w-4" />
+                    )}
+                    {isGeneratingIdea ? 'Generating...' : 'Surprise me'}
+                  </button>
+
+                  <span className="text-sm text-neutral-500">
+                    {idea.length} characters
+                  </span>
+                </div>
+
+                {error && (
+                  <p className="text-red-600 text-sm mt-4 bg-red-50 px-4 py-2 rounded-lg">{error}</p>
+                )}
+
+                <div className="mt-8 flex justify-end">
+                  <button
+                    onClick={handleContinue}
+                    disabled={idea.trim().length < 20 || isSubmitting}
+                    className="flex items-center gap-2 px-8 py-4 bg-neutral-900 text-white rounded-full hover:bg-neutral-800 disabled:opacity-50 font-medium transition-all hover:scale-105"
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <Loader2 className="h-5 w-5 animate-spin" />
+                        Creating your book...
+                      </>
+                    ) : preset.format !== 'text_only' ? (
+                      <>
+                        Choose Art Style <ArrowRight className="h-5 w-5" />
+                      </>
+                    ) : (
+                      <>
+                        Create Book <ArrowRight className="h-5 w-5" />
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* Step 3: Art Style (for illustrated books) */}
+          {step === 'style' && preset && (
+            <>
+              <button
+                onClick={() => setStep('idea')}
+                className="flex items-center gap-2 text-neutral-600 hover:text-neutral-900 mb-8 transition-colors"
+              >
+                <ArrowLeft className="h-5 w-5" /> Back to idea
+              </button>
+
+              <div className="text-center mb-8">
+                <h1 className="text-3xl md:text-4xl font-bold tracking-tight mb-4" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>
+                  Choose your art style
+                </h1>
+                <p className="text-lg text-neutral-600">
+                  This style will be used for all illustrations and the cover
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                {(Object.entries(ART_STYLES) as [ArtStyleKey, typeof ART_STYLES[ArtStyleKey]][]).map(([key, style]) => (
+                  <button
+                    key={key}
+                    onClick={() => setSelectedArtStyle(key)}
+                    className={`p-4 rounded-2xl border-2 transition-all text-left ${
+                      selectedArtStyle === key
+                        ? 'border-neutral-900 bg-neutral-50 shadow-md'
+                        : 'border-neutral-200 hover:border-neutral-400 bg-white'
+                    }`}
+                  >
+                    <div className={`w-full aspect-square rounded-xl mb-3 ${
+                      key === 'watercolor' ? 'bg-gradient-to-br from-blue-100 via-pink-100 to-yellow-100' :
+                      key === 'cartoon' ? 'bg-gradient-to-br from-yellow-200 to-orange-200' :
+                      key === 'storybook' ? 'bg-gradient-to-br from-amber-100 to-orange-100' :
+                      key === 'modern' ? 'bg-gradient-to-br from-gray-100 to-gray-200' :
+                      key === 'realistic' ? 'bg-gradient-to-br from-emerald-100 to-teal-100' :
+                      key === 'manga' ? 'bg-gradient-to-br from-pink-200 to-purple-200' :
+                      key === 'vintage' ? 'bg-gradient-to-br from-amber-200 to-yellow-100' :
+                      'bg-gradient-to-br from-indigo-200 to-purple-200'
+                    }`} />
+                    <h3 className="font-semibold text-sm mb-1">{style.label}</h3>
+                    <p className="text-xs text-neutral-500 line-clamp-2">{style.description}</p>
+                  </button>
+                ))}
+              </div>
+
+              {error && (
+                <p className="text-red-600 text-sm mb-4 bg-red-50 px-4 py-2 rounded-lg text-center">{error}</p>
               )}
-            </div>
-          </div>
+
+              <div className="flex justify-center">
+                <button
+                  onClick={handleSubmit}
+                  disabled={!selectedArtStyle || isSubmitting}
+                  className="flex items-center gap-2 px-8 py-4 bg-neutral-900 text-white rounded-full hover:bg-neutral-800 disabled:opacity-50 font-medium transition-all hover:scale-105"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="h-5 w-5 animate-spin" />
+                      Creating your book...
+                    </>
+                  ) : (
+                    <>
+                      Create {preset.label} <ArrowRight className="h-5 w-5" />
+                    </>
+                  )}
+                </button>
+              </div>
+            </>
+          )}
         </div>
       </main>
 
