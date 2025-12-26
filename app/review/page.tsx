@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import { BookOpen, Users, FileText, Loader2, ArrowLeft, CreditCard } from 'lucide-react';
+import Header from '@/components/Header';
 
 interface BookPlan {
   title: string;
@@ -161,14 +161,7 @@ export default function Review() {
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: '#F5F3EF' }}>
-      {/* Simple Header */}
-      <header className="border-b" style={{ borderColor: '#E0DDD6' }}>
-        <div className="max-w-4xl mx-auto px-6 py-4">
-          <Link href="/" className="text-xl font-bold" style={{ fontFamily: 'Cinzel, Georgia, serif' }}>
-            Draft My Book
-          </Link>
-        </div>
-      </header>
+      <Header />
 
       <main className="py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-4xl mx-auto">
