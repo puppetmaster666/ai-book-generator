@@ -72,22 +72,10 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-[#FAFAFA]">
-      {/* Hero Section with Background */}
+      {/* Hero Section */}
       <section className="relative min-h-screen flex flex-col">
-        {/* Background Image */}
-        <div className="absolute inset-0 z-0">
-          <Image
-            src="/images/pexels-karola-g-5993566.jpg"
-            alt=""
-            fill
-            className="object-cover"
-            priority
-          />
-          <div className="absolute inset-0 bg-gradient-to-b from-white/90 via-white/85 to-white" />
-        </div>
-
         {/* Navigation */}
-        <nav className="relative z-10 w-full px-6 py-6">
+        <nav className="w-full px-6 py-6">
           <div className="max-w-7xl mx-auto flex items-center justify-between">
             {/* Left Nav */}
             <div className="hidden md:flex items-center gap-8 flex-1">
@@ -149,10 +137,10 @@ export default function Home() {
         )}
 
         {/* Hero Content */}
-        <div className="relative z-10 flex-1 flex items-center justify-center px-6 py-16">
+        <div className="flex-1 flex items-center justify-center px-6 py-16">
           <div className="max-w-4xl mx-auto text-center">
             {/* Badge */}
-            <div className="inline-flex items-center gap-2 bg-neutral-100/80 backdrop-blur px-4 py-2 rounded-full text-sm text-neutral-600 mb-8">
+            <div className="inline-flex items-center gap-2 bg-neutral-100 px-4 py-2 rounded-full text-sm text-neutral-600 mb-8">
               <Zap className="h-4 w-4 text-amber-500" />
               <span>50,000+ words in 30-60 minutes</span>
             </div>
