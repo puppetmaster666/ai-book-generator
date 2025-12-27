@@ -445,8 +445,35 @@ export async function POST(
       return NextResponse.json({ error: 'Book not found' }, { status: 404 });
     }
 
+    // Check payment OR free tier eligibility
     if (book.paymentStatus !== 'completed') {
-      return NextResponse.json({ error: 'Payment required' }, { status: 402 });
+      // Check if user has free book available
+      if (book.userId) {
+        const user = await prisma.user.findUnique({
+          where: { id: book.userId },
+          select: { freeBookUsed: true, plan: true, credits: true },
+        });
+
+        if (user && !user.freeBookUsed) {
+          // User has free book available - mark as used and allow generation
+          await prisma.user.update({
+            where: { id: book.userId },
+            data: { freeBookUsed: true },
+          });
+          // Mark book as paid via free tier
+          await prisma.book.update({
+            where: { id },
+            data: { paymentStatus: 'completed' },
+          });
+          console.log(`Free book used for user ${book.userId}, book ${id}`);
+        } else {
+          // No free book available
+          return NextResponse.json({ error: 'Payment required' }, { status: 402 });
+        }
+      } else {
+        // Anonymous user - must pay
+        return NextResponse.json({ error: 'Payment required' }, { status: 402 });
+      }
     }
 
     // Block if already completed

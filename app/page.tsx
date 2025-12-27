@@ -19,17 +19,11 @@ const IDEA_CATEGORIES: { value: IdeaCategory; label: string; emoji: string }[] =
   { value: 'adult_comic', label: 'Adult Comic', emoji: '🔥' },
 ];
 
-// Accent color options for admin switcher
-type AccentColor = 'amber' | 'violet' | 'fuchsia' | 'lime' | 'cyan' | 'rose';
-
-const ACCENT_COLORS: { value: AccentColor; label: string; bg: string; text: string }[] = [
-  { value: 'amber', label: 'Amber', bg: 'bg-amber-400', text: 'text-amber-400' },
-  { value: 'violet', label: 'Violet', bg: 'bg-violet-500', text: 'text-violet-400' },
-  { value: 'fuchsia', label: 'Fuchsia', bg: 'bg-fuchsia-500', text: 'text-fuchsia-400' },
-  { value: 'lime', label: 'Lime', bg: 'bg-lime-400', text: 'text-lime-400' },
-  { value: 'cyan', label: 'Cyan', bg: 'bg-cyan-400', text: 'text-cyan-400' },
-  { value: 'rose', label: 'Rose', bg: 'bg-rose-500', text: 'text-rose-400' },
-];
+// Locked accent color: Lime
+const ACCENT = {
+  bg: 'bg-lime-400',
+  text: 'text-lime-400',
+};
 
 export default function Home() {
   const router = useRouter();
@@ -40,10 +34,6 @@ export default function Home() {
   const [lightboxImage, setLightboxImage] = useState<{ src: string; label: string } | null>(null);
   const [ideaCategory, setIdeaCategory] = useState<IdeaCategory>('random');
   const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
-  const [accentColor, setAccentColor] = useState<AccentColor>('violet');
-
-  // Get current accent color classes
-  const currentAccent = ACCENT_COLORS.find(c => c.value === accentColor) || ACCENT_COLORS[0];
 
   const handleFindIdea = async () => {
     setIsGeneratingIdea(true);
@@ -82,7 +72,7 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-[#FAFAFA]">
+    <div className="min-h-screen bg-white">
       <Header variant="transparent" />
 
       {/* Hero Section */}
@@ -105,8 +95,8 @@ export default function Home() {
           <div className="max-w-4xl mx-auto text-center">
             {/* Badge */}
             <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-md px-5 py-2.5 rounded-full text-sm text-white mb-8 border border-white/20 shadow-lg">
-              <Zap className={`h-4 w-4 ${currentAccent.text} animate-pulse`} />
-              <span className="font-medium">50,000+ words in 30-60 minutes</span>
+              <Zap className={`h-4 w-4 ${ACCENT.text} animate-pulse`} />
+              <span className="font-medium">First book free - 50,000+ words in under an hour</span>
             </div>
 
             {/* Headline */}
@@ -117,7 +107,7 @@ export default function Home() {
                 {/* Shadow rectangle */}
                 <span className="absolute inset-0 bg-black -skew-y-2 translate-x-2 translate-y-2" aria-hidden="true" />
                 {/* Colored rectangle */}
-                <span className={`absolute inset-0 ${currentAccent.bg} -skew-y-2`} aria-hidden="true" />
+                <span className={`absolute inset-0 ${ACCENT.bg} -skew-y-2`} aria-hidden="true" />
                 {/* Text */}
                 <span className="relative text-neutral-900 px-4 py-1">a complete book</span>
               </span>
@@ -233,7 +223,7 @@ export default function Home() {
       </section>
 
       {/* Success Story - Blood & Silver */}
-      <section className="py-20 px-6 bg-[#FAFAFA]">
+      <section className="py-20 px-6 bg-lime-50">
         <div className="max-w-6xl mx-auto">
           <div className="grid md:grid-cols-2 gap-12 items-center">
             {/* Book Cover */}
@@ -344,7 +334,7 @@ export default function Home() {
       </section>
 
       {/* Showcase */}
-      <section className="py-24 px-6">
+      <section className="py-24 px-6 bg-lime-50">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-4xl md:text-5xl font-bold tracking-tight mb-4" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>
@@ -403,16 +393,50 @@ export default function Home() {
               Simple pricing
             </h2>
             <p className="text-lg text-neutral-600">
-              One price for any book type, or subscribe for more
+              Start free, then pay as you go
             </p>
           </div>
 
-          {/* All pricing options in one row */}
-          <div className="grid md:grid-cols-3 gap-6">
+          {/* All pricing options */}
+          <div className="grid md:grid-cols-4 gap-5">
+            {/* Free Tier */}
+            <button
+              onClick={() => router.push('/signup')}
+              className="group bg-lime-50 rounded-2xl p-6 border-2 border-lime-200 hover:border-lime-400 card-hover text-left cursor-pointer"
+            >
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 bg-lime-400 rounded-lg flex items-center justify-center">
+                  <Zap className="h-5 w-5 text-neutral-900" />
+                </div>
+              </div>
+              <h3 className="text-xl font-semibold mb-1" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>Free</h3>
+              <div className="flex items-baseline gap-1 mb-2">
+                <span className="text-4xl font-bold">$0</span>
+              </div>
+              <p className="text-sm text-neutral-500 mb-4">Try it out - no credit card</p>
+              <ul className="space-y-2 text-sm text-neutral-600 mb-6">
+                <li className="flex items-center gap-2">
+                  <Check className="h-4 w-4 text-lime-600 flex-shrink-0" />
+                  1 complete book
+                </li>
+                <li className="flex items-center gap-2">
+                  <Check className="h-4 w-4 text-lime-600 flex-shrink-0" />
+                  Any book type
+                </li>
+                <li className="flex items-center gap-2">
+                  <Check className="h-4 w-4 text-lime-600 flex-shrink-0" />
+                  Full EPUB download
+                </li>
+              </ul>
+              <div className="w-full bg-lime-400 text-neutral-900 py-3 rounded-xl text-sm font-medium text-center group-hover:bg-lime-500 transition-colors">
+                Start Free
+              </div>
+            </button>
+
             {/* One-Time - Any Book */}
             <button
               onClick={() => router.push('/create')}
-              className="group bg-white rounded-2xl p-8 border-2 border-neutral-200 hover:border-neutral-900 card-hover text-left cursor-pointer"
+              className="group bg-white rounded-2xl p-6 border-2 border-neutral-200 hover:border-neutral-900 card-hover text-left cursor-pointer"
             >
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-10 h-10 bg-neutral-100 rounded-lg flex items-center justify-center group-hover:bg-neutral-900 transition-colors">
@@ -422,21 +446,20 @@ export default function Home() {
               <h3 className="text-xl font-semibold mb-1" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>One Book</h3>
               <div className="flex items-baseline gap-1 mb-2">
                 <span className="text-4xl font-bold">$19.99</span>
-                <span className="text-neutral-500 text-sm">one-time</span>
               </div>
               <p className="text-sm text-neutral-500 mb-4">Novel, Comic, or Picture Book</p>
               <ul className="space-y-2 text-sm text-neutral-600 mb-6">
                 <li className="flex items-center gap-2">
                   <Check className="h-4 w-4 text-neutral-400 flex-shrink-0" />
-                  Any book type you choose
+                  Any book type
                 </li>
                 <li className="flex items-center gap-2">
                   <Check className="h-4 w-4 text-neutral-400 flex-shrink-0" />
-                  AI cover + full formatting
+                  AI cover + formatting
                 </li>
                 <li className="flex items-center gap-2">
                   <Check className="h-4 w-4 text-neutral-400 flex-shrink-0" />
-                  EPUB or PDF download
+                  EPUB or PDF
                 </li>
               </ul>
               <div className="w-full bg-neutral-900 text-white py-3 rounded-xl text-sm font-medium text-center group-hover:bg-neutral-800 transition-colors">
@@ -447,9 +470,9 @@ export default function Home() {
             {/* Monthly Subscription */}
             <button
               onClick={() => router.push('/signup?plan=monthly')}
-              className="group bg-neutral-900 text-white rounded-2xl p-8 border-2 border-neutral-900 card-hover text-left cursor-pointer relative"
+              className="group bg-neutral-900 text-white rounded-2xl p-6 border-2 border-neutral-900 card-hover text-left cursor-pointer relative"
             >
-              <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-white text-neutral-900 px-3 py-1 rounded-full text-xs font-medium">
+              <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-lime-400 text-neutral-900 px-3 py-1 rounded-full text-xs font-medium">
                 Most Popular
               </div>
               <div className="flex items-center gap-3 mb-4">
@@ -460,9 +483,9 @@ export default function Home() {
               <h3 className="text-xl font-semibold mb-1" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>Monthly</h3>
               <div className="flex items-baseline gap-1 mb-2">
                 <span className="text-4xl font-bold">$69</span>
-                <span className="text-neutral-400 text-sm">/month</span>
+                <span className="text-neutral-400 text-sm">/mo</span>
               </div>
-              <p className="text-sm text-neutral-300 mb-4">5 books per month (any type)</p>
+              <p className="text-sm text-neutral-300 mb-4">5 books per month</p>
               <ul className="space-y-2 text-sm text-neutral-200 mb-6">
                 <li className="flex items-center gap-2">
                   <Check className="h-4 w-4 text-neutral-400 flex-shrink-0" />
@@ -485,19 +508,19 @@ export default function Home() {
             {/* Yearly Subscription */}
             <button
               onClick={() => router.push('/signup?plan=yearly')}
-              className="group bg-white rounded-2xl p-8 border-2 border-neutral-200 hover:border-neutral-900 card-hover text-left cursor-pointer"
+              className="group bg-white rounded-2xl p-6 border-2 border-neutral-200 hover:border-neutral-900 card-hover text-left cursor-pointer"
             >
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-10 h-10 bg-neutral-100 rounded-lg flex items-center justify-center group-hover:bg-neutral-900 transition-colors">
-                  <Zap className="h-5 w-5 text-neutral-700 group-hover:text-white transition-colors" />
+                  <BookOpen className="h-5 w-5 text-neutral-700 group-hover:text-white transition-colors" />
                 </div>
               </div>
               <h3 className="text-xl font-semibold mb-1" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>Yearly</h3>
               <div className="flex items-baseline gap-1 mb-2">
                 <span className="text-4xl font-bold">$499</span>
-                <span className="text-neutral-500 text-sm">/year</span>
+                <span className="text-neutral-500 text-sm">/yr</span>
               </div>
-              <p className="text-sm text-neutral-500 mb-4">50 book credits (any type)</p>
+              <p className="text-sm text-neutral-500 mb-4">50 book credits</p>
               <ul className="space-y-2 text-sm text-neutral-600 mb-6">
                 <li className="flex items-center gap-2">
                   <Check className="h-4 w-4 text-neutral-400 flex-shrink-0" />
@@ -521,19 +544,19 @@ export default function Home() {
       </section>
 
       {/* CTA */}
-      <section className="py-24 px-6">
+      <section className="py-24 px-6 bg-lime-50">
         <div className="max-w-4xl mx-auto text-center">
           <h2 className="text-4xl md:text-5xl font-bold tracking-tight mb-6" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>
             Ready to write your book?
           </h2>
           <p className="text-lg text-neutral-600 mb-10">
-            Join thousands of authors who have brought their stories to life.
+            Start with a free book. No credit card required.
           </p>
           <button
-            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+            onClick={() => router.push('/signup')}
             className="bg-neutral-900 text-white px-8 py-4 rounded-full text-base font-medium hover:bg-neutral-800 transition-all hover:scale-105 inline-flex items-center gap-2"
           >
-            Start writing
+            Get your free book
             <ArrowRight className="h-5 w-5" />
           </button>
         </div>
@@ -570,26 +593,6 @@ export default function Home() {
 
       {/* New Year Promo Popup */}
       <NewYearPopup />
-
-      {/* Admin Color Switcher Panel */}
-      <div className="fixed bottom-4 right-4 z-50 bg-white/95 backdrop-blur rounded-xl shadow-lg border border-neutral-200 p-4">
-        <p className="text-xs text-neutral-500 mb-2 font-medium">Accent Color</p>
-        <div className="flex gap-2">
-          {ACCENT_COLORS.map((color) => (
-            <button
-              key={color.value}
-              onClick={() => setAccentColor(color.value)}
-              className={`w-8 h-8 rounded-full ${color.bg} transition-all hover:scale-110 ${
-                accentColor === color.value
-                  ? 'ring-2 ring-offset-2 ring-neutral-900'
-                  : 'opacity-70 hover:opacity-100'
-              }`}
-              title={color.label}
-            />
-          ))}
-        </div>
-        <p className="text-[10px] text-neutral-400 mt-2 text-center">{currentAccent.label}</p>
-      </div>
     </div>
   );
 }
