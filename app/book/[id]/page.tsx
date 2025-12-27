@@ -51,6 +51,23 @@ interface Book {
   };
 }
 
+// Lightweight status for polling (no heavy content/images)
+interface BookStatus {
+  id: string;
+  status: string;
+  paymentStatus: string;
+  currentChapter: number;
+  totalChapters: number;
+  totalWords: number;
+  bookFormat: string;
+  dialogueStyle: string | null;
+  bookPreset: string | null;
+  artStyle: string | null;
+  completedAt: string | null;
+  chapterCount: number;
+  illustrationCount: number;
+}
+
 const WRITING_MESSAGES = [
   "Crafting compelling prose",
   "Developing character arcs",
@@ -198,28 +215,43 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
     }
   }, [book?.status, book?.bookFormat]);
 
-  // Poll for book status
+  // Poll for book status using lightweight endpoint (saves ~99% bandwidth)
   useEffect(() => {
-    const fetchBook = async () => {
+    // Lightweight status fetch for polling (only essential fields, no content/images)
+    const fetchStatus = async () => {
       try {
-        const res = await fetch(`/api/books/${id}`);
-        if (!res.ok) throw new Error('Failed to fetch book');
+        const res = await fetch(`/api/books/${id}/status`);
+        if (!res.ok) throw new Error('Failed to fetch status');
         const data = await res.json();
-        setBook(data.book);
+        const status: BookStatus = data.status;
+
+        // Update book with status info (preserves existing heavy data)
+        setBook(prev => prev ? {
+          ...prev,
+          status: status.status,
+          paymentStatus: status.paymentStatus,
+          currentChapter: status.currentChapter,
+          totalChapters: status.totalChapters,
+          totalWords: status.totalWords,
+        } : prev);
+
+        // When generation completes, fetch full book with all content
+        if (status.status === 'completed' && book?.status !== 'completed') {
+          const fullRes = await fetch(`/api/books/${id}`);
+          if (fullRes.ok) {
+            const fullData = await fullRes.json();
+            setBook(fullData.book);
+          }
+        }
       } catch (err) {
-        setError('Failed to load book');
-        console.error(err);
-      } finally {
-        setLoading(false);
+        console.error('Status poll error:', err);
       }
     };
 
-    fetchBook();
-
-    // Poll every 3 seconds if still generating or if retrying (faster updates)
+    // Poll every 3 seconds if still generating or if retrying
     const interval = setInterval(() => {
       if (book?.status === 'generating' || book?.status === 'outlining' || book?.status === 'pending' || retrying) {
-        fetchBook();
+        fetchStatus();
       }
     }, 3000);
 
