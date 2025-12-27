@@ -99,6 +99,21 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
   // Check if this is a comic book (should use parallel panel generation page)
   const isComicBook = book?.dialogueStyle === 'bubbles' || book?.bookPreset === 'comic_story';
 
+  // Debug logging
+  useEffect(() => {
+    if (book) {
+      console.log('Book loaded:', {
+        id: book.id,
+        dialogueStyle: book.dialogueStyle,
+        bookPreset: book.bookPreset,
+        bookFormat: book.bookFormat,
+        isComicBook,
+        status: book.status,
+        paymentStatus: book.paymentStatus,
+      });
+    }
+  }, [book, isComicBook]);
+
   // Start generation if payment successful (either from URL param or from book status)
   // Wait for book to load first so we can check if it's a comic book
   useEffect(() => {
@@ -107,9 +122,12 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
       (success === 'true' || (book.paymentStatus === 'completed' && book.status === 'pending'))
       && !generationStarted;
 
+    console.log('Generation check:', { shouldStartGeneration, isComicBook, generationStarted, success });
+
     if (shouldStartGeneration) {
       // For comic books, redirect to the parallel generation page
       if (isComicBook) {
+        console.log('Detected comic book, redirecting to /generate-comic');
         setGenerationStarted(true);
         // First generate the outline, then redirect to comic generation page
         fetch(`/api/books/${id}/generate`, {
