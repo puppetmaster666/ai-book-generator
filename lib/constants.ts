@@ -20,8 +20,8 @@ export const PRICING = {
   },
   // Visual books (comics & children's)
   VISUAL: {
-    price: 3999, // cents
-    priceDisplay: '$39.99',
+    price: 1999, // cents
+    priceDisplay: '$19.99',
   },
 } as const;
 
@@ -139,7 +139,7 @@ export const BOOK_PRESETS = {
     defaultGenre: 'childrens',
     targetWords: 500,
     chapters: 20, // Standard picture books have 24-32 pages
-    priceDisplay: '$39.99',
+    priceDisplay: '$19.99',
     downloadFormat: 'pdf',
   },
   comic_story: {
@@ -152,7 +152,7 @@ export const BOOK_PRESETS = {
     defaultGenre: 'ya',
     targetWords: 1000,
     chapters: 24, // Standard comic issues have 22-24 pages
-    priceDisplay: '$39.99',
+    priceDisplay: '$19.99',
     downloadFormat: 'pdf',
   },
 } as const;

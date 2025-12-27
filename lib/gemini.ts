@@ -189,6 +189,7 @@ JSON format:
 
 // Scene description for visual books
 export interface SceneDescription {
+  location: string;
   description: string;
   characters: string[];
   characterActions: Record<string, string>;
@@ -205,6 +206,9 @@ export interface DialogueEntry {
   type?: 'speech' | 'thought' | 'shout';
 }
 
+// Panel layout types for comics
+export type PanelLayout = 'splash' | 'two-panel' | 'three-panel' | 'four-panel';
+
 // Enhanced outline chapter for visual books
 export interface VisualChapter {
   number: number;
@@ -214,6 +218,7 @@ export interface VisualChapter {
   targetWords: number;
   dialogue?: DialogueEntry[]; // For comic/bubbles style
   scene: SceneDescription; // Detailed scene for image generation
+  panelLayout?: PanelLayout; // For comics: how many panels on this page
 }
 
 // Generate outline for visual books (picture books, comics)
@@ -259,6 +264,16 @@ For each page, include "dialogue" array with speech bubbles:
 - Each entry has: speaker (character name), text (the speech), position (where on image), type (speech/thought/shout)
 - Positions: "top-left", "top-right", "bottom-left", "bottom-right", "top-center", "bottom-center"
 - Comic dialogue is SHORT - max 15 words per bubble
+
+PANEL LAYOUTS - IMPORTANT FOR COMICS:
+Each page should specify a "panelLayout" to vary the visual pacing:
+- "splash" - Full page single image (use for dramatic moments: 4-5 pages)
+- "two-panel" - Split into 2 panels showing a sequence (most common: 8-10 pages)
+- "three-panel" - 3 panels showing action/reaction (good for dialogue: 5-6 pages)
+- "four-panel" - 4 panels for rapid sequences (action scenes: 3-4 pages)
+
+For multi-panel pages, the scene description should describe what happens ACROSS all panels in sequence.
+Example: "Panel 1: Hero spots danger. Panel 2: Hero leaps into action. Panel 3: Villain turns in surprise."
 `
     : `
 For each page, the "text" field contains the prose that appears under/around the image.
@@ -286,20 +301,39 @@ Create EXACTLY ${bookData.targetChapters} pages. Each page needs BOTH the text/d
 ${dialogueInstructions}
 
 For EVERY page's "scene", provide:
+- location: The specific place/setting (e.g., "castle kitchen", "forest clearing", "city rooftop") - VARY THIS!
 - description: What's happening in this specific moment (1-2 sentences, UNIQUE to this page)
-- characters: Array of character names appearing in this scene
+- characters: Array of character names appearing in this scene (don't include protagonist on every page!)
 - characterActions: Object mapping each character to their specific action/pose/expression in THIS scene
-- background: The setting/environment details for THIS scene
+- background: Environmental details, objects, atmosphere, time of day
 - mood: The emotional tone (tense, joyful, mysterious, peaceful, exciting, etc.)
-- cameraAngle: How to "shoot" this scene (close-up, wide shot, low angle, bird's eye, etc.)
+- cameraAngle: How to "shoot" this scene - be specific! ("extreme close-up of eyes", "wide establishing shot", "low angle looking up", "bird's eye view", "over-shoulder shot")
 
-CRITICAL RULES:
-1. Each page's scene MUST be VISUALLY DISTINCT - different actions, poses, and compositions
-2. Vary camera angles and character positions page to page
-3. Show PROGRESSION - characters should be doing DIFFERENT things on each page
-4. Avoid repetition - no "character standing" or "character looking" on multiple pages
-5. Include specific actions: running, jumping, reaching, laughing, crying, pointing, hugging, etc.
-6. Vary the character's position in the frame (left, right, center, foreground, background)
+CRITICAL RULES FOR VISUAL VARIETY:
+
+LOCATIONS & SETTINGS:
+1. Use AT LEAST 4-6 DIFFERENT LOCATIONS throughout the story (not the same room/place!)
+2. Each location should appear only 2-3 times maximum
+3. Locations can include: different rooms, outdoor areas, vehicles, fantasy spaces, etc.
+4. Even within the same location, change the specific area (different corner, angle, time of day)
+
+CHARACTER VARIETY:
+5. The protagonist should NOT appear in every single image - show supporting characters alone sometimes
+6. At least 3-4 pages should focus on OTHER characters without the main hero
+7. Create scenes with different character groupings (solo, pairs, groups)
+8. Show characters interacting with the environment, not just each other
+
+VISUAL COMPOSITION:
+9. Each page MUST be visually distinct - different actions, poses, and compositions
+10. Vary camera angles dramatically: close-ups, wide shots, bird's eye, worm's eye, over-shoulder
+11. Change character positions in frame (left, right, center, foreground, background)
+12. Include dynamic actions: running, jumping, reaching, fighting, hiding, discovering, etc.
+
+STORY PACING:
+13. Show PROGRESSION - don't just describe states, show active moments
+14. Include establishing shots (environment with small characters)
+15. Include intimate moments (close-ups of faces/hands)
+16. Avoid repetitive staging - no "character standing and talking" on multiple pages
 
 Output ONLY valid JSON:
 {
@@ -310,19 +344,21 @@ Output ONLY valid JSON:
       "text": "${isComicStyle ? 'Minimal narration if needed' : 'The prose text for this page'}",
       "summary": "Brief summary of what happens",
       "targetWords": ${wordsPerPage},
-      ${isComicStyle ? `"dialogue": [
+      ${isComicStyle ? `"panelLayout": "two-panel",
+      "dialogue": [
         {"speaker": "Character", "text": "Short speech!", "position": "top-left", "type": "speech"}
       ],` : ''}
       "scene": {
-        "description": "Specific visual moment to illustrate",
-        "characters": ["Character1", "Character2"],
+        "location": "Specific place (castle courtyard, dark alley, bedroom, etc.)",
+        "description": "What's happening - action-focused, unique to this page",
+        "characters": ["Only characters IN THIS scene"],
         "characterActions": {
-          "Character1": "specific action, pose, expression",
-          "Character2": "different specific action"
+          "Character1": "dynamic action: leaping, crouching, shouting, laughing",
+          "Character2": "different action with emotion"
         },
-        "background": "Setting details",
+        "background": "Time of day, weather, objects, atmosphere",
         "mood": "emotional tone",
-        "cameraAngle": "shot type"
+        "cameraAngle": "specific: extreme close-up, wide shot, low angle, over-shoulder, bird's eye"
       }
     }
   ]
@@ -781,7 +817,8 @@ export function buildIllustrationPromptFromScene(
     lightingStyle: string;
     moodAndAtmosphere: string;
     consistencyRules: string[];
-  }
+  },
+  panelLayout?: PanelLayout
 ): string {
   // Build character descriptions for characters in this scene
   let characterDescriptions = '';
@@ -801,6 +838,11 @@ export function buildIllustrationPromptFromScene(
   // Build the prompt
   let prompt = `${artStylePrompt}. `;
 
+  // Add location context first
+  if (scene.location) {
+    prompt += `Setting: ${scene.location}. `;
+  }
+
   // Add scene description
   prompt += `${scene.description}. `;
 
@@ -815,7 +857,7 @@ export function buildIllustrationPromptFromScene(
   }
 
   // Add background and mood
-  prompt += `Background: ${scene.background}. `;
+  prompt += `Environment: ${scene.background}. `;
   prompt += `Mood: ${scene.mood}. `;
   prompt += `Camera angle: ${scene.cameraAngle}. `;
 
@@ -824,6 +866,17 @@ export function buildIllustrationPromptFromScene(
     prompt += `Style: ${visualStyleGuide.overallStyle}. `;
     prompt += `Colors: ${visualStyleGuide.colorPalette}. `;
     prompt += `Lighting: ${visualStyleGuide.lightingStyle}. `;
+  }
+
+  // Add panel layout instructions for comics
+  if (panelLayout && panelLayout !== 'splash') {
+    const layoutInstructions: Record<PanelLayout, string> = {
+      'splash': '', // Full page, no special instructions
+      'two-panel': 'IMPORTANT: Draw this as a COMIC PAGE with 2 PANELS arranged vertically or horizontally. Each panel shows a different moment in the sequence described. Use clear panel borders with gutters between panels.',
+      'three-panel': 'IMPORTANT: Draw this as a COMIC PAGE with 3 PANELS. Can be vertical strip, horizontal strip, or 2+1 layout. Each panel shows a sequential moment. Include clear panel borders and gutters.',
+      'four-panel': 'IMPORTANT: Draw this as a COMIC PAGE with 4 PANELS in a 2x2 grid layout. Each panel shows a quick sequential moment for action pacing. Use clear panel borders and consistent gutters.',
+    };
+    prompt += ` ${layoutInstructions[panelLayout]} `;
   }
 
   // Add critical instructions

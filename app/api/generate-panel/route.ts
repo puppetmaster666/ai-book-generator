@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { prisma } from '@/lib/db';
 import { ART_STYLES, ILLUSTRATION_DIMENSIONS, type ArtStyleKey } from '@/lib/constants';
-import { buildIllustrationPromptFromScene, SceneDescription } from '@/lib/gemini';
+import { buildIllustrationPromptFromScene, SceneDescription, type PanelLayout } from '@/lib/gemini';
 
 // Lazy initialization
 let genAI: GoogleGenerativeAI | null = null;
@@ -70,6 +70,7 @@ export async function POST(request: NextRequest) {
       visualStyleGuide,
       chapterTitle,
       chapterText,
+      panelLayout,
     } = await request.json();
 
     // Validate required fields
@@ -99,11 +100,20 @@ export async function POST(request: NextRequest) {
         scene as SceneDescription,
         artStylePrompt,
         characterVisualGuide,
-        visualStyleGuide
+        visualStyleGuide,
+        panelLayout // Pass panel layout for multi-panel comics
       );
     } else {
-      // Scene is a string
+      // Scene is a string - add panel layout instructions if provided
       prompt = `${artStylePrompt}. ${scene}.`;
+      if (panelLayout && panelLayout !== 'splash') {
+        const layoutInstructions: Record<string, string> = {
+          'two-panel': 'Draw this as a COMIC PAGE with 2 PANELS arranged vertically or horizontally. Each panel shows a different moment in the sequence.',
+          'three-panel': 'Draw this as a COMIC PAGE with 3 PANELS. Each panel shows a sequential moment.',
+          'four-panel': 'Draw this as a COMIC PAGE with 4 PANELS in a 2x2 grid layout.',
+        };
+        prompt += ` ${layoutInstructions[panelLayout] || ''} `;
+      }
     }
 
     // Add format instructions

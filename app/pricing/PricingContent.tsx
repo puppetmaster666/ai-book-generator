@@ -66,7 +66,7 @@ export default function PricingContent() {
                 Comic or Picture Book
               </h3>
               <div className="mb-4">
-                <span className="text-5xl font-bold tracking-tight" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>$39.99</span>
+                <span className="text-5xl font-bold tracking-tight" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>$19.99</span>
               </div>
               <p className="text-neutral-500 mb-6">Visual book with illustrations</p>
               <ul className="space-y-4 flex-grow">
@@ -121,7 +121,7 @@ export default function PricingContent() {
               <ul className="space-y-4 flex-grow">
                 <li className="flex items-start gap-3 text-neutral-600">
                   <Check className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
-                  <span><strong>5 books per month</strong></span>
+                  <span><strong>5 books per month</strong> (any type)</span>
                 </li>
                 <li className="flex items-start gap-3 text-neutral-600">
                   <Check className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />

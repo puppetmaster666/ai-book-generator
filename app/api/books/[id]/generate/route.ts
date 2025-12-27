@@ -16,6 +16,7 @@ import {
   type VisualChapter,
   type SceneDescription,
   type DialogueEntry,
+  type PanelLayout,
 } from '@/lib/gemini';
 import { countWords } from '@/lib/epub';
 import { BOOK_FORMATS, ART_STYLES, ILLUSTRATION_DIMENSIONS, BOOK_PRESETS, type BookFormatKey, type ArtStyleKey, type BookPresetKey } from '@/lib/constants';
@@ -307,12 +308,13 @@ async function generateIllustrationsInParallel(
         return null;
       }
 
-      // Build prompt from scene description
+      // Build prompt from scene description (with panel layout for comics)
       const illustrationPrompt = buildIllustrationPromptFromScene(
         chapter.scene,
         bookData.artStylePrompt,
         bookData.characterVisualGuide,
-        bookData.visualStyleGuide
+        bookData.visualStyleGuide,
+        chapter.panelLayout // Pass panel layout for multi-panel comics
       );
 
       console.log(`Generating illustration for page ${chapter.number}...`);

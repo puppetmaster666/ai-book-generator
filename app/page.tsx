@@ -74,7 +74,7 @@ export default function Home() {
             </h1>
 
             <p className="text-xl text-neutral-600 max-w-2xl mx-auto mb-12">
-              Describe your story, get a professionally formatted manuscript ready for Amazon KDP. No writing experience needed.
+              Create novels, comics, or picture books from a simple description. Professionally formatted and ready to publish.
             </p>
 
             {/* Form */}
@@ -367,7 +367,7 @@ export default function Home() {
               </div>
               <h3 className="text-xl font-semibold mb-2" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>Comic Book</h3>
               <div className="flex items-baseline gap-1 mb-3">
-                <span className="text-4xl font-bold">$39.99</span>
+                <span className="text-4xl font-bold">$19.99</span>
               </div>
               <p className="text-sm text-neutral-500 mb-4">With speech bubbles, PDF download</p>
               <ul className="space-y-3 text-sm text-neutral-600 mb-6">
@@ -401,7 +401,7 @@ export default function Home() {
               </div>
               <h3 className="text-xl font-semibold mb-2" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>Picture Book</h3>
               <div className="flex items-baseline gap-1 mb-3">
-                <span className="text-4xl font-bold">$39.99</span>
+                <span className="text-4xl font-bold">$19.99</span>
               </div>
               <p className="text-sm text-neutral-500 mb-4">For children, PDF download</p>
               <ul className="space-y-3 text-sm text-neutral-600 mb-6">
@@ -432,7 +432,7 @@ export default function Home() {
             <h3 className="text-2xl font-bold mb-2" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>
               Subscription Plans
             </h3>
-            <p className="text-neutral-600">For authors creating multiple novels</p>
+            <p className="text-neutral-600">For authors creating multiple books</p>
           </div>
 
           <div className="grid md:grid-cols-2 gap-6 max-w-3xl mx-auto">
@@ -446,7 +446,7 @@ export default function Home() {
                 <span className="text-4xl font-bold">$69</span>
                 <span className="text-neutral-400">/month</span>
               </div>
-              <p className="text-sm text-neutral-300 mb-6">5 novels per month</p>
+              <p className="text-sm text-neutral-300 mb-6">5 books per month (any type)</p>
               <ul className="space-y-3 text-sm text-neutral-200 mb-6">
                 <li className="flex items-center gap-2">
                   <Check className="h-4 w-4 text-green-400" />
@@ -472,7 +472,7 @@ export default function Home() {
                 <span className="text-4xl font-bold">$499</span>
                 <span className="text-neutral-500">/year</span>
               </div>
-              <p className="text-sm text-neutral-600 mb-6">50 novel credits ($10 each)</p>
+              <p className="text-sm text-neutral-600 mb-6">50 book credits ($10 each)</p>
               <ul className="space-y-3 text-sm text-neutral-600 mb-6">
                 <li className="flex items-center gap-2">
                   <Check className="h-4 w-4 text-green-600" />
