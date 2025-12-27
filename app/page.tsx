@@ -166,7 +166,7 @@ export default function Home() {
             </form>
 
             {/* Trust signals */}
-            <div className="mt-8 flex items-center justify-center gap-8 text-sm text-white/70">
+            <div className="mt-8 flex items-center justify-center gap-8 text-sm text-white">
               <span className="flex items-center gap-2">
                 <Check className="h-4 w-4" />
                 Full commercial rights
