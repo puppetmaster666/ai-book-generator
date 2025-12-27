@@ -4,10 +4,21 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
-import { ArrowRight, Loader2, Sparkles, X, Check, ChevronRight, Zap, BookOpen, Download, ExternalLink } from 'lucide-react';
+import { ArrowRight, Loader2, Sparkles, X, Check, ChevronRight, Zap, BookOpen, Download, ExternalLink, ChevronDown } from 'lucide-react';
 import Footer from '@/components/Footer';
 import NewYearPopup from '@/components/NewYearPopup';
 import Header from '@/components/Header';
+
+// Idea categories for the Surprise Me feature
+type IdeaCategory = 'random' | 'novel' | 'childrens' | 'comic' | 'adult_comic';
+
+const IDEA_CATEGORIES: { value: IdeaCategory; label: string; emoji: string }[] = [
+  { value: 'random', label: 'Any Type', emoji: '🎲' },
+  { value: 'novel', label: 'Novel', emoji: '📚' },
+  { value: 'childrens', label: "Children's", emoji: '🧸' },
+  { value: 'comic', label: 'Comic', emoji: '💥' },
+  { value: 'adult_comic', label: 'Adult Comic', emoji: '🔥' },
+];
 
 export default function Home() {
   const router = useRouter();
@@ -16,7 +27,8 @@ export default function Home() {
   const [error, setError] = useState('');
   const [isGeneratingIdea, setIsGeneratingIdea] = useState(false);
   const [lightboxImage, setLightboxImage] = useState<{ src: string; label: string } | null>(null);
-  const [heroBg, setHeroBg] = useState<1 | 2>(1);
+  const [ideaCategory, setIdeaCategory] = useState<IdeaCategory>('random');
+  const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
 
   const handleFindIdea = async () => {
     setIsGeneratingIdea(true);
@@ -25,6 +37,8 @@ export default function Home() {
     try {
       const response = await fetch('/api/generate-idea', {
         method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ category: ideaCategory }),
       });
 
       if (!response.ok) {
@@ -61,7 +75,7 @@ export default function Home() {
         {/* Background Image */}
         <div className="absolute inset-0 z-0">
           <Image
-            src={heroBg === 1 ? '/images/hg1.png' : '/images/hg2.png'}
+            src="/images/hg2.png"
             alt=""
             fill
             className="object-cover"
@@ -69,27 +83,6 @@ export default function Home() {
           />
           {/* Dark Overlay */}
           <div className="absolute inset-0 bg-black/40" />
-        </div>
-
-        {/* Background Switcher (Admin) */}
-        <div className="fixed bottom-4 right-4 z-50 bg-white rounded-xl shadow-lg border border-neutral-200 p-2 flex items-center gap-2">
-          <span className="text-xs text-neutral-500 px-2">BG:</span>
-          <button
-            onClick={() => setHeroBg(1)}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-              heroBg === 1 ? 'bg-neutral-900 text-white' : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200'
-            }`}
-          >
-            1
-          </button>
-          <button
-            onClick={() => setHeroBg(2)}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-              heroBg === 2 ? 'bg-neutral-900 text-white' : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200'
-            }`}
-          >
-            2
-          </button>
         </div>
 
         {/* Hero Content */}
@@ -130,7 +123,40 @@ export default function Home() {
                   disabled={isLoading || isGeneratingIdea}
                 />
                 <div className="flex items-center justify-between gap-4 px-2 pb-2">
-                  <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-2">
+                    {/* Category Dropdown */}
+                    <div className="relative">
+                      <button
+                        type="button"
+                        onClick={() => setShowCategoryDropdown(!showCategoryDropdown)}
+                        disabled={isLoading || isGeneratingIdea}
+                        className="text-sm text-neutral-500 hover:text-neutral-900 disabled:opacity-50 flex items-center gap-1 px-2 py-2 rounded-lg hover:bg-neutral-100 transition-colors border border-neutral-200"
+                      >
+                        <span>{IDEA_CATEGORIES.find(c => c.value === ideaCategory)?.emoji}</span>
+                        <ChevronDown className="h-3 w-3" />
+                      </button>
+                      {showCategoryDropdown && (
+                        <div className="absolute left-0 bottom-full mb-1 bg-white rounded-lg shadow-lg border border-neutral-200 py-1 z-50 min-w-[140px]">
+                          {IDEA_CATEGORIES.map((cat) => (
+                            <button
+                              key={cat.value}
+                              type="button"
+                              onClick={() => {
+                                setIdeaCategory(cat.value);
+                                setShowCategoryDropdown(false);
+                              }}
+                              className={`w-full text-left px-3 py-2 text-sm hover:bg-neutral-100 flex items-center gap-2 ${
+                                ideaCategory === cat.value ? 'bg-neutral-50 font-medium' : ''
+                              }`}
+                            >
+                              <span>{cat.emoji}</span>
+                              <span>{cat.label}</span>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    {/* Surprise Me Button */}
                     <button
                       type="button"
                       onClick={handleFindIdea}

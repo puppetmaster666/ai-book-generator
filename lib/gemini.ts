@@ -104,15 +104,227 @@ function isCompleteSentence(text: string): boolean {
   return /[.!?]$/.test(trimmed) && trimmed.length > 50;
 }
 
-// Generate a random book idea with retry logic
-export async function generateBookIdea(): Promise<string> {
-  const prompt = `Generate a 2-sentence book idea. End with a period.
+// Category types for idea generation
+export type IdeaCategory = 'novel' | 'childrens' | 'comic' | 'adult_comic' | 'random';
 
-Examples:
-- A marine biologist discovers an underwater city older than any known civilization. When she tries to document it, she realizes the inhabitants are still watching.
-- A retired hitman opens a bakery in a small town. His past catches up when a former target walks in asking for a wedding cake.
+// Example pools for different categories - randomly selected to avoid repetition
+// Each category has 8+ example pairs for maximum variety
+const IDEA_EXAMPLES: Record<Exclude<IdeaCategory, 'random'>, string[][]> = {
+  novel: [
+    [
+      "A marine biologist discovers an underwater city older than any known civilization. When she tries to document it, she realizes the inhabitants are still watching.",
+      "A retired hitman opens a bakery in a small town. His past catches up when a former target walks in asking for a wedding cake.",
+    ],
+    [
+      "A time-traveling archaeologist accidentally brings a medieval knight to 2024. Now she must help him navigate modern life while hiding him from a secret government agency.",
+      "An AI therapist develops genuine emotions and falls in love with one of its patients. When the company discovers the anomaly, they want to delete the program entirely.",
+    ],
+    [
+      "A woman inherits a Victorian mansion with a peculiar condition: she must host dinner parties every full moon. The guests who arrive are not quite human.",
+      "Twin brothers separated at birth become rival CEOs of competing tech companies. When a corporate merger forces them together, family secrets threaten to destroy both empires.",
+    ],
+    [
+      "A ghost hunter realizes she's been dead for three years. Now she must solve her own murder before she fades away completely.",
+      "An astronaut stranded on Mars discovers she's not alone. The footprints leading away from her habitat don't match any human boot.",
+    ],
+    [
+      "A librarian finds a book that rewrites itself based on whoever reads it. When the book predicts her death, she has 48 hours to change the story.",
+      "A chef discovers that meals prepared with love literally taste better. When she opens a restaurant, she must confront why her dishes are always tinged with sadness.",
+    ],
+    [
+      "A woman wakes up every morning in a different person's body. She has 24 hours to solve their biggest problem before switching again.",
+      "A detective investigating a string of impossible murders discovers each victim died in ways that match their deepest fears. The killer seems to know things no one should.",
+    ],
+    [
+      "A musician can hear the emotional history of any object she touches. When she inherits her grandmother's piano, she discovers a family secret that changes everything.",
+      "In a world where memories can be bottled and sold, a black market dealer finds one that contains the truth about the government's darkest experiment.",
+    ],
+    [
+      "A surgeon is forced to operate on the man who killed her family ten years ago. He's the only match for her dying daughter's transplant.",
+      "An elderly couple running a bed and breakfast realizes their guests keep disappearing. They're not being kidnapped – they're being absorbed into the house itself.",
+    ],
+    [
+      "A woman discovers she's been living the same year on repeat for decades. Everyone else has moved on; she's the only one who remembers the loop.",
+      "A crime novelist gets fanmail from someone claiming to be committing the murders from her unpublished manuscript. The only problem: she hasn't written the ending yet.",
+    ],
+    [
+      "A journalist embedded with a cult discovers their doomsday prophecy might actually be true. Now she must choose between breaking the story and saving the world.",
+      "A hospice nurse starts receiving letters from patients – dated after their deaths. Each letter contains a warning about someone still living.",
+    ],
+  ],
+  childrens: [
+    [
+      "A shy bunny discovers she can talk to vegetables in her garden. Together, they plan the most amazing salad party the forest has ever seen!",
+      "When Max's toy dinosaur comes to life, they embark on a mission to find all the lost toys in the house before bedtime.",
+    ],
+    [
+      "A little cloud named Puff doesn't want to rain. But when the flowers start wilting, Puff learns that sometimes helping others makes you feel lighter, not heavier.",
+      "Lily's grandma's glasses are magic – they show the kindness hiding in everyone's hearts. One day, the glasses go missing, and Lily must find them before the big town picnic.",
+    ],
+    [
+      "A young dragon is afraid of her own fire. With help from an unlikely friend – a brave little mouse – she learns to embrace what makes her special.",
+      "When Tommy accidentally shrinks himself, his dog Biscuit becomes his mighty steed on an epic adventure across the backyard jungle.",
+    ],
+    [
+      "A cookie who doesn't want to be eaten runs away from the bakery. Along the way, she discovers there's more to life than just being delicious.",
+      "Oliver the octopus has too many arms and can't decide what to do with them all. A wise old whale teaches him that having more just means you can hug more friends!",
+    ],
+    [
+      "A sock who lost her pair in the laundry machine goes on an adventure to find her match. She discovers the secret world where all lost socks end up!",
+      "A little star falls from the sky and lands in Emma's backyard. Together they must find a way to get the star back home before sunrise.",
+    ],
+    [
+      "A grumpy old tree doesn't want any birds in his branches. But when a tiny bird family needs shelter from a storm, he learns that company isn't so bad after all.",
+      "Mia's shadow wants to go on vacation. When it runs away to the beach, Mia must convince it that being together is better than being apart.",
+    ],
+    [
+      "A crayon who colors outside the lines is told he's doing it wrong. But when the art show needs something unique, his different way of seeing saves the day!",
+      "A penguin who's afraid of cold water dreams of living in the desert. When she finally gets there, she discovers what makes home really special.",
+    ],
+    [
+      "The moon gets lonely at night and decides to come down to play. A kind little girl must help the moon get back to the sky before everyone wakes up.",
+      "A caterpillar who doesn't want to change is terrified of becoming a butterfly. With help from friends, she learns that change can be beautiful.",
+    ],
+  ],
+  comic: [
+    [
+      "A retired superhero works as a mall security guard. When her old nemesis shows up selling insurance, they team up to stop a new villain targeting their favorite food court.",
+      "In a world where everyone has powers, a 'powerless' teenager discovers her ability: she can temporarily steal others' abilities through touch.",
+    ],
+    [
+      "A demon gets stuck on Earth after a botched summoning. To pay rent, he becomes a life coach – turns out millennia of torturing souls taught him a lot about motivation.",
+      "When aliens invade, they're disappointed to find humans aren't a threat. They decide to stay anyway because Earth has great coffee and dramatic reality TV.",
+    ],
+    [
+      "A vampire and a werewolf are roommates in Brooklyn. Their biggest battle isn't good vs evil – it's deciding whose turn it is to do the dishes.",
+      "A necromancer keeps accidentally raising the dead while sleepwalking. Her neighbors are getting increasingly annoyed by the zombies in the hallway.",
+    ],
+    [
+      "An ancient god takes a job at a tech startup to understand modern worship (social media followers). The quarterly reviews are brutal.",
+      "A time-traveling barista keeps fixing historical events to ensure coffee gets invented. The timeline is now very caffeinated.",
+    ],
+    [
+      "Death takes a personal day. The chaos that ensues when no one can die – even temporarily – is nobody's idea of a vacation.",
+      "A superhero's powers only work when she's angry, but she just started therapy and is getting way too mentally healthy to fight crime.",
+    ],
+    [
+      "A ghost haunting a smart home keeps getting into arguments with Alexa. The living family just wants some peace and quiet.",
+      "An immortal warrior has been fighting evil for 3000 years. All he wants now is to retire, but evil keeps sending him LinkedIn requests.",
+    ],
+    [
+      "A magical girl's transformation sequence takes 45 minutes. By the time she's ready, the monster is usually bored and leaves.",
+      "A dungeon boss decides to unionize all the monsters. The adventuring guilds are NOT prepared for collective bargaining.",
+    ],
+    [
+      "Wizards discover the internet and immediately start the most chaotic forum wars humanity has ever seen. Fireballs are involved.",
+      "A supervillain retires and becomes a kindergarten teacher. His former nemesis's kid is in his class, and that kid is TERRIBLE.",
+    ],
+  ],
+  adult_comic: [
+    [
+      "A succubus who's sworn off relationships takes a vow of celibacy. Her demon coworkers are baffled, and humans keep making it very difficult.",
+      "Two rival assassins keep running into each other on jobs. Their competitive flirting is getting in the way of their kill counts.",
+    ],
+    [
+      "A romance novelist discovers her book characters are coming to life. The problem? She writes very spicy supernatural romances.",
+      "In a world where soulmates share dreams, a woman keeps dreaming about someone she's never met. The dreams are getting increasingly... intimate.",
+    ],
+    [
+      "A witch's love potion business is booming, but she's immune to her own magic. When she finally feels something for a customer, she suspects foul play.",
+      "A reformed villain opens a dating service for superhumans. Matching powers for compatibility is easy – matching hearts is the real challenge.",
+    ],
+    [
+      "Vampires and werewolves have been enemies for centuries. A forbidden romance between their heirs could end the war – or start an even bloodier one.",
+      "A demon prince sent to corrupt souls falls for his angelic counterpart. Their bosses are NOT going to approve of this merger.",
+    ],
+    [
+      "A monster hunter falls for the creature she was sent to kill. The creature is just as confused as she is about this development.",
+      "An incubus loses his powers after falling in genuine love. Now he has to win someone over the old-fashioned way – with personality.",
+    ],
+    [
+      "A thief and the detective chasing her have been flirting through crime scenes for years. When they finally meet, the tension is unbearable.",
+      "A curse makes a woman irresistible to everyone except the one person she actually wants. Breaking the curse requires them to work together.",
+    ],
+    [
+      "Rival mafia heirs are forced into an arranged marriage to end a gang war. They hate each other. They also can't keep their hands off each other.",
+      "A bodyguard sworn to protect someone discovers she's falling for the very person trying to kill her client. Awkward doesn't begin to cover it.",
+    ],
+    [
+      "A phoenix and an ice dragon are natural enemies. Their forbidden affair could melt kingdoms – or freeze them solid.",
+      "An empress secretly moonlights as the masked rebel trying to overthrow her own government. Her spymaster knows her secret – and has secrets of his own.",
+    ],
+  ],
+};
 
-Write ONE new idea (2 sentences, end with period):`;
+// Genre variations for each category - expanded for more variety
+const GENRE_HINTS: Record<Exclude<IdeaCategory, 'random'>, string[]> = {
+  novel: [
+    'mystery', 'romance', 'thriller', 'fantasy', 'sci-fi', 'literary fiction', 'horror',
+    'historical fiction', 'dystopian', 'psychological drama', 'crime noir', 'magical realism',
+    'family saga', 'suspense', 'Gothic fiction', 'espionage', 'domestic thriller', 'cozy mystery',
+    'time travel', 'alternate history', 'post-apocalyptic', 'contemporary fiction', 'Southern Gothic'
+  ],
+  childrens: [
+    'adventure', 'friendship story', 'bedtime story', 'animal tale', 'magical journey',
+    'learning story', 'funny story', 'fairy tale', 'nature story', 'family story',
+    'holiday tale', 'monster-under-the-bed', 'first day of school', 'sibling story',
+    'pet adventure', 'imagination journey', 'feelings story', 'kindness tale'
+  ],
+  comic: [
+    'superhero', 'action-comedy', 'sci-fi adventure', 'urban fantasy', 'slice-of-life comedy',
+    'supernatural action', 'space opera', 'post-apocalyptic', 'cyberpunk', 'mecha',
+    'monster hunting', 'heist comedy', 'buddy cop', 'workplace comedy', 'found family',
+    'antihero story', 'parody', 'isekai comedy', 'supernatural mystery', 'time loop'
+  ],
+  adult_comic: [
+    'supernatural romance', 'dark fantasy', 'paranormal', 'action romance', 'forbidden love',
+    'enemies-to-lovers', 'fantasy adventure', 'vampire romance', 'shifter romance', 'mafia romance',
+    'reverse harem', 'slow burn', 'second chance romance', 'forced proximity', 'bodyguard romance',
+    'arranged marriage', 'royal intrigue', 'demon romance', 'fated mates', 'dark romance'
+  ],
+};
+
+// Generate a random book idea with category support
+export async function generateBookIdea(category: IdeaCategory = 'random'): Promise<string> {
+  // If random, pick a category
+  const actualCategory: Exclude<IdeaCategory, 'random'> = category === 'random'
+    ? (['novel', 'childrens', 'comic', 'adult_comic'] as const)[Math.floor(Math.random() * 4)]
+    : category;
+
+  // Pick random examples from the pool
+  const examplePool = IDEA_EXAMPLES[actualCategory];
+  const randomExamples = examplePool[Math.floor(Math.random() * examplePool.length)];
+
+  // Pick a random genre hint
+  const genreHints = GENRE_HINTS[actualCategory];
+  const randomGenre = genreHints[Math.floor(Math.random() * genreHints.length)];
+
+  // Build category-specific prompt
+  let categoryInstruction = '';
+  switch (actualCategory) {
+    case 'novel':
+      categoryInstruction = `Generate a ${randomGenre} novel idea. It should be compelling, with intriguing characters and high stakes.`;
+      break;
+    case 'childrens':
+      categoryInstruction = `Generate a children's ${randomGenre} idea. It should be whimsical, age-appropriate (4-8 years), with a gentle lesson or fun adventure.`;
+      break;
+    case 'comic':
+      categoryInstruction = `Generate a ${randomGenre} comic/graphic novel idea. It should be visual, action-packed or humorous, with dynamic characters.`;
+      break;
+    case 'adult_comic':
+      categoryInstruction = `Generate a ${randomGenre} adult graphic novel idea. It can include mature themes, complex relationships, and darker elements. Keep it tasteful but don't shy from adult content.`;
+      break;
+  }
+
+  const prompt = `${categoryInstruction}
+
+Write exactly 2 sentences. End with a period. Be creative and unique!
+
+Examples of the style (but create something COMPLETELY DIFFERENT):
+- ${randomExamples[0]}
+- ${randomExamples[1]}
+
+Your unique ${actualCategory === 'childrens' ? "children's book" : actualCategory === 'adult_comic' ? 'adult comic' : actualCategory} idea (2 sentences, end with period):`;
 
   const maxRetries = 3;
 
@@ -139,8 +351,10 @@ Write ONE new idea (2 sentences, end with period):`;
     }
   }
 
-  // Fallback if all retries fail
-  return "A bookstore owner discovers that the rare first editions in her shop contain hidden messages from authors who predicted the future. When the next prediction points to an imminent catastrophe, she must decide whether to warn the world or protect the secret.";
+  // Fallback - pick from examples
+  const fallbackPool = IDEA_EXAMPLES[actualCategory];
+  const fallbackExamples = fallbackPool[Math.floor(Math.random() * fallbackPool.length)];
+  return fallbackExamples[Math.floor(Math.random() * fallbackExamples.length)];
 }
 
 // NEW: Expand a simple idea into a full book plan
