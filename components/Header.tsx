@@ -6,7 +6,11 @@ import { useState, useRef, useEffect } from 'react';
 import { useSession, signOut } from 'next-auth/react';
 import { useGeneratingBook } from '@/contexts/GeneratingBookContext';
 
-export default function Header() {
+interface HeaderProps {
+  variant?: 'default' | 'transparent';
+}
+
+export default function Header({ variant = 'default' }: HeaderProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [navDropdownOpen, setNavDropdownOpen] = useState(false);
@@ -59,14 +63,22 @@ export default function Header() {
 
   return (
     <>
-      <nav className="w-full px-6 py-6">
+      <nav className={`w-full px-6 py-6 ${
+        variant === 'transparent'
+          ? 'absolute top-0 left-0 right-0 z-40'
+          : 'relative bg-[#FAFAFA]'
+      }`}>
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           {/* Left Nav - Hamburger Menu */}
           <div className="hidden md:flex items-center gap-8 flex-1">
             <div className="relative" ref={navDropdownRef}>
               <button
                 onClick={() => setNavDropdownOpen(!navDropdownOpen)}
-                className="flex items-center gap-2 text-sm text-neutral-600 hover:text-neutral-900 transition-colors"
+                className={`flex items-center gap-2 text-sm transition-colors ${
+                  variant === 'transparent'
+                    ? 'text-white/80 hover:text-white'
+                    : 'text-neutral-600 hover:text-neutral-900'
+                }`}
               >
                 <Menu className="h-5 w-5" />
                 <span>Menu</span>
@@ -103,7 +115,9 @@ export default function Header() {
           {/* Center Logo */}
           <Link
             href="/"
-            className="text-2xl font-bold tracking-tight md:absolute md:left-1/2 md:-translate-x-1/2"
+            className={`text-2xl font-bold tracking-tight md:absolute md:left-1/2 md:-translate-x-1/2 ${
+              variant === 'transparent' ? 'text-white' : 'text-neutral-900'
+            }`}
             style={{ fontFamily: 'FoundersGrotesk, system-ui' }}
           >
             draftmybook
@@ -245,12 +259,20 @@ export default function Header() {
             ) : (
               // Logged out state
               <>
-                <Link href="/login" className="text-sm text-neutral-600 hover:text-neutral-900 animated-underline">
+                <Link href="/login" className={`text-sm animated-underline ${
+                  variant === 'transparent'
+                    ? 'text-white/80 hover:text-white'
+                    : 'text-neutral-600 hover:text-neutral-900'
+                }`}>
                   Log in
                 </Link>
                 <Link
                   href="/signup"
-                  className="text-sm bg-neutral-900 text-white px-5 py-2.5 rounded-full hover:bg-neutral-800 transition-colors font-medium"
+                  className={`text-sm px-5 py-2.5 rounded-full transition-colors font-medium ${
+                    variant === 'transparent'
+                      ? 'bg-white text-neutral-900 hover:bg-white/90'
+                      : 'bg-neutral-900 text-white hover:bg-neutral-800'
+                  }`}
                 >
                   Get Started
                 </Link>
@@ -261,7 +283,7 @@ export default function Header() {
           {/* Mobile menu button */}
           <button
             onClick={() => setMenuOpen(true)}
-            className="md:hidden p-2 -mr-2"
+            className={`md:hidden p-2 -mr-2 ${variant === 'transparent' ? 'text-white' : ''}`}
             aria-label="Open menu"
           >
             <Menu className="h-6 w-6" />

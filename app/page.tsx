@@ -54,7 +54,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-[#FAFAFA]">
-      <Header />
+      <Header variant="transparent" />
 
       {/* Hero Section */}
       <section className="relative min-h-screen flex flex-col pt-0">
@@ -64,11 +64,11 @@ export default function Home() {
             src={heroBg === 1 ? '/images/hg1.png' : '/images/hg2.png'}
             alt=""
             fill
-            className="object-cover"
+            className="object-cover blur-[2px]"
             priority
           />
-          {/* Overlay */}
-          <div className="absolute inset-0 bg-[#FAFAFA]/85" />
+          {/* Dark Overlay */}
+          <div className="absolute inset-0 bg-black/40" />
         </div>
 
         {/* Background Switcher (Admin) */}
@@ -96,19 +96,19 @@ export default function Home() {
         <div className="relative z-10 flex-1 flex items-center justify-center px-6 py-16">
           <div className="max-w-4xl mx-auto text-center">
             {/* Badge */}
-            <div className="inline-flex items-center gap-2 bg-neutral-100 px-4 py-2 rounded-full text-sm text-neutral-600 mb-8">
-              <Zap className="h-4 w-4 text-amber-500" />
+            <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm px-4 py-2 rounded-full text-sm text-white mb-8">
+              <Zap className="h-4 w-4 text-amber-400" />
               <span>50,000+ words in 30-60 minutes</span>
             </div>
 
             {/* Headline */}
-            <h1 className="text-5xl md:text-7xl font-bold tracking-tight mb-6 leading-[1.1]" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>
+            <h1 className="text-5xl md:text-7xl font-bold tracking-tight mb-6 leading-[1.1] text-white" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>
               Turn your idea into
               <br />
-              <span className="text-neutral-400">a complete book</span>
+              <span className="text-white/70">a complete book</span>
             </h1>
 
-            <p className="text-xl text-neutral-600 max-w-2xl mx-auto mb-12">
+            <p className="text-xl text-white/80 max-w-2xl mx-auto mb-12">
               Create novels, comics, or picture books from a simple description. Professionally formatted and ready to publish.
             </p>
 
