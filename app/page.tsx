@@ -64,7 +64,7 @@ export default function Home() {
             src={heroBg === 1 ? '/images/hg1.png' : '/images/hg2.png'}
             alt=""
             fill
-            className="object-cover blur-[2px]"
+            className="object-cover"
             priority
           />
           {/* Dark Overlay */}
@@ -166,17 +166,17 @@ export default function Home() {
             </form>
 
             {/* Trust signals */}
-            <div className="mt-8 flex items-center justify-center gap-8 text-sm text-neutral-500">
+            <div className="mt-8 flex items-center justify-center gap-8 text-sm text-white/70">
               <span className="flex items-center gap-2">
-                <Check className="h-4 w-4 text-green-600" />
+                <Check className="h-4 w-4" />
                 Full commercial rights
               </span>
               <span className="flex items-center gap-2">
-                <Check className="h-4 w-4 text-green-600" />
+                <Check className="h-4 w-4" />
                 Ready for Amazon KDP
               </span>
               <span className="hidden sm:flex items-center gap-2">
-                <Check className="h-4 w-4 text-green-600" />
+                <Check className="h-4 w-4" />
                 EPUB download
               </span>
             </div>
@@ -185,7 +185,7 @@ export default function Home() {
       </section>
 
       {/* Success Story - Blood & Silver */}
-      <section className="py-20 px-6 bg-neutral-900 text-white">
+      <section className="py-20 px-6 bg-[#FAFAFA]">
         <div className="max-w-6xl mx-auto">
           <div className="grid md:grid-cols-2 gap-12 items-center">
             {/* Book Cover */}
@@ -214,17 +214,17 @@ export default function Home() {
 
             {/* Content */}
             <div>
-              <div className="inline-flex items-center gap-2 bg-white/10 px-4 py-2 rounded-full text-sm mb-6">
-                <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+              <div className="inline-flex items-center gap-2 bg-neutral-100 px-4 py-2 rounded-full text-sm text-neutral-600 mb-6">
+                <span className="w-2 h-2 bg-neutral-400 rounded-full" />
                 Published on Amazon KDP
               </div>
-              <h2 className="text-4xl md:text-5xl font-bold tracking-tight mb-6" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>
+              <h2 className="text-4xl md:text-5xl font-bold tracking-tight mb-6 text-neutral-900" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>
                 Blood & Silver
               </h2>
-              <p className="text-xl text-neutral-300 mb-4">
+              <p className="text-xl text-neutral-600 mb-4">
                 by Freddie Fabrevoie
               </p>
-              <p className="text-neutral-400 mb-8 leading-relaxed">
+              <p className="text-neutral-500 mb-8 leading-relaxed">
                 A complete 10-chapter historical fiction exploring history&apos;s most ruthless untold betrayals.
                 Created with draftmybook, formatted to Amazon KDP specifications, and published in under an hour.
               </p>
@@ -233,7 +233,7 @@ export default function Home() {
                   href="https://a.co/d/f9GkEr9"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 bg-white text-neutral-900 px-6 py-3 rounded-full font-medium hover:bg-neutral-100 transition-colors"
+                  className="inline-flex items-center gap-2 bg-neutral-900 text-white px-6 py-3 rounded-full font-medium hover:bg-neutral-800 transition-colors"
                 >
                   View on Amazon
                   <ExternalLink className="h-4 w-4" />
@@ -370,7 +370,6 @@ export default function Home() {
                 <div className="w-10 h-10 bg-neutral-100 rounded-lg flex items-center justify-center group-hover:bg-neutral-900 transition-colors">
                   <BookOpen className="h-5 w-5 text-neutral-700 group-hover:text-white transition-colors" />
                 </div>
-                <span className="text-xs font-medium bg-green-100 text-green-700 px-2 py-1 rounded-full">Best Value</span>
               </div>
               <h3 className="text-xl font-semibold mb-1" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>One Book</h3>
               <div className="flex items-baseline gap-1 mb-2">
@@ -380,15 +379,15 @@ export default function Home() {
               <p className="text-sm text-neutral-500 mb-4">Novel, Comic, or Picture Book</p>
               <ul className="space-y-2 text-sm text-neutral-600 mb-6">
                 <li className="flex items-center gap-2">
-                  <Check className="h-4 w-4 text-green-600 flex-shrink-0" />
+                  <Check className="h-4 w-4 text-neutral-400 flex-shrink-0" />
                   Any book type you choose
                 </li>
                 <li className="flex items-center gap-2">
-                  <Check className="h-4 w-4 text-green-600 flex-shrink-0" />
+                  <Check className="h-4 w-4 text-neutral-400 flex-shrink-0" />
                   AI cover + full formatting
                 </li>
                 <li className="flex items-center gap-2">
-                  <Check className="h-4 w-4 text-green-600 flex-shrink-0" />
+                  <Check className="h-4 w-4 text-neutral-400 flex-shrink-0" />
                   EPUB or PDF download
                 </li>
               </ul>
@@ -418,15 +417,15 @@ export default function Home() {
               <p className="text-sm text-neutral-300 mb-4">5 books per month (any type)</p>
               <ul className="space-y-2 text-sm text-neutral-200 mb-6">
                 <li className="flex items-center gap-2">
-                  <Check className="h-4 w-4 text-green-400 flex-shrink-0" />
+                  <Check className="h-4 w-4 text-neutral-400 flex-shrink-0" />
                   $13.80 per book
                 </li>
                 <li className="flex items-center gap-2">
-                  <Check className="h-4 w-4 text-green-400 flex-shrink-0" />
+                  <Check className="h-4 w-4 text-neutral-400 flex-shrink-0" />
                   Priority generation
                 </li>
                 <li className="flex items-center gap-2">
-                  <Check className="h-4 w-4 text-green-400 flex-shrink-0" />
+                  <Check className="h-4 w-4 text-neutral-400 flex-shrink-0" />
                   Cancel anytime
                 </li>
               </ul>
@@ -444,7 +443,6 @@ export default function Home() {
                 <div className="w-10 h-10 bg-neutral-100 rounded-lg flex items-center justify-center group-hover:bg-neutral-900 transition-colors">
                   <Zap className="h-5 w-5 text-neutral-700 group-hover:text-white transition-colors" />
                 </div>
-                <span className="text-xs font-medium bg-amber-100 text-amber-700 px-2 py-1 rounded-full">Save 50%</span>
               </div>
               <h3 className="text-xl font-semibold mb-1" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>Yearly</h3>
               <div className="flex items-baseline gap-1 mb-2">
@@ -454,15 +452,15 @@ export default function Home() {
               <p className="text-sm text-neutral-500 mb-4">50 book credits (any type)</p>
               <ul className="space-y-2 text-sm text-neutral-600 mb-6">
                 <li className="flex items-center gap-2">
-                  <Check className="h-4 w-4 text-green-600 flex-shrink-0" />
+                  <Check className="h-4 w-4 text-neutral-400 flex-shrink-0" />
                   $10 per book
                 </li>
                 <li className="flex items-center gap-2">
-                  <Check className="h-4 w-4 text-green-600 flex-shrink-0" />
+                  <Check className="h-4 w-4 text-neutral-400 flex-shrink-0" />
                   Credits never expire
                 </li>
                 <li className="flex items-center gap-2">
-                  <Check className="h-4 w-4 text-green-600 flex-shrink-0" />
+                  <Check className="h-4 w-4 text-neutral-400 flex-shrink-0" />
                   Priority support
                 </li>
               </ul>
