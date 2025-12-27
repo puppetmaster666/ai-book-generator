@@ -138,7 +138,7 @@ export const BOOK_PRESETS = {
     dialogueStyle: 'prose',
     defaultGenre: 'childrens',
     targetWords: 500,
-    chapters: 12,
+    chapters: 20, // Standard picture books have 24-32 pages
     priceDisplay: '$39.99',
     downloadFormat: 'pdf',
   },
@@ -150,8 +150,8 @@ export const BOOK_PRESETS = {
     artStyle: 'noir',
     dialogueStyle: 'bubbles',
     defaultGenre: 'ya',
-    targetWords: 800,
-    chapters: 20,
+    targetWords: 1000,
+    chapters: 24, // Standard comic issues have 22-24 pages
     priceDisplay: '$39.99',
     downloadFormat: 'pdf',
   },

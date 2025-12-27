@@ -11,6 +11,8 @@ function SignupContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const plan = searchParams.get('plan');
+  const bookId = searchParams.get('bookId');
+  const callbackUrl = searchParams.get('callbackUrl');
   const { data: session, status } = useSession();
 
   const [email, setEmail] = useState('');
@@ -20,16 +22,38 @@ function SignupContent() {
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [error, setError] = useState('');
 
+  // Claim book for user after authentication
+  const claimBook = async (userId: string) => {
+    if (!bookId) return;
+    try {
+      await fetch(`/api/books/${bookId}/claim`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId }),
+      });
+    } catch (err) {
+      console.error('Failed to claim book:', err);
+    }
+  };
+
   // Redirect logged-in users to checkout or dashboard
   useEffect(() => {
     if (status === 'authenticated' && session) {
-      if (plan) {
+      // Claim the book if there's a bookId
+      const userId = (session.user as { id?: string })?.id;
+      if (bookId && userId) {
+        claimBook(userId);
+      }
+
+      if (callbackUrl) {
+        router.push(callbackUrl);
+      } else if (plan) {
         router.push(`/checkout?plan=${plan}`);
       } else {
         router.push('/dashboard');
       }
     }
-  }, [status, session, plan, router]);
+  }, [status, session, plan, bookId, callbackUrl, router]);
 
   // Show loading while checking session
   if (status === 'loading' || (status === 'authenticated' && session)) {
@@ -70,12 +94,8 @@ function SignupContent() {
       if (result?.error) {
         setError('Account created but failed to sign in. Please try logging in.');
       } else {
-        // Redirect based on plan selection
-        if (plan) {
-          router.push(`/checkout?plan=${plan}`);
-        } else {
-          router.push('/dashboard');
-        }
+        // Claim book if we have a bookId (the useEffect will handle the redirect)
+        // Just refresh to trigger the session check
         router.refresh();
       }
     } catch (err) {
@@ -88,8 +108,18 @@ function SignupContent() {
   const handleGoogleSignIn = async () => {
     setIsGoogleLoading(true);
     try {
-      const callbackUrl = plan ? `/checkout?plan=${plan}` : '/dashboard';
-      await signIn('google', { callbackUrl });
+      // Build callback URL with bookId if present
+      let redirectUrl = '/dashboard';
+      if (callbackUrl) {
+        redirectUrl = callbackUrl;
+      } else if (plan) {
+        redirectUrl = `/checkout?plan=${plan}`;
+      }
+      // Add claimBook param if we have a bookId
+      if (bookId) {
+        redirectUrl += (redirectUrl.includes('?') ? '&' : '?') + `claimBook=${bookId}`;
+      }
+      await signIn('google', { callbackUrl: redirectUrl });
     } catch (err) {
       setError('Failed to sign in with Google');
       setIsGoogleLoading(false);

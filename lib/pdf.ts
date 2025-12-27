@@ -81,6 +81,26 @@ export async function generatePdf(bookData: BookData): Promise<Buffer> {
       doc.on('end', () => resolve(Buffer.concat(chunks)));
       doc.on('error', reject);
 
+      // Cover Page - Full page cover image if available
+      if (bookData.coverImageUrl) {
+        const coverBuffer = base64ToBuffer(bookData.coverImageUrl);
+        if (coverBuffer) {
+          try {
+            doc.image(coverBuffer, 0, 0, {
+              width: 1024,
+              height: 768,
+              fit: [1024, 768],
+              align: 'center',
+              valign: 'center',
+            });
+            doc.addPage(); // Add new page for title page
+          } catch (coverError) {
+            console.error('Error adding cover to PDF:', coverError);
+            // Continue without cover
+          }
+        }
+      }
+
       // Title Page - Light theme
       doc.rect(0, 0, 1024, 768).fill('#FAFAFA');
       doc.fillColor('#0a0a0a')

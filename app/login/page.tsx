@@ -1,19 +1,54 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { signIn } from 'next-auth/react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { signIn, useSession } from 'next-auth/react';
 import Header from '@/components/Header';
 import { Loader2 } from 'lucide-react';
 
-export default function Login() {
+function LoginContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const bookId = searchParams.get('bookId');
+  const callbackUrl = searchParams.get('callbackUrl');
+  const { data: session, status } = useSession();
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [error, setError] = useState('');
+
+  // Claim book for user after authentication
+  const claimBook = async (userId: string) => {
+    if (!bookId) return;
+    try {
+      await fetch(`/api/books/${bookId}/claim`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId }),
+      });
+    } catch (err) {
+      console.error('Failed to claim book:', err);
+    }
+  };
+
+  // Handle redirect after login
+  useEffect(() => {
+    if (status === 'authenticated' && session) {
+      const userId = (session.user as { id?: string })?.id;
+      if (bookId && userId) {
+        claimBook(userId);
+      }
+
+      if (callbackUrl) {
+        router.push(callbackUrl);
+      } else {
+        router.push('/dashboard');
+      }
+    }
+  }, [status, session, bookId, callbackUrl, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,7 +65,6 @@ export default function Login() {
       if (result?.error) {
         setError('Invalid email or password');
       } else {
-        router.push('/dashboard');
         router.refresh();
       }
     } catch (err) {
@@ -43,7 +77,11 @@ export default function Login() {
   const handleGoogleSignIn = async () => {
     setIsGoogleLoading(true);
     try {
-      await signIn('google', { callbackUrl: '/dashboard' });
+      let redirectUrl = callbackUrl || '/dashboard';
+      if (bookId) {
+        redirectUrl += (redirectUrl.includes('?') ? '&' : '?') + `claimBook=${bookId}`;
+      }
+      await signIn('google', { callbackUrl: redirectUrl });
     } catch (err) {
       setError('Failed to sign in with Google');
       setIsGoogleLoading(false);
@@ -140,5 +178,13 @@ export default function Login() {
         </div>
       </main>
     </div>
+  );
+}
+
+export default function Login() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-[#FAFAFA] flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-neutral-900" /></div>}>
+      <LoginContent />
+    </Suspense>
   );
 }
