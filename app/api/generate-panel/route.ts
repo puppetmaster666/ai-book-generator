@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { prisma } from '@/lib/db';
 import { ART_STYLES, ILLUSTRATION_DIMENSIONS, type ArtStyleKey } from '@/lib/constants';
-import { addSpeechBubbles, DialogueBubble } from '@/lib/bubbles';
 import { buildIllustrationPromptFromScene, SceneDescription } from '@/lib/gemini';
 
 // Lazy initialization
@@ -19,8 +18,44 @@ function getGenAI(): GoogleGenerativeAI {
   return genAI;
 }
 
-// No text instruction for all illustrations
+// No text instruction for illustrations without dialogue
 const NO_TEXT_INSTRUCTION = `CRITICAL: Do NOT include any text, words, letters, numbers, signs, labels, or written characters anywhere in the image. The image must be purely visual with no readable text elements whatsoever.`;
+
+// Interface for dialogue bubbles
+interface DialogueBubble {
+  speaker: string;
+  text: string;
+  position: string;
+  type?: 'speech' | 'thought' | 'shout';
+}
+
+// Build speech bubble instructions for the AI to draw
+function buildSpeechBubblePrompt(dialogue: DialogueBubble[]): string {
+  if (!dialogue || dialogue.length === 0) return '';
+
+  const bubbleInstructions = dialogue.map((d, i) => {
+    const bubbleType = d.type === 'thought' ? 'thought bubble (cloud-shaped)' :
+                       d.type === 'shout' ? 'jagged/spiky speech bubble' :
+                       'speech bubble';
+    const position = d.position.replace('-', ' '); // "top-left" -> "top left"
+
+    return `Speech Bubble ${i + 1}: Draw a ${bubbleType} in the ${position} area of the image. Inside the bubble, write the text: "${d.text}" (spoken by ${d.speaker})`;
+  }).join('\n');
+
+  return `
+SPEECH BUBBLES - IMPORTANT:
+This is a comic panel. You MUST include the following speech bubbles with the EXACT text written inside them:
+
+${bubbleInstructions}
+
+Speech bubble style guidelines:
+- Draw clear white speech bubbles with black outlines
+- Each bubble should have a tail/pointer aimed toward the speaker
+- Text should be clearly readable, using a comic-style font
+- Position bubbles so they don't cover character faces
+- Keep the bubble text EXACTLY as specified above - do not change or abbreviate it
+`;
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -53,6 +88,9 @@ export async function POST(request: NextRequest) {
     const formatKey = (bookFormat || 'picture_book') as keyof typeof ILLUSTRATION_DIMENSIONS;
     const dimensions = ILLUSTRATION_DIMENSIONS[formatKey] || ILLUSTRATION_DIMENSIONS.picture_book;
 
+    // Check if we have dialogue (comic mode with speech bubbles)
+    const hasDialogue = dialogue && Array.isArray(dialogue) && dialogue.length > 0;
+
     // Build the illustration prompt using scene description
     let prompt = '';
     if (typeof scene === 'object' && scene.description) {
@@ -65,11 +103,19 @@ export async function POST(request: NextRequest) {
       );
     } else {
       // Scene is a string
-      prompt = `${artStylePrompt}. ${scene}. ${NO_TEXT_INSTRUCTION}`;
+      prompt = `${artStylePrompt}. ${scene}.`;
     }
 
-    // Add format and no-text instructions
-    prompt += `\n\nFORMAT: ${dimensions.prompt}\n${NO_TEXT_INSTRUCTION}`;
+    // Add format instructions
+    prompt += `\n\nFORMAT: ${dimensions.prompt}`;
+
+    // For comics with dialogue: add speech bubble instructions
+    // For non-dialogue images: add no-text instruction
+    if (hasDialogue) {
+      prompt += buildSpeechBubblePrompt(dialogue as DialogueBubble[]);
+    } else {
+      prompt += `\n${NO_TEXT_INSTRUCTION}`;
+    }
 
     console.log(`[Panel ${panelNumber}] Generating illustration for book ${bookId}`);
 
@@ -122,23 +168,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Store original image URL
-    const originalImageUrl = `data:${imageData.mimeType};base64,${imageData.base64}`;
-    let finalImageUrl = originalImageUrl;
+    // Create image URL from base64
+    const imageUrl = `data:${imageData.mimeType};base64,${imageData.base64}`;
 
-    // Apply speech bubbles if dialogue is provided (for comics)
-    if (dialogue && Array.isArray(dialogue) && dialogue.length > 0) {
-      try {
-        console.log(`[Panel ${panelNumber}] Adding ${dialogue.length} speech bubbles`);
-        const processedBase64 = await addSpeechBubbles(
-          imageData.base64,
-          dialogue as DialogueBubble[]
-        );
-        finalImageUrl = `data:image/png;base64,${processedBase64}`;
-      } catch (bubbleError) {
-        console.error(`[Panel ${panelNumber}] Failed to add speech bubbles:`, bubbleError);
-        // Continue with original image if bubble overlay fails
-      }
+    if (hasDialogue) {
+      console.log(`[Panel ${panelNumber}] Generated comic panel with ${dialogue.length} speech bubbles`);
     }
 
     // Create or find chapter for this panel
@@ -170,8 +204,7 @@ export async function POST(request: NextRequest) {
       data: {
         bookId,
         chapterId: chapter.id,
-        imageUrl: finalImageUrl,
-        originalUrl: dialogue?.length ? originalImageUrl : null,
+        imageUrl,
         prompt,
         altText: typeof scene === 'object' ? scene.description : scene.slice(0, 100),
         position: 0,
@@ -188,8 +221,8 @@ export async function POST(request: NextRequest) {
       panelNumber,
       illustrationId: illustration.id,
       chapterId: chapter.id,
-      imageUrl: finalImageUrl,
-      hasDialogue: !!dialogue?.length,
+      imageUrl,
+      hasDialogue,
     });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';

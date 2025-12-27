@@ -249,8 +249,8 @@ function GenerateComicContent() {
         throw new Error(errorData.error || 'Failed to assemble book');
       }
 
-      // Redirect to download page
-      router.push(`/download?bookId=${bookId}`);
+      // Redirect to book page (which shows completed state)
+      router.push(`/book/${bookId}`);
     } catch (err) {
       console.error('Error assembling book:', err);
       setError(err instanceof Error ? err.message : 'Failed to assemble book');
