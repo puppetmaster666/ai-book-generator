@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import Image from 'next/image';
 import { ArrowRight, Loader2, Sparkles, X, Check, ChevronRight, Zap, BookOpen, Download, ExternalLink, ChevronDown } from 'lucide-react';
 import Footer from '@/components/Footer';
@@ -20,6 +19,18 @@ const IDEA_CATEGORIES: { value: IdeaCategory; label: string; emoji: string }[] =
   { value: 'adult_comic', label: 'Adult Comic', emoji: '🔥' },
 ];
 
+// Accent color options for admin switcher
+type AccentColor = 'amber' | 'violet' | 'fuchsia' | 'lime' | 'cyan' | 'rose';
+
+const ACCENT_COLORS: { value: AccentColor; label: string; bg: string; text: string }[] = [
+  { value: 'amber', label: 'Amber', bg: 'bg-amber-400', text: 'text-amber-400' },
+  { value: 'violet', label: 'Violet', bg: 'bg-violet-500', text: 'text-violet-400' },
+  { value: 'fuchsia', label: 'Fuchsia', bg: 'bg-fuchsia-500', text: 'text-fuchsia-400' },
+  { value: 'lime', label: 'Lime', bg: 'bg-lime-400', text: 'text-lime-400' },
+  { value: 'cyan', label: 'Cyan', bg: 'bg-cyan-400', text: 'text-cyan-400' },
+  { value: 'rose', label: 'Rose', bg: 'bg-rose-500', text: 'text-rose-400' },
+];
+
 export default function Home() {
   const router = useRouter();
   const [bookIdea, setBookIdea] = useState('');
@@ -29,6 +40,10 @@ export default function Home() {
   const [lightboxImage, setLightboxImage] = useState<{ src: string; label: string } | null>(null);
   const [ideaCategory, setIdeaCategory] = useState<IdeaCategory>('random');
   const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
+  const [accentColor, setAccentColor] = useState<AccentColor>('violet');
+
+  // Get current accent color classes
+  const currentAccent = ACCENT_COLORS.find(c => c.value === accentColor) || ACCENT_COLORS[0];
 
   const handleFindIdea = async () => {
     setIsGeneratingIdea(true);
@@ -89,9 +104,9 @@ export default function Home() {
         <div className="relative z-10 flex-1 flex items-center justify-center px-6 py-16">
           <div className="max-w-4xl mx-auto text-center">
             {/* Badge */}
-            <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm px-4 py-2 rounded-full text-sm text-white mb-8">
-              <Zap className="h-4 w-4 text-amber-400" />
-              <span>50,000+ words in 30-60 minutes</span>
+            <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-md px-5 py-2.5 rounded-full text-sm text-white mb-8 border border-white/20 shadow-lg">
+              <Zap className={`h-4 w-4 ${currentAccent.text} animate-pulse`} />
+              <span className="font-medium">50,000+ words in 30-60 minutes</span>
             </div>
 
             {/* Headline */}
@@ -102,9 +117,9 @@ export default function Home() {
                 {/* Shadow rectangle */}
                 <span className="absolute inset-0 bg-black -skew-y-2 translate-x-2 translate-y-2" aria-hidden="true" />
                 {/* Colored rectangle */}
-                <span className="absolute inset-0 bg-amber-400 -skew-y-2" aria-hidden="true" />
+                <span className={`absolute inset-0 ${currentAccent.bg} -skew-y-2`} aria-hidden="true" />
                 {/* Text */}
-                <span className="relative text-neutral-900 px-4">a complete book</span>
+                <span className="relative text-neutral-900 px-4 py-1">a complete book</span>
               </span>
             </h1>
 
@@ -397,7 +412,7 @@ export default function Home() {
             {/* One-Time - Any Book */}
             <button
               onClick={() => router.push('/create')}
-              className="group bg-white rounded-2xl p-8 border-2 border-neutral-200 hover:border-neutral-900 hover:shadow-xl transition-all text-left cursor-pointer"
+              className="group bg-white rounded-2xl p-8 border-2 border-neutral-200 hover:border-neutral-900 card-hover text-left cursor-pointer"
             >
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-10 h-10 bg-neutral-100 rounded-lg flex items-center justify-center group-hover:bg-neutral-900 transition-colors">
@@ -432,7 +447,7 @@ export default function Home() {
             {/* Monthly Subscription */}
             <button
               onClick={() => router.push('/signup?plan=monthly')}
-              className="group bg-neutral-900 text-white rounded-2xl p-8 border-2 border-neutral-900 hover:shadow-xl transition-all text-left cursor-pointer relative"
+              className="group bg-neutral-900 text-white rounded-2xl p-8 border-2 border-neutral-900 card-hover text-left cursor-pointer relative"
             >
               <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-white text-neutral-900 px-3 py-1 rounded-full text-xs font-medium">
                 Most Popular
@@ -470,7 +485,7 @@ export default function Home() {
             {/* Yearly Subscription */}
             <button
               onClick={() => router.push('/signup?plan=yearly')}
-              className="group bg-white rounded-2xl p-8 border-2 border-neutral-200 hover:border-neutral-900 hover:shadow-xl transition-all text-left cursor-pointer"
+              className="group bg-white rounded-2xl p-8 border-2 border-neutral-200 hover:border-neutral-900 card-hover text-left cursor-pointer"
             >
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-10 h-10 bg-neutral-100 rounded-lg flex items-center justify-center group-hover:bg-neutral-900 transition-colors">
@@ -555,6 +570,26 @@ export default function Home() {
 
       {/* New Year Promo Popup */}
       <NewYearPopup />
+
+      {/* Admin Color Switcher Panel */}
+      <div className="fixed bottom-4 right-4 z-50 bg-white/95 backdrop-blur rounded-xl shadow-lg border border-neutral-200 p-4">
+        <p className="text-xs text-neutral-500 mb-2 font-medium">Accent Color</p>
+        <div className="flex gap-2">
+          {ACCENT_COLORS.map((color) => (
+            <button
+              key={color.value}
+              onClick={() => setAccentColor(color.value)}
+              className={`w-8 h-8 rounded-full ${color.bg} transition-all hover:scale-110 ${
+                accentColor === color.value
+                  ? 'ring-2 ring-offset-2 ring-neutral-900'
+                  : 'opacity-70 hover:opacity-100'
+              }`}
+              title={color.label}
+            />
+          ))}
+        </div>
+        <p className="text-[10px] text-neutral-400 mt-2 text-center">{currentAccent.label}</p>
+      </div>
     </div>
   );
 }
