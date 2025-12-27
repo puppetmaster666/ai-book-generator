@@ -1,17 +1,21 @@
 'use client';
 
 import Link from 'next/link';
-import { Menu, X, ChevronDown, LogOut, User, BookOpen } from 'lucide-react';
+import { Menu, X, ChevronDown, LogOut, User, BookOpen, Loader2, Check, AlertCircle } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import { useSession, signOut } from 'next-auth/react';
+import { useGeneratingBook } from '@/contexts/GeneratingBookContext';
 
 export default function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [navDropdownOpen, setNavDropdownOpen] = useState(false);
+  const [genDropdownOpen, setGenDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const navDropdownRef = useRef<HTMLDivElement>(null);
+  const genDropdownRef = useRef<HTMLDivElement>(null);
   const { data: session, status } = useSession();
+  const { generatingBook } = useGeneratingBook();
 
   // Close dropdowns when clicking outside
   useEffect(() => {
@@ -22,10 +26,22 @@ export default function Header() {
       if (navDropdownRef.current && !navDropdownRef.current.contains(event.target as Node)) {
         setNavDropdownOpen(false);
       }
+      if (genDropdownRef.current && !genDropdownRef.current.contains(event.target as Node)) {
+        setGenDropdownOpen(false);
+      }
     }
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  // Calculate progress percentage
+  const progress = generatingBook?.totalChapters
+    ? Math.round((generatingBook.currentChapter / generatingBook.totalChapters) * 100)
+    : 0;
+
+  const isGenerating = generatingBook?.status === 'generating' || generatingBook?.status === 'outlining' || generatingBook?.status === 'pending';
+  const isCompleted = generatingBook?.status === 'completed';
+  const isFailed = generatingBook?.status === 'failed';
 
   const getInitials = (name: string | null | undefined, email: string | null | undefined) => {
     if (name) {
@@ -95,6 +111,79 @@ export default function Header() {
 
           {/* Right Nav */}
           <div className="hidden md:flex items-center gap-6 flex-1 justify-end">
+            {/* Generating Book Notification */}
+            {generatingBook && (
+              <div className="relative" ref={genDropdownRef}>
+                <button
+                  onClick={() => setGenDropdownOpen(!genDropdownOpen)}
+                  className="flex items-center gap-2 px-3 py-2 rounded-full bg-neutral-100 hover:bg-neutral-200 transition-colors"
+                >
+                  {isGenerating && (
+                    <>
+                      <div className="relative">
+                        <Loader2 className="h-4 w-4 animate-spin text-neutral-700" />
+                        <span className="absolute -top-1 -right-1 w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                      </div>
+                      <span className="text-sm font-medium text-neutral-700 max-w-[120px] truncate">
+                        {generatingBook.title}
+                      </span>
+                    </>
+                  )}
+                  {isCompleted && (
+                    <>
+                      <Check className="h-4 w-4 text-green-600" />
+                      <span className="text-sm font-medium text-green-600">Ready!</span>
+                    </>
+                  )}
+                  {isFailed && (
+                    <>
+                      <AlertCircle className="h-4 w-4 text-red-600" />
+                      <span className="text-sm font-medium text-red-600">Failed</span>
+                    </>
+                  )}
+                </button>
+
+                {genDropdownOpen && (
+                  <div className="absolute right-0 mt-2 w-72 bg-white rounded-xl border border-neutral-200 shadow-lg py-3 px-4 z-50">
+                    <div className="mb-3">
+                      <p className="font-medium text-sm text-neutral-900 truncate">{generatingBook.title}</p>
+                      <p className="text-xs text-neutral-500 mt-0.5">
+                        {isGenerating && `Chapter ${generatingBook.currentChapter} of ${generatingBook.totalChapters}`}
+                        {isCompleted && 'Generation complete!'}
+                        {isFailed && 'Generation failed - click to retry'}
+                      </p>
+                    </div>
+
+                    {isGenerating && (
+                      <div className="mb-3">
+                        <div className="flex justify-between text-xs text-neutral-500 mb-1">
+                          <span>Progress</span>
+                          <span>{progress}%</span>
+                        </div>
+                        <div className="h-1.5 bg-neutral-100 rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-neutral-900 transition-all duration-500 rounded-full"
+                            style={{ width: `${Math.max(progress, 3)}%` }}
+                          />
+                        </div>
+                        <p className="text-xs text-neutral-400 mt-2">
+                          {generatingBook.totalWords.toLocaleString()} words written
+                        </p>
+                      </div>
+                    )}
+
+                    <Link
+                      href={generatingBook.isVisualBook ? `/generate-comic?bookId=${generatingBook.id}` : `/book/${generatingBook.id}`}
+                      className="block w-full text-center py-2 px-4 bg-neutral-900 text-white text-sm font-medium rounded-lg hover:bg-neutral-800 transition-colors"
+                      onClick={() => setGenDropdownOpen(false)}
+                    >
+                      {isCompleted ? 'View Book' : 'View Progress'}
+                    </Link>
+                  </div>
+                )}
+              </div>
+            )}
+
             {status === 'loading' ? (
               <div className="w-10 h-10 rounded-full bg-neutral-200 animate-pulse" />
             ) : session?.user ? (
@@ -197,6 +286,48 @@ export default function Header() {
               </button>
             </div>
             <div className="flex flex-col gap-4">
+              {/* Mobile Generating Book Notification */}
+              {generatingBook && (
+                <Link
+                  href={generatingBook.isVisualBook ? `/generate-comic?bookId=${generatingBook.id}` : `/book/${generatingBook.id}`}
+                  className="flex items-center gap-3 p-3 rounded-xl bg-neutral-100 mb-2"
+                  onClick={() => setMenuOpen(false)}
+                >
+                  {isGenerating && (
+                    <>
+                      <div className="relative">
+                        <Loader2 className="h-5 w-5 animate-spin text-neutral-700" />
+                        <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-neutral-900 truncate">{generatingBook.title}</p>
+                        <p className="text-xs text-neutral-500">
+                          Chapter {generatingBook.currentChapter}/{generatingBook.totalChapters} • {progress}%
+                        </p>
+                      </div>
+                    </>
+                  )}
+                  {isCompleted && (
+                    <>
+                      <Check className="h-5 w-5 text-green-600" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-green-600">Book Ready!</p>
+                        <p className="text-xs text-neutral-500 truncate">{generatingBook.title}</p>
+                      </div>
+                    </>
+                  )}
+                  {isFailed && (
+                    <>
+                      <AlertCircle className="h-5 w-5 text-red-600" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-red-600">Generation Failed</p>
+                        <p className="text-xs text-neutral-500">Tap to retry</p>
+                      </div>
+                    </>
+                  )}
+                </Link>
+              )}
+
               {session?.user && (
                 <div className="flex items-center gap-3 pb-4 mb-2 border-b border-neutral-200">
                   {session.user.image ? (

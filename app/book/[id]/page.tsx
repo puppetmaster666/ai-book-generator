@@ -3,7 +3,8 @@
 import { useState, useEffect, use, useRef } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Header from '@/components/Header';
-import { Download, BookOpen, Loader2, Check, AlertCircle, ImageIcon, Mail, User, Palette, PenTool, Clock, Zap } from 'lucide-react';
+import { Download, BookOpen, Loader2, Check, AlertCircle, ImageIcon, Mail, User, Palette, PenTool, Clock, Zap, AlertTriangle } from 'lucide-react';
+import { useGeneratingBook } from '@/contexts/GeneratingBookContext';
 import Link from 'next/link';
 
 interface Chapter {
@@ -113,6 +114,7 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
   const [elapsedTime, setElapsedTime] = useState(0);
   const [retrying, setRetrying] = useState(false);
   const startTimeRef = useRef<number | null>(null);
+  const { setGeneratingBookId } = useGeneratingBook();
 
   // Check if this is a visual book (should use parallel panel generation page)
   const isVisualBook = book?.bookFormat === 'picture_book' || book?.dialogueStyle === 'bubbles' || book?.bookPreset === 'comic_story' || book?.bookPreset === 'childrens_picture';
@@ -138,6 +140,8 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
         // If it's a visual book that needs generation, redirect IMMEDIATELY
         if (isVisual && needsGeneration) {
           setRedirectingToComic(true);
+          // Set generating book ID for header notification (visual books require staying on page)
+          setGeneratingBookId(id);
           console.log('Visual book detected, generating outline and redirecting...');
 
           const genRes = await fetch(`/api/books/${id}/generate`, {
@@ -176,9 +180,11 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
     if (shouldStartGeneration) {
       setGenerationStarted(true);
       startTimeRef.current = Date.now();
+      // Set generating book ID so header shows progress badge
+      setGeneratingBookId(id);
       fetch(`/api/books/${id}/generate`, { method: 'POST' }).catch(console.error);
     }
-  }, [success, id, generationStarted, book, isVisualBook, redirectingToComic]);
+  }, [success, id, generationStarted, book, isVisualBook, redirectingToComic, setGeneratingBookId]);
 
   // Timer for elapsed time during generation
   useEffect(() => {
@@ -514,6 +520,26 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
                   <p className="text-xs text-neutral-400">elapsed</p>
                 </div>
               </div>
+
+              {/* Safe to leave message - only for text-only books (novels) */}
+              {!isIllustrated && (
+                <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-xl mb-6">
+                  <Check className="h-4 w-4 text-green-600 flex-shrink-0" />
+                  <p className="text-sm text-green-800">
+                    <span className="font-medium">Safe to leave!</span> Your book will continue generating in the background. Use the notification badge in the header to track progress.
+                  </p>
+                </div>
+              )}
+
+              {/* Stay on page warning - illustrated books only */}
+              {isIllustrated && (
+                <div className="flex items-center gap-2 p-3 bg-amber-50 border border-amber-200 rounded-xl mb-6">
+                  <AlertTriangle className="h-4 w-4 text-amber-600 flex-shrink-0" />
+                  <p className="text-sm text-amber-800">
+                    <span className="font-medium">Please stay on this page.</span> Illustrated books require an active connection to generate images.
+                  </p>
+                </div>
+              )}
 
               {/* Progress Bar */}
               <div className="mb-6">
