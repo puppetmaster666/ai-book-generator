@@ -140,6 +140,8 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
         // If it's a visual book that needs generation, redirect IMMEDIATELY
         if (isVisual && needsGeneration) {
           setRedirectingToComic(true);
+          // Start timer for preparation phase
+          startTimeRef.current = Date.now();
           // Set generating book ID for header notification (visual books require staying on page)
           setGeneratingBookId(id);
           console.log('Visual book detected, generating outline and redirecting...');
@@ -186,9 +188,9 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
     }
   }, [success, id, generationStarted, book, isVisualBook, redirectingToComic, setGeneratingBookId]);
 
-  // Timer for elapsed time during generation
+  // Timer for elapsed time during generation OR preparation
   useEffect(() => {
-    const isActive = book?.status === 'generating' || book?.status === 'outlining';
+    const isActive = book?.status === 'generating' || book?.status === 'outlining' || redirectingToComic;
 
     if (isActive) {
       if (!startTimeRef.current) {
@@ -205,7 +207,7 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
     } else if (book?.status === 'completed' || book?.status === 'failed') {
       startTimeRef.current = null;
     }
-  }, [book?.status]);
+  }, [book?.status, redirectingToComic]);
 
   // Rotate writing messages
   useEffect(() => {
@@ -308,7 +310,13 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
             {redirectingToComic ? 'Preparing your illustrated book...' : 'Loading your book...'}
           </p>
           {redirectingToComic && (
-            <p className="text-sm text-neutral-500 mt-2">This typically takes 3-5 minutes</p>
+            <>
+              <div className="flex items-center justify-center gap-2 mt-4">
+                <Clock className="h-5 w-5 text-neutral-500" />
+                <span className="font-mono text-2xl font-bold text-neutral-900">{formatElapsedTime(elapsedTime)}</span>
+              </div>
+              <p className="text-sm text-neutral-500 mt-2">Creating story outline and character guides...</p>
+            </>
           )}
         </div>
       </div>
