@@ -28,6 +28,7 @@ export async function POST(request: NextRequest) {
       bookFormat,
       artStyle,
       bookPreset,
+      dialogueStyle,
     } = body;
 
     // Validate required fields
@@ -66,6 +67,7 @@ export async function POST(request: NextRequest) {
         bookFormat: bookFormat || 'text_only',
         artStyle: artStyle || null,
         bookPreset: bookPreset || null,
+        dialogueStyle: dialogueStyle || null,
       },
     });
 

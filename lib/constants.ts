@@ -107,6 +107,20 @@ export const ART_STYLES = {
 
 export type ArtStyleKey = keyof typeof ART_STYLES;
 
+// Dialogue Styles for visual books
+export const DIALOGUE_STYLES = {
+  prose: {
+    label: 'Classic Prose',
+    description: 'Text displayed under or around images (traditional picture book style)',
+  },
+  bubbles: {
+    label: 'Speech Bubbles',
+    description: 'Comic-style speech bubbles overlaid on images',
+  },
+} as const;
+
+export type DialogueStyleKey = keyof typeof DIALOGUE_STYLES;
+
 // Quick Book Presets (simplified creation)
 export const BOOK_PRESETS = {
   novel: {
@@ -115,6 +129,7 @@ export const BOOK_PRESETS = {
     icon: 'BookOpen',
     format: 'text_only',
     artStyle: null,
+    dialogueStyle: null, // No dialogue style for text-only
     defaultGenre: 'literary',
     targetWords: 60000,
     chapters: 20,
@@ -122,23 +137,25 @@ export const BOOK_PRESETS = {
   },
   childrens_picture: {
     label: "Children's Picture Book",
-    description: '500-1,500 words with full illustrations',
+    description: '300-500 words with full illustrations',
     icon: 'Palette',
     format: 'picture_book',
     artStyle: 'storybook',
+    dialogueStyle: 'prose', // Text under images
     defaultGenre: 'childrens',
-    targetWords: 1000,
-    chapters: 12, // pages/spreads
+    targetWords: 500, // Reduced from 1000 - picture books are minimal text
+    chapters: 12, // 12 pages/spreads
     priceDisplay: '$39.99',
   },
   childrens_chapter: {
     label: "Children's Chapter Book",
-    description: '5,000-15,000 words with illustrations',
+    description: '5,000-10,000 words with illustrations',
     icon: 'BookMarked',
     format: 'illustrated',
     artStyle: 'cartoon',
+    dialogueStyle: 'prose',
     defaultGenre: 'childrens',
-    targetWords: 10000,
+    targetWords: 8000, // Reduced from 10000
     chapters: 10,
     priceDisplay: '$29.99',
   },
@@ -148,6 +165,7 @@ export const BOOK_PRESETS = {
     icon: 'Image',
     format: 'illustrated',
     artStyle: 'fantasy',
+    dialogueStyle: 'prose',
     defaultGenre: 'fantasy',
     targetWords: 40000,
     chapters: 15,
@@ -155,13 +173,14 @@ export const BOOK_PRESETS = {
   },
   comic_story: {
     label: 'Comic/Graphic Story',
-    description: 'Visual storytelling with manga style',
+    description: 'Visual storytelling with speech bubbles',
     icon: 'Layers',
     format: 'picture_book',
     artStyle: 'manga',
+    dialogueStyle: 'bubbles', // Speech bubbles for comics
     defaultGenre: 'ya',
-    targetWords: 3000,
-    chapters: 20,
+    targetWords: 800, // Reduced from 3000 - comics are mostly visual
+    chapters: 20, // 20 panels/pages
     priceDisplay: '$39.99',
   },
   self_help: {
@@ -170,6 +189,7 @@ export const BOOK_PRESETS = {
     icon: 'Lightbulb',
     format: 'text_only',
     artStyle: null,
+    dialogueStyle: null,
     defaultGenre: 'selfhelp',
     targetWords: 45000,
     chapters: 12,

@@ -187,6 +187,155 @@ JSON format:
   };
 }
 
+// Scene description for visual books
+export interface SceneDescription {
+  description: string;
+  characters: string[];
+  characterActions: Record<string, string>;
+  background: string;
+  mood: string;
+  cameraAngle: string;
+}
+
+// Dialogue for comic-style books
+export interface DialogueEntry {
+  speaker: string;
+  text: string;
+  position: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right' | 'top-center' | 'bottom-center';
+  type?: 'speech' | 'thought' | 'shout';
+}
+
+// Enhanced outline chapter for visual books
+export interface VisualChapter {
+  number: number;
+  title: string;
+  text: string; // The actual page text (for prose style)
+  summary: string;
+  targetWords: number;
+  dialogue?: DialogueEntry[]; // For comic/bubbles style
+  scene: SceneDescription; // Detailed scene for image generation
+}
+
+// Generate outline for visual books (picture books, comics)
+// Returns detailed scene descriptions upfront so text and images can generate in parallel
+export async function generateIllustratedOutline(bookData: {
+  title: string;
+  genre: string;
+  bookType: string;
+  premise: string;
+  characters: { name: string; description: string }[];
+  beginning: string;
+  middle: string;
+  ending: string;
+  writingStyle: string;
+  targetWords: number;
+  targetChapters: number;
+  dialogueStyle: 'prose' | 'bubbles';
+  characterVisualGuide?: {
+    characters: Array<{
+      name: string;
+      physicalDescription: string;
+      clothing: string;
+      distinctiveFeatures: string;
+    }>;
+  };
+}): Promise<{
+  chapters: VisualChapter[];
+}> {
+  const isComicStyle = bookData.dialogueStyle === 'bubbles';
+  const wordsPerPage = Math.ceil(bookData.targetWords / bookData.targetChapters);
+
+  // Build character reference for consistency
+  const characterRef = bookData.characterVisualGuide
+    ? bookData.characterVisualGuide.characters.map(c =>
+        `${c.name}: ${c.physicalDescription}. Wears: ${c.clothing}. Distinct: ${c.distinctiveFeatures}`
+      ).join('\n')
+    : bookData.characters.map(c => `${c.name}: ${c.description}`).join('\n');
+
+  const dialogueInstructions = isComicStyle
+    ? `
+For each page, include "dialogue" array with speech bubbles:
+- 1-4 dialogue entries per page (short, punchy comic dialogue)
+- Each entry has: speaker (character name), text (the speech), position (where on image), type (speech/thought/shout)
+- Positions: "top-left", "top-right", "bottom-left", "bottom-right", "top-center", "bottom-center"
+- Comic dialogue is SHORT - max 15 words per bubble
+`
+    : `
+For each page, the "text" field contains the prose that appears under/around the image.
+Keep text short and age-appropriate (${wordsPerPage} words average per page).
+`;
+
+  const prompt = `You are creating a detailed page-by-page outline for an illustrated ${isComicStyle ? 'comic/graphic story' : 'picture book'}.
+
+BOOK DETAILS:
+- Title: "${bookData.title}"
+- Genre: ${bookData.genre}
+- Premise: ${bookData.premise}
+- Beginning: ${bookData.beginning}
+- Middle: ${bookData.middle}
+- Ending: ${bookData.ending}
+- Style: ${bookData.writingStyle}
+- Total pages: ${bookData.targetChapters}
+- Total words: ~${bookData.targetWords}
+
+CHARACTERS (use these EXACT descriptions for consistency):
+${characterRef}
+
+Create EXACTLY ${bookData.targetChapters} pages. Each page needs BOTH the text/dialogue AND a detailed scene description for illustration.
+
+${dialogueInstructions}
+
+For EVERY page's "scene", provide:
+- description: What's happening in this specific moment (1-2 sentences, UNIQUE to this page)
+- characters: Array of character names appearing in this scene
+- characterActions: Object mapping each character to their specific action/pose/expression in THIS scene
+- background: The setting/environment details for THIS scene
+- mood: The emotional tone (tense, joyful, mysterious, peaceful, exciting, etc.)
+- cameraAngle: How to "shoot" this scene (close-up, wide shot, low angle, bird's eye, etc.)
+
+CRITICAL RULES:
+1. Each page's scene MUST be VISUALLY DISTINCT - different actions, poses, and compositions
+2. Vary camera angles and character positions page to page
+3. Show PROGRESSION - characters should be doing DIFFERENT things on each page
+4. Avoid repetition - no "character standing" or "character looking" on multiple pages
+5. Include specific actions: running, jumping, reaching, laughing, crying, pointing, hugging, etc.
+6. Vary the character's position in the frame (left, right, center, foreground, background)
+
+Output ONLY valid JSON:
+{
+  "chapters": [
+    {
+      "number": 1,
+      "title": "Page Title",
+      "text": "${isComicStyle ? 'Minimal narration if needed' : 'The prose text for this page'}",
+      "summary": "Brief summary of what happens",
+      "targetWords": ${wordsPerPage},
+      ${isComicStyle ? `"dialogue": [
+        {"speaker": "Character", "text": "Short speech!", "position": "top-left", "type": "speech"}
+      ],` : ''}
+      "scene": {
+        "description": "Specific visual moment to illustrate",
+        "characters": ["Character1", "Character2"],
+        "characterActions": {
+          "Character1": "specific action, pose, expression",
+          "Character2": "different specific action"
+        },
+        "background": "Setting details",
+        "mood": "emotional tone",
+        "cameraAngle": "shot type"
+      }
+    }
+  ]
+}`;
+
+  const result = await getGeminiPro().generateContent(prompt);
+  const response = result.response.text();
+
+  return parseJSONFromResponse(response) as {
+    chapters: VisualChapter[];
+  };
+}
+
 export async function generateOutline(bookData: {
   title: string;
   genre: string;
@@ -610,6 +759,77 @@ Output ONLY valid JSON:
       colorMood: 'warm and inviting',
     };
   }
+}
+
+// Build illustration prompt from scene description (for parallel generation)
+export function buildIllustrationPromptFromScene(
+  scene: SceneDescription,
+  artStylePrompt: string,
+  characterVisualGuide?: {
+    characters: Array<{
+      name: string;
+      physicalDescription: string;
+      clothing: string;
+      distinctiveFeatures: string;
+      colorPalette: string;
+    }>;
+    styleNotes: string;
+  },
+  visualStyleGuide?: {
+    overallStyle: string;
+    colorPalette: string;
+    lightingStyle: string;
+    moodAndAtmosphere: string;
+    consistencyRules: string[];
+  }
+): string {
+  // Build character descriptions for characters in this scene
+  let characterDescriptions = '';
+  if (characterVisualGuide) {
+    const sceneCharacters = scene.characters;
+    const relevantChars = characterVisualGuide.characters.filter(c =>
+      sceneCharacters.some(sc => sc.toLowerCase() === c.name.toLowerCase())
+    );
+    if (relevantChars.length > 0) {
+      characterDescriptions = relevantChars.map(c => {
+        const action = scene.characterActions[c.name] || '';
+        return `${c.name}: ${c.physicalDescription}, wearing ${c.clothing}, ${c.distinctiveFeatures}${action ? `. Action: ${action}` : ''}`;
+      }).join('. ');
+    }
+  }
+
+  // Build the prompt
+  let prompt = `${artStylePrompt}. `;
+
+  // Add scene description
+  prompt += `${scene.description}. `;
+
+  // Add character details
+  if (characterDescriptions) {
+    prompt += `Characters: ${characterDescriptions}. `;
+  } else if (scene.characters.length > 0) {
+    const actions = Object.entries(scene.characterActions)
+      .map(([char, action]) => `${char}: ${action}`)
+      .join(', ');
+    prompt += `Characters in scene: ${actions}. `;
+  }
+
+  // Add background and mood
+  prompt += `Background: ${scene.background}. `;
+  prompt += `Mood: ${scene.mood}. `;
+  prompt += `Camera angle: ${scene.cameraAngle}. `;
+
+  // Add style guide if available
+  if (visualStyleGuide) {
+    prompt += `Style: ${visualStyleGuide.overallStyle}. `;
+    prompt += `Colors: ${visualStyleGuide.colorPalette}. `;
+    prompt += `Lighting: ${visualStyleGuide.lightingStyle}. `;
+  }
+
+  // Add critical instructions
+  prompt += 'NO TEXT or letters in the image. Full color illustration.';
+
+  return prompt;
 }
 
 export async function generateCoverImage(coverPrompt: string): Promise<string> {

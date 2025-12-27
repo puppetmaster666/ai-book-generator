@@ -6,7 +6,7 @@ import Image from 'next/image';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { ArrowLeft, ArrowRight, Sparkles, Loader2 } from 'lucide-react';
-import { BOOK_PRESETS, ART_STYLES, GENRES, type BookPresetKey, type ArtStyleKey } from '@/lib/constants';
+import { BOOK_PRESETS, ART_STYLES, GENRES, DIALOGUE_STYLES, type BookPresetKey, type ArtStyleKey, type DialogueStyleKey } from '@/lib/constants';
 
 // Map art style keys to image filenames
 const ART_STYLE_IMAGES: Record<ArtStyleKey, string> = {
@@ -25,6 +25,7 @@ export default function CreateBook() {
   const [step, setStep] = useState<'type' | 'idea' | 'style'>('type');
   const [selectedPreset, setSelectedPreset] = useState<BookPresetKey | null>(null);
   const [selectedArtStyle, setSelectedArtStyle] = useState<ArtStyleKey | null>(null);
+  const [selectedDialogueStyle, setSelectedDialogueStyle] = useState<DialogueStyleKey | null>(null);
   const [idea, setIdea] = useState('');
   const [hasIdeaFromHomepage, setHasIdeaFromHomepage] = useState(false);
   const [isGeneratingIdea, setIsGeneratingIdea] = useState(false);
@@ -66,6 +67,13 @@ export default function CreateBook() {
       setSelectedArtStyle(preset.artStyle as ArtStyleKey);
     } else {
       setSelectedArtStyle(null);
+    }
+
+    // Set default dialogue style (prose vs bubbles) for visual books
+    if (preset.dialogueStyle) {
+      setSelectedDialogueStyle(preset.dialogueStyle as DialogueStyleKey);
+    } else {
+      setSelectedDialogueStyle(null);
     }
 
     // If idea already exists from homepage, skip the idea step
@@ -116,6 +124,7 @@ export default function CreateBook() {
           bookPreset: presetKey,
           bookFormat: preset.format,
           artStyle: preset.artStyle,
+          dialogueStyle: preset.dialogueStyle || null,
           targetWords: preset.targetWords,
           targetChapters: preset.chapters,
         }),
@@ -179,6 +188,7 @@ export default function CreateBook() {
           bookPreset: selectedPreset,
           bookFormat: preset.format,
           artStyle: selectedArtStyle,
+          dialogueStyle: selectedDialogueStyle,
           targetWords: preset.targetWords,
           targetChapters: preset.chapters,
         }),

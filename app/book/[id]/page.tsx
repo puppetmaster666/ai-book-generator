@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, use, useRef } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import Header from '@/components/Header';
 import { Download, BookOpen, Loader2, Check, AlertCircle, ImageIcon, Mail, User, Palette, PenTool, Clock, Zap } from 'lucide-react';
 import Link from 'next/link';
@@ -40,6 +40,8 @@ interface Book {
   completedAt: string | null;
   bookFormat: string;
   artStyle: string | null;
+  dialogueStyle: string | null;
+  bookPreset: string | null;
   outline?: {
     chapters: Array<{
       number: number;
@@ -82,6 +84,7 @@ function formatElapsedTime(seconds: number): string {
 export default function BookProgress({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const searchParams = useSearchParams();
+  const router = useRouter();
   const success = searchParams.get('success');
 
   const [book, setBook] = useState<Book | null>(null);
@@ -93,6 +96,9 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
   const [retrying, setRetrying] = useState(false);
   const startTimeRef = useRef<number | null>(null);
 
+  // Check if this is a comic book (should use parallel panel generation page)
+  const isComicBook = book?.dialogueStyle === 'bubbles' || book?.bookPreset === 'comic_story';
+
   // Start generation if payment successful (either from URL param or from book status)
   useEffect(() => {
     const shouldStartGeneration =
@@ -100,11 +106,30 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
       && !generationStarted;
 
     if (shouldStartGeneration) {
+      // For comic books, redirect to the parallel generation page
+      if (isComicBook) {
+        setGenerationStarted(true);
+        // First generate the outline, then redirect to comic generation page
+        fetch(`/api/books/${id}/generate`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ outlineOnly: true }),
+        })
+          .then(res => res.json())
+          .then(data => {
+            if (data.success || data.outlineOnly) {
+              router.push(`/generate-comic?bookId=${id}`);
+            }
+          })
+          .catch(console.error);
+        return;
+      }
+
       setGenerationStarted(true);
       startTimeRef.current = Date.now();
       fetch(`/api/books/${id}/generate`, { method: 'POST' }).catch(console.error);
     }
-  }, [success, id, generationStarted, book?.paymentStatus, book?.status]);
+  }, [success, id, generationStarted, book?.paymentStatus, book?.status, isComicBook, router]);
 
   // Timer for elapsed time during generation
   useEffect(() => {

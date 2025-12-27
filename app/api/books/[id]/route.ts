@@ -13,25 +13,14 @@ export async function GET(
       include: {
         chapters: {
           orderBy: { number: 'asc' },
-          select: {
-            id: true,
-            number: true,
-            title: true,
-            content: true,
-            wordCount: true,
-            createdAt: true,
+          include: {
+            illustrations: {
+              orderBy: { position: 'asc' },
+            },
           },
         },
         illustrations: {
           orderBy: { createdAt: 'asc' },
-          select: {
-            id: true,
-            chapterId: true,
-            imageUrl: true,
-            altText: true,
-            position: true,
-            createdAt: true,
-          },
         },
       },
     });

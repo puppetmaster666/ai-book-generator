@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import {
   generateOutline,
+  generateIllustratedOutline,
+  buildIllustrationPromptFromScene,
   generateChapter,
   summarizeChapter,
   updateCharacterStates,
@@ -11,10 +13,14 @@ import {
   generateChildrensIllustrationPrompts,
   generateCharacterVisualGuide,
   generateVisualStyleGuide,
+  type VisualChapter,
+  type SceneDescription,
+  type DialogueEntry,
 } from '@/lib/gemini';
 import { countWords } from '@/lib/epub';
-import { BOOK_FORMATS, ART_STYLES, ILLUSTRATION_DIMENSIONS, type BookFormatKey, type ArtStyleKey } from '@/lib/constants';
+import { BOOK_FORMATS, ART_STYLES, ILLUSTRATION_DIMENSIONS, BOOK_PRESETS, type BookFormatKey, type ArtStyleKey, type BookPresetKey } from '@/lib/constants';
 import { sendEmail, getBookReadyEmail } from '@/lib/email';
+import { addSpeechBubbles, type DialogueBubble } from '@/lib/bubbles';
 
 // Timeout for illustration generation (30 seconds) - prevents 504 Gateway Timeout
 const ILLUSTRATION_TIMEOUT_MS = 30000;
@@ -273,12 +279,160 @@ async function generateIllustrationImage(data: {
   return null;
 }
 
+// Generate all illustrations in parallel for visual books
+async function generateIllustrationsInParallel(
+  chapters: VisualChapter[],
+  bookData: {
+    id: string;
+    title: string;
+    artStyle: string;
+    artStylePrompt: string;
+    bookFormat: string;
+    dialogueStyle: string | null;
+    characters: { name: string; description: string }[];
+    premise: string;
+    characterVisualGuide?: CharacterVisualGuide;
+    visualStyleGuide?: VisualStyleGuide;
+  }
+): Promise<Map<number, { imageUrl: string; originalUrl?: string; altText: string; width: number; height: number }>> {
+  const results = new Map<number, { imageUrl: string; originalUrl?: string; altText: string; width: number; height: number }>();
+
+  // Process in batches of 3 to avoid overwhelming the API
+  const batchSize = 3;
+  for (let i = 0; i < chapters.length; i += batchSize) {
+    const batch = chapters.slice(i, i + batchSize);
+    const batchPromises = batch.map(async (chapter) => {
+      if (!chapter.scene) {
+        console.warn(`No scene description for chapter ${chapter.number}`);
+        return null;
+      }
+
+      // Build prompt from scene description
+      const illustrationPrompt = buildIllustrationPromptFromScene(
+        chapter.scene,
+        bookData.artStylePrompt,
+        bookData.characterVisualGuide,
+        bookData.visualStyleGuide
+      );
+
+      console.log(`Generating illustration for page ${chapter.number}...`);
+
+      const result = await generateIllustrationImage({
+        scene: illustrationPrompt,
+        artStyle: bookData.artStyle,
+        characters: bookData.characters.filter(c =>
+          chapter.scene.characters.some(sc => sc.toLowerCase() === c.name.toLowerCase())
+        ),
+        setting: chapter.scene.background,
+        bookTitle: bookData.title,
+        chapterTitle: chapter.title,
+        characterVisualGuide: bookData.characterVisualGuide,
+        visualStyleGuide: bookData.visualStyleGuide,
+        bookFormat: bookData.bookFormat,
+      });
+
+      if (result) {
+        let finalImageUrl = result.imageUrl;
+        let originalUrl: string | undefined;
+
+        // Apply speech bubbles for comic style
+        if (bookData.dialogueStyle === 'bubbles' && chapter.dialogue && chapter.dialogue.length > 0) {
+          try {
+            console.log(`Adding speech bubbles to page ${chapter.number}...`);
+            originalUrl = result.imageUrl;
+
+            // Convert DialogueEntry to DialogueBubble format
+            const bubbles: DialogueBubble[] = chapter.dialogue.map(d => ({
+              speaker: d.speaker,
+              text: d.text,
+              position: d.position,
+              type: d.type,
+            }));
+
+            // Extract base64 from data URI
+            const base64Match = result.imageUrl.match(/^data:[^;]+;base64,(.+)$/);
+            if (base64Match) {
+              const withBubbles = await addSpeechBubbles(base64Match[1], bubbles);
+              finalImageUrl = `data:image/png;base64,${withBubbles}`;
+            }
+          } catch (bubbleError) {
+            console.error(`Failed to add speech bubbles to page ${chapter.number}:`, bubbleError);
+            // Use original image without bubbles
+          }
+        }
+
+        return {
+          chapterNumber: chapter.number,
+          imageUrl: finalImageUrl,
+          originalUrl,
+          altText: chapter.scene.description,
+          width: result.width,
+          height: result.height,
+        };
+      }
+      return null;
+    });
+
+    const batchResults = await Promise.all(batchPromises);
+    for (const result of batchResults) {
+      if (result) {
+        results.set(result.chapterNumber, {
+          imageUrl: result.imageUrl,
+          originalUrl: result.originalUrl,
+          altText: result.altText,
+          width: result.width,
+          height: result.height,
+        });
+      }
+    }
+  }
+
+  return results;
+}
+
+// Check if book should use visual book flow (picture books, comics)
+function isVisualBook(bookFormat: string, bookPreset: string | null): boolean {
+  // Picture books and comics use the visual book flow
+  if (bookFormat === 'picture_book') return true;
+
+  // Check preset
+  if (bookPreset === 'childrens_picture' || bookPreset === 'comic_story') return true;
+
+  return false;
+}
+
+// Get dialogue style from book preset or stored value
+function getDialogueStyle(book: { dialogueStyle: string | null; bookPreset: string | null }): 'prose' | 'bubbles' | null {
+  if (book.dialogueStyle) {
+    return book.dialogueStyle as 'prose' | 'bubbles';
+  }
+
+  // Infer from preset
+  if (book.bookPreset) {
+    const preset = BOOK_PRESETS[book.bookPreset as BookPresetKey];
+    if (preset && 'dialogueStyle' in preset) {
+      return preset.dialogueStyle as 'prose' | 'bubbles' | null;
+    }
+  }
+
+  return null;
+}
+
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id } = await params;
+
+    // Check for outlineOnly mode (for comics - client handles parallel panel generation)
+    let outlineOnly = false;
+    try {
+      const body = await request.json();
+      outlineOnly = body.outlineOnly === true;
+    } catch {
+      // No body or invalid JSON - use default
+    }
 
     const book = await prisma.book.findUnique({
       where: { id },
@@ -337,6 +491,13 @@ export async function POST(
       data: { status: 'outlining' },
     });
 
+    // Determine if this is a visual book that uses the new parallel generation flow
+    const bookFormat = book.bookFormat as BookFormatKey || 'text_only';
+    const useVisualFlow = isVisualBook(bookFormat, book.bookPreset);
+    const dialogueStyle = getDialogueStyle(book);
+
+    console.log(`Book ${id}: format=${bookFormat}, preset=${book.bookPreset}, useVisualFlow=${useVisualFlow}, dialogueStyle=${dialogueStyle}`);
+
     // Step 1: Generate outline if not exists
     let outline = book.outline as { chapters: Array<{
       number: number;
@@ -344,22 +505,47 @@ export async function POST(
       summary: string;
       pov?: string;
       targetWords: number;
+      text?: string;
+      dialogue?: DialogueEntry[];
+      scene?: SceneDescription;
     }> } | null;
 
     if (!outline) {
-      outline = await generateOutline({
-        title: book.title,
-        genre: book.genre,
-        bookType: book.bookType,
-        premise: book.premise,
-        characters: book.characters as { name: string; description: string }[],
-        beginning: book.beginning,
-        middle: book.middle,
-        ending: book.ending,
-        writingStyle: book.writingStyle,
-        targetWords: book.targetWords,
-        targetChapters: book.targetChapters,
-      });
+      if (useVisualFlow && dialogueStyle) {
+        // Use enhanced illustrated outline for visual books
+        console.log('Generating illustrated outline with scene descriptions...');
+        const visualOutline = await generateIllustratedOutline({
+          title: book.title,
+          genre: book.genre,
+          bookType: book.bookType,
+          premise: book.premise,
+          characters: book.characters as { name: string; description: string }[],
+          beginning: book.beginning,
+          middle: book.middle,
+          ending: book.ending,
+          writingStyle: book.writingStyle,
+          targetWords: book.targetWords,
+          targetChapters: book.targetChapters,
+          dialogueStyle: dialogueStyle,
+          characterVisualGuide: book.characterVisualGuide as CharacterVisualGuide | undefined,
+        });
+        outline = visualOutline;
+      } else {
+        // Use standard outline for text-based books
+        outline = await generateOutline({
+          title: book.title,
+          genre: book.genre,
+          bookType: book.bookType,
+          premise: book.premise,
+          characters: book.characters as { name: string; description: string }[],
+          beginning: book.beginning,
+          middle: book.middle,
+          ending: book.ending,
+          writingStyle: book.writingStyle,
+          targetWords: book.targetWords,
+          targetChapters: book.targetChapters,
+        });
+      }
 
       await prisma.book.update({
         where: { id },
@@ -372,7 +558,6 @@ export async function POST(
     }
 
     // Step 1.5: Generate visual guides for illustrated books (before any illustrations)
-    const bookFormat = book.bookFormat as BookFormatKey || 'text_only';
     const formatConfig = BOOK_FORMATS[bookFormat];
     const artStyleKey = book.artStyle as ArtStyleKey | null;
     const artStyleConfig = artStyleKey ? ART_STYLES[artStyleKey] : null;
@@ -418,137 +603,211 @@ export async function POST(
       }
     }
 
-    // Step 2: Generate chapters
+    // For comics with outlineOnly mode, return here so client can do parallel panel generation
+    // The client will fire all /api/generate-panel requests in parallel
+    if (outlineOnly && dialogueStyle === 'bubbles') {
+      console.log(`OutlineOnly mode: returning outline with ${outline.chapters.length} panels for client-side parallel generation`);
+
+      // Update status to 'generating' to indicate panels are being generated
+      await prisma.book.update({
+        where: { id },
+        data: { status: 'generating' },
+      });
+
+      // Refetch book with updated data
+      const updatedBook = await prisma.book.findUnique({
+        where: { id },
+        select: {
+          id: true,
+          title: true,
+          artStyle: true,
+          bookFormat: true,
+          dialogueStyle: true,
+          characterVisualGuide: true,
+          visualStyleGuide: true,
+          outline: true,
+          status: true,
+        },
+      });
+
+      return NextResponse.json({
+        success: true,
+        outlineOnly: true,
+        book: updatedBook,
+        totalPanels: outline.chapters.length,
+        message: 'Outline generated. Ready for parallel panel generation.',
+      });
+    }
+
+    // Step 2: Generate content
     let storySoFar = book.storySoFar || '';
     let characterStates = (book.characterStates as Record<string, object>) || {};
     let totalWords = book.totalWords || 0;
 
     const startChapter = book.currentChapter + 1;
 
-    for (let i = startChapter; i <= outline.chapters.length; i++) {
-      const chapterPlan = outline.chapters[i - 1];
+    // VISUAL BOOK FLOW: Parallel generation for picture books and comics
+    if (useVisualFlow && dialogueStyle && book.artStyle) {
+      console.log('Using parallel generation flow for visual book...');
 
-      // Generate chapter content
-      const chapterContent = await generateChapter({
-        title: book.title,
-        genre: book.genre,
-        bookType: book.bookType,
-        writingStyle: book.writingStyle,
-        outline: outline,
-        storySoFar,
-        characterStates,
-        chapterNumber: chapterPlan.number,
-        chapterTitle: chapterPlan.title,
-        chapterPlan: chapterPlan.summary,
-        chapterPov: chapterPlan.pov,
-        targetWords: chapterPlan.targetWords,
-        chapterFormat: book.chapterFormat,
-      });
+      // Cast outline to visual chapters
+      const visualChapters = outline.chapters as VisualChapter[];
 
-      const wordCount = countWords(chapterContent);
-      totalWords += wordCount;
+      // Step 2a: Generate all illustrations in parallel (using scene descriptions from outline)
+      console.log('Generating all illustrations in parallel...');
+      const illustrationResults = await generateIllustrationsInParallel(
+        visualChapters.slice(startChapter - 1), // Start from where we left off
+        {
+          id,
+          title: book.title,
+          artStyle: book.artStyle,
+          artStylePrompt: artStyleConfig?.prompt || 'professional illustration',
+          bookFormat: bookFormat,
+          dialogueStyle: dialogueStyle,
+          characters,
+          premise: book.premise,
+          characterVisualGuide: characterVisualGuide || undefined,
+          visualStyleGuide: visualStyleGuide || undefined,
+        }
+      );
 
-      // Generate chapter summary (with fallback)
-      let summary: string;
-      try {
-        summary = await summarizeChapter(chapterContent);
-      } catch (summaryError) {
-        console.error(`Failed to summarize chapter ${i}:`, summaryError);
-        summary = chapterContent.substring(0, 500) + '...'; // Fallback to truncated content
+      console.log(`Generated ${illustrationResults.size} illustrations`);
+
+      // Step 2b: Save chapters with their illustrations
+      for (let i = startChapter; i <= outline.chapters.length; i++) {
+        const chapterPlan = visualChapters[i - 1];
+
+        // For visual books, the text is already in the outline
+        const chapterContent = chapterPlan.text || chapterPlan.summary;
+        const wordCount = countWords(chapterContent);
+        totalWords += wordCount;
+
+        // Save chapter with scene description and dialogue
+        const chapter = await prisma.chapter.create({
+          data: {
+            bookId: id,
+            number: i,
+            title: chapterPlan.title,
+            content: chapterContent,
+            summary: chapterPlan.summary || chapterContent.substring(0, 200),
+            wordCount,
+            sceneDescription: chapterPlan.scene as object || null,
+            dialogue: chapterPlan.dialogue as object[] || null,
+          },
+        });
+        console.log(`Page ${i} saved. Word count: ${wordCount}`);
+
+        // Save illustration if generated
+        const illustration = illustrationResults.get(i);
+        if (illustration) {
+          await prisma.illustration.create({
+            data: {
+              bookId: id,
+              chapterId: chapter.id,
+              imageUrl: illustration.imageUrl,
+              originalUrl: illustration.originalUrl || null,
+              prompt: chapterPlan.scene?.description || `Page ${i} illustration`,
+              altText: illustration.altText,
+              position: 0,
+              style: book.artStyle,
+              width: illustration.width,
+              height: illustration.height,
+            },
+          });
+        }
+
+        // Update book progress
+        await prisma.book.update({
+          where: { id },
+          data: {
+            currentChapter: i,
+            totalWords,
+          },
+        });
       }
+    } else {
+      // STANDARD FLOW: Sequential generation for text-based books
+      for (let i = startChapter; i <= outline.chapters.length; i++) {
+        const chapterPlan = outline.chapters[i - 1];
 
-      // Update character states (with fallback)
-      try {
-        characterStates = await updateCharacterStates(
+        // Generate chapter content
+        const chapterContent = await generateChapter({
+          title: book.title,
+          genre: book.genre,
+          bookType: book.bookType,
+          writingStyle: book.writingStyle,
+          outline: outline,
+          storySoFar,
           characterStates,
-          chapterContent,
-          i
-        );
-      } catch (stateError) {
-        console.error(`Failed to update character states for chapter ${i}:`, stateError);
-        // Continue with existing states
-      }
+          chapterNumber: chapterPlan.number,
+          chapterTitle: chapterPlan.title,
+          chapterPlan: chapterPlan.summary,
+          chapterPov: chapterPlan.pov,
+          targetWords: chapterPlan.targetWords,
+          chapterFormat: book.chapterFormat,
+        });
 
-      // Update story so far
-      storySoFar += `\n\nChapter ${i}: ${chapterPlan.title}\n${summary}`;
+        const wordCount = countWords(chapterContent);
+        totalWords += wordCount;
 
-      // Save chapter
-      const chapter = await prisma.chapter.create({
-        data: {
-          bookId: id,
-          number: i,
-          title: chapterPlan.title,
-          content: chapterContent,
-          summary,
-          wordCount,
-        },
-      });
-      console.log(`Chapter ${i} saved successfully. Word count: ${wordCount}`);
-
-      // Generate illustrations if book has illustrations enabled (using pre-generated visual guides)
-      // Uses smart retry with sanitized prompts if content policy blocks occur
-      if (formatConfig && formatConfig.illustrationsPerChapter > 0 && book.artStyle) {
+        // Generate chapter summary (with fallback)
+        let summary: string;
         try {
-          if (bookFormat === 'picture_book') {
-            // Picture book: more detailed, full-page illustrations
-            const illustrationPlan = await generateChildrensIllustrationPrompts({
-              pageNumber: i,
-              pageText: chapterContent.substring(0, 500),
-              characters,
-              setting: book.premise.substring(0, 200),
-              artStyle: artStyleConfig?.prompt || 'storybook illustration',
-              bookTitle: book.title,
-            });
+          summary = await summarizeChapter(chapterContent);
+        } catch (summaryError) {
+          console.error(`Failed to summarize chapter ${i}:`, summaryError);
+          summary = chapterContent.substring(0, 500) + '...'; // Fallback to truncated content
+        }
 
-            // Generate the illustration image with visual consistency guides
-            const illustrationResponse = await generateIllustrationImage({
-              scene: illustrationPlan.visualDescription,
-              artStyle: book.artStyle,
-              characters,
-              setting: illustrationPlan.backgroundDetails,
-              bookTitle: book.title,
-              chapterTitle: chapterPlan.title,
-              characterVisualGuide: characterVisualGuide || undefined,
-              visualStyleGuide: visualStyleGuide || undefined,
-              bookFormat: bookFormat,
-            });
+        // Update character states (with fallback)
+        try {
+          characterStates = await updateCharacterStates(
+            characterStates,
+            chapterContent,
+            i
+          );
+        } catch (stateError) {
+          console.error(`Failed to update character states for chapter ${i}:`, stateError);
+          // Continue with existing states
+        }
 
-            if (illustrationResponse) {
-              await prisma.illustration.create({
-                data: {
-                  bookId: id,
-                  chapterId: chapter.id,
-                  imageUrl: illustrationResponse.imageUrl,
-                  prompt: illustrationPlan.visualDescription,
-                  altText: illustrationPlan.scene,
-                  position: 0,
-                  style: book.artStyle,
-                  width: illustrationResponse.width,
-                  height: illustrationResponse.height,
-                },
-              });
-            }
-          } else {
-            // Illustrated book: 1 illustration per chapter
-            const illustrationPrompts = await generateIllustrationPrompts({
-              chapterNumber: i,
-              chapterTitle: chapterPlan.title,
-              chapterContent,
-              characters,
-              artStyle: artStyleConfig?.prompt || 'professional illustration',
-              illustrationsCount: formatConfig.illustrationsPerChapter,
-              bookTitle: book.title,
-            });
+        // Update story so far
+        storySoFar += `\n\nChapter ${i}: ${chapterPlan.title}\n${summary}`;
 
-            // Generate each illustration with visual consistency guides
-            for (let j = 0; j < illustrationPrompts.length; j++) {
-              const illustPrompt = illustrationPrompts[j];
+        // Save chapter
+        const chapter = await prisma.chapter.create({
+          data: {
+            bookId: id,
+            number: i,
+            title: chapterPlan.title,
+            content: chapterContent,
+            summary,
+            wordCount,
+          },
+        });
+        console.log(`Chapter ${i} saved successfully. Word count: ${wordCount}`);
 
-              const illustrationResponse = await generateIllustrationImage({
-                scene: illustPrompt.description,
-                artStyle: book.artStyle,
-                characters: characters.filter(c => illustPrompt.characters.includes(c.name)),
+        // Generate illustrations if book has illustrations enabled (using pre-generated visual guides)
+        // Uses smart retry with sanitized prompts if content policy blocks occur
+        if (formatConfig && formatConfig.illustrationsPerChapter > 0 && book.artStyle) {
+          try {
+            if (bookFormat === 'picture_book') {
+              // Picture book: more detailed, full-page illustrations
+              const illustrationPlan = await generateChildrensIllustrationPrompts({
+                pageNumber: i,
+                pageText: chapterContent.substring(0, 500),
+                characters,
                 setting: book.premise.substring(0, 200),
+                artStyle: artStyleConfig?.prompt || 'storybook illustration',
+                bookTitle: book.title,
+              });
+
+              // Generate the illustration image with visual consistency guides
+              const illustrationResponse = await generateIllustrationImage({
+                scene: illustrationPlan.visualDescription,
+                artStyle: book.artStyle,
+                characters,
+                setting: illustrationPlan.backgroundDetails,
                 bookTitle: book.title,
                 chapterTitle: chapterPlan.title,
                 characterVisualGuide: characterVisualGuide || undefined,
@@ -562,34 +821,78 @@ export async function POST(
                     bookId: id,
                     chapterId: chapter.id,
                     imageUrl: illustrationResponse.imageUrl,
-                    prompt: illustPrompt.description,
-                    altText: illustPrompt.scene,
-                    position: j,
+                    prompt: illustrationPlan.visualDescription,
+                    altText: illustrationPlan.scene,
+                    position: 0,
                     style: book.artStyle,
                     width: illustrationResponse.width,
                     height: illustrationResponse.height,
                   },
                 });
               }
-            }
-          }
-        } catch (illustrationError) {
-          console.error(`Failed to generate illustrations for chapter ${i}:`, illustrationError);
-          // Continue without illustrations - don't fail the whole book
-        }
-      }
+            } else {
+              // Illustrated book: 1 illustration per chapter
+              const illustrationPrompts = await generateIllustrationPrompts({
+                chapterNumber: i,
+                chapterTitle: chapterPlan.title,
+                chapterContent,
+                characters,
+                artStyle: artStyleConfig?.prompt || 'professional illustration',
+                illustrationsCount: formatConfig.illustrationsPerChapter,
+                bookTitle: book.title,
+              });
 
-      // Update book progress
-      await prisma.book.update({
-        where: { id },
-        data: {
-          currentChapter: i,
-          totalWords,
-          storySoFar,
-          characterStates: characterStates as object,
-        },
-      });
-    }
+              // Generate each illustration with visual consistency guides
+              for (let j = 0; j < illustrationPrompts.length; j++) {
+                const illustPrompt = illustrationPrompts[j];
+
+                const illustrationResponse = await generateIllustrationImage({
+                  scene: illustPrompt.description,
+                  artStyle: book.artStyle,
+                  characters: characters.filter(c => illustPrompt.characters.includes(c.name)),
+                  setting: book.premise.substring(0, 200),
+                  bookTitle: book.title,
+                  chapterTitle: chapterPlan.title,
+                  characterVisualGuide: characterVisualGuide || undefined,
+                  visualStyleGuide: visualStyleGuide || undefined,
+                  bookFormat: bookFormat,
+                });
+
+                if (illustrationResponse) {
+                  await prisma.illustration.create({
+                    data: {
+                      bookId: id,
+                      chapterId: chapter.id,
+                      imageUrl: illustrationResponse.imageUrl,
+                      prompt: illustPrompt.description,
+                      altText: illustPrompt.scene,
+                      position: j,
+                      style: book.artStyle,
+                      width: illustrationResponse.width,
+                      height: illustrationResponse.height,
+                    },
+                  });
+                }
+              }
+            }
+          } catch (illustrationError) {
+            console.error(`Failed to generate illustrations for chapter ${i}:`, illustrationError);
+            // Continue without illustrations - don't fail the whole book
+          }
+        }
+
+        // Update book progress
+        await prisma.book.update({
+          where: { id },
+          data: {
+            currentChapter: i,
+            totalWords,
+            storySoFar,
+            characterStates: characterStates as object,
+          },
+        });
+      }
+    } // End of else block for standard flow
 
     // Step 3: Generate cover (using visual guides for consistency with interior)
     const coverPrompt = await generateCoverPrompt({

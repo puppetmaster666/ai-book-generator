@@ -92,6 +92,7 @@ model Book {
   // Book format & illustrations
   bookFormat      String    @default("text_only") // text_only, illustrated, picture_book
   artStyle        String?   // watercolor, cartoon, storybook, etc.
+  dialogueStyle   String?   // prose (text under images), bubbles (speech bubbles on images)
   bookPreset      String?   // novel, childrens_picture, etc.
 
   // Target settings
@@ -140,6 +141,11 @@ model Chapter {
   summary   String   @db.Text
   wordCount Int
 
+  // Scene description for visual books (enables parallel generation)
+  sceneDescription Json?   // { description, characters, characterActions, background, mood, cameraAngle }
+  // Dialogue for comic-style books
+  dialogue         Json?   // Array of { speaker, text, position }
+
   illustrations Illustration[]
   createdAt     DateTime @default(now())
 
@@ -155,7 +161,8 @@ model Illustration {
   chapter     Chapter? @relation(fields: [chapterId], references: [id], onDelete: Cascade)
 
   // Image details
-  imageUrl    String   // URL to stored image
+  imageUrl    String   // URL to stored image (may have speech bubbles overlaid)
+  originalUrl String?  // Original image URL before bubble overlay (for comics)
   prompt      String   @db.Text  // The prompt used to generate
   altText     String?  // Accessibility text
   position    Int      @default(0) // Order within chapter (0 = chapter start)
