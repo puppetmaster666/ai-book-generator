@@ -100,9 +100,11 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
   const isComicBook = book?.dialogueStyle === 'bubbles' || book?.bookPreset === 'comic_story';
 
   // Start generation if payment successful (either from URL param or from book status)
+  // Wait for book to load first so we can check if it's a comic book
   useEffect(() => {
     const shouldStartGeneration =
-      (success === 'true' || (book?.paymentStatus === 'completed' && book?.status === 'pending'))
+      book &&  // Wait for book to load before checking isComicBook
+      (success === 'true' || (book.paymentStatus === 'completed' && book.status === 'pending'))
       && !generationStarted;
 
     if (shouldStartGeneration) {
