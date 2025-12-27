@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { BookOpen, Plus, Download, Clock, Check, AlertCircle } from 'lucide-react';
@@ -22,12 +24,43 @@ interface Book {
 export default function Dashboard() {
   const [books, setBooks] = useState<Book[]>([]);
   const [loading, setLoading] = useState(true);
+  const { data: session, status: sessionStatus } = useSession();
+  const router = useRouter();
 
   useEffect(() => {
-    // TODO: Fetch user's books from API
-    // For now, show empty state
-    setLoading(false);
-  }, []);
+    // Redirect to login if not authenticated
+    if (sessionStatus === 'unauthenticated') {
+      router.push('/login?callbackUrl=/dashboard');
+      return;
+    }
+
+    // Fetch books when session is available
+    if (sessionStatus === 'authenticated' && session?.user) {
+      const fetchBooks = async () => {
+        try {
+          const userId = (session.user as { id?: string }).id;
+          const email = session.user.email;
+
+          // Pass both userId AND email to find all user's books
+          const params = new URLSearchParams();
+          if (userId) params.set('userId', userId);
+          if (email) params.set('email', email);
+
+          const response = await fetch(`/api/books?${params.toString()}`);
+          if (response.ok) {
+            const data = await response.json();
+            setBooks(data.books || []);
+          }
+        } catch (error) {
+          console.error('Failed to fetch books:', error);
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      fetchBooks();
+    }
+  }, [session, sessionStatus, router]);
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -61,7 +94,7 @@ export default function Dashboard() {
             </Link>
           </div>
 
-          {loading ? (
+          {loading || sessionStatus === 'loading' ? (
             <div className="text-center py-12">
               <div className="loading-spinner mx-auto mb-4"></div>
               <p className="text-neutral-600">Loading your books...</p>

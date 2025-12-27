@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import Image from 'next/image';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
@@ -28,6 +29,7 @@ const ART_STYLE_IMAGES: Partial<Record<ArtStyleKey, string>> = {
 
 export default function CreateBook() {
   const router = useRouter();
+  const { data: session } = useSession();
   const [step, setStep] = useState<'type' | 'idea' | 'style'>('type');
   const [selectedPreset, setSelectedPreset] = useState<BookPresetKey | null>(null);
   const [selectedArtStyle, setSelectedArtStyle] = useState<ArtStyleKey | null>(null);
@@ -36,6 +38,9 @@ export default function CreateBook() {
   const [isGeneratingIdea, setIsGeneratingIdea] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
+
+  // Get user ID from session if logged in
+  const userId = (session?.user as { id?: string })?.id;
 
   // Check if coming from homepage with an idea
   useEffect(() => {
@@ -120,6 +125,7 @@ export default function CreateBook() {
           dialogueStyle: preset.dialogueStyle || null,
           targetWords: preset.targetWords,
           targetChapters: preset.chapters,
+          userId,
         }),
       });
 
@@ -181,6 +187,7 @@ export default function CreateBook() {
           dialogueStyle: preset.dialogueStyle,
           targetWords: preset.targetWords,
           targetChapters: preset.chapters,
+          userId,
         }),
       });
 

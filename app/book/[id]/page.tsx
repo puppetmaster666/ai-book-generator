@@ -757,7 +757,7 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
                   <div
                     key={illustration.id}
                     className="aspect-square rounded-xl overflow-hidden bg-neutral-100 border border-neutral-200 hover:border-neutral-400 transition-colors cursor-pointer group"
-                    onClick={() => window.open(illustration.imageUrl, '_blank')}
+                    onClick={() => router.push(`/book/${id}/image/${illustration.id}`)}
                   >
                     <img
                       src={illustration.imageUrl}

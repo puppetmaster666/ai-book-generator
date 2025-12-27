@@ -110,8 +110,13 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // Search by BOTH userId AND email to catch books created before user association
+    const whereConditions = [];
+    if (userId) whereConditions.push({ userId });
+    if (email) whereConditions.push({ email });
+
     const books = await prisma.book.findMany({
-      where: userId ? { userId } : { email },
+      where: whereConditions.length > 1 ? { OR: whereConditions } : whereConditions[0],
       orderBy: { createdAt: 'desc' },
       select: {
         id: true,
