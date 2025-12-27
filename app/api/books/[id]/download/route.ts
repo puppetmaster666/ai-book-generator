@@ -36,6 +36,9 @@ export async function GET(
     }
 
     // Generate EPUB with illustrations if available
+    const isComic = book.dialogueStyle === 'bubbles' || book.bookFormat === 'comic_book';
+    console.log(`Generating EPUB for book ${id}: format=${book.bookFormat}, dialogueStyle=${book.dialogueStyle}, isComic=${isComic}`);
+
     const epubBuffer = await generateEpub({
       title: book.title,
       authorName: book.authorName,
@@ -53,6 +56,7 @@ export async function GET(
       fontStyle: book.fontStyle as FontStyleKey,
       coverImageUrl: book.coverImageUrl || undefined,
       bookFormat: book.bookFormat,
+      dialogueStyle: book.dialogueStyle || undefined,
     });
 
     // Return as downloadable file
@@ -65,9 +69,10 @@ export async function GET(
       },
     });
   } catch (error) {
-    console.error('Error downloading book:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error('Error downloading book:', errorMessage, error);
     return NextResponse.json(
-      { error: 'Failed to generate download' },
+      { error: `Failed to generate download: ${errorMessage}` },
       { status: 500 }
     );
   }

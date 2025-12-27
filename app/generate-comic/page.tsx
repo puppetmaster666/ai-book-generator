@@ -5,7 +5,14 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
-import { Loader2, Check, X, Download, AlertCircle, RefreshCw, StopCircle } from 'lucide-react';
+import { Loader2, Check, X, Download, AlertCircle, RefreshCw, StopCircle, Clock } from 'lucide-react';
+
+// Format elapsed time as MM:SS
+function formatTime(seconds: number): string {
+  const mins = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+  return `${mins}:${secs.toString().padStart(2, '0')}`;
+}
 
 interface Panel {
   number: number;
@@ -62,9 +69,32 @@ function GenerateComicContent() {
   const [isCancelling, setIsCancelling] = useState(false);
   const [error, setError] = useState('');
   const [allComplete, setAllComplete] = useState(false);
+  const [elapsedTime, setElapsedTime] = useState(0);
 
   // AbortController for cancelling requests
   const abortControllerRef = useRef<AbortController | null>(null);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Timer effect
+  useEffect(() => {
+    if (isGenerating) {
+      setElapsedTime(0);
+      timerRef.current = setInterval(() => {
+        setElapsedTime(prev => prev + 1);
+      }, 1000);
+    } else {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+    }
+
+    return () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+      }
+    };
+  }, [isGenerating]);
 
   // Load book data and outline
   useEffect(() => {
@@ -402,11 +432,37 @@ function GenerateComicContent() {
             )}
           </div>
 
-          {/* Generating Status */}
+          {/* Generating Status with Timer */}
           {isGenerating && (
-            <div className="mb-8 p-4 bg-amber-50 border border-amber-200 rounded-xl text-center text-amber-700">
-              <Loader2 className="h-5 w-5 animate-spin inline mr-2" />
-              Generating {generatingCount} panels in parallel... This may take a few minutes.
+            <div className="mb-8 bg-amber-50 border border-amber-200 rounded-2xl overflow-hidden">
+              {/* Timer Header */}
+              <div className="bg-amber-100 px-6 py-4 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-amber-200 rounded-full flex items-center justify-center">
+                    <Clock className="h-5 w-5 text-amber-700" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-amber-900">Generating Your Comic</p>
+                    <p className="text-sm text-amber-700">{generatingCount} panels in progress</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="text-2xl font-mono font-bold text-amber-900">{formatTime(elapsedTime)}</p>
+                  <p className="text-xs text-amber-600">elapsed</p>
+                </div>
+              </div>
+
+              {/* Warning Message */}
+              <div className="px-6 py-4 text-center">
+                <div className="flex items-center justify-center gap-2 text-amber-800 mb-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span className="font-medium">Please do not leave this page</span>
+                </div>
+                <p className="text-sm text-amber-700">
+                  This typically takes <strong>3-4 minutes</strong> for {panels.length} panels.
+                  Your comic is being generated in parallel for faster results.
+                </p>
+              </div>
             </div>
           )}
 
