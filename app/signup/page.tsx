@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, Suspense } from 'react';
+import { useState, Suspense, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { signIn } from 'next-auth/react';
+import { signIn, useSession } from 'next-auth/react';
 import Header from '@/components/Header';
 import { Loader2 } from 'lucide-react';
 
@@ -11,6 +11,7 @@ function SignupContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const plan = searchParams.get('plan');
+  const { data: session, status } = useSession();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -18,6 +19,26 @@ function SignupContent() {
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [error, setError] = useState('');
+
+  // Redirect logged-in users to checkout or dashboard
+  useEffect(() => {
+    if (status === 'authenticated' && session) {
+      if (plan) {
+        router.push(`/checkout?plan=${plan}`);
+      } else {
+        router.push('/dashboard');
+      }
+    }
+  }, [status, session, plan, router]);
+
+  // Show loading while checking session
+  if (status === 'loading' || (status === 'authenticated' && session)) {
+    return (
+      <div className="min-h-screen bg-[#FAFAFA] flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-neutral-900" />
+      </div>
+    );
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

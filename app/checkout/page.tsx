@@ -18,6 +18,7 @@ function CheckoutContent() {
   const router = useRouter();
   const bookId = searchParams.get('bookId');
   const urlPromoCode = searchParams.get('promo');
+  const planType = searchParams.get('plan'); // 'monthly' or 'yearly'
 
   const [email, setEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -27,14 +28,21 @@ function CheckoutContent() {
   const [bookDetails, setBookDetails] = useState<BookDetails | null>(null);
   const [isLoadingBook, setIsLoadingBook] = useState(true);
 
+  // Determine if this is a subscription checkout
+  const isSubscription = planType === 'monthly' || planType === 'yearly';
+
   // Promo code state
   const [promoCode, setPromoCode] = useState(urlPromoCode || '');
   const [promoDiscount, setPromoDiscount] = useState<number | null>(null);
   const [promoError, setPromoError] = useState('');
   const [isValidatingPromo, setIsValidatingPromo] = useState(false);
 
-  // Fetch book details
+  // Fetch book details (only for book purchases, not subscriptions)
   useEffect(() => {
+    if (isSubscription) {
+      setIsLoadingBook(false);
+      return;
+    }
     if (bookId) {
       fetch(`/api/books/${bookId}`)
         .then(res => res.json())
@@ -46,7 +54,7 @@ function CheckoutContent() {
     } else {
       setIsLoadingBook(false);
     }
-  }, [bookId]);
+  }, [bookId, isSubscription]);
 
   // Auto-validate promo code from URL
   useEffect(() => {
@@ -129,10 +137,10 @@ function CheckoutContent() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          bookId,
+          bookId: isSubscription ? undefined : bookId,
           email,
-          productType: 'one-time',
-          applyDiscount: !promoDiscount && applyDiscount, // Only apply idle discount if no promo
+          productType: isSubscription ? planType : 'one-time',
+          applyDiscount: !promoDiscount && applyDiscount,
           promoCode: promoDiscount ? promoCode : undefined,
         }),
       });
@@ -149,17 +157,29 @@ function CheckoutContent() {
     }
   };
 
-  // Get price based on book format
+  // Get price based on product type
   const getBasePrice = () => {
+    if (isSubscription) {
+      return planType === 'monthly' ? PRICING.MONTHLY.price : PRICING.YEARLY.price;
+    }
     if (!bookDetails) return PRICING.ONE_TIME.price;
     if (bookDetails.bookFormat === 'picture_book') return PRICING.VISUAL.price;
     return PRICING.ONE_TIME.price;
   };
 
   const getProductLabel = () => {
+    if (isSubscription) {
+      return planType === 'monthly' ? 'Monthly Subscription' : 'Yearly Subscription';
+    }
     if (!bookDetails) return 'AI Book Generation';
     if (bookDetails.bookFormat === 'picture_book') return 'Visual Book';
     return 'Novel';
+  };
+
+  const getPriceLabel = () => {
+    if (planType === 'monthly') return '/month';
+    if (planType === 'yearly') return '/year';
+    return '';
   };
 
   const originalPrice = getBasePrice() / 100;
@@ -196,12 +216,26 @@ function CheckoutContent() {
           </div>
 
           <div className="bg-white rounded-2xl border border-neutral-200 p-8">
-            {/* Book Preview */}
-            {isLoadingBook ? (
+            {/* Subscription Header */}
+            {isSubscription && (
+              <div className="mb-6 pb-6 border-b border-neutral-200">
+                <h3 className="font-semibold text-lg mb-2" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>
+                  {planType === 'monthly' ? 'Monthly Plan' : 'Yearly Plan'}
+                </h3>
+                <p className="text-sm text-neutral-600">
+                  {planType === 'monthly'
+                    ? '5 novels per month with priority generation'
+                    : '50 novel credits to use anytime'}
+                </p>
+              </div>
+            )}
+
+            {/* Book Preview (only for book purchases) */}
+            {!isSubscription && isLoadingBook ? (
               <div className="flex items-center justify-center py-8">
                 <Loader2 className="h-6 w-6 animate-spin text-neutral-400" />
               </div>
-            ) : bookDetails && (
+            ) : !isSubscription && bookDetails && (
               <div className="mb-6 pb-6 border-b border-neutral-200">
                 <h3 className="font-semibold text-lg mb-2" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>
                   {bookDetails.title}
@@ -222,31 +256,46 @@ function CheckoutContent() {
                 <span className="text-neutral-600">{getProductLabel()}</span>
                 {(promoDiscount || applyDiscount) ? (
                   <span>
-                    <span className="line-through text-neutral-400 mr-2">${originalPrice.toFixed(2)}</span>
-                    <span className="font-medium text-green-600">${finalPrice.toFixed(2)}</span>
+                    <span className="line-through text-neutral-400 mr-2">${originalPrice.toFixed(2)}{getPriceLabel()}</span>
+                    <span className="font-medium text-green-600">${finalPrice.toFixed(2)}{getPriceLabel()}</span>
                   </span>
                 ) : (
-                  <span className="font-medium">${originalPrice.toFixed(2)}</span>
+                  <span className="font-medium">${originalPrice.toFixed(2)}{getPriceLabel()}</span>
                 )}
               </div>
-              <div className="flex justify-between text-sm mt-2">
-                <span className="text-neutral-600">AI-Generated Cover</span>
-                <span className="font-medium text-green-600">Included</span>
-              </div>
-              {bookDetails?.bookFormat !== 'text_only' && (
-                <div className="flex justify-between text-sm mt-2">
-                  <span className="text-neutral-600">Illustrations</span>
-                  <span className="font-medium text-green-600">Included</span>
-                </div>
+              {isSubscription ? (
+                <>
+                  <div className="flex justify-between text-sm mt-2">
+                    <span className="text-neutral-600">{planType === 'monthly' ? '5 novels/month' : '50 novel credits'}</span>
+                    <span className="font-medium text-green-600">Included</span>
+                  </div>
+                  <div className="flex justify-between text-sm mt-2">
+                    <span className="text-neutral-600">Priority generation</span>
+                    <span className="font-medium text-green-600">Included</span>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="flex justify-between text-sm mt-2">
+                    <span className="text-neutral-600">AI-Generated Cover</span>
+                    <span className="font-medium text-green-600">Included</span>
+                  </div>
+                  {bookDetails?.bookFormat !== 'text_only' && (
+                    <div className="flex justify-between text-sm mt-2">
+                      <span className="text-neutral-600">Illustrations</span>
+                      <span className="font-medium text-green-600">Included</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between text-sm mt-2">
+                    <span className="text-neutral-600">EPUB Download</span>
+                    <span className="font-medium text-green-600">Included</span>
+                  </div>
+                </>
               )}
-              <div className="flex justify-between text-sm mt-2">
-                <span className="text-neutral-600">EPUB Download</span>
-                <span className="font-medium text-green-600">Included</span>
-              </div>
               <hr className="my-4 border-neutral-200" />
               <div className="flex justify-between font-medium text-lg">
                 <span>Total</span>
-                <span>${finalPrice.toFixed(2)}</span>
+                <span>${finalPrice.toFixed(2)}{getPriceLabel()}</span>
               </div>
               {discountLabel && (
                 <p className="text-xs text-green-600 mt-2">{discountLabel} applied!</p>
@@ -309,29 +358,58 @@ function CheckoutContent() {
                 placeholder="your@email.com"
                 className="w-full px-4 py-3 border border-neutral-200 rounded-xl focus:border-neutral-900 focus:outline-none transition-colors"
               />
-              <p className="text-xs text-neutral-500 mt-1">We&apos;ll send your book download link to this email</p>
+              <p className="text-xs text-neutral-500 mt-1">
+                {isSubscription ? 'Your account will be linked to this email' : 'We\'ll send your book download link to this email'}
+              </p>
             </div>
 
             {/* What You Get */}
             <div className="mb-6">
               <h3 className="font-medium mb-3" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>What You Get</h3>
               <ul className="space-y-2">
-                <li className="flex items-center gap-2 text-sm text-neutral-600">
-                  <Check className="h-4 w-4 text-green-600" />
-                  Complete book based on your specifications
-                </li>
-                <li className="flex items-center gap-2 text-sm text-neutral-600">
-                  <Check className="h-4 w-4 text-green-600" />
-                  Professional AI-generated cover
-                </li>
-                <li className="flex items-center gap-2 text-sm text-neutral-600">
-                  <Check className="h-4 w-4 text-green-600" />
-                  EPUB format ready for Amazon KDP
-                </li>
-                <li className="flex items-center gap-2 text-sm text-neutral-600">
-                  <Check className="h-4 w-4 text-green-600" />
-                  Full commercial rights
-                </li>
+                {isSubscription ? (
+                  <>
+                    <li className="flex items-center gap-2 text-sm text-neutral-600">
+                      <Check className="h-4 w-4 text-green-600" />
+                      {planType === 'monthly' ? '5 novels per month' : '50 novel credits (use anytime)'}
+                    </li>
+                    <li className="flex items-center gap-2 text-sm text-neutral-600">
+                      <Check className="h-4 w-4 text-green-600" />
+                      AI-generated covers for all books
+                    </li>
+                    <li className="flex items-center gap-2 text-sm text-neutral-600">
+                      <Check className="h-4 w-4 text-green-600" />
+                      Priority generation queue
+                    </li>
+                    <li className="flex items-center gap-2 text-sm text-neutral-600">
+                      <Check className="h-4 w-4 text-green-600" />
+                      Full commercial rights
+                    </li>
+                    <li className="flex items-center gap-2 text-sm text-neutral-600">
+                      <Check className="h-4 w-4 text-green-600" />
+                      {planType === 'monthly' ? 'Cancel anytime' : 'Credits never expire'}
+                    </li>
+                  </>
+                ) : (
+                  <>
+                    <li className="flex items-center gap-2 text-sm text-neutral-600">
+                      <Check className="h-4 w-4 text-green-600" />
+                      Complete book based on your specifications
+                    </li>
+                    <li className="flex items-center gap-2 text-sm text-neutral-600">
+                      <Check className="h-4 w-4 text-green-600" />
+                      Professional AI-generated cover
+                    </li>
+                    <li className="flex items-center gap-2 text-sm text-neutral-600">
+                      <Check className="h-4 w-4 text-green-600" />
+                      EPUB format ready for Amazon KDP
+                    </li>
+                    <li className="flex items-center gap-2 text-sm text-neutral-600">
+                      <Check className="h-4 w-4 text-green-600" />
+                      Full commercial rights
+                    </li>
+                  </>
+                )}
               </ul>
             </div>
 
@@ -344,7 +422,7 @@ function CheckoutContent() {
               {isLoading ? (
                 <><Loader2 className="h-5 w-5 animate-spin" /> Processing...</>
               ) : (
-                <><CreditCard className="h-5 w-5" /> Pay ${finalPrice.toFixed(2)}</>
+                <><CreditCard className="h-5 w-5" /> {isSubscription ? `Subscribe - $${finalPrice.toFixed(2)}${getPriceLabel()}` : `Pay $${finalPrice.toFixed(2)}`}</>
               )}
             </button>
 
