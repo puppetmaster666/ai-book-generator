@@ -7,6 +7,15 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
 
+    // Debug: log what we're receiving
+    console.log('Creating book with:', {
+      bookPreset: body.bookPreset,
+      bookFormat: body.bookFormat,
+      artStyle: body.artStyle,
+      dialogueStyle: body.dialogueStyle,
+      targetChapters: body.targetChapters,
+    });
+
     const {
       title,
       authorName,
@@ -69,6 +78,13 @@ export async function POST(request: NextRequest) {
         bookPreset: bookPreset || null,
         dialogueStyle: dialogueStyle || null,
       },
+    });
+
+    console.log('Book created:', {
+      id: book.id,
+      bookPreset: book.bookPreset,
+      dialogueStyle: book.dialogueStyle,
+      bookFormat: book.bookFormat,
     });
 
     return NextResponse.json({ bookId: book.id, book });

@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useEffect, useCallback, Suspense } from 'react';
+import { useState, useEffect, useCallback, Suspense, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import Header from '@/components/Header';
-import { Loader2, Check, X, Download, AlertCircle, RefreshCw } from 'lucide-react';
+import Footer from '@/components/Footer';
+import { Loader2, Check, X, Download, AlertCircle, RefreshCw, StopCircle } from 'lucide-react';
 
 interface Panel {
   number: number;
@@ -58,8 +59,12 @@ function GenerateComicContent() {
   const [isLoading, setIsLoading] = useState(true);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isAssembling, setIsAssembling] = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
   const [error, setError] = useState('');
   const [allComplete, setAllComplete] = useState(false);
+
+  // AbortController for cancelling requests
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   // Load book data and outline
   useEffect(() => {
@@ -105,7 +110,7 @@ function GenerateComicContent() {
   }, [panels]);
 
   // Generate a single panel
-  const generatePanel = useCallback(async (panelIndex: number) => {
+  const generatePanel = useCallback(async (panelIndex: number, signal?: AbortSignal) => {
     if (!bookData || !panels[panelIndex]) return;
 
     const panel = panels[panelIndex];
@@ -131,6 +136,7 @@ function GenerateComicContent() {
           chapterTitle: panel.title,
           chapterText: panel.text,
         }),
+        signal,
       });
 
       if (!response.ok) {
@@ -146,6 +152,15 @@ function GenerateComicContent() {
           : p
       ));
     } catch (err) {
+      if (err instanceof Error && err.name === 'AbortError') {
+        // Request was cancelled
+        setPanels(prev => prev.map((p, i) =>
+          i === panelIndex
+            ? { ...p, status: 'pending' as const, error: undefined }
+            : p
+        ));
+        return;
+      }
       const errorMsg = err instanceof Error ? err.message : 'Unknown error';
       setPanels(prev => prev.map((p, i) =>
         i === panelIndex
@@ -159,15 +174,49 @@ function GenerateComicContent() {
   const generateAllPanels = useCallback(async () => {
     if (!bookData || panels.length === 0) return;
 
+    // Create new AbortController
+    abortControllerRef.current = new AbortController();
+    const signal = abortControllerRef.current.signal;
+
     setIsGenerating(true);
     setError('');
 
     // Fire ALL generations at once - true parallel!
-    const promises = panels.map((_, index) => generatePanel(index));
+    const promises = panels.map((_, index) => generatePanel(index, signal));
     await Promise.allSettled(promises);
 
-    setIsGenerating(false);
+    if (!signal.aborted) {
+      setIsGenerating(false);
+    }
   }, [bookData, panels, generatePanel]);
+
+  // Cancel generation
+  const cancelGeneration = useCallback(async () => {
+    setIsCancelling(true);
+
+    // Abort all pending requests
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+
+    // Reset all generating panels to pending
+    setPanels(prev => prev.map(p =>
+      p.status === 'generating' ? { ...p, status: 'pending' as const } : p
+    ));
+
+    setIsGenerating(false);
+    setIsCancelling(false);
+
+    // Ask if user wants to delete the book
+    if (confirm('Do you want to delete this book and go back home?')) {
+      try {
+        await fetch(`/api/books/${bookId}`, { method: 'DELETE' });
+      } catch (e) {
+        console.error('Failed to delete book:', e);
+      }
+      router.push('/');
+    }
+  }, [bookId, router]);
 
   // Retry a failed panel
   const retryPanel = useCallback((index: number) => {
@@ -217,12 +266,12 @@ function GenerateComicContent() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-[#0a0a0a]">
+      <div className="min-h-screen bg-[#FAFAFA]">
         <Header />
         <main className="py-20 px-6">
           <div className="max-w-6xl mx-auto text-center">
-            <Loader2 className="h-12 w-12 animate-spin mx-auto mb-4 text-white" />
-            <p className="text-neutral-400">Loading comic outline...</p>
+            <Loader2 className="h-12 w-12 animate-spin mx-auto mb-4 text-neutral-900" />
+            <p className="text-neutral-600">Loading comic outline...</p>
           </div>
         </main>
       </div>
@@ -231,16 +280,16 @@ function GenerateComicContent() {
 
   if (error && !bookData) {
     return (
-      <div className="min-h-screen bg-[#0a0a0a]">
+      <div className="min-h-screen bg-[#FAFAFA]">
         <Header />
         <main className="py-20 px-6">
           <div className="max-w-md mx-auto text-center">
             <AlertCircle className="h-12 w-12 mx-auto mb-4 text-red-500" />
-            <h1 className="text-2xl font-bold text-white mb-4">Error</h1>
-            <p className="text-neutral-400 mb-6">{error}</p>
+            <h1 className="text-2xl font-bold text-neutral-900 mb-4">Error</h1>
+            <p className="text-neutral-600 mb-6">{error}</p>
             <button
               onClick={() => router.push('/')}
-              className="px-6 py-3 bg-white text-black rounded-full hover:bg-neutral-200 transition-colors"
+              className="px-6 py-3 bg-neutral-900 text-white rounded-full hover:bg-neutral-800 transition-colors"
             >
               Go Home
             </button>
@@ -251,28 +300,28 @@ function GenerateComicContent() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a]">
+    <div className="min-h-screen bg-[#FAFAFA]">
       <Header />
 
       <main className="py-12 px-6">
         <div className="max-w-7xl mx-auto">
           {/* Header */}
           <div className="text-center mb-8">
-            <h1 className="text-3xl md:text-4xl font-bold text-white mb-2">
+            <h1 className="text-3xl md:text-4xl font-bold text-neutral-900 mb-2">
               {bookData?.title || 'Generate Comic'}
             </h1>
-            <p className="text-neutral-400">
+            <p className="text-neutral-600">
               {panels.length} panels • {bookData?.artStyle} style
             </p>
           </div>
 
           {/* Progress Bar */}
-          <div className="mb-8">
-            <div className="flex items-center justify-between text-sm text-neutral-400 mb-2">
+          <div className="mb-8 bg-white rounded-2xl p-6 border border-neutral-200">
+            <div className="flex items-center justify-between text-sm text-neutral-600 mb-2">
               <span>Progress</span>
               <span>{doneCount} / {panels.length} panels complete</span>
             </div>
-            <div className="h-3 bg-neutral-800 rounded-full overflow-hidden">
+            <div className="h-3 bg-neutral-100 rounded-full overflow-hidden">
               <div
                 className="h-full bg-gradient-to-r from-emerald-500 to-emerald-400 transition-all duration-300"
                 style={{ width: `${(doneCount / panels.length) * 100}%` }}
@@ -281,10 +330,10 @@ function GenerateComicContent() {
             {(generatingCount > 0 || errorCount > 0) && (
               <div className="flex gap-4 mt-2 text-xs">
                 {generatingCount > 0 && (
-                  <span className="text-yellow-400">{generatingCount} generating</span>
+                  <span className="text-amber-600">{generatingCount} generating</span>
                 )}
                 {errorCount > 0 && (
-                  <span className="text-red-400">{errorCount} failed</span>
+                  <span className="text-red-600">{errorCount} failed</span>
                 )}
               </div>
             )}
@@ -292,20 +341,31 @@ function GenerateComicContent() {
 
           {/* Action Buttons */}
           <div className="flex flex-wrap gap-4 justify-center mb-8">
-            {pendingCount === panels.length && (
+            {pendingCount === panels.length && !isGenerating && (
               <button
                 onClick={generateAllPanels}
                 disabled={isGenerating}
-                className="flex items-center gap-2 px-8 py-4 bg-white text-black rounded-full hover:bg-neutral-200 disabled:opacity-50 font-medium transition-all"
+                className="flex items-center gap-2 px-8 py-4 bg-neutral-900 text-white rounded-full hover:bg-neutral-800 disabled:opacity-50 font-medium transition-all"
               >
-                {isGenerating ? (
+                Generate All {panels.length} Panels
+              </button>
+            )}
+
+            {isGenerating && (
+              <button
+                onClick={cancelGeneration}
+                disabled={isCancelling}
+                className="flex items-center gap-2 px-8 py-4 bg-red-600 text-white rounded-full hover:bg-red-500 disabled:opacity-50 font-medium transition-all"
+              >
+                {isCancelling ? (
                   <>
                     <Loader2 className="h-5 w-5 animate-spin" />
-                    Generating {generatingCount} panels...
+                    Cancelling...
                   </>
                 ) : (
                   <>
-                    Generate All {panels.length} Panels
+                    <StopCircle className="h-5 w-5" />
+                    Cancel Generation
                   </>
                 )}
               </button>
@@ -342,8 +402,16 @@ function GenerateComicContent() {
             )}
           </div>
 
+          {/* Generating Status */}
+          {isGenerating && (
+            <div className="mb-8 p-4 bg-amber-50 border border-amber-200 rounded-xl text-center text-amber-700">
+              <Loader2 className="h-5 w-5 animate-spin inline mr-2" />
+              Generating {generatingCount} panels in parallel... This may take a few minutes.
+            </div>
+          )}
+
           {error && (
-            <div className="mb-8 p-4 bg-red-900/30 border border-red-700 rounded-xl text-center text-red-400">
+            <div className="mb-8 p-4 bg-red-50 border border-red-200 rounded-xl text-center text-red-600">
               {error}
             </div>
           )}
@@ -353,21 +421,21 @@ function GenerateComicContent() {
             {panels.map((panel, index) => (
               <div
                 key={panel.number}
-                className="bg-neutral-900 rounded-xl overflow-hidden border border-neutral-800"
+                className="bg-white rounded-xl overflow-hidden border border-neutral-200 shadow-sm"
               >
                 {/* Panel Image Area */}
-                <div className="aspect-[3/4] bg-neutral-800 relative">
+                <div className="aspect-[3/4] bg-neutral-100 relative">
                   {panel.status === 'pending' && (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center text-neutral-500">
+                    <div className="absolute inset-0 flex flex-col items-center justify-center text-neutral-400">
                       <span className="text-3xl font-bold mb-2">{panel.number}</span>
                       <span className="text-xs">Waiting</span>
                     </div>
                   )}
 
                   {panel.status === 'generating' && (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center">
-                      <Loader2 className="h-8 w-8 animate-spin text-white mb-2" />
-                      <span className="text-xs text-neutral-400">Generating...</span>
+                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-neutral-50">
+                      <Loader2 className="h-8 w-8 animate-spin text-neutral-900 mb-2" />
+                      <span className="text-xs text-neutral-600">Generating...</span>
                     </div>
                   )}
 
@@ -382,14 +450,14 @@ function GenerateComicContent() {
                   )}
 
                   {panel.status === 'error' && (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center p-4">
+                    <div className="absolute inset-0 flex flex-col items-center justify-center p-4 bg-red-50">
                       <X className="h-8 w-8 text-red-500 mb-2" />
-                      <span className="text-xs text-red-400 text-center line-clamp-2">
+                      <span className="text-xs text-red-600 text-center line-clamp-2">
                         {panel.error || 'Failed'}
                       </span>
                       <button
                         onClick={() => retryPanel(index)}
-                        className="mt-3 flex items-center gap-1 text-xs text-neutral-300 hover:text-white transition-colors"
+                        className="mt-3 flex items-center gap-1 text-xs text-neutral-600 hover:text-neutral-900 transition-colors"
                       >
                         <RefreshCw className="h-3 w-3" />
                         Retry
@@ -403,17 +471,17 @@ function GenerateComicContent() {
                   <div className="flex items-center justify-between mb-1">
                     <span className="text-xs text-neutral-500">Panel {panel.number}</span>
                     {panel.status === 'done' && (
-                      <Check className="h-4 w-4 text-emerald-400" />
+                      <Check className="h-4 w-4 text-emerald-500" />
                     )}
                   </div>
-                  <p className="text-sm text-white font-medium line-clamp-1">
+                  <p className="text-sm text-neutral-900 font-medium line-clamp-1">
                     {panel.title}
                   </p>
-                  <p className="text-xs text-neutral-400 line-clamp-2 mt-1">
+                  <p className="text-xs text-neutral-500 line-clamp-2 mt-1">
                     {panel.scene.description}
                   </p>
                   {panel.dialogue && panel.dialogue.length > 0 && (
-                    <p className="text-xs text-blue-400 mt-1">
+                    <p className="text-xs text-blue-600 mt-1">
                       {panel.dialogue.length} bubble{panel.dialogue.length !== 1 ? 's' : ''}
                     </p>
                   )}
@@ -435,18 +503,20 @@ function GenerateComicContent() {
           )}
         </div>
       </main>
+
+      <Footer />
     </div>
   );
 }
 
 function LoadingFallback() {
   return (
-    <div className="min-h-screen bg-[#0a0a0a]">
+    <div className="min-h-screen bg-[#FAFAFA]">
       <Header />
       <main className="py-20 px-6">
         <div className="max-w-6xl mx-auto text-center">
-          <Loader2 className="h-12 w-12 animate-spin mx-auto mb-4 text-white" />
-          <p className="text-neutral-400">Loading...</p>
+          <Loader2 className="h-12 w-12 animate-spin mx-auto mb-4 text-neutral-900" />
+          <p className="text-neutral-600">Loading...</p>
         </div>
       </main>
     </div>
