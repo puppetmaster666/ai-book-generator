@@ -159,14 +159,14 @@ export default function Home() {
                 href="https://a.co/d/f9GkEr9"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="group relative block"
+                className="group relative block no-underline focus:outline-none hover:scale-105 transition-transform duration-300"
               >
-                <div className="relative w-72 md:w-80 aspect-[2/3] rounded-lg overflow-hidden shadow-2xl transform group-hover:scale-105 transition-transform duration-300">
+                <div className="relative w-72 md:w-80 aspect-[2/3] rounded-lg overflow-hidden shadow-2xl">
                   <Image
                     src="/images/cover.jpg"
                     alt="Blood & Silver by Freddie Fabrevoie"
                     fill
-                    className="object-contain"
+                    className="object-cover"
                   />
                 </div>
                 <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg">
