@@ -18,13 +18,15 @@ const PRESET_ICONS = {
 
 // Art style images
 const ART_STYLE_IMAGES: Partial<Record<ArtStyleKey, string>> = {
+  // Children's book styles
   watercolor: '/images/illustrations/watercolor.png',
   cartoon: '/images/illustrations/cartoon.png',
   storybook: '/images/illustrations/classicstory.png',
-  noir: '/images/illustrations/mangaanime.png', // Using manga as placeholder for noir
-  manga: '/images/illustrations/mangaanime.png',
-  superhero: '/images/illustrations/cartoon.png', // Placeholder
-  retro: '/images/illustrations/vintage.png',
+  // Comic book styles
+  noir: '/images/illustrations/noir.png',
+  manga: '/images/illustrations/manga.png',
+  superhero: '/images/illustrations/superhero.png',
+  retro: '/images/illustrations/vintagecomic.png',
 };
 
 export default function CreateBook() {

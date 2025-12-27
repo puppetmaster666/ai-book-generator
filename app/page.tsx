@@ -16,6 +16,7 @@ export default function Home() {
   const [error, setError] = useState('');
   const [isGeneratingIdea, setIsGeneratingIdea] = useState(false);
   const [lightboxImage, setLightboxImage] = useState<{ src: string; label: string } | null>(null);
+  const [heroBg, setHeroBg] = useState<1 | 2>(1);
 
   const handleFindIdea = async () => {
     setIsGeneratingIdea(true);
@@ -57,8 +58,42 @@ export default function Home() {
 
       {/* Hero Section */}
       <section className="relative min-h-screen flex flex-col pt-0">
+        {/* Background Image */}
+        <div className="absolute inset-0 z-0">
+          <Image
+            src={heroBg === 1 ? '/images/hg1.png' : '/images/hg2.png'}
+            alt=""
+            fill
+            className="object-cover"
+            priority
+          />
+          {/* Overlay */}
+          <div className="absolute inset-0 bg-[#FAFAFA]/85" />
+        </div>
+
+        {/* Background Switcher (Admin) */}
+        <div className="fixed bottom-4 right-4 z-50 bg-white rounded-xl shadow-lg border border-neutral-200 p-2 flex items-center gap-2">
+          <span className="text-xs text-neutral-500 px-2">BG:</span>
+          <button
+            onClick={() => setHeroBg(1)}
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+              heroBg === 1 ? 'bg-neutral-900 text-white' : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200'
+            }`}
+          >
+            1
+          </button>
+          <button
+            onClick={() => setHeroBg(2)}
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+              heroBg === 2 ? 'bg-neutral-900 text-white' : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200'
+            }`}
+          >
+            2
+          </button>
+        </div>
+
         {/* Hero Content */}
-        <div className="flex-1 flex items-center justify-center px-6 py-16">
+        <div className="relative z-10 flex-1 flex items-center justify-center px-6 py-16">
           <div className="max-w-4xl mx-auto text-center">
             {/* Badge */}
             <div className="inline-flex items-center gap-2 bg-neutral-100 px-4 py-2 rounded-full text-sm text-neutral-600 mb-8">
@@ -314,182 +349,127 @@ export default function Home() {
 
       {/* Pricing */}
       <section className="py-24 px-6 bg-white">
-        <div className="max-w-5xl mx-auto">
-          <div className="text-center mb-16">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-12">
             <h2 className="text-4xl md:text-5xl font-bold tracking-tight mb-4" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>
               Simple pricing
             </h2>
             <p className="text-lg text-neutral-600">
-              Choose the book type that fits your project
+              One price for any book type, or subscribe for more
             </p>
           </div>
 
-          {/* Book Types - 3 options */}
-          <div className="grid md:grid-cols-3 gap-6 mb-16">
-            {/* Novel */}
-            <div className="bg-white rounded-2xl p-8 border border-neutral-200 hover:shadow-lg transition-shadow">
-              <div className="w-12 h-12 bg-neutral-100 rounded-xl flex items-center justify-center mb-4">
-                <BookOpen className="h-6 w-6 text-neutral-700" />
+          {/* All pricing options in one row */}
+          <div className="grid md:grid-cols-3 gap-6">
+            {/* One-Time - Any Book */}
+            <button
+              onClick={() => router.push('/create')}
+              className="group bg-white rounded-2xl p-8 border-2 border-neutral-200 hover:border-neutral-900 hover:shadow-xl transition-all text-left cursor-pointer"
+            >
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 bg-neutral-100 rounded-lg flex items-center justify-center group-hover:bg-neutral-900 transition-colors">
+                  <BookOpen className="h-5 w-5 text-neutral-700 group-hover:text-white transition-colors" />
+                </div>
+                <span className="text-xs font-medium bg-green-100 text-green-700 px-2 py-1 rounded-full">Best Value</span>
               </div>
-              <h3 className="text-xl font-semibold mb-2" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>Novel</h3>
-              <div className="flex items-baseline gap-1 mb-3">
+              <h3 className="text-xl font-semibold mb-1" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>One Book</h3>
+              <div className="flex items-baseline gap-1 mb-2">
                 <span className="text-4xl font-bold">$19.99</span>
+                <span className="text-neutral-500 text-sm">one-time</span>
               </div>
-              <p className="text-sm text-neutral-500 mb-4">Text-only, EPUB download</p>
-              <ul className="space-y-3 text-sm text-neutral-600 mb-6">
+              <p className="text-sm text-neutral-500 mb-4">Novel, Comic, or Picture Book</p>
+              <ul className="space-y-2 text-sm text-neutral-600 mb-6">
                 <li className="flex items-center gap-2">
-                  <Check className="h-4 w-4 text-green-600" />
-                  50,000+ words, 20+ chapters
+                  <Check className="h-4 w-4 text-green-600 flex-shrink-0" />
+                  Any book type you choose
                 </li>
                 <li className="flex items-center gap-2">
-                  <Check className="h-4 w-4 text-green-600" />
-                  AI-generated cover
+                  <Check className="h-4 w-4 text-green-600 flex-shrink-0" />
+                  AI cover + full formatting
                 </li>
                 <li className="flex items-center gap-2">
-                  <Check className="h-4 w-4 text-green-600" />
-                  Amazon KDP ready
+                  <Check className="h-4 w-4 text-green-600 flex-shrink-0" />
+                  EPUB or PDF download
                 </li>
               </ul>
-              <button
-                onClick={() => router.push('/create')}
-                className="w-full bg-neutral-900 text-white py-3 rounded-xl text-sm font-medium hover:bg-neutral-800 transition-colors"
-              >
-                Create Novel
-              </button>
-            </div>
-
-            {/* Comic Book */}
-            <div className="bg-white rounded-2xl p-8 border border-neutral-200 hover:shadow-lg transition-shadow">
-              <div className="w-12 h-12 bg-neutral-100 rounded-xl flex items-center justify-center mb-4">
-                <svg className="h-6 w-6 text-neutral-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                </svg>
+              <div className="w-full bg-neutral-900 text-white py-3 rounded-xl text-sm font-medium text-center group-hover:bg-neutral-800 transition-colors">
+                Create Book
               </div>
-              <h3 className="text-xl font-semibold mb-2" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>Comic Book</h3>
-              <div className="flex items-baseline gap-1 mb-3">
-                <span className="text-4xl font-bold">$19.99</span>
-              </div>
-              <p className="text-sm text-neutral-500 mb-4">With speech bubbles, PDF download</p>
-              <ul className="space-y-3 text-sm text-neutral-600 mb-6">
-                <li className="flex items-center gap-2">
-                  <Check className="h-4 w-4 text-green-600" />
-                  20 full-page panels
-                </li>
-                <li className="flex items-center gap-2">
-                  <Check className="h-4 w-4 text-green-600" />
-                  4 art styles (noir, manga, etc.)
-                </li>
-                <li className="flex items-center gap-2">
-                  <Check className="h-4 w-4 text-green-600" />
-                  Print-ready PDF
-                </li>
-              </ul>
-              <button
-                onClick={() => router.push('/create')}
-                className="w-full bg-neutral-900 text-white py-3 rounded-xl text-sm font-medium hover:bg-neutral-800 transition-colors"
-              >
-                Create Comic
-              </button>
-            </div>
+            </button>
 
-            {/* Children's Picture Book */}
-            <div className="bg-white rounded-2xl p-8 border border-neutral-200 hover:shadow-lg transition-shadow">
-              <div className="w-12 h-12 bg-neutral-100 rounded-xl flex items-center justify-center mb-4">
-                <svg className="h-6 w-6 text-neutral-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
-              </div>
-              <h3 className="text-xl font-semibold mb-2" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>Picture Book</h3>
-              <div className="flex items-baseline gap-1 mb-3">
-                <span className="text-4xl font-bold">$19.99</span>
-              </div>
-              <p className="text-sm text-neutral-500 mb-4">For children, PDF download</p>
-              <ul className="space-y-3 text-sm text-neutral-600 mb-6">
-                <li className="flex items-center gap-2">
-                  <Check className="h-4 w-4 text-green-600" />
-                  12 illustrated pages
-                </li>
-                <li className="flex items-center gap-2">
-                  <Check className="h-4 w-4 text-green-600" />
-                  3 art styles (watercolor, etc.)
-                </li>
-                <li className="flex items-center gap-2">
-                  <Check className="h-4 w-4 text-green-600" />
-                  Ages 3-8 friendly
-                </li>
-              </ul>
-              <button
-                onClick={() => router.push('/create')}
-                className="w-full bg-neutral-900 text-white py-3 rounded-xl text-sm font-medium hover:bg-neutral-800 transition-colors"
-              >
-                Create Picture Book
-              </button>
-            </div>
-          </div>
-
-          {/* Subscription Plans */}
-          <div className="text-center mb-8">
-            <h3 className="text-2xl font-bold mb-2" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>
-              Subscription Plans
-            </h3>
-            <p className="text-neutral-600">For authors creating multiple books</p>
-          </div>
-
-          <div className="grid md:grid-cols-2 gap-6 max-w-3xl mx-auto">
-            {/* Monthly */}
-            <div className="bg-neutral-900 text-white rounded-2xl p-8 relative">
+            {/* Monthly Subscription */}
+            <button
+              onClick={() => router.push('/signup?plan=monthly')}
+              className="group bg-neutral-900 text-white rounded-2xl p-8 border-2 border-neutral-900 hover:shadow-xl transition-all text-left cursor-pointer relative"
+            >
               <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-white text-neutral-900 px-3 py-1 rounded-full text-xs font-medium">
                 Most Popular
               </div>
-              <h4 className="text-lg font-semibold mb-2">Monthly</h4>
-              <div className="flex items-baseline gap-1 mb-4">
-                <span className="text-4xl font-bold">$69</span>
-                <span className="text-neutral-400">/month</span>
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 bg-white/10 rounded-lg flex items-center justify-center">
+                  <Sparkles className="h-5 w-5 text-white" />
+                </div>
               </div>
-              <p className="text-sm text-neutral-300 mb-6">5 books per month (any type)</p>
-              <ul className="space-y-3 text-sm text-neutral-200 mb-6">
+              <h3 className="text-xl font-semibold mb-1" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>Monthly</h3>
+              <div className="flex items-baseline gap-1 mb-2">
+                <span className="text-4xl font-bold">$69</span>
+                <span className="text-neutral-400 text-sm">/month</span>
+              </div>
+              <p className="text-sm text-neutral-300 mb-4">5 books per month (any type)</p>
+              <ul className="space-y-2 text-sm text-neutral-200 mb-6">
                 <li className="flex items-center gap-2">
-                  <Check className="h-4 w-4 text-green-400" />
+                  <Check className="h-4 w-4 text-green-400 flex-shrink-0" />
+                  $13.80 per book
+                </li>
+                <li className="flex items-center gap-2">
+                  <Check className="h-4 w-4 text-green-400 flex-shrink-0" />
                   Priority generation
                 </li>
                 <li className="flex items-center gap-2">
-                  <Check className="h-4 w-4 text-green-400" />
+                  <Check className="h-4 w-4 text-green-400 flex-shrink-0" />
                   Cancel anytime
                 </li>
               </ul>
-              <button
-                onClick={() => router.push('/signup?plan=monthly')}
-                className="w-full bg-white text-neutral-900 py-3 rounded-xl text-sm font-medium hover:bg-neutral-100 transition-colors"
-              >
+              <div className="w-full bg-white text-neutral-900 py-3 rounded-xl text-sm font-medium text-center group-hover:bg-neutral-100 transition-colors">
                 Subscribe
-              </button>
-            </div>
-
-            {/* Yearly */}
-            <div className="bg-neutral-50 rounded-2xl p-8 border border-neutral-200">
-              <h4 className="text-lg font-semibold mb-2">Yearly</h4>
-              <div className="flex items-baseline gap-1 mb-4">
-                <span className="text-4xl font-bold">$499</span>
-                <span className="text-neutral-500">/year</span>
               </div>
-              <p className="text-sm text-neutral-600 mb-6">50 book credits ($10 each)</p>
-              <ul className="space-y-3 text-sm text-neutral-600 mb-6">
+            </button>
+
+            {/* Yearly Subscription */}
+            <button
+              onClick={() => router.push('/signup?plan=yearly')}
+              className="group bg-white rounded-2xl p-8 border-2 border-neutral-200 hover:border-neutral-900 hover:shadow-xl transition-all text-left cursor-pointer"
+            >
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 bg-neutral-100 rounded-lg flex items-center justify-center group-hover:bg-neutral-900 transition-colors">
+                  <Zap className="h-5 w-5 text-neutral-700 group-hover:text-white transition-colors" />
+                </div>
+                <span className="text-xs font-medium bg-amber-100 text-amber-700 px-2 py-1 rounded-full">Save 50%</span>
+              </div>
+              <h3 className="text-xl font-semibold mb-1" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>Yearly</h3>
+              <div className="flex items-baseline gap-1 mb-2">
+                <span className="text-4xl font-bold">$499</span>
+                <span className="text-neutral-500 text-sm">/year</span>
+              </div>
+              <p className="text-sm text-neutral-500 mb-4">50 book credits (any type)</p>
+              <ul className="space-y-2 text-sm text-neutral-600 mb-6">
                 <li className="flex items-center gap-2">
-                  <Check className="h-4 w-4 text-green-600" />
+                  <Check className="h-4 w-4 text-green-600 flex-shrink-0" />
+                  $10 per book
+                </li>
+                <li className="flex items-center gap-2">
+                  <Check className="h-4 w-4 text-green-600 flex-shrink-0" />
                   Credits never expire
                 </li>
                 <li className="flex items-center gap-2">
-                  <Check className="h-4 w-4 text-green-600" />
+                  <Check className="h-4 w-4 text-green-600 flex-shrink-0" />
                   Priority support
                 </li>
               </ul>
-              <button
-                onClick={() => router.push('/signup?plan=yearly')}
-                className="w-full bg-neutral-900 text-white py-3 rounded-xl text-sm font-medium hover:bg-neutral-800 transition-colors"
-              >
+              <div className="w-full bg-neutral-900 text-white py-3 rounded-xl text-sm font-medium text-center group-hover:bg-neutral-800 transition-colors">
                 Get Started
-              </button>
-            </div>
+              </div>
+            </button>
           </div>
         </div>
       </section>
