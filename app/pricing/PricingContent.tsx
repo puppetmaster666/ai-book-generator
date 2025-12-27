@@ -23,20 +23,21 @@ export default function PricingContent() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* One-Time */}
+          {/* Single Book Options */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
+            {/* Novel */}
             <div className="bg-white rounded-2xl border border-neutral-200 p-8 hover:shadow-lg transition-shadow flex flex-col">
               <h3 className="text-xl font-semibold mb-2" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>
-                Single Book
+                Novel
               </h3>
               <div className="mb-4">
                 <span className="text-5xl font-bold tracking-tight" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>$19.99</span>
               </div>
-              <p className="text-neutral-500 mb-6">One-time payment</p>
+              <p className="text-neutral-500 mb-6">Text-only book</p>
               <ul className="space-y-4 flex-grow">
                 <li className="flex items-start gap-3 text-neutral-600">
                   <Check className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
-                  <span>1 complete book (up to 100K words)</span>
+                  <span>50,000+ words, 20+ chapters</span>
                 </li>
                 <li className="flex items-start gap-3 text-neutral-600">
                   <Check className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
@@ -50,18 +51,59 @@ export default function PricingContent() {
                   <Check className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
                   <span>Full commercial rights</span>
                 </li>
+              </ul>
+              <button
+                onClick={() => router.push('/create')}
+                className="w-full bg-neutral-900 text-white py-3 rounded-full hover:bg-neutral-800 transition-colors font-medium mt-8"
+              >
+                Create Novel
+              </button>
+            </div>
+
+            {/* Visual Book */}
+            <div className="bg-white rounded-2xl border border-neutral-200 p-8 hover:shadow-lg transition-shadow flex flex-col">
+              <h3 className="text-xl font-semibold mb-2" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>
+                Comic or Picture Book
+              </h3>
+              <div className="mb-4">
+                <span className="text-5xl font-bold tracking-tight" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>$39.99</span>
+              </div>
+              <p className="text-neutral-500 mb-6">Visual book with illustrations</p>
+              <ul className="space-y-4 flex-grow">
                 <li className="flex items-start gap-3 text-neutral-600">
                   <Check className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
-                  <span>30-day money-back guarantee</span>
+                  <span>12-20 full-page illustrations</span>
+                </li>
+                <li className="flex items-start gap-3 text-neutral-600">
+                  <Check className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
+                  <span>Comic with speech bubbles OR children's book</span>
+                </li>
+                <li className="flex items-start gap-3 text-neutral-600">
+                  <Check className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
+                  <span>PDF download (print-ready)</span>
+                </li>
+                <li className="flex items-start gap-3 text-neutral-600">
+                  <Check className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
+                  <span>Full commercial rights</span>
                 </li>
               </ul>
               <button
                 onClick={() => router.push('/create')}
                 className="w-full bg-neutral-900 text-white py-3 rounded-full hover:bg-neutral-800 transition-colors font-medium mt-8"
               >
-                Get Started
+                Create Visual Book
               </button>
             </div>
+          </div>
+
+          <div className="text-center mb-12">
+            <h2 className="text-2xl font-bold mb-2" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>
+              Subscription Plans
+            </h2>
+            <p className="text-neutral-600">For authors creating multiple books</p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl mx-auto">
 
             {/* Monthly */}
             <div className="bg-white rounded-2xl border-2 border-neutral-900 p-8 relative hover:shadow-lg transition-shadow flex flex-col">
