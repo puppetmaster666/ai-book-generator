@@ -676,7 +676,7 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
                   onClick={handleDownload}
                   className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-neutral-900 text-white rounded-xl hover:bg-black font-medium transition-colors"
                 >
-                  <Download className="h-5 w-5" /> Download EPUB
+                  <Download className="h-5 w-5" /> Download {isIllustrated ? 'PDF' : 'EPUB'}
                 </button>
 
                 {book.coverImageUrl && (

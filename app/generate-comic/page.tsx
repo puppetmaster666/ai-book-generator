@@ -314,7 +314,7 @@ function GenerateComicContent() {
         <Header />
         <main className="py-20 px-6">
           <div className="max-w-md mx-auto text-center">
-            <AlertCircle className="h-12 w-12 mx-auto mb-4 text-red-500" />
+            <AlertCircle className="h-12 w-12 mx-auto mb-4 text-neutral-500" />
             <h1 className="text-2xl font-bold text-neutral-900 mb-4">Error</h1>
             <p className="text-neutral-600 mb-6">{error}</p>
             <button
@@ -351,19 +351,19 @@ function GenerateComicContent() {
               <span>Progress</span>
               <span>{doneCount} / {panels.length} {bookData?.dialogueStyle === 'bubbles' ? 'panels' : 'pages'} complete</span>
             </div>
-            <div className="h-3 bg-neutral-100 rounded-full overflow-hidden">
+            <div className="h-3 bg-neutral-200 rounded-full overflow-hidden">
               <div
-                className="h-full bg-gradient-to-r from-emerald-500 to-emerald-400 transition-all duration-300"
+                className="h-full bg-neutral-900 transition-all duration-300"
                 style={{ width: `${(doneCount / panels.length) * 100}%` }}
               />
             </div>
             {(generatingCount > 0 || errorCount > 0) && (
               <div className="flex gap-4 mt-2 text-xs">
                 {generatingCount > 0 && (
-                  <span className="text-amber-600">{generatingCount} generating</span>
+                  <span className="text-neutral-600">{generatingCount} generating</span>
                 )}
                 {errorCount > 0 && (
-                  <span className="text-red-600">{errorCount} failed</span>
+                  <span className="text-neutral-500">{errorCount} failed</span>
                 )}
               </div>
             )}
@@ -385,7 +385,7 @@ function GenerateComicContent() {
               <button
                 onClick={cancelGeneration}
                 disabled={isCancelling}
-                className="flex items-center gap-2 px-8 py-4 bg-red-600 text-white rounded-full hover:bg-red-500 disabled:opacity-50 font-medium transition-all"
+                className="flex items-center gap-2 px-8 py-4 bg-neutral-700 text-white rounded-full hover:bg-neutral-600 disabled:opacity-50 font-medium transition-all"
               >
                 {isCancelling ? (
                   <>
@@ -404,7 +404,7 @@ function GenerateComicContent() {
             {errorCount > 0 && !isGenerating && (
               <button
                 onClick={retryAllFailed}
-                className="flex items-center gap-2 px-6 py-3 bg-red-600 text-white rounded-full hover:bg-red-500 transition-colors"
+                className="flex items-center gap-2 px-6 py-3 bg-neutral-700 text-white rounded-full hover:bg-neutral-600 transition-colors"
               >
                 <RefreshCw className="h-4 w-4" />
                 Retry {errorCount} Failed
@@ -415,7 +415,7 @@ function GenerateComicContent() {
               <button
                 onClick={assembleBook}
                 disabled={isAssembling}
-                className="flex items-center gap-2 px-8 py-4 bg-emerald-500 text-white rounded-full hover:bg-emerald-400 disabled:opacity-50 font-medium transition-all"
+                className="flex items-center gap-2 px-8 py-4 bg-neutral-900 text-white rounded-full hover:bg-neutral-800 disabled:opacity-50 font-medium transition-all"
               >
                 {isAssembling ? (
                   <>
@@ -434,31 +434,31 @@ function GenerateComicContent() {
 
           {/* Generating Status with Timer */}
           {isGenerating && (
-            <div className="mb-8 bg-amber-50 border border-amber-200 rounded-2xl overflow-hidden">
+            <div className="mb-8 bg-neutral-100 border border-neutral-300 rounded-2xl overflow-hidden">
               {/* Timer Header */}
-              <div className="bg-amber-100 px-6 py-4 flex items-center justify-between">
+              <div className="bg-neutral-200 px-6 py-4 flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-amber-200 rounded-full flex items-center justify-center">
-                    <Clock className="h-5 w-5 text-amber-700" />
+                  <div className="w-10 h-10 bg-neutral-300 rounded-full flex items-center justify-center">
+                    <Clock className="h-5 w-5 text-neutral-700" />
                   </div>
                   <div>
-                    <p className="font-semibold text-amber-900">Generating Your Illustrations</p>
-                    <p className="text-sm text-amber-700">{generatingCount} {bookData?.dialogueStyle === 'bubbles' ? 'panels' : 'pages'} in progress</p>
+                    <p className="font-semibold text-neutral-900">Generating Your Illustrations</p>
+                    <p className="text-sm text-neutral-600">{generatingCount} {bookData?.dialogueStyle === 'bubbles' ? 'panels' : 'pages'} in progress</p>
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className="text-2xl font-mono font-bold text-amber-900">{formatTime(elapsedTime)}</p>
-                  <p className="text-xs text-amber-600">elapsed</p>
+                  <p className="text-2xl font-mono font-bold text-neutral-900">{formatTime(elapsedTime)}</p>
+                  <p className="text-xs text-neutral-500">elapsed</p>
                 </div>
               </div>
 
               {/* Warning Message */}
               <div className="px-6 py-4 text-center">
-                <div className="flex items-center justify-center gap-2 text-amber-800 mb-2">
+                <div className="flex items-center justify-center gap-2 text-neutral-800 mb-2">
                   <Loader2 className="h-4 w-4 animate-spin" />
                   <span className="font-medium">Please do not leave this page</span>
                 </div>
-                <p className="text-sm text-amber-700">
+                <p className="text-sm text-neutral-600">
                   This typically takes <strong>3-5 minutes</strong> for {panels.length} {bookData?.dialogueStyle === 'bubbles' ? 'panels' : 'pages'}.
                   Your book is being generated in parallel for faster results.
                 </p>
@@ -467,7 +467,7 @@ function GenerateComicContent() {
           )}
 
           {error && (
-            <div className="mb-8 p-4 bg-red-50 border border-red-200 rounded-xl text-center text-red-600">
+            <div className="mb-8 p-4 bg-neutral-100 border border-neutral-300 rounded-xl text-center text-neutral-700">
               {error}
             </div>
           )}
@@ -506,9 +506,9 @@ function GenerateComicContent() {
                   )}
 
                   {panel.status === 'error' && (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center p-4 bg-red-50">
-                      <X className="h-8 w-8 text-red-500 mb-2" />
-                      <span className="text-xs text-red-600 text-center line-clamp-2">
+                    <div className="absolute inset-0 flex flex-col items-center justify-center p-4 bg-neutral-100">
+                      <X className="h-8 w-8 text-neutral-500 mb-2" />
+                      <span className="text-xs text-neutral-600 text-center line-clamp-2">
                         {panel.error || 'Failed'}
                       </span>
                       <button
@@ -527,7 +527,7 @@ function GenerateComicContent() {
                   <div className="flex items-center justify-between mb-1">
                     <span className="text-xs text-neutral-500">{bookData?.dialogueStyle === 'bubbles' ? 'Panel' : 'Page'} {panel.number}</span>
                     {panel.status === 'done' && (
-                      <Check className="h-4 w-4 text-emerald-500" />
+                      <Check className="h-4 w-4 text-neutral-900" />
                     )}
                   </div>
                   <p className="text-sm text-neutral-900 font-medium line-clamp-1">
@@ -537,7 +537,7 @@ function GenerateComicContent() {
                     {panel.scene.description}
                   </p>
                   {panel.dialogue && panel.dialogue.length > 0 && (
-                    <p className="text-xs text-blue-600 mt-1">
+                    <p className="text-xs text-neutral-600 mt-1">
                       {panel.dialogue.length} bubble{panel.dialogue.length !== 1 ? 's' : ''}
                     </p>
                   )}

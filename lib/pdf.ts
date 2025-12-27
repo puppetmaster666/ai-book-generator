@@ -1,5 +1,7 @@
 import PDFDocument from 'pdfkit';
 import { FONT_STYLES } from './constants';
+import path from 'path';
+import fs from 'fs';
 
 interface Illustration {
   imageUrl: string;
@@ -36,6 +38,22 @@ function base64ToBuffer(dataUrl: string): Buffer | null {
   }
 }
 
+// Get font paths - handles both local dev and Vercel deployment
+function getFontPath(fontName: string): string {
+  // Try public/fonts first (works in development)
+  const publicPath = path.join(process.cwd(), 'public', 'fonts', fontName);
+  if (fs.existsSync(publicPath)) {
+    return publicPath;
+  }
+  // Fallback for Vercel - fonts should be in .next/server/public/fonts
+  const vercelPath = path.join(process.cwd(), '.next', 'server', 'public', 'fonts', fontName);
+  if (fs.existsSync(vercelPath)) {
+    return vercelPath;
+  }
+  // Last resort - return public path and hope for the best
+  return publicPath;
+}
+
 export async function generatePdf(bookData: BookData): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     try {
@@ -52,6 +70,13 @@ export async function generatePdf(bookData: BookData): Promise<Buffer> {
         },
       });
 
+      // Register custom fonts to avoid AFM file issues on Vercel
+      const regularFontPath = getFontPath('WorkSans-Regular.ttf');
+      const boldFontPath = getFontPath('Raleway-Bold.ttf');
+
+      doc.registerFont('Regular', regularFontPath);
+      doc.registerFont('Bold', boldFontPath);
+
       doc.on('data', (chunk) => chunks.push(chunk));
       doc.on('end', () => resolve(Buffer.concat(chunks)));
       doc.on('error', reject);
@@ -60,12 +85,12 @@ export async function generatePdf(bookData: BookData): Promise<Buffer> {
       doc.rect(0, 0, 1024, 768).fill('#FAFAFA');
       doc.fillColor('#0a0a0a')
          .fontSize(48)
-         .font('Helvetica-Bold')
+         .font('Bold')
          .text(bookData.title, 50, 280, { width: 924, align: 'center' });
 
       doc.fillColor('#737373')
          .fontSize(24)
-         .font('Helvetica')
+         .font('Regular')
          .text(isComic ? 'A Comic Story' : 'A Picture Book', 50, 360, { width: 924, align: 'center' });
 
       doc.fillColor('#0a0a0a')
@@ -73,7 +98,7 @@ export async function generatePdf(bookData: BookData): Promise<Buffer> {
          .text('by', 50, 420, { width: 924, align: 'center' });
 
       doc.fontSize(28)
-         .font('Helvetica-Bold')
+         .font('Bold')
          .text(bookData.authorName, 50, 460, { width: 924, align: 'center' });
 
       // Add each chapter/panel as a full page
@@ -116,7 +141,7 @@ export async function generatePdf(bookData: BookData): Promise<Buffer> {
 
           doc.fillColor('#0a0a0a')
              .fontSize(16)
-             .font('Helvetica')
+             .font('Regular')
              .text(chapter.content, 50, 640, {
                width: 924,
                align: 'center',
@@ -130,12 +155,12 @@ export async function generatePdf(bookData: BookData): Promise<Buffer> {
       doc.rect(0, 0, 1024, 768).fill('#FAFAFA');
       doc.fillColor('#0a0a0a')
          .fontSize(24)
-         .font('Helvetica-Bold')
+         .font('Bold')
          .text('The End', 50, 340, { width: 924, align: 'center' });
 
       doc.fillColor('#737373')
          .fontSize(14)
-         .font('Helvetica')
+         .font('Regular')
          .text(`Created with draftmybook.com`, 50, 400, { width: 924, align: 'center' });
 
       doc.end();
