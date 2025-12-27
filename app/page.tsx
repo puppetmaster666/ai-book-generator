@@ -105,7 +105,14 @@ export default function Home() {
             <h1 className="text-5xl md:text-7xl font-bold tracking-tight mb-6 leading-[1.1] text-white" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>
               Turn your idea into
               <br />
-              <span className="text-white/70">a complete book</span>
+              <span className="relative inline-block">
+                {/* Shadow rectangle */}
+                <span className="absolute inset-0 bg-black -skew-y-2 translate-x-2 translate-y-2" aria-hidden="true" />
+                {/* Colored rectangle */}
+                <span className="absolute inset-0 bg-amber-400 -skew-y-2" aria-hidden="true" />
+                {/* Text */}
+                <span className="relative text-neutral-900 px-4">a complete book</span>
+              </span>
             </h1>
 
             <p className="text-xl text-white/80 max-w-2xl mx-auto mb-12">
@@ -196,12 +203,12 @@ export default function Home() {
                 rel="noopener noreferrer"
                 className="group relative block no-underline focus:outline-none hover:scale-105 transition-transform duration-300"
               >
-                <div className="relative w-72 md:w-80 aspect-[2/3] rounded-lg overflow-hidden shadow-2xl">
+                <div className="relative w-72 md:w-80 aspect-[2/3] rounded-lg overflow-hidden shadow-2xl bg-neutral-100">
                   <Image
                     src="/images/cover.jpg"
                     alt="Blood & Silver by Freddie Fabrevoie"
                     fill
-                    className="object-cover"
+                    className="object-contain"
                   />
                 </div>
                 <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg">
