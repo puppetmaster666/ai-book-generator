@@ -5,19 +5,25 @@ import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
-import { ArrowLeft, ArrowRight, Sparkles, Loader2 } from 'lucide-react';
-import { BOOK_PRESETS, ART_STYLES, GENRES, DIALOGUE_STYLES, type BookPresetKey, type ArtStyleKey, type DialogueStyleKey } from '@/lib/constants';
+import { ArrowLeft, ArrowRight, Sparkles, Loader2, BookOpen, Palette, Layers } from 'lucide-react';
+import { BOOK_PRESETS, ART_STYLES, GENRES, type BookPresetKey, type ArtStyleKey } from '@/lib/constants';
 
-// Map art style keys to image filenames
-const ART_STYLE_IMAGES: Record<ArtStyleKey, string> = {
+// Icons for book types
+const PRESET_ICONS = {
+  novel: BookOpen,
+  childrens_picture: Palette,
+  comic_story: Layers,
+};
+
+// Art style images
+const ART_STYLE_IMAGES: Partial<Record<ArtStyleKey, string>> = {
   watercolor: '/images/illustrations/watercolor.png',
   cartoon: '/images/illustrations/cartoon.png',
   storybook: '/images/illustrations/classicstory.png',
-  modern: '/images/illustrations/modernminimal.png',
-  realistic: '/images/illustrations/realistic.png',
+  noir: '/images/illustrations/mangaanime.png', // Using manga as placeholder for noir
   manga: '/images/illustrations/mangaanime.png',
-  vintage: '/images/illustrations/vintage.png',
-  fantasy: '/images/illustrations/fantasy.png',
+  superhero: '/images/illustrations/cartoon.png', // Placeholder
+  retro: '/images/illustrations/vintage.png',
 };
 
 export default function CreateBook() {
@@ -25,7 +31,6 @@ export default function CreateBook() {
   const [step, setStep] = useState<'type' | 'idea' | 'style'>('type');
   const [selectedPreset, setSelectedPreset] = useState<BookPresetKey | null>(null);
   const [selectedArtStyle, setSelectedArtStyle] = useState<ArtStyleKey | null>(null);
-  const [selectedDialogueStyle, setSelectedDialogueStyle] = useState<DialogueStyleKey | null>(null);
   const [idea, setIdea] = useState('');
   const [hasIdeaFromHomepage, setHasIdeaFromHomepage] = useState(false);
   const [isGeneratingIdea, setIsGeneratingIdea] = useState(false);
@@ -69,22 +74,11 @@ export default function CreateBook() {
       setSelectedArtStyle(null);
     }
 
-    // Set default dialogue style (prose vs bubbles) for visual books
-    if (preset.dialogueStyle) {
-      setSelectedDialogueStyle(preset.dialogueStyle as DialogueStyleKey);
-    } else {
-      setSelectedDialogueStyle(null);
-    }
-
     // If idea already exists from homepage, skip the idea step
     if (hasIdeaFromHomepage && idea.trim().length >= 20) {
       if (preset.format !== 'text_only') {
-        // Illustrated book: go to art style selection
         setStep('style');
       } else {
-        // Text-only book: submit directly
-        setSelectedPreset(key);
-        // Need to wait for state update, then submit
         setTimeout(() => handleSubmitWithPreset(key), 0);
       }
     } else {
@@ -92,7 +86,6 @@ export default function CreateBook() {
     }
   };
 
-  // Separate submit function that takes preset key directly (for immediate submission)
   const handleSubmitWithPreset = async (presetKey: BookPresetKey) => {
     if (!idea.trim()) return;
 
@@ -137,7 +130,7 @@ export default function CreateBook() {
     } catch (err) {
       console.error('Error:', err);
       setError('Something went wrong. Please try again.');
-      setStep('idea'); // Fall back to idea step on error
+      setStep('idea');
     } finally {
       setIsSubmitting(false);
     }
@@ -147,7 +140,6 @@ export default function CreateBook() {
     if (!selectedPreset) return;
     const preset = BOOK_PRESETS[selectedPreset];
 
-    // If it's an illustrated book, show art style selection
     if (preset.format !== 'text_only' && step === 'idea') {
       setStep('style');
     } else {
@@ -165,7 +157,6 @@ export default function CreateBook() {
       const preset = BOOK_PRESETS[selectedPreset];
       const genre = GENRES[preset.defaultGenre as keyof typeof GENRES];
 
-      // First expand the idea using AI
       const expandResponse = await fetch('/api/expand-idea', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -179,7 +170,6 @@ export default function CreateBook() {
       if (!expandResponse.ok) throw new Error('Failed to expand idea');
       const bookPlan = await expandResponse.json();
 
-      // Create the book
       const response = await fetch('/api/books', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -188,7 +178,7 @@ export default function CreateBook() {
           bookPreset: selectedPreset,
           bookFormat: preset.format,
           artStyle: selectedArtStyle,
-          dialogueStyle: selectedDialogueStyle,
+          dialogueStyle: preset.dialogueStyle,
           targetWords: preset.targetWords,
           targetChapters: preset.chapters,
         }),
@@ -207,6 +197,17 @@ export default function CreateBook() {
   };
 
   const preset = selectedPreset ? BOOK_PRESETS[selectedPreset] : null;
+
+  // Get art styles for the current book type
+  const getArtStylesForPreset = () => {
+    if (!selectedPreset) return [];
+    const preset = BOOK_PRESETS[selectedPreset];
+
+    // Filter art styles by category
+    const category = preset.dialogueStyle === 'bubbles' ? 'comic' : 'childrens';
+    return (Object.entries(ART_STYLES) as [ArtStyleKey, typeof ART_STYLES[ArtStyleKey]][])
+      .filter(([, style]) => style.category === category);
+  };
 
   return (
     <div className="min-h-screen bg-[#FAFAFA]">
@@ -234,29 +235,33 @@ export default function CreateBook() {
                     </p>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {(Object.entries(BOOK_PRESETS) as [BookPresetKey, typeof BOOK_PRESETS[BookPresetKey]][]).map(([key, preset]) => (
-                      <button
-                        key={key}
-                        onClick={() => handleSelectPreset(key)}
-                        className="group p-6 bg-white rounded-2xl border border-neutral-200 hover:border-neutral-400 hover:shadow-lg transition-all text-left"
-                      >
-                        <h3 className="text-lg font-semibold mb-2" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>
-                          {preset.label}
-                        </h3>
-                        <p className="text-sm text-neutral-600 mb-4">
-                          {preset.description}
-                        </p>
-                        <div className="flex items-center justify-between">
-                          <span className="text-lg font-bold">{preset.priceDisplay}</span>
-                          {preset.format !== 'text_only' && (
-                            <span className="text-xs bg-neutral-100 text-neutral-600 px-2 py-1 rounded-full">
-                              Illustrated
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    {(Object.entries(BOOK_PRESETS) as [BookPresetKey, typeof BOOK_PRESETS[BookPresetKey]][]).map(([key, presetItem]) => {
+                      const IconComponent = PRESET_ICONS[key as keyof typeof PRESET_ICONS] || BookOpen;
+                      return (
+                        <button
+                          key={key}
+                          onClick={() => handleSelectPreset(key)}
+                          className="group p-8 bg-white rounded-2xl border border-neutral-200 hover:border-neutral-400 hover:shadow-lg transition-all text-left"
+                        >
+                          <div className="w-14 h-14 bg-neutral-100 rounded-xl flex items-center justify-center mb-5 group-hover:bg-neutral-200 transition-colors">
+                            <IconComponent className="h-7 w-7 text-neutral-700" />
+                          </div>
+                          <h3 className="text-xl font-semibold mb-2" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>
+                            {presetItem.label}
+                          </h3>
+                          <p className="text-sm text-neutral-600 mb-5">
+                            {presetItem.description}
+                          </p>
+                          <div className="flex items-center justify-between">
+                            <span className="text-2xl font-bold">{presetItem.priceDisplay}</span>
+                            <span className="text-xs bg-neutral-100 text-neutral-600 px-3 py-1 rounded-full">
+                              {presetItem.downloadFormat.toUpperCase()}
                             </span>
-                          )}
-                        </div>
-                      </button>
-                    ))}
+                          </div>
+                        </button>
+                      );
+                    })}
                   </div>
                 </>
               )}
@@ -283,7 +288,9 @@ export default function CreateBook() {
                   Describe your {preset.format === 'picture_book' ? 'story' : 'book'} idea
                 </h1>
                 <p className="text-lg text-neutral-600">
-                  {preset.format === 'picture_book'
+                  {selectedPreset === 'comic_story'
+                    ? "Tell us about your comic story - the characters, action, and setting"
+                    : preset.format === 'picture_book'
                     ? "Tell us about your children's story - the characters, setting, and message"
                     : "Share your concept and we'll expand it into a full outline"}
                 </p>
@@ -294,8 +301,10 @@ export default function CreateBook() {
                   value={idea}
                   onChange={(e) => setIdea(e.target.value)}
                   placeholder={
-                    preset.format === 'picture_book'
-                      ? "A curious little fox named Pip who discovers that the stars in the sky are actually sleeping fireflies, and embarks on an adventure to wake them up..."
+                    selectedPreset === 'comic_story'
+                      ? "A noir detective story set in a rainy city where a private eye investigates a series of mysterious disappearances..."
+                      : preset.format === 'picture_book'
+                      ? "A curious little fox named Pip who discovers that the stars in the sky are actually sleeping fireflies..."
                       : "A mystery novel about a detective who discovers her own name in a cold case file from 1985..."
                   }
                   rows={6}
@@ -368,12 +377,14 @@ export default function CreateBook() {
                   Choose your art style
                 </h1>
                 <p className="text-lg text-neutral-600">
-                  This style will be used for all illustrations and the cover
+                  {selectedPreset === 'comic_story'
+                    ? "Select the visual style for your comic panels"
+                    : "This style will be used for all illustrations"}
                 </p>
               </div>
 
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-                {(Object.entries(ART_STYLES) as [ArtStyleKey, typeof ART_STYLES[ArtStyleKey]][]).map(([key, style]) => (
+                {getArtStylesForPreset().map(([key, style]) => (
                   <button
                     key={key}
                     onClick={() => setSelectedArtStyle(key)}
@@ -383,13 +394,19 @@ export default function CreateBook() {
                         : 'border-neutral-200 hover:border-neutral-400 bg-white'
                     }`}
                   >
-                    <div className="relative aspect-square">
-                      <Image
-                        src={ART_STYLE_IMAGES[key]}
-                        alt={style.label}
-                        fill
-                        className="object-cover group-hover:scale-105 transition-transform duration-300"
-                      />
+                    <div className="relative aspect-square bg-neutral-100">
+                      {ART_STYLE_IMAGES[key] ? (
+                        <Image
+                          src={ART_STYLE_IMAGES[key]!}
+                          alt={style.label}
+                          fill
+                          className="object-cover group-hover:scale-105 transition-transform duration-300"
+                        />
+                      ) : (
+                        <div className="absolute inset-0 flex items-center justify-center text-neutral-400">
+                          <Palette className="h-12 w-12" />
+                        </div>
+                      )}
                       {selectedArtStyle === key && (
                         <div className="absolute inset-0 bg-neutral-900/10" />
                       )}

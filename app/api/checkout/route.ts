@@ -53,11 +53,8 @@ export async function POST(request: NextRequest) {
 
         // Set price based on book format
         if (book?.bookFormat === 'picture_book') {
-          amount = PRICING.CHILDRENS.price;
-          description = 'AI Book Generator - Picture Book';
-        } else if (book?.bookFormat === 'illustrated') {
-          amount = PRICING.ILLUSTRATED.price;
-          description = 'AI Book Generator - Illustrated Book';
+          amount = PRICING.VISUAL.price;
+          description = 'AI Book Generator - Visual Book';
         } else {
           amount = PRICING.ONE_TIME.price;
           description = 'AI Book Generator - Single Book';

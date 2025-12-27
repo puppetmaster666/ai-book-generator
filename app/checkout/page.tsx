@@ -152,15 +152,13 @@ function CheckoutContent() {
   // Get price based on book format
   const getBasePrice = () => {
     if (!bookDetails) return PRICING.ONE_TIME.price;
-    if (bookDetails.bookFormat === 'picture_book') return PRICING.CHILDRENS.price;
-    if (bookDetails.bookFormat === 'illustrated') return PRICING.ILLUSTRATED.price;
+    if (bookDetails.bookFormat === 'picture_book') return PRICING.VISUAL.price;
     return PRICING.ONE_TIME.price;
   };
 
   const getProductLabel = () => {
     if (!bookDetails) return 'AI Book Generation';
-    if (bookDetails.bookFormat === 'picture_book') return 'Picture Book';
-    if (bookDetails.bookFormat === 'illustrated') return 'Illustrated Book';
+    if (bookDetails.bookFormat === 'picture_book') return 'Visual Book';
     return 'Novel';
   };
 

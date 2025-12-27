@@ -123,8 +123,7 @@ function ReviewContent() {
 
   const getBasePrice = () => {
     if (!book) return PRICING.ONE_TIME.price;
-    if (book.bookFormat === 'picture_book') return PRICING.CHILDRENS.price;
-    if (book.bookFormat === 'illustrated') return PRICING.ILLUSTRATED.price;
+    if (book.bookFormat === 'picture_book') return PRICING.VISUAL.price;
     return PRICING.ONE_TIME.price;
   };
 

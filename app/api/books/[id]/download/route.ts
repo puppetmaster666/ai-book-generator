@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { generateEpub } from '@/lib/epub';
+import { generatePdf } from '@/lib/pdf';
 import { FontStyleKey } from '@/lib/constants';
 
 export async function GET(
@@ -35,11 +36,14 @@ export async function GET(
       );
     }
 
-    // Generate EPUB with illustrations if available
-    const isComic = book.dialogueStyle === 'bubbles' || book.bookFormat === 'comic_book';
-    console.log(`Generating EPUB for book ${id}: format=${book.bookFormat}, dialogueStyle=${book.dialogueStyle}, isComic=${isComic}`);
+    // Determine if this is a visual book (comic or children's picture book)
+    const isVisualBook = book.dialogueStyle === 'bubbles' ||
+                         book.dialogueStyle === 'prose' ||
+                         book.bookFormat === 'picture_book';
+    const isTextOnly = book.bookFormat === 'text_only';
 
-    const epubBuffer = await generateEpub({
+    // Prepare book data for generation
+    const bookData = {
       title: book.title,
       authorName: book.authorName,
       genre: book.genre,
@@ -57,17 +61,34 @@ export async function GET(
       coverImageUrl: book.coverImageUrl || undefined,
       bookFormat: book.bookFormat,
       dialogueStyle: book.dialogueStyle || undefined,
-    });
+    };
 
-    // Return as downloadable file
-    const filename = `${book.title.replace(/[^a-z0-9]/gi, '_')}.epub`;
+    const safeFilename = book.title.replace(/[^a-z0-9]/gi, '_');
 
-    return new NextResponse(new Uint8Array(epubBuffer), {
-      headers: {
-        'Content-Type': 'application/epub+zip',
-        'Content-Disposition': `attachment; filename="${filename}"`,
-      },
-    });
+    // Use PDF for visual books, EPUB for text-only novels
+    if (isVisualBook && !isTextOnly) {
+      console.log(`Generating PDF for visual book ${id}: format=${book.bookFormat}, dialogueStyle=${book.dialogueStyle}`);
+
+      const pdfBuffer = await generatePdf(bookData);
+
+      return new NextResponse(new Uint8Array(pdfBuffer), {
+        headers: {
+          'Content-Type': 'application/pdf',
+          'Content-Disposition': `attachment; filename="${safeFilename}.pdf"`,
+        },
+      });
+    } else {
+      console.log(`Generating EPUB for novel ${id}: format=${book.bookFormat}`);
+
+      const epubBuffer = await generateEpub(bookData);
+
+      return new NextResponse(new Uint8Array(epubBuffer), {
+        headers: {
+          'Content-Type': 'application/epub+zip',
+          'Content-Disposition': `attachment; filename="${safeFilename}.epub"`,
+        },
+      });
+    }
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     console.error('Error downloading book:', errorMessage, error);

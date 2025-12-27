@@ -69,7 +69,7 @@ export async function POST(request: NextRequest) {
 
     // Get aspect ratio for this book format
     const formatKey = bookFormat as keyof typeof ILLUSTRATION_DIMENSIONS;
-    const dimensions = ILLUSTRATION_DIMENSIONS[formatKey] || ILLUSTRATION_DIMENSIONS.illustrated;
+    const dimensions = ILLUSTRATION_DIMENSIONS[formatKey] || ILLUSTRATION_DIMENSIONS.picture_book;
 
     // Build a detailed prompt for the illustration with consistency guides
     const prompt = buildIllustrationPrompt({

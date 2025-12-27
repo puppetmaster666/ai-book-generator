@@ -189,7 +189,7 @@ async function attemptIllustrationGeneration(data: {
 
     if (result.image?.base64 && result.image?.mimeType) {
       const formatKey = data.bookFormat as keyof typeof ILLUSTRATION_DIMENSIONS;
-      const dimensions = ILLUSTRATION_DIMENSIONS[formatKey] || ILLUSTRATION_DIMENSIONS.illustrated;
+      const dimensions = ILLUSTRATION_DIMENSIONS[formatKey] || ILLUSTRATION_DIMENSIONS.picture_book;
 
       return {
         success: true,

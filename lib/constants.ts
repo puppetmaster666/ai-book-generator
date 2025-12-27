@@ -18,13 +18,9 @@ export const PRICING = {
     credits: 50,
     interval: 'year',
   },
-  // Illustrated books
-  ILLUSTRATED: {
-    price: 2999, // cents - illustrated chapter book
-    priceDisplay: '$29.99',
-  },
-  CHILDRENS: {
-    price: 3999, // cents - full picture book
+  // Visual books (comics & children's)
+  VISUAL: {
+    price: 3999, // cents
     priceDisplay: '$39.99',
   },
 } as const;
@@ -37,71 +33,68 @@ export const BOOK_FORMATS = {
     illustrationsPerChapter: 0,
     priceKey: 'ONE_TIME',
   },
-  illustrated: {
-    label: 'Illustrated',
-    description: '1 illustration per chapter',
-    illustrationsPerChapter: 1,
-    priceKey: 'ILLUSTRATED',
-  },
   picture_book: {
     label: 'Picture Book',
     description: 'Full-page illustrations throughout',
-    illustrationsPerChapter: 2, // 2 per spread
-    priceKey: 'CHILDRENS',
+    illustrationsPerChapter: 1,
+    priceKey: 'VISUAL',
   },
 } as const;
 
 export type BookFormatKey = keyof typeof BOOK_FORMATS;
 
-// Art Styles for Illustrations
+// Art Styles for Illustrations - Simplified for 2 visual book types
 export const ART_STYLES = {
+  // Children's Book Styles
   watercolor: {
     label: 'Watercolor',
     description: 'Soft, dreamy watercolor paintings',
-    prompt: 'watercolor illustration style, soft edges, flowing colors, artistic, hand-painted look',
+    prompt: 'watercolor illustration style, soft edges, flowing colors, artistic, hand-painted look, gentle and warm',
     coverStyle: 'watercolor painting style',
+    category: 'childrens',
   },
   cartoon: {
     label: 'Cartoon',
     description: 'Fun, animated cartoon style',
-    prompt: 'cartoon illustration style, bold outlines, vibrant colors, expressive characters, animated look',
+    prompt: 'cartoon illustration style, bold outlines, vibrant colors, expressive characters, animated look, friendly',
     coverStyle: 'cartoon animated style',
+    category: 'childrens',
   },
   storybook: {
     label: 'Classic Storybook',
     description: 'Traditional children\'s book illustrations',
-    prompt: 'classic storybook illustration, warm colors, gentle shading, whimsical, fairy tale aesthetic',
+    prompt: 'classic storybook illustration, warm colors, gentle shading, whimsical, fairy tale aesthetic, cozy',
     coverStyle: 'classic storybook illustration',
+    category: 'childrens',
   },
-  modern: {
-    label: 'Modern Minimal',
-    description: 'Clean, contemporary illustrations',
-    prompt: 'modern minimalist illustration, clean lines, limited color palette, geometric shapes, contemporary design',
-    coverStyle: 'modern minimalist design',
-  },
-  realistic: {
-    label: 'Realistic',
-    description: 'Detailed, lifelike artwork',
-    prompt: 'realistic detailed illustration, lifelike rendering, rich textures, photorealistic elements',
-    coverStyle: 'realistic detailed artwork',
+  // Comic Book Styles
+  noir: {
+    label: 'Noir / Sin City',
+    description: 'High contrast black and white',
+    prompt: 'noir comic book style, high contrast black and white only, no colors, dramatic shadows, stark lighting, Frank Miller Sin City aesthetic, monochrome, ink style, cinematic',
+    coverStyle: 'noir black and white comic style',
+    category: 'comic',
   },
   manga: {
-    label: 'Manga/Anime',
-    description: 'Japanese manga-inspired art',
-    prompt: 'manga anime illustration style, expressive eyes, dynamic poses, Japanese comic aesthetic',
-    coverStyle: 'manga anime style artwork',
+    label: 'Manga',
+    description: 'Japanese manga black and white',
+    prompt: 'manga illustration style, black and white, screentones, expressive eyes, dynamic action lines, Japanese comic aesthetic, monochrome ink style',
+    coverStyle: 'manga style artwork',
+    category: 'comic',
   },
-  vintage: {
-    label: 'Vintage',
-    description: 'Retro, nostalgic artwork',
-    prompt: 'vintage retro illustration, muted colors, nostalgic feel, mid-century aesthetic, classic book art',
-    coverStyle: 'vintage retro book cover',
+  superhero: {
+    label: 'Superhero',
+    description: 'Classic American comic style',
+    prompt: 'classic American superhero comic book style, bold colors, dynamic poses, action-packed, muscular characters, dramatic lighting, Marvel DC aesthetic',
+    coverStyle: 'superhero comic book cover',
+    category: 'comic',
   },
-  fantasy: {
-    label: 'Fantasy Art',
-    description: 'Epic, magical fantasy artwork',
-    prompt: 'fantasy art illustration, magical atmosphere, epic lighting, detailed fantasy world, enchanting',
-    coverStyle: 'epic fantasy book cover art',
+  retro: {
+    label: 'Retro Comics',
+    description: 'Vintage 1950s comic style',
+    prompt: 'vintage 1950s comic book style, halftone dots, limited color palette, retro aesthetic, pulp comic look, classic pop art style',
+    coverStyle: 'vintage retro comic cover',
+    category: 'comic',
   },
 } as const;
 
@@ -111,89 +104,56 @@ export type ArtStyleKey = keyof typeof ART_STYLES;
 export const DIALOGUE_STYLES = {
   prose: {
     label: 'Classic Prose',
-    description: 'Text displayed under or around images (traditional picture book style)',
+    description: 'Text displayed under images (children\'s book style)',
   },
   bubbles: {
     label: 'Speech Bubbles',
-    description: 'Comic-style speech bubbles overlaid on images',
+    description: 'Comic-style speech bubbles on images',
   },
 } as const;
 
 export type DialogueStyleKey = keyof typeof DIALOGUE_STYLES;
 
-// Quick Book Presets (simplified creation)
+// Simplified Book Presets - Only 3 types
 export const BOOK_PRESETS = {
   novel: {
     label: 'Novel',
-    description: '50,000+ words, no illustrations',
+    description: '50,000+ words, text only, EPUB download',
     icon: 'BookOpen',
     format: 'text_only',
     artStyle: null,
-    dialogueStyle: null, // No dialogue style for text-only
+    dialogueStyle: null,
     defaultGenre: 'literary',
     targetWords: 60000,
     chapters: 20,
     priceDisplay: '$19.99',
+    downloadFormat: 'epub',
   },
   childrens_picture: {
     label: "Children's Picture Book",
-    description: '300-500 words with full illustrations',
+    description: '300-500 words with illustrations, PDF download',
     icon: 'Palette',
     format: 'picture_book',
     artStyle: 'storybook',
-    dialogueStyle: 'prose', // Text under images
+    dialogueStyle: 'prose',
     defaultGenre: 'childrens',
-    targetWords: 500, // Reduced from 1000 - picture books are minimal text
-    chapters: 12, // 12 pages/spreads
+    targetWords: 500,
+    chapters: 12,
     priceDisplay: '$39.99',
-  },
-  childrens_chapter: {
-    label: "Children's Chapter Book",
-    description: '5,000-10,000 words with illustrations',
-    icon: 'BookMarked',
-    format: 'illustrated',
-    artStyle: 'cartoon',
-    dialogueStyle: 'prose',
-    defaultGenre: 'childrens',
-    targetWords: 8000, // Reduced from 10000
-    chapters: 10,
-    priceDisplay: '$29.99',
-  },
-  illustrated_novel: {
-    label: 'Illustrated Novel',
-    description: '30,000+ words with chapter art',
-    icon: 'Image',
-    format: 'illustrated',
-    artStyle: 'fantasy',
-    dialogueStyle: 'prose',
-    defaultGenre: 'fantasy',
-    targetWords: 40000,
-    chapters: 15,
-    priceDisplay: '$29.99',
+    downloadFormat: 'pdf',
   },
   comic_story: {
-    label: 'Comic/Graphic Story',
-    description: 'Visual storytelling with speech bubbles',
+    label: 'Comic Book',
+    description: 'Visual story with speech bubbles, PDF download',
     icon: 'Layers',
     format: 'picture_book',
-    artStyle: 'manga',
-    dialogueStyle: 'bubbles', // Speech bubbles for comics
+    artStyle: 'noir',
+    dialogueStyle: 'bubbles',
     defaultGenre: 'ya',
-    targetWords: 800, // Reduced from 3000 - comics are mostly visual
-    chapters: 20, // 20 panels/pages
+    targetWords: 800,
+    chapters: 20,
     priceDisplay: '$39.99',
-  },
-  self_help: {
-    label: 'Self-Help Book',
-    description: 'Practical advice, no illustrations',
-    icon: 'Lightbulb',
-    format: 'text_only',
-    artStyle: null,
-    dialogueStyle: null,
-    defaultGenre: 'selfhelp',
-    targetWords: 45000,
-    chapters: 12,
-    priceDisplay: '$19.99',
+    downloadFormat: 'pdf',
   },
 } as const;
 
@@ -293,21 +253,14 @@ export const COVER_DIMENSIONS = {
 
 // Illustration dimensions for different book formats
 export const ILLUSTRATION_DIMENSIONS = {
-  // Standard illustrated novel - portrait orientation
-  illustrated: {
-    width: 768,
-    height: 1024,
-    aspectRatio: '3:4',
-    prompt: 'portrait orientation (3:4 aspect ratio)',
-  },
-  // Picture book - full page/spread landscape
+  // Picture book - full page landscape
   picture_book: {
     width: 1024,
     height: 768,
     aspectRatio: '4:3',
     prompt: 'landscape orientation (4:3 aspect ratio), full-page spread',
   },
-  // Square format (alternative)
+  // Square format for social sharing
   square: {
     width: 1024,
     height: 1024,
