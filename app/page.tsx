@@ -15,7 +15,6 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [isGeneratingIdea, setIsGeneratingIdea] = useState(false);
-  const [selectedPlan, setSelectedPlan] = useState<'single' | 'monthly' | 'yearly'>('monthly');
   const [lightboxImage, setLightboxImage] = useState<{ src: string; label: string } | null>(null);
 
   const handleFindIdea = async () => {
@@ -319,253 +318,182 @@ export default function Home() {
 
       {/* Pricing */}
       <section className="py-24 px-6 bg-white">
-        <div className="max-w-6xl mx-auto">
+        <div className="max-w-5xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-4xl md:text-5xl font-bold tracking-tight mb-4" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>
               Simple pricing
             </h2>
             <p className="text-lg text-neutral-600">
-              Choose the plan that works for you
+              Choose the book type that fits your project
             </p>
           </div>
 
-          {/* Illustrated Books - One-time only */}
-          <div className="mb-16">
-            <div className="flex items-center gap-3 mb-6">
-              <h3 className="text-2xl font-bold" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>
-                Illustrated Books
-              </h3>
-              <span className="bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-xs font-medium">
-                New
-              </span>
-            </div>
-            <div className="grid md:grid-cols-2 gap-6 mb-4">
-              {/* Illustrated Chapter Book */}
-              <div className="bg-gradient-to-br from-blue-50 to-purple-50 rounded-2xl p-6 border border-blue-100">
-                <h4 className="text-lg font-semibold mb-2">Illustrated Chapter Book</h4>
-                <div className="flex items-baseline gap-1 mb-3">
-                  <span className="text-3xl font-bold">$29.99</span>
-                  <span className="text-neutral-500">one-time</span>
-                </div>
-                <p className="text-sm text-neutral-600 mb-4">
-                  5,000-15,000 words with 1 illustration per chapter
-                </p>
-                <ul className="space-y-2 text-sm text-neutral-600">
-                  <li className="flex items-center gap-2">
-                    <Check className="h-4 w-4 text-green-600" />
-                    AI-generated chapter illustrations
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <Check className="h-4 w-4 text-green-600" />
-                    Custom cover design
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <Check className="h-4 w-4 text-green-600" />
-                    8 art styles to choose from
-                  </li>
-                </ul>
+          {/* Book Types - 3 options */}
+          <div className="grid md:grid-cols-3 gap-6 mb-16">
+            {/* Novel */}
+            <div className="bg-white rounded-2xl p-8 border border-neutral-200 hover:shadow-lg transition-shadow">
+              <div className="w-12 h-12 bg-neutral-100 rounded-xl flex items-center justify-center mb-4">
+                <BookOpen className="h-6 w-6 text-neutral-700" />
               </div>
-
-              {/* Picture Book */}
-              <div className="bg-gradient-to-br from-pink-50 to-orange-50 rounded-2xl p-6 border border-pink-100">
-                <h4 className="text-lg font-semibold mb-2">Children&apos;s Picture Book</h4>
-                <div className="flex items-baseline gap-1 mb-3">
-                  <span className="text-3xl font-bold">$39.99</span>
-                  <span className="text-neutral-500">one-time</span>
-                </div>
-                <p className="text-sm text-neutral-600 mb-4">
-                  500-1,500 words with full-page illustrations throughout
-                </p>
-                <ul className="space-y-2 text-sm text-neutral-600">
-                  <li className="flex items-center gap-2">
-                    <Check className="h-4 w-4 text-green-600" />
-                    2 illustrations per spread
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <Check className="h-4 w-4 text-green-600" />
-                    Child-friendly art styles
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <Check className="h-4 w-4 text-green-600" />
-                    Perfect for ages 3-8
-                  </li>
-                </ul>
-              </div>
-            </div>
-            <p className="text-sm text-neutral-500 text-center">
-              Illustrated books are one-time purchases only. AI illustration is cutting-edge technology and not yet available for subscriptions.
-            </p>
-          </div>
-
-          {/* Text-Only Books */}
-          <div>
-            <h3 className="text-2xl font-bold mb-6" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>
-              Text-Only Novels
-            </h3>
-
-            {/* Plan Toggle */}
-            <div className="flex justify-center mb-8">
-              <div className="inline-flex bg-neutral-100 p-1 rounded-full">
-                {(['single', 'monthly', 'yearly'] as const).map((plan) => (
-                  <button
-                    key={plan}
-                    onClick={() => setSelectedPlan(plan)}
-                    className={`px-6 py-2 rounded-full text-sm font-medium transition-all ${
-                      selectedPlan === plan
-                        ? 'bg-white text-neutral-900 shadow-sm'
-                        : 'text-neutral-600 hover:text-neutral-900'
-                    }`}
-                  >
-                    {plan === 'single' ? 'One Book' : plan === 'monthly' ? 'Monthly' : 'Yearly'}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-          {/* Pricing Cards */}
-          <div className="grid md:grid-cols-3 gap-6">
-            {/* Single */}
-            <div
-              onClick={() => setSelectedPlan('single')}
-              className={`relative rounded-2xl p-8 cursor-pointer transition-all card-hover ${
-                selectedPlan === 'single'
-                  ? 'bg-neutral-900 text-white ring-2 ring-neutral-900'
-                  : 'bg-neutral-50 hover:bg-neutral-100'
-              }`}
-            >
-              <h3 className="text-lg font-semibold mb-2" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>Single Book</h3>
-              <div className="flex items-baseline gap-1 mb-4">
+              <h3 className="text-xl font-semibold mb-2" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>Novel</h3>
+              <div className="flex items-baseline gap-1 mb-3">
                 <span className="text-4xl font-bold">$19.99</span>
               </div>
-              <p className={`text-sm mb-6 ${selectedPlan === 'single' ? 'text-neutral-300' : 'text-neutral-600'}`}>
-                One-time payment
-              </p>
-              <ul className={`space-y-3 text-sm ${selectedPlan === 'single' ? 'text-neutral-200' : 'text-neutral-600'}`}>
-                <li className="flex items-center gap-3">
-                  <Check className={`h-4 w-4 ${selectedPlan === 'single' ? 'text-green-400' : 'text-green-600'}`} />
-                  Complete 50k+ word book
+              <p className="text-sm text-neutral-500 mb-4">Text-only, EPUB download</p>
+              <ul className="space-y-3 text-sm text-neutral-600 mb-6">
+                <li className="flex items-center gap-2">
+                  <Check className="h-4 w-4 text-green-600" />
+                  50,000+ words, 20+ chapters
                 </li>
-                <li className="flex items-center gap-3">
-                  <Check className={`h-4 w-4 ${selectedPlan === 'single' ? 'text-green-400' : 'text-green-600'}`} />
-                  EPUB + cover image
+                <li className="flex items-center gap-2">
+                  <Check className="h-4 w-4 text-green-600" />
+                  AI-generated cover
                 </li>
-                <li className="flex items-center gap-3">
-                  <Check className={`h-4 w-4 ${selectedPlan === 'single' ? 'text-green-400' : 'text-green-600'}`} />
-                  Full commercial rights
+                <li className="flex items-center gap-2">
+                  <Check className="h-4 w-4 text-green-600" />
+                  Amazon KDP ready
                 </li>
               </ul>
               <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  window.scrollTo({ top: 0, behavior: 'smooth' });
-                }}
-                className={`w-full mt-8 py-3 rounded-xl text-sm font-medium transition-all ${
-                  selectedPlan === 'single'
-                    ? 'bg-white text-neutral-900 hover:bg-neutral-100'
-                    : 'bg-neutral-900 text-white hover:bg-neutral-800'
-                }`}
+                onClick={() => router.push('/create')}
+                className="w-full bg-neutral-900 text-white py-3 rounded-xl text-sm font-medium hover:bg-neutral-800 transition-colors"
               >
-                Get started
+                Create Novel
               </button>
             </div>
 
+            {/* Comic Book */}
+            <div className="bg-white rounded-2xl p-8 border border-neutral-200 hover:shadow-lg transition-shadow">
+              <div className="w-12 h-12 bg-neutral-100 rounded-xl flex items-center justify-center mb-4">
+                <svg className="h-6 w-6 text-neutral-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                </svg>
+              </div>
+              <h3 className="text-xl font-semibold mb-2" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>Comic Book</h3>
+              <div className="flex items-baseline gap-1 mb-3">
+                <span className="text-4xl font-bold">$39.99</span>
+              </div>
+              <p className="text-sm text-neutral-500 mb-4">With speech bubbles, PDF download</p>
+              <ul className="space-y-3 text-sm text-neutral-600 mb-6">
+                <li className="flex items-center gap-2">
+                  <Check className="h-4 w-4 text-green-600" />
+                  20 full-page panels
+                </li>
+                <li className="flex items-center gap-2">
+                  <Check className="h-4 w-4 text-green-600" />
+                  4 art styles (noir, manga, etc.)
+                </li>
+                <li className="flex items-center gap-2">
+                  <Check className="h-4 w-4 text-green-600" />
+                  Print-ready PDF
+                </li>
+              </ul>
+              <button
+                onClick={() => router.push('/create')}
+                className="w-full bg-neutral-900 text-white py-3 rounded-xl text-sm font-medium hover:bg-neutral-800 transition-colors"
+              >
+                Create Comic
+              </button>
+            </div>
+
+            {/* Children's Picture Book */}
+            <div className="bg-white rounded-2xl p-8 border border-neutral-200 hover:shadow-lg transition-shadow">
+              <div className="w-12 h-12 bg-neutral-100 rounded-xl flex items-center justify-center mb-4">
+                <svg className="h-6 w-6 text-neutral-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+              </div>
+              <h3 className="text-xl font-semibold mb-2" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>Picture Book</h3>
+              <div className="flex items-baseline gap-1 mb-3">
+                <span className="text-4xl font-bold">$39.99</span>
+              </div>
+              <p className="text-sm text-neutral-500 mb-4">For children, PDF download</p>
+              <ul className="space-y-3 text-sm text-neutral-600 mb-6">
+                <li className="flex items-center gap-2">
+                  <Check className="h-4 w-4 text-green-600" />
+                  12 illustrated pages
+                </li>
+                <li className="flex items-center gap-2">
+                  <Check className="h-4 w-4 text-green-600" />
+                  3 art styles (watercolor, etc.)
+                </li>
+                <li className="flex items-center gap-2">
+                  <Check className="h-4 w-4 text-green-600" />
+                  Ages 3-8 friendly
+                </li>
+              </ul>
+              <button
+                onClick={() => router.push('/create')}
+                className="w-full bg-neutral-900 text-white py-3 rounded-xl text-sm font-medium hover:bg-neutral-800 transition-colors"
+              >
+                Create Picture Book
+              </button>
+            </div>
+          </div>
+
+          {/* Subscription Plans */}
+          <div className="text-center mb-8">
+            <h3 className="text-2xl font-bold mb-2" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>
+              Subscription Plans
+            </h3>
+            <p className="text-neutral-600">For authors creating multiple novels</p>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-6 max-w-3xl mx-auto">
             {/* Monthly */}
-            <div
-              onClick={() => setSelectedPlan('monthly')}
-              className={`relative rounded-2xl p-8 cursor-pointer transition-all card-hover ${
-                selectedPlan === 'monthly'
-                  ? 'bg-neutral-900 text-white ring-2 ring-neutral-900'
-                  : 'bg-neutral-50 hover:bg-neutral-100'
-              }`}
-            >
-              <div className={`absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full text-xs font-medium ${
-                selectedPlan === 'monthly' ? 'bg-white text-neutral-900' : 'bg-neutral-900 text-white'
-              }`}>
+            <div className="bg-neutral-900 text-white rounded-2xl p-8 relative">
+              <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-white text-neutral-900 px-3 py-1 rounded-full text-xs font-medium">
                 Most Popular
               </div>
-              <h3 className="text-lg font-semibold mb-2" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>Monthly</h3>
+              <h4 className="text-lg font-semibold mb-2">Monthly</h4>
               <div className="flex items-baseline gap-1 mb-4">
                 <span className="text-4xl font-bold">$69</span>
-                <span className={selectedPlan === 'monthly' ? 'text-neutral-400' : 'text-neutral-500'}>/month</span>
+                <span className="text-neutral-400">/month</span>
               </div>
-              <p className={`text-sm mb-6 ${selectedPlan === 'monthly' ? 'text-neutral-300' : 'text-neutral-600'}`}>
-                5 books per month
-              </p>
-              <ul className={`space-y-3 text-sm ${selectedPlan === 'monthly' ? 'text-neutral-200' : 'text-neutral-600'}`}>
-                <li className="flex items-center gap-3">
-                  <Check className={`h-4 w-4 ${selectedPlan === 'monthly' ? 'text-green-400' : 'text-green-600'}`} />
-                  Everything in Single
-                </li>
-                <li className="flex items-center gap-3">
-                  <Check className={`h-4 w-4 ${selectedPlan === 'monthly' ? 'text-green-400' : 'text-green-600'}`} />
+              <p className="text-sm text-neutral-300 mb-6">5 novels per month</p>
+              <ul className="space-y-3 text-sm text-neutral-200 mb-6">
+                <li className="flex items-center gap-2">
+                  <Check className="h-4 w-4 text-green-400" />
                   Priority generation
                 </li>
-                <li className="flex items-center gap-3">
-                  <Check className={`h-4 w-4 ${selectedPlan === 'monthly' ? 'text-green-400' : 'text-green-600'}`} />
+                <li className="flex items-center gap-2">
+                  <Check className="h-4 w-4 text-green-400" />
                   Cancel anytime
                 </li>
               </ul>
               <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  window.scrollTo({ top: 0, behavior: 'smooth' });
-                }}
-                className={`w-full mt-8 py-3 rounded-xl text-sm font-medium transition-all ${
-                  selectedPlan === 'monthly'
-                    ? 'bg-white text-neutral-900 hover:bg-neutral-100'
-                    : 'bg-neutral-900 text-white hover:bg-neutral-800'
-                }`}
+                onClick={() => router.push('/signup?plan=monthly')}
+                className="w-full bg-white text-neutral-900 py-3 rounded-xl text-sm font-medium hover:bg-neutral-100 transition-colors"
               >
                 Subscribe
               </button>
             </div>
 
             {/* Yearly */}
-            <div
-              onClick={() => setSelectedPlan('yearly')}
-              className={`relative rounded-2xl p-8 cursor-pointer transition-all card-hover ${
-                selectedPlan === 'yearly'
-                  ? 'bg-neutral-900 text-white ring-2 ring-neutral-900'
-                  : 'bg-neutral-50 hover:bg-neutral-100'
-              }`}
-            >
-              <h3 className="text-lg font-semibold mb-2" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>Yearly</h3>
+            <div className="bg-neutral-50 rounded-2xl p-8 border border-neutral-200">
+              <h4 className="text-lg font-semibold mb-2">Yearly</h4>
               <div className="flex items-baseline gap-1 mb-4">
                 <span className="text-4xl font-bold">$499</span>
-                <span className={selectedPlan === 'yearly' ? 'text-neutral-400' : 'text-neutral-500'}>/year</span>
+                <span className="text-neutral-500">/year</span>
               </div>
-              <p className={`text-sm mb-6 ${selectedPlan === 'yearly' ? 'text-neutral-300' : 'text-neutral-600'}`}>
-                50 book credits
-              </p>
-              <ul className={`space-y-3 text-sm ${selectedPlan === 'yearly' ? 'text-neutral-200' : 'text-neutral-600'}`}>
-                <li className="flex items-center gap-3">
-                  <Check className={`h-4 w-4 ${selectedPlan === 'yearly' ? 'text-green-400' : 'text-green-600'}`} />
-                  Best value ($10/book)
-                </li>
-                <li className="flex items-center gap-3">
-                  <Check className={`h-4 w-4 ${selectedPlan === 'yearly' ? 'text-green-400' : 'text-green-600'}`} />
+              <p className="text-sm text-neutral-600 mb-6">50 novel credits ($10 each)</p>
+              <ul className="space-y-3 text-sm text-neutral-600 mb-6">
+                <li className="flex items-center gap-2">
+                  <Check className="h-4 w-4 text-green-600" />
                   Credits never expire
                 </li>
-                <li className="flex items-center gap-3">
-                  <Check className={`h-4 w-4 ${selectedPlan === 'yearly' ? 'text-green-400' : 'text-green-600'}`} />
+                <li className="flex items-center gap-2">
+                  <Check className="h-4 w-4 text-green-600" />
                   Priority support
                 </li>
               </ul>
               <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  window.scrollTo({ top: 0, behavior: 'smooth' });
-                }}
-                className={`w-full mt-8 py-3 rounded-xl text-sm font-medium transition-all ${
-                  selectedPlan === 'yearly'
-                    ? 'bg-white text-neutral-900 hover:bg-neutral-100'
-                    : 'bg-neutral-900 text-white hover:bg-neutral-800'
-                }`}
+                onClick={() => router.push('/signup?plan=yearly')}
+                className="w-full bg-neutral-900 text-white py-3 rounded-xl text-sm font-medium hover:bg-neutral-800 transition-colors"
               >
-                Get started
+                Get Started
               </button>
             </div>
-          </div>
           </div>
         </div>
       </section>
