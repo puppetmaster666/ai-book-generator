@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
-import { ArrowRight, Loader2, Sparkles, X, Check, ChevronRight, Zap, BookOpen, Download, ExternalLink, FileCheck } from 'lucide-react';
+import { ArrowRight, Loader2, Sparkles, X, Check, ChevronRight, Zap, BookOpen, Download, ExternalLink } from 'lucide-react';
 import Footer from '@/components/Footer';
 import NewYearPopup from '@/components/NewYearPopup';
 import Header from '@/components/Header';
@@ -264,10 +264,6 @@ export default function Home() {
       <section className="py-24 px-6">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-16">
-            <div className="inline-flex items-center gap-2 bg-green-50 text-green-700 px-4 py-2 rounded-full text-sm mb-6">
-              <FileCheck className="h-4 w-4" />
-              Amazon KDP Ready
-            </div>
             <h2 className="text-4xl md:text-5xl font-bold tracking-tight mb-4" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>
               Publication-ready formatting
             </h2>
@@ -279,7 +275,7 @@ export default function Home() {
 
           <div className="grid md:grid-cols-3 gap-6">
             {[
-              { src: '/images/screenshots/epub-cover.png', label: 'Cover (1600x2560px)' },
+              { src: '/images/screenshots/epub-cover.png', label: 'Title Page & Author' },
               { src: '/images/screenshots/epub-toc.png', label: 'Auto-generated TOC' },
               { src: '/images/screenshots/epub-chapter-1.png', label: 'Formatted Chapters' },
             ].map((item, i) => (

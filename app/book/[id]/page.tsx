@@ -97,10 +97,10 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
   const [retrying, setRetrying] = useState(false);
   const startTimeRef = useRef<number | null>(null);
 
-  // Check if this is a comic book (should use parallel panel generation page)
-  const isComicBook = book?.dialogueStyle === 'bubbles' || book?.bookPreset === 'comic_story';
+  // Check if this is a visual book (should use parallel panel generation page)
+  const isVisualBook = book?.bookFormat === 'picture_book' || book?.dialogueStyle === 'bubbles' || book?.bookPreset === 'comic_story' || book?.bookPreset === 'childrens_picture';
 
-  // First: Load book and check if we need to redirect to comic page
+  // First: Load book and check if we need to redirect to visual generation page
   // This happens BEFORE any UI is shown
   useEffect(() => {
     const loadAndCheck = async () => {
@@ -110,15 +110,18 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
         const data = await res.json();
         const loadedBook = data.book;
 
-        // Check if this is a comic book that needs generation
-        const isComic = loadedBook?.dialogueStyle === 'bubbles' || loadedBook?.bookPreset === 'comic_story';
+        // Check if this is a visual book that needs generation (comics OR picture books)
+        const isVisual = loadedBook?.bookFormat === 'picture_book' ||
+                         loadedBook?.dialogueStyle === 'bubbles' ||
+                         loadedBook?.bookPreset === 'comic_story' ||
+                         loadedBook?.bookPreset === 'childrens_picture';
         const needsGeneration = success === 'true' ||
           (loadedBook?.paymentStatus === 'completed' && loadedBook?.status === 'pending');
 
-        // If it's a comic that needs generation, redirect IMMEDIATELY
-        if (isComic && needsGeneration) {
+        // If it's a visual book that needs generation, redirect IMMEDIATELY
+        if (isVisual && needsGeneration) {
           setRedirectingToComic(true);
-          console.log('Comic book detected, generating outline and redirecting...');
+          console.log('Visual book detected, generating outline and redirecting...');
 
           const genRes = await fetch(`/api/books/${id}/generate`, {
             method: 'POST',
@@ -145,9 +148,9 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
     loadAndCheck();
   }, [id, success, router]);
 
-  // Start generation for non-comic books only
+  // Start generation for text-only books (visual books use the parallel generation page)
   useEffect(() => {
-    if (!book || isComicBook || redirectingToComic) return;
+    if (!book || isVisualBook || redirectingToComic) return;
 
     const shouldStartGeneration =
       (success === 'true' || (book.paymentStatus === 'completed' && book.status === 'pending'))
@@ -158,7 +161,7 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
       startTimeRef.current = Date.now();
       fetch(`/api/books/${id}/generate`, { method: 'POST' }).catch(console.error);
     }
-  }, [success, id, generationStarted, book, isComicBook, redirectingToComic]);
+  }, [success, id, generationStarted, book, isVisualBook, redirectingToComic]);
 
   // Timer for elapsed time during generation
   useEffect(() => {
@@ -264,8 +267,11 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
         <div className="text-center">
           <Loader2 className="h-12 w-12 animate-spin text-neutral-900 mx-auto mb-4" />
           <p className="text-neutral-600">
-            {redirectingToComic ? 'Preparing your comic...' : 'Loading your book...'}
+            {redirectingToComic ? 'Preparing your illustrated book...' : 'Loading your book...'}
           </p>
+          {redirectingToComic && (
+            <p className="text-sm text-neutral-500 mt-2">This typically takes 3-5 minutes</p>
+          )}
         </div>
       </div>
     );

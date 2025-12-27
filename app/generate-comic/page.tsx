@@ -301,7 +301,7 @@ function GenerateComicContent() {
         <main className="py-20 px-6">
           <div className="max-w-6xl mx-auto text-center">
             <Loader2 className="h-12 w-12 animate-spin mx-auto mb-4 text-neutral-900" />
-            <p className="text-neutral-600">Loading comic outline...</p>
+            <p className="text-neutral-600">Loading your illustrated book...</p>
           </div>
         </main>
       </div>
@@ -338,10 +338,10 @@ function GenerateComicContent() {
           {/* Header */}
           <div className="text-center mb-8">
             <h1 className="text-3xl md:text-4xl font-bold text-neutral-900 mb-2">
-              {bookData?.title || 'Generate Comic'}
+              {bookData?.title || 'Generate Illustrated Book'}
             </h1>
             <p className="text-neutral-600">
-              {panels.length} panels • {bookData?.artStyle} style
+              {panels.length} {bookData?.dialogueStyle === 'bubbles' ? 'panels' : 'pages'} • {bookData?.artStyle} style
             </p>
           </div>
 
@@ -349,7 +349,7 @@ function GenerateComicContent() {
           <div className="mb-8 bg-white rounded-2xl p-6 border border-neutral-200">
             <div className="flex items-center justify-between text-sm text-neutral-600 mb-2">
               <span>Progress</span>
-              <span>{doneCount} / {panels.length} panels complete</span>
+              <span>{doneCount} / {panels.length} {bookData?.dialogueStyle === 'bubbles' ? 'panels' : 'pages'} complete</span>
             </div>
             <div className="h-3 bg-neutral-100 rounded-full overflow-hidden">
               <div
@@ -377,7 +377,7 @@ function GenerateComicContent() {
                 disabled={isGenerating}
                 className="flex items-center gap-2 px-8 py-4 bg-neutral-900 text-white rounded-full hover:bg-neutral-800 disabled:opacity-50 font-medium transition-all"
               >
-                Generate All {panels.length} Panels
+                Generate All {panels.length} {bookData?.dialogueStyle === 'bubbles' ? 'Panels' : 'Pages'}
               </button>
             )}
 
@@ -442,8 +442,8 @@ function GenerateComicContent() {
                     <Clock className="h-5 w-5 text-amber-700" />
                   </div>
                   <div>
-                    <p className="font-semibold text-amber-900">Generating Your Comic</p>
-                    <p className="text-sm text-amber-700">{generatingCount} panels in progress</p>
+                    <p className="font-semibold text-amber-900">Generating Your Illustrations</p>
+                    <p className="text-sm text-amber-700">{generatingCount} {bookData?.dialogueStyle === 'bubbles' ? 'panels' : 'pages'} in progress</p>
                   </div>
                 </div>
                 <div className="text-right">
@@ -459,8 +459,8 @@ function GenerateComicContent() {
                   <span className="font-medium">Please do not leave this page</span>
                 </div>
                 <p className="text-sm text-amber-700">
-                  This typically takes <strong>3-4 minutes</strong> for {panels.length} panels.
-                  Your comic is being generated in parallel for faster results.
+                  This typically takes <strong>3-5 minutes</strong> for {panels.length} {bookData?.dialogueStyle === 'bubbles' ? 'panels' : 'pages'}.
+                  Your book is being generated in parallel for faster results.
                 </p>
               </div>
             </div>
@@ -525,7 +525,7 @@ function GenerateComicContent() {
                 {/* Panel Info */}
                 <div className="p-3">
                   <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs text-neutral-500">Panel {panel.number}</span>
+                    <span className="text-xs text-neutral-500">{bookData?.dialogueStyle === 'bubbles' ? 'Panel' : 'Page'} {panel.number}</span>
                     {panel.status === 'done' && (
                       <Check className="h-4 w-4 text-emerald-500" />
                     )}
@@ -550,10 +550,10 @@ function GenerateComicContent() {
           {pendingCount === panels.length && !isGenerating && (
             <div className="mt-12 text-center text-neutral-500">
               <p className="text-sm">
-                Click &quot;Generate All Panels&quot; to start. All {panels.length} panels will be generated in parallel.
+                Click the button above to start. All {panels.length} {bookData?.dialogueStyle === 'bubbles' ? 'panels' : 'pages'} will be generated in parallel.
               </p>
               <p className="text-xs mt-2">
-                This may take a few minutes depending on the number of panels.
+                This typically takes 3-5 minutes depending on the number of illustrations.
               </p>
             </div>
           )}
