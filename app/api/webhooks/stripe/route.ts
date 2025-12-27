@@ -7,9 +7,7 @@ function getStripe() {
   if (!secretKey) {
     throw new Error('STRIPE_SECRET_KEY is not set');
   }
-  return new Stripe(secretKey, {
-    apiVersion: '2025-12-15.clover',
-  });
+  return new Stripe(secretKey);
 }
 
 export async function POST(request: NextRequest) {
