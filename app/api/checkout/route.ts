@@ -121,8 +121,12 @@ export async function POST(request: NextRequest) {
         },
       ],
       mode: productType === 'one-time' ? 'payment' : 'subscription',
-      success_url: `${process.env.NEXT_PUBLIC_APP_URL}/book/${bookId || 'dashboard'}?success=true&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/checkout?canceled=true&bookId=${bookId || ''}`,
+      success_url: productType === 'one-time'
+        ? `${process.env.NEXT_PUBLIC_APP_URL}/book/${bookId}?success=true&session_id={CHECKOUT_SESSION_ID}`
+        : `${process.env.NEXT_PUBLIC_APP_URL}/dashboard?success=true&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: productType === 'one-time'
+        ? `${process.env.NEXT_PUBLIC_APP_URL}/checkout?canceled=true&bookId=${bookId}`
+        : `${process.env.NEXT_PUBLIC_APP_URL}/checkout?canceled=true&plan=${productType}`,
       customer_email: email,
       metadata: {
         bookId: bookId || '',
