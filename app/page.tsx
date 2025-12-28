@@ -259,9 +259,9 @@ export default function Home() {
               <h2 className="text-4xl md:text-5xl font-bold tracking-tight mb-6 text-neutral-900" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>
                 Blood &{' '}
                 <span className="relative inline-block">
-                  <span className="absolute inset-0 bg-black -skew-y-2 translate-x-1 translate-y-1" aria-hidden="true" />
-                  <span className={`absolute inset-0 ${ACCENT.bg} -skew-y-2`} aria-hidden="true" />
-                  <span className="relative text-neutral-900 px-3 py-0.5">Silver</span>
+                  <span className="absolute -inset-1 bg-black -skew-y-2 translate-x-1 translate-y-0.5" aria-hidden="true" />
+                  <span className={`absolute -inset-1 ${ACCENT.bg} -skew-y-2`} aria-hidden="true" />
+                  <span className="relative text-neutral-900 px-3 py-1">Silver</span>
                 </span>
               </h2>
               <p className="text-xl text-neutral-600 mb-4">
@@ -294,9 +294,9 @@ export default function Home() {
             <h2 className="text-4xl md:text-5xl font-bold tracking-tight mb-4" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>
               Three steps to{' '}
               <span className="relative inline-block">
-                <span className="absolute inset-0 bg-black -skew-y-2 translate-x-1 translate-y-1" aria-hidden="true" />
-                <span className={`absolute inset-0 ${ACCENT.bg} -skew-y-2`} aria-hidden="true" />
-                <span className="relative text-neutral-900 px-3 py-0.5">your book</span>
+                <span className="absolute -inset-1 bg-black -skew-y-2 translate-x-1 translate-y-0.5" aria-hidden="true" />
+                <span className={`absolute -inset-1 ${ACCENT.bg} -skew-y-2`} aria-hidden="true" />
+                <span className="relative text-neutral-900 px-3 py-1">your book</span>
               </span>
             </h2>
             <p className="text-lg text-neutral-600">
@@ -350,9 +350,9 @@ export default function Home() {
             <h2 className="text-4xl md:text-5xl font-bold tracking-tight mb-4 text-white" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>
               Publication-
               <span className="relative inline-block">
-                <span className="absolute inset-0 bg-black -skew-y-2 translate-x-1 translate-y-1" aria-hidden="true" />
-                <span className={`absolute inset-0 ${ACCENT.bg} -skew-y-2`} aria-hidden="true" />
-                <span className="relative text-neutral-900 px-3 py-0.5">ready</span>
+                <span className="absolute -inset-1 bg-white/20 -skew-y-2 translate-x-1 translate-y-0.5" aria-hidden="true" />
+                <span className={`absolute -inset-1 ${ACCENT.bg} -skew-y-2`} aria-hidden="true" />
+                <span className="relative text-neutral-900 px-3 py-1">ready</span>
               </span>
               {' '}formatting
             </h2>
@@ -408,9 +408,9 @@ export default function Home() {
             <h2 className="text-4xl md:text-5xl font-bold tracking-tight mb-4" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>
               Simple{' '}
               <span className="relative inline-block">
-                <span className="absolute inset-0 bg-black -skew-y-2 translate-x-1 translate-y-1" aria-hidden="true" />
-                <span className={`absolute inset-0 ${ACCENT.bg} -skew-y-2`} aria-hidden="true" />
-                <span className="relative text-neutral-900 px-3 py-0.5">pricing</span>
+                <span className="absolute -inset-1 bg-black -skew-y-2 translate-x-1 translate-y-0.5" aria-hidden="true" />
+                <span className={`absolute -inset-1 ${ACCENT.bg} -skew-y-2`} aria-hidden="true" />
+                <span className="relative text-neutral-900 px-3 py-1">pricing</span>
               </span>
             </h2>
             <p className="text-lg text-neutral-600">
@@ -570,9 +570,9 @@ export default function Home() {
           <h2 className="text-4xl md:text-5xl font-bold tracking-tight mb-6 text-white" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>
             Ready to write{' '}
             <span className="relative inline-block">
-              <span className="absolute inset-0 bg-black -skew-y-2 translate-x-1 translate-y-1" aria-hidden="true" />
-              <span className={`absolute inset-0 ${ACCENT.bg} -skew-y-2`} aria-hidden="true" />
-              <span className="relative text-neutral-900 px-3 py-0.5">your book</span>
+              <span className="absolute -inset-1 bg-white/20 -skew-y-2 translate-x-1 translate-y-0.5" aria-hidden="true" />
+              <span className={`absolute -inset-1 ${ACCENT.bg} -skew-y-2`} aria-hidden="true" />
+              <span className="relative text-neutral-900 px-3 py-1">your book</span>
             </span>
             ?
           </h2>
