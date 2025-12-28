@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
+import VideoEmbed from '@/components/VideoEmbed';
 import { Sparkles, FileText, Zap, Download, ArrowRight, Check, FileCheck, BookOpen, Palette, Layers } from 'lucide-react';
 
 export default function HowItWorksContent() {
@@ -24,6 +25,18 @@ export default function HowItWorksContent() {
             </h1>
             <p className="text-xl text-neutral-600 max-w-2xl mx-auto">
               From your idea to a publication-ready book in minutes
+            </p>
+          </div>
+
+          {/* Full Walkthrough Video */}
+          <div className="mb-16">
+            <VideoEmbed
+              videoId="dQw4w9WgXcQ"
+              title="Full Walkthrough: Creating a Book from Start to Finish"
+              className="max-w-3xl mx-auto"
+            />
+            <p className="text-center text-sm text-neutral-500 mt-4">
+              Watch the full walkthrough to see the entire process in action
             </p>
           </div>
 

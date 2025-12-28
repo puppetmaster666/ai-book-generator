@@ -81,6 +81,7 @@ function parseJSONFromResponse(response: string): object {
 let genAI: GoogleGenerativeAI | null = null;
 let _geminiPro: GenerativeModel | null = null;
 let _geminiFlash: GenerativeModel | null = null;
+let _geminiFlashLight: GenerativeModel | null = null; // Lightweight version for quick tasks
 let _geminiImage: GenerativeModel | null = null;
 
 function getGenAI(): GoogleGenerativeAI {
@@ -110,7 +111,7 @@ function getGeminiPro(): GenerativeModel {
   return _geminiPro;
 }
 
-// Gemini 3 Flash for summarization and outlines
+// Gemini 3 Flash for fast tasks (outlines, ideas, summaries)
 function getGeminiFlash(): GenerativeModel {
   if (!_geminiFlash) {
     _geminiFlash = getGenAI().getGenerativeModel({
@@ -118,11 +119,26 @@ function getGeminiFlash(): GenerativeModel {
       generationConfig: {
         temperature: 0.3,
         topP: 0.9,
-        maxOutputTokens: 65536, // Increased for large comic outlines (24 panels with scene descriptions)
+        maxOutputTokens: 65536,
       },
     });
   }
   return _geminiFlash;
+}
+
+// Lightweight Gemini 3 Flash for very quick tasks (idea generation)
+function getGeminiFlashLight(): GenerativeModel {
+  if (!_geminiFlashLight) {
+    _geminiFlashLight = getGenAI().getGenerativeModel({
+      model: 'gemini-3-flash-preview',
+      generationConfig: {
+        temperature: 0.9,
+        topP: 0.95,
+        maxOutputTokens: 256, // Much smaller for quick responses
+      },
+    });
+  }
+  return _geminiFlashLight;
 }
 
 // Gemini 3 Pro Image for cover generation
@@ -363,10 +379,10 @@ Examples of the style (but create something COMPLETELY DIFFERENT):
 
 Your unique ${actualCategory === 'childrens' ? "children's book" : actualCategory === 'adult_comic' ? 'adult comic' : actualCategory} idea (2 sentences, end with period):`;
 
-  const maxRetries = 3;
+  const maxRetries = 2; // Reduced retries for faster response
 
   for (let attempt = 0; attempt < maxRetries; attempt++) {
-    const result = await getGeminiFlash().generateContent(prompt);
+    const result = await getGeminiFlashLight().generateContent(prompt);
     let idea = result.response.text().trim();
 
     // Remove any quotes or prefixes

@@ -4,10 +4,14 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import Image from 'next/image';
-import { ArrowRight, Loader2, Sparkles, X, Check, ChevronRight, Zap, BookOpen, Download, ExternalLink, ChevronDown } from 'lucide-react';
+import { ArrowRight, Loader2, Sparkles, X, Check, ChevronRight, Zap, BookOpen, Download, ExternalLink, ChevronDown, Play } from 'lucide-react';
 import Footer from '@/components/Footer';
 import NewYearPopup from '@/components/NewYearPopup';
 import Header from '@/components/Header';
+import VideoModal from '@/components/VideoModal';
+import StatsBar from '@/components/StatsBar';
+import Testimonials from '@/components/Testimonials';
+import FAQ from '@/components/FAQ';
 
 // Idea categories for the Surprise Me feature
 type IdeaCategory = 'random' | 'novel' | 'childrens' | 'comic' | 'adult_comic';
@@ -36,6 +40,7 @@ export default function Home() {
   const [lightboxImage, setLightboxImage] = useState<{ src: string; label: string } | null>(null);
   const [ideaCategory, setIdeaCategory] = useState<IdeaCategory>('random');
   const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
+  const [showVideoModal, setShowVideoModal] = useState(false);
 
   const handleFindIdea = async () => {
     setIsGeneratingIdea(true);
@@ -220,9 +225,23 @@ export default function Home() {
                 EPUB download
               </span>
             </div>
+
+            {/* Watch Demo Button */}
+            <button
+              onClick={() => setShowVideoModal(true)}
+              className="mt-8 inline-flex items-center gap-2 text-white/80 hover:text-white transition-colors group"
+            >
+              <div className="w-10 h-10 rounded-full bg-white/20 backdrop-blur flex items-center justify-center group-hover:bg-white/30 transition-colors">
+                <Play className="h-4 w-4 ml-0.5" fill="currentColor" />
+              </div>
+              <span className="text-sm font-medium">Watch how it works</span>
+            </button>
           </div>
         </div>
       </section>
+
+      {/* Stats Bar */}
+      <StatsBar />
 
       {/* Success Story - Blood & Silver */}
       <section className="py-20 px-6 bg-white">
@@ -344,6 +363,9 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      {/* Testimonials */}
+      <Testimonials />
 
       {/* Showcase */}
       <section className="py-24 px-6 bg-neutral-900">
@@ -564,6 +586,9 @@ export default function Home() {
         </div>
       </section>
 
+      {/* FAQ */}
+      <FAQ />
+
       {/* CTA */}
       <section className="py-24 px-6 bg-neutral-900">
         <div className="max-w-4xl mx-auto text-center">
@@ -620,6 +645,14 @@ export default function Home() {
 
       {/* New Year Promo Popup */}
       <NewYearPopup />
+
+      {/* Video Modal */}
+      <VideoModal
+        isOpen={showVideoModal}
+        onClose={() => setShowVideoModal(false)}
+        videoId="dQw4w9WgXcQ"
+        title="How DraftMyBook Works"
+      />
     </div>
   );
 }
