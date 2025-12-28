@@ -19,6 +19,7 @@ import {
   Mail,
   Gift,
   Send,
+  RotateCcw,
 } from 'lucide-react';
 
 interface AdminStats {
@@ -122,6 +123,8 @@ export default function AdminDashboard() {
   const [isSendingEmail, setIsSendingEmail] = useState(false);
   const [isGiftingCredits, setIsGiftingCredits] = useState(false);
   const [emailResult, setEmailResult] = useState<{ success: boolean; message: string } | null>(null);
+  const [restartingBookId, setRestartingBookId] = useState<string | null>(null);
+  const [restartResult, setRestartResult] = useState<{ success: boolean; message: string } | null>(null);
 
   const fetchStats = async (showRefresh = false) => {
     if (showRefresh) setIsRefreshing(true);
@@ -303,6 +306,42 @@ export default function AdminDashboard() {
       setDeleteError(err instanceof Error ? err.message : 'Failed to delete books');
     } finally {
       setIsDeleting(false);
+    }
+  };
+
+  const handleRestartBook = async (bookId: string, bookTitle: string) => {
+    const confirmed = window.confirm(
+      `Are you sure you want to restart "${bookTitle}" from scratch?\n\nThis will DELETE all chapters, illustrations, and generated content.\n\nThe original book input (title, premise, characters, etc.) will be kept.`
+    );
+
+    if (!confirmed) return;
+
+    setRestartingBookId(bookId);
+    setRestartResult(null);
+
+    try {
+      const response = await fetch(`/api/admin/books/${bookId}/restart`, {
+        method: 'POST',
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to restart book');
+      }
+
+      setRestartResult({
+        success: true,
+        message: data.message,
+      });
+      await fetchStats(true);
+    } catch (err) {
+      setRestartResult({
+        success: false,
+        message: err instanceof Error ? err.message : 'Failed to restart book',
+      });
+    } finally {
+      setRestartingBookId(null);
     }
   };
 
@@ -527,6 +566,15 @@ export default function AdminDashboard() {
               {deleteError}
             </div>
           )}
+          {restartResult && (
+            <div className={`mb-4 p-3 rounded-lg text-sm ${
+              restartResult.success
+                ? 'bg-green-50 text-green-700 border border-green-200'
+                : 'bg-red-50 text-red-700 border border-red-200'
+            }`}>
+              {restartResult.message}
+            </div>
+          )}
           {stats.recentBooks.length > 0 ? (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
@@ -548,6 +596,7 @@ export default function AdminDashboard() {
                     <th className="text-left py-3 px-2 font-medium text-neutral-500">Payment</th>
                     <th className="text-left py-3 px-2 font-medium text-neutral-500">Words</th>
                     <th className="text-left py-3 px-2 font-medium text-neutral-500">Created</th>
+                    <th className="text-left py-3 px-2 font-medium text-neutral-500">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -600,6 +649,20 @@ export default function AdminDashboard() {
                       <td className="py-3 px-2 text-neutral-500">
                         <div>{new Date(book.createdAt).toLocaleDateString()}</div>
                         <div className="text-xs text-neutral-400">{new Date(book.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+                      </td>
+                      <td className="py-3 px-2">
+                        <button
+                          onClick={() => handleRestartBook(book.id, book.title)}
+                          disabled={restartingBookId === book.id}
+                          title="Restart from scratch (keeps original input)"
+                          className="p-2 text-neutral-500 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-colors disabled:opacity-50"
+                        >
+                          {restartingBookId === book.id ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <RotateCcw className="h-4 w-4" />
+                          )}
+                        </button>
                       </td>
                     </tr>
                   ))}

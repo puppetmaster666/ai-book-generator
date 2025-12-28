@@ -129,16 +129,16 @@ function getGenAI(): GoogleGenerativeAI {
   return genAI;
 }
 
-// Gemini 3 Pro for main generation
+// Gemini 3 Flash for main generation (faster and cheaper, each chapter is independent)
 function getGeminiPro(): GenerativeModel {
   if (!_geminiPro) {
     _geminiPro = getGenAI().getGenerativeModel({
-      model: 'gemini-3-pro-preview',
+      model: 'gemini-3-flash-preview',
       generationConfig: {
         temperature: 0.8,
         topP: 0.95,
         topK: 40,
-        maxOutputTokens: 65536, // Increased for large comic outlines (24 panels with scene descriptions)
+        maxOutputTokens: 65536,
       },
     });
   }
