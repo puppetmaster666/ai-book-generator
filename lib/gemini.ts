@@ -73,7 +73,7 @@ function getGeminiPro(): GenerativeModel {
   return _geminiPro;
 }
 
-// Gemini 3 Flash for summarization (cheaper)
+// Gemini 3 Flash for summarization and outlines
 function getGeminiFlash(): GenerativeModel {
   if (!_geminiFlash) {
     _geminiFlash = getGenAI().getGenerativeModel({
@@ -81,7 +81,7 @@ function getGeminiFlash(): GenerativeModel {
       generationConfig: {
         temperature: 0.3,
         topP: 0.9,
-        maxOutputTokens: 8192,
+        maxOutputTokens: 65536, // Increased for large comic outlines (24 panels with scene descriptions)
       },
     });
   }
