@@ -67,6 +67,13 @@ export const ART_STYLES = {
     coverStyle: 'classic storybook illustration',
     category: 'childrens',
   },
+  fantasy: {
+    label: 'Fantasy',
+    description: 'Magical fantasy art with rich details',
+    prompt: 'fantasy illustration style, magical atmosphere, rich vibrant colors, detailed backgrounds, enchanted lighting, mystical elements, epic scenery, fairytale magic, ethereal glow, professional fantasy book art',
+    coverStyle: 'fantasy art illustration',
+    category: 'childrens',
+  },
   // Comic Book Styles
   noir: {
     label: 'Noir / Sin City',
