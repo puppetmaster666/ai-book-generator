@@ -8,7 +8,6 @@ import { ArrowRight, Loader2, Sparkles, X, Check, ChevronRight, Zap, BookOpen, D
 import Footer from '@/components/Footer';
 import NewYearPopup from '@/components/NewYearPopup';
 import Header from '@/components/Header';
-import StatsBar from '@/components/StatsBar';
 import Testimonials from '@/components/Testimonials';
 import FAQ from '@/components/FAQ';
 
@@ -228,19 +227,16 @@ export default function Home() {
             {/* Watch Demo Button - scrolls to video section */}
             <button
               onClick={() => document.getElementById('video-tutorial')?.scrollIntoView({ behavior: 'smooth' })}
-              className="mt-12 inline-flex items-center gap-4 text-white hover:text-white transition-all group"
+              className="mt-12 inline-flex items-center gap-3 text-white/80 hover:text-white transition-colors group"
             >
-              <div className="w-16 h-16 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center border-2 border-lime-400 shadow-[0_0_20px_rgba(191,255,0,0.4)] group-hover:shadow-[0_0_30px_rgba(191,255,0,0.6)] group-hover:scale-110 transition-all">
-                <Play className="h-7 w-7 ml-1 text-lime-400" fill="currentColor" />
+              <div className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center group-hover:bg-white/30 transition-colors">
+                <Play className="h-5 w-5 ml-0.5 text-white" fill="currentColor" />
               </div>
-              <span className="text-lg font-semibold">Watch how it works</span>
+              <span className="text-sm font-medium">Watch how it works</span>
             </button>
           </div>
         </div>
       </section>
-
-      {/* Stats Bar */}
-      <StatsBar />
 
       {/* Success Story - Blood & Silver */}
       <section className="py-20 px-6 bg-white">
