@@ -8,13 +8,6 @@ interface Stat {
   label: string;
 }
 
-const stats: Stat[] = [
-  { value: 10000, suffix: '+', label: 'Books Created' },
-  { value: 500, suffix: '+', label: 'Authors Published' },
-  { value: 4.9, suffix: '/5', label: 'Average Rating' },
-  { value: 2, suffix: ' min', label: 'Avg. Creation Time' },
-];
-
 function AnimatedNumber({ value, suffix, duration = 2000 }: { value: number; suffix: string; duration?: number }) {
   const [displayValue, setDisplayValue] = useState(0);
   const [hasAnimated, setHasAnimated] = useState(false);
@@ -70,10 +63,29 @@ function AnimatedNumber({ value, suffix, duration = 2000 }: { value: number; suf
 }
 
 export default function StatsBar() {
+  const [stats, setStats] = useState<Stat[]>([
+    { value: 0, suffix: '+', label: 'Books Created' },
+    { value: 0, suffix: '+', label: 'Authors' },
+    { value: 2, suffix: ' min', label: 'Avg. Creation Time' },
+  ]);
+
+  useEffect(() => {
+    fetch('/api/stats')
+      .then((res) => res.json())
+      .then((data) => {
+        setStats([
+          { value: data.books || 0, suffix: '+', label: 'Books Created' },
+          { value: data.users || 0, suffix: '+', label: 'Authors' },
+          { value: data.avgTimeMinutes || 2, suffix: ' min', label: 'Avg. Creation Time' },
+        ]);
+      })
+      .catch(console.error);
+  }, []);
+
   return (
     <section className="py-12 px-4 sm:px-6 lg:px-8 bg-neutral-900">
       <div className="max-w-6xl mx-auto">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+        <div className="grid grid-cols-3 gap-8">
           {stats.map((stat, index) => (
             <div key={index} className="text-center">
               <div

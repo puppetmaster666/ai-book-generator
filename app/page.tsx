@@ -228,12 +228,12 @@ export default function Home() {
             {/* Watch Demo Button - scrolls to video section */}
             <button
               onClick={() => document.getElementById('video-tutorial')?.scrollIntoView({ behavior: 'smooth' })}
-              className="mt-8 inline-flex items-center gap-2 text-white/80 hover:text-white transition-colors group"
+              className="mt-12 inline-flex items-center gap-4 text-white hover:text-white transition-all group"
             >
-              <div className="w-10 h-10 rounded-full bg-white/20 backdrop-blur flex items-center justify-center group-hover:bg-white/30 transition-colors">
-                <Play className="h-4 w-4 ml-0.5" fill="currentColor" />
+              <div className="w-16 h-16 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center border-2 border-lime-400 shadow-[0_0_20px_rgba(191,255,0,0.4)] group-hover:shadow-[0_0_30px_rgba(191,255,0,0.6)] group-hover:scale-110 transition-all">
+                <Play className="h-7 w-7 ml-1 text-lime-400" fill="currentColor" />
               </div>
-              <span className="text-sm font-medium">Watch how it works</span>
+              <span className="text-lg font-semibold">Watch how it works</span>
             </button>
           </div>
         </div>
