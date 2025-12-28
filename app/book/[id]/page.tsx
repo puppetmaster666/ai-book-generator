@@ -479,12 +479,13 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
       fetchStatus();
     }
 
-    // Poll every 3 seconds if still generating or if retrying
+    // Poll every 15 seconds during generation (chapters take 2-4 minutes each)
+    // This reduces database load while still providing reasonable update frequency
     const interval = setInterval(() => {
       if (book?.status === 'generating' || book?.status === 'outlining' || book?.status === 'pending' || retrying) {
         fetchStatus();
       }
-    }, 3000);
+    }, 15000);
 
     return () => clearInterval(interval);
   }, [id, book?.status, retrying, serverStartTime]);
