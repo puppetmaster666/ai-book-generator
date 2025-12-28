@@ -6,14 +6,26 @@ export async function GET() {
   try {
     // Check if user is authenticated and is admin
     const session = await auth();
-    if (!session?.user?.id) {
+    if (!session?.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const user = await prisma.user.findUnique({
-      where: { id: session.user.id },
-      select: { isAdmin: true },
-    });
+    // Try to find user by ID first, then by email as fallback
+    let user = null;
+    if (session.user.id) {
+      user = await prisma.user.findUnique({
+        where: { id: session.user.id },
+        select: { isAdmin: true },
+      });
+    }
+
+    // Fallback to email lookup if ID lookup fails
+    if (!user && session.user.email) {
+      user = await prisma.user.findUnique({
+        where: { email: session.user.email },
+        select: { isAdmin: true },
+      });
+    }
 
     if (!user?.isAdmin) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
