@@ -26,7 +26,7 @@ export async function sendEmail({ to, subject, html }: EmailOptions): Promise<bo
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        from: process.env.EMAIL_FROM || 'DraftMyBook <noreply@send.draftmybook.com>',
+        from: process.env.EMAIL_FROM || 'DraftMyBook <noreply@draftmybook.com>',
         to,
         subject,
         html,
