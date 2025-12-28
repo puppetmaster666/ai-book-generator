@@ -331,7 +331,7 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
 
   if (loading || redirectingToComic) {
     return (
-      <div className="min-h-screen bg-[#FAFAFA] flex items-center justify-center">
+      <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="h-12 w-12 animate-spin text-neutral-900 mx-auto mb-4" />
           <p className="text-neutral-600">
@@ -353,7 +353,7 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
 
   if (error || !book) {
     return (
-      <div className="min-h-screen bg-[#FAFAFA]">
+      <div className="min-h-screen bg-white">
         <Header />
         <main className="pt-24 px-4">
           <div className="max-w-2xl mx-auto text-center">
@@ -382,7 +382,7 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
   const currentChapterOutline = book.outline?.chapters?.[book.currentChapter];
 
   return (
-    <div className="min-h-screen bg-[#FAFAFA]">
+    <div className="min-h-screen bg-white">
       <Header />
 
       <main className="pt-24 pb-12 px-4 sm:px-6 lg:px-8">

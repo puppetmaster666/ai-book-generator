@@ -362,7 +362,7 @@ export default function Home() {
             </p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-6">
+          <div className="grid md:grid-cols-3 gap-8">
             {[
               { src: '/images/screenshots/epub-cover.png', label: 'Title Page & Author' },
               { src: '/images/screenshots/epub-toc.png', label: 'Auto-generated TOC' },
@@ -373,19 +373,17 @@ export default function Home() {
                 onClick={() => setLightboxImage(item)}
                 className="group text-left cursor-pointer"
               >
-                <div className="bg-neutral-800 rounded-2xl border border-neutral-700 p-4 card-hover hover:border-neutral-600">
-                  <div className="aspect-[3/4] relative overflow-hidden rounded-xl bg-neutral-700">
-                    <Image
-                      src={item.src}
-                      alt={item.label}
-                      fill
-                      className="object-contain group-hover:scale-105 transition-transform duration-500"
-                    />
-                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center">
-                      <span className="opacity-0 group-hover:opacity-100 transition-opacity bg-white/90 backdrop-blur px-4 py-2 rounded-full text-sm font-medium text-neutral-900">
-                        Click to enlarge
-                      </span>
-                    </div>
+                <div className="aspect-[3/4] relative overflow-hidden rounded-xl shadow-2xl">
+                  <Image
+                    src={item.src}
+                    alt={item.label}
+                    fill
+                    className="object-contain group-hover:scale-105 transition-transform duration-500"
+                  />
+                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                    <span className="opacity-0 group-hover:opacity-100 transition-opacity bg-white/90 backdrop-blur px-4 py-2 rounded-full text-sm font-medium text-neutral-900">
+                      Click to enlarge
+                    </span>
                   </div>
                 </div>
                 <p className="text-center text-sm text-neutral-400 mt-4">{item.label}</p>

@@ -58,7 +58,7 @@ function SignupContent() {
   // Show loading while checking session
   if (status === 'loading' || (status === 'authenticated' && session)) {
     return (
-      <div className="min-h-screen bg-[#FAFAFA] flex items-center justify-center">
+      <div className="min-h-screen bg-white flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-neutral-900" />
       </div>
     );
@@ -127,7 +127,7 @@ function SignupContent() {
   };
 
   return (
-    <div className="min-h-screen bg-[#FAFAFA]">
+    <div className="min-h-screen bg-white">
       <Header />
 
       <main className="py-16 px-6">
@@ -239,7 +239,7 @@ function SignupContent() {
 
 export default function Signup() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-[#FAFAFA] flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-neutral-900" /></div>}>
+    <Suspense fallback={<div className="min-h-screen bg-white flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-neutral-900" /></div>}>
       <SignupContent />
     </Suspense>
   );

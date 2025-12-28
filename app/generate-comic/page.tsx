@@ -296,7 +296,7 @@ function GenerateComicContent() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-[#FAFAFA]">
+      <div className="min-h-screen bg-white">
         <Header />
         <main className="py-20 px-6">
           <div className="max-w-6xl mx-auto text-center">
@@ -310,7 +310,7 @@ function GenerateComicContent() {
 
   if (error && !bookData) {
     return (
-      <div className="min-h-screen bg-[#FAFAFA]">
+      <div className="min-h-screen bg-white">
         <Header />
         <main className="py-20 px-6">
           <div className="max-w-md mx-auto text-center">
@@ -330,7 +330,7 @@ function GenerateComicContent() {
   }
 
   return (
-    <div className="min-h-screen bg-[#FAFAFA]">
+    <div className="min-h-screen bg-white">
       <Header />
 
       <main className="py-12 px-6">
@@ -567,7 +567,7 @@ function GenerateComicContent() {
 
 function LoadingFallback() {
   return (
-    <div className="min-h-screen bg-[#FAFAFA]">
+    <div className="min-h-screen bg-white">
       <Header />
       <main className="py-20 px-6">
         <div className="max-w-6xl mx-auto text-center">

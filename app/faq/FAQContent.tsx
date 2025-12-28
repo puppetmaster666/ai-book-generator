@@ -114,7 +114,7 @@ function FAQItem({ question, answer }: { question: string; answer: string }) {
 
 export default function FAQContent() {
   return (
-    <div className="min-h-screen bg-[#FAFAFA]">
+    <div className="min-h-screen bg-white">
       <Header />
 
       <main className="py-16 px-6">

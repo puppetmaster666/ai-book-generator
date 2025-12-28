@@ -66,7 +66,7 @@ export default function Header({ variant = 'default' }: HeaderProps) {
       <nav className={`w-full px-6 py-6 ${
         variant === 'transparent'
           ? 'absolute top-0 left-0 right-0 z-40'
-          : 'relative bg-[#FAFAFA]'
+          : 'relative bg-white'
       }`}>
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           {/* Left Nav - Hamburger Menu */}

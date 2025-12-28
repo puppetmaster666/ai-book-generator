@@ -9,7 +9,7 @@ export default function PricingContent() {
   const router = useRouter();
 
   return (
-    <div className="min-h-screen bg-[#FAFAFA]">
+    <div className="min-h-screen bg-white">
       <Header />
 
       <main className="py-16 px-6">
