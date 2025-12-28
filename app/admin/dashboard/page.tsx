@@ -330,10 +330,31 @@ export default function AdminDashboard() {
         throw new Error(data.error || 'Failed to restart book');
       }
 
-      setRestartResult({
-        success: true,
-        message: data.message,
-      });
+      // After successful restart, trigger outline generation
+      // This moves the book from 'pending' to 'generating' so orchestration can start
+      try {
+        const genRes = await fetch(`/api/books/${bookId}/generate`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ outlineOnly: true }),
+        });
+        if (genRes.ok) {
+          setRestartResult({
+            success: true,
+            message: `${data.message} Generation started.`,
+          });
+        } else {
+          setRestartResult({
+            success: true,
+            message: `${data.message} Note: Auto-start failed, visit book page to resume.`,
+          });
+        }
+      } catch {
+        setRestartResult({
+          success: true,
+          message: `${data.message} Note: Auto-start failed, visit book page to resume.`,
+        });
+      }
       await fetchStats(true);
     } catch (err) {
       setRestartResult({

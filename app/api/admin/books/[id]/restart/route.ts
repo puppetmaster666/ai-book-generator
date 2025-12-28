@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { prisma, Prisma } from '@/lib/db';
 
-const ADMIN_EMAILS = ['lhllparis@gmail.com', 'jonathanreaud666@gmail.com'];
+const ADMIN_EMAILS = ['lhllparis@gmail.com'];
 
 /**
  * Admin endpoint to restart a book generation from scratch.
