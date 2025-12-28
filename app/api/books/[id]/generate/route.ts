@@ -498,7 +498,23 @@ export async function POST(
     if (book.status !== 'pending' && book.status !== 'completed') {
       console.log(`Retrying ${book.status} book generation for book ${id}`);
 
+      // SAFEGUARD: For text books with progress, don't delete - use /resume endpoint instead
+      // This prevents accidental data loss when client incorrectly calls /generate
+      const bookFormatCheck = book.bookFormat || 'text_only';
+      const isTextOnlyBook = bookFormatCheck === 'text_only';
+      const hasProgress = book.currentChapter > 0 || book.chapters.length > 0;
+
+      if (isTextOnlyBook && hasProgress && book.outline) {
+        console.log(`SAFEGUARD: Text book ${id} has ${book.chapters.length} chapters and outline. Refusing to delete. Use /resume instead.`);
+        return NextResponse.json({
+          error: 'Book has existing progress. Use /resume endpoint to continue generation.',
+          currentChapter: book.currentChapter,
+          existingChapters: book.chapters.length,
+        }, { status: 400 });
+      }
+
       // Delete any existing chapters and illustrations from failed attempt
+      // This is safe for visual books that need a fresh start
       await prisma.illustration.deleteMany({ where: { bookId: id } });
       await prisma.chapter.deleteMany({ where: { bookId: id } });
 

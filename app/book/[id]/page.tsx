@@ -521,15 +521,16 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
     orchestrationRef.current = false; // Reset orchestration state
 
     try {
-      // Check if this is a text book with an existing outline (has chapters to resume)
+      // Check if this is a text book with an existing outline that can be resumed
       const hasOutline = book.outline && typeof book.outline === 'object';
-      const hasChapters = book.chapters && book.chapters.length > 0;
+      const hasProgress = book.currentChapter > 0 || (book.chapters && book.chapters.length > 0);
       const isTextBook = !isVisualBook;
 
-      if (isTextBook && hasOutline && hasChapters) {
+      if (isTextBook && hasOutline) {
         // Resume text book: Just update status and let orchestration continue
         // Don't call /generate which would delete existing chapters
-        console.log('Resuming text book from chapter', book.currentChapter);
+        // Use /resume for ANY text book with an outline - even if chapters were lost
+        console.log('Resuming text book from chapter', book.currentChapter, 'hasProgress:', hasProgress);
         const res = await fetch(`/api/books/${id}/resume`, {
           method: 'POST',
         });

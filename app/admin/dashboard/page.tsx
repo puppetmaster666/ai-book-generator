@@ -15,6 +15,7 @@ import {
   ArrowLeft,
   RefreshCw,
   TrendingUp,
+  Trash2,
 } from 'lucide-react';
 
 interface AdminStats {
@@ -105,6 +106,9 @@ export default function AdminDashboard() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [selectedBooks, setSelectedBooks] = useState<Set<string>>(new Set());
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
 
   const fetchStats = async (showRefresh = false) => {
     if (showRefresh) setIsRefreshing(true);
@@ -131,6 +135,62 @@ export default function AdminDashboard() {
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
+    }
+  };
+
+  const toggleBookSelection = (bookId: string) => {
+    setSelectedBooks(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(bookId)) {
+        newSet.delete(bookId);
+      } else {
+        newSet.add(bookId);
+      }
+      return newSet;
+    });
+  };
+
+  const toggleAllBooks = () => {
+    if (!stats) return;
+    if (selectedBooks.size === stats.recentBooks.length) {
+      setSelectedBooks(new Set());
+    } else {
+      setSelectedBooks(new Set(stats.recentBooks.map(b => b.id)));
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedBooks.size === 0) return;
+
+    const confirmed = window.confirm(
+      `Are you sure you want to permanently delete ${selectedBooks.size} book(s)? This cannot be undone.`
+    );
+
+    if (!confirmed) return;
+
+    setIsDeleting(true);
+    setDeleteError('');
+
+    try {
+      const response = await fetch('/api/admin/books/bulk-delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bookIds: Array.from(selectedBooks) }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to delete books');
+      }
+
+      // Clear selection and refresh stats
+      setSelectedBooks(new Set());
+      await fetchStats(true);
+    } catch (err) {
+      setDeleteError(err instanceof Error ? err.message : 'Failed to delete books');
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -323,12 +383,51 @@ export default function AdminDashboard() {
 
         {/* Recent Books */}
         <div className="bg-white rounded-xl border border-neutral-200 p-6 mb-8">
-          <h2 className="text-lg font-semibold mb-4">Recent Books</h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold">Recent Books</h2>
+            {selectedBooks.size > 0 && (
+              <div className="flex items-center gap-3">
+                <span className="text-sm text-neutral-600">
+                  {selectedBooks.size} selected
+                </span>
+                <button
+                  onClick={handleBulkDelete}
+                  disabled={isDeleting}
+                  className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 disabled:opacity-50 transition-colors"
+                >
+                  {isDeleting ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Deleting...
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 className="h-4 w-4" />
+                      Delete Selected
+                    </>
+                  )}
+                </button>
+              </div>
+            )}
+          </div>
+          {deleteError && (
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+              {deleteError}
+            </div>
+          )}
           {stats.recentBooks.length > 0 ? (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-neutral-200">
+                    <th className="text-left py-3 px-2 font-medium text-neutral-500 w-10">
+                      <input
+                        type="checkbox"
+                        checked={selectedBooks.size === stats.recentBooks.length && stats.recentBooks.length > 0}
+                        onChange={toggleAllBooks}
+                        className="w-4 h-4 rounded border-neutral-300 text-neutral-900 focus:ring-neutral-500 cursor-pointer"
+                      />
+                    </th>
                     <th className="text-left py-3 px-2 font-medium text-neutral-500">Title</th>
                     <th className="text-left py-3 px-2 font-medium text-neutral-500">User</th>
                     <th className="text-left py-3 px-2 font-medium text-neutral-500">Format</th>
@@ -341,7 +440,18 @@ export default function AdminDashboard() {
                 </thead>
                 <tbody>
                   {stats.recentBooks.map((book) => (
-                    <tr key={book.id} className="border-b border-neutral-100 hover:bg-neutral-50">
+                    <tr
+                      key={book.id}
+                      className={`border-b border-neutral-100 hover:bg-neutral-50 ${selectedBooks.has(book.id) ? 'bg-blue-50' : ''}`}
+                    >
+                      <td className="py-3 px-2">
+                        <input
+                          type="checkbox"
+                          checked={selectedBooks.has(book.id)}
+                          onChange={() => toggleBookSelection(book.id)}
+                          className="w-4 h-4 rounded border-neutral-300 text-neutral-900 focus:ring-neutral-500 cursor-pointer"
+                        />
+                      </td>
                       <td className="py-3 px-2">
                         <a
                           href={`/book/${book.id}`}
