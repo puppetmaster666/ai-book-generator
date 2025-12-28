@@ -1,6 +1,10 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import "./globals.css";
 import Providers from "@/components/Providers";
+import CookieConsent from "@/components/CookieConsent";
+
+const GA_MEASUREMENT_ID = 'G-14TXZWW3NZ';
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://draftmybook.com'),
@@ -85,9 +89,55 @@ export default function RootLayout({
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
+        {/* Step 1: Define dataLayer and gtag function, set consent defaults BEFORE loading gtag.js */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              window.dataLayer = window.dataLayer || [];
+              function gtag(){dataLayer.push(arguments);}
+
+              // Set default consent to denied (for EU/EEA)
+              gtag('consent', 'default', {
+                'ad_storage': 'denied',
+                'ad_user_data': 'denied',
+                'ad_personalization': 'denied',
+                'analytics_storage': 'denied',
+                'wait_for_update': 500
+              });
+
+              // Region-specific: auto-grant for non-EU regions
+              gtag('consent', 'default', {
+                'ad_storage': 'granted',
+                'ad_user_data': 'granted',
+                'ad_personalization': 'granted',
+                'analytics_storage': 'granted',
+                'region': ['US', 'CA', 'AU', 'NZ', 'JP', 'KR', 'SG', 'HK', 'TW', 'MX', 'BR', 'AR', 'CL', 'CO']
+              });
+
+              // Enable URL passthrough for better conversion tracking when cookies denied
+              gtag('set', 'url_passthrough', true);
+
+              // Redact ad data when ad_storage is denied
+              gtag('set', 'ads_data_redaction', true);
+            `,
+          }}
+        />
+        {/* Step 2: Load gtag.js */}
+        <Script
+          src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`}
+          strategy="afterInteractive"
+        />
+        {/* Step 3: Configure gtag */}
+        <Script id="google-analytics" strategy="afterInteractive">
+          {`
+            gtag('js', new Date());
+            gtag('config', '${GA_MEASUREMENT_ID}');
+          `}
+        </Script>
       </head>
       <body className={`antialiased`}>
         <Providers>{children}</Providers>
+        <CookieConsent />
       </body>
     </html>
   );
