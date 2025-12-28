@@ -77,13 +77,50 @@ export async function POST(
       }, { status: 400 });
     }
 
-    const nextChapterNum = book.currentChapter + 1;
     const totalChapters = outline.chapters.length;
+
+    // Get the actual next chapter to generate based on what chapters exist
+    const existingChapterNumbers = new Set(book.chapters.map(c => c.number));
+    let nextChapterNum = book.currentChapter + 1;
+
+    // Skip over any chapters that already exist (race condition protection)
+    while (nextChapterNum <= totalChapters && existingChapterNumbers.has(nextChapterNum)) {
+      console.log(`Chapter ${nextChapterNum} already exists, skipping to next`);
+      nextChapterNum++;
+    }
 
     // Check if all chapters are done
     if (nextChapterNum > totalChapters) {
       // All chapters complete - finalize book
       return await finalizeBook(id, book);
+    }
+
+    // Double-check this specific chapter doesn't exist (another race condition check)
+    const chapterExists = await prisma.chapter.findUnique({
+      where: {
+        bookId_number: {
+          bookId: id,
+          number: nextChapterNum,
+        },
+      },
+      select: { id: true },
+    });
+
+    if (chapterExists) {
+      console.log(`Chapter ${nextChapterNum} was created by another request, skipping`);
+      // Update book progress and return
+      await prisma.book.update({
+        where: { id },
+        data: { currentChapter: nextChapterNum },
+      });
+      return NextResponse.json({
+        done: false,
+        currentChapter: nextChapterNum,
+        totalChapters,
+        totalWords: book.totalWords,
+        message: `Chapter ${nextChapterNum} already exists. Continuing...`,
+        skipped: true,
+      });
     }
 
     // Update status to generating if not already
@@ -164,18 +201,39 @@ export async function POST(
       }, { status: 404 });
     }
 
-    // Save chapter
-    await prisma.chapter.create({
-      data: {
-        bookId: id,
-        number: nextChapterNum,
-        title: chapterPlan.title,
-        content: chapterContent,
-        summary,
-        wordCount,
-      },
-    });
-    console.log(`Chapter ${nextChapterNum} saved. Word count: ${wordCount}`);
+    // Save chapter (with race condition handling)
+    try {
+      await prisma.chapter.create({
+        data: {
+          bookId: id,
+          number: nextChapterNum,
+          title: chapterPlan.title,
+          content: chapterContent,
+          summary,
+          wordCount,
+        },
+      });
+      console.log(`Chapter ${nextChapterNum} saved. Word count: ${wordCount}`);
+    } catch (createError: unknown) {
+      // Handle unique constraint violation (P2002) - chapter was created by another request
+      if (createError && typeof createError === 'object' && 'code' in createError && createError.code === 'P2002') {
+        console.log(`Chapter ${nextChapterNum} already exists (race condition), skipping save`);
+        // Update progress and continue - the chapter content is lost but that's ok
+        await prisma.book.update({
+          where: { id },
+          data: { currentChapter: nextChapterNum },
+        });
+        return NextResponse.json({
+          done: false,
+          currentChapter: nextChapterNum,
+          totalChapters,
+          totalWords: book.totalWords,
+          message: `Chapter ${nextChapterNum} already exists. Continuing...`,
+          skipped: true,
+        });
+      }
+      throw createError; // Re-throw other errors
+    }
 
     // Update book progress
     await prisma.book.update({
