@@ -18,13 +18,14 @@ export async function GET(
       return NextResponse.json({ error: 'Book not found' }, { status: 404 });
     }
 
-    // Get the illustration
+    // Get the illustration (check both direct bookId and chapter.bookId)
     const illustration = await prisma.illustration.findFirst({
       where: {
         id: illustrationId,
-        chapter: {
-          bookId: id,
-        },
+        OR: [
+          { bookId: id },
+          { chapter: { bookId: id } },
+        ],
       },
       select: {
         imageUrl: true,

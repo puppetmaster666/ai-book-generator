@@ -27,7 +27,7 @@ const faqJsonLd = {
       name: 'How long does it take to generate a book?',
       acceptedAnswer: {
         '@type': 'Answer',
-        text: 'Typically 1-2 minutes for picture books and comics. Novels take longer depending on length - about 5-10 minutes for a full-length book.',
+        text: 'Picture books and comics take 1-2 minutes. Novels take 30-60 minutes depending on length (50,000-100,000 words).',
       },
     },
     {

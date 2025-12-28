@@ -16,11 +16,26 @@ export async function GET(
           include: {
             illustrations: {
               orderBy: { position: 'asc' },
+              select: {
+                id: true,
+                altText: true,
+                position: true,
+                createdAt: true,
+                // Don't include imageUrl (base64) - use API endpoint instead
+              },
             },
           },
         },
         illustrations: {
           orderBy: { createdAt: 'asc' },
+          select: {
+            id: true,
+            chapterId: true,
+            altText: true,
+            position: true,
+            createdAt: true,
+            // Don't include imageUrl (base64) - use API endpoint instead
+          },
         },
       },
     });
@@ -32,7 +47,23 @@ export async function GET(
       );
     }
 
-    return NextResponse.json({ book });
+    // Transform illustrations to use API URLs instead of inline base64
+    const transformedBook = {
+      ...book,
+      illustrations: book.illustrations.map(ill => ({
+        ...ill,
+        imageUrl: `/api/books/${id}/illustrations/${ill.id}`,
+      })),
+      chapters: book.chapters.map(ch => ({
+        ...ch,
+        illustrations: ch.illustrations?.map(ill => ({
+          ...ill,
+          imageUrl: `/api/books/${id}/illustrations/${ill.id}`,
+        })),
+      })),
+    };
+
+    return NextResponse.json({ book: transformedBook });
   } catch (error) {
     console.error('Error fetching book:', error);
     return NextResponse.json(

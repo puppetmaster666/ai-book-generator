@@ -23,7 +23,7 @@ export default function HowItWorksContent() {
               How It Works
             </h1>
             <p className="text-xl text-neutral-600 max-w-2xl mx-auto">
-              From your idea to a publication-ready book in 1-2 minutes
+              From your idea to a publication-ready book in minutes
             </p>
           </div>
 

@@ -203,7 +203,7 @@ export default function PricingContent() {
               </div>
               <div className="bg-white p-6 rounded-xl border border-neutral-200">
                 <h3 className="font-medium mb-2">How long does generation take?</h3>
-                <p className="text-neutral-600">Typically 1-2 minutes for picture books and comics. Novels take 5-10 minutes depending on length.</p>
+                <p className="text-neutral-600">Picture books and comics: 1-2 minutes. Novels: 30-60 minutes depending on length.</p>
               </div>
               <div className="bg-white p-6 rounded-xl border border-neutral-200">
                 <h3 className="font-medium mb-2">What if I am not satisfied?</h3>
