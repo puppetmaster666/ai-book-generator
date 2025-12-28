@@ -37,6 +37,40 @@ async function withRetry<T>(
   throw lastError;
 }
 
+// Detect if text contains non-Latin scripts and return language instruction
+function detectLanguageInstruction(text: string): string {
+  // Check for Arabic/Persian/Kurdish script (used for Kurdish Sorani, Arabic, Persian, Urdu)
+  if (/[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF]/.test(text)) {
+    return 'IMPORTANT: Write the content in the SAME LANGUAGE as the book title and premise. If the input is in Kurdish (Sorani), Arabic, Persian, or Urdu, write the entire chapter in that language. Match the language and script exactly.';
+  }
+  // Check for Chinese characters
+  if (/[\u4E00-\u9FFF]/.test(text)) {
+    return 'IMPORTANT: Write the content in Chinese, matching the language of the book title and premise.';
+  }
+  // Check for Japanese (Hiragana, Katakana, Kanji)
+  if (/[\u3040-\u30FF\u4E00-\u9FFF]/.test(text)) {
+    return 'IMPORTANT: Write the content in Japanese, matching the language of the book title and premise.';
+  }
+  // Check for Korean (Hangul)
+  if (/[\uAC00-\uD7AF\u1100-\u11FF]/.test(text)) {
+    return 'IMPORTANT: Write the content in Korean, matching the language of the book title and premise.';
+  }
+  // Check for Cyrillic (Russian, Ukrainian, etc.)
+  if (/[\u0400-\u04FF]/.test(text)) {
+    return 'IMPORTANT: Write the content in the same Cyrillic language as the book title and premise (Russian, Ukrainian, etc.).';
+  }
+  // Check for Hebrew
+  if (/[\u0590-\u05FF]/.test(text)) {
+    return 'IMPORTANT: Write the content in Hebrew, matching the language of the book title and premise.';
+  }
+  // Check for Thai
+  if (/[\u0E00-\u0E7F]/.test(text)) {
+    return 'IMPORTANT: Write the content in Thai, matching the language of the book title and premise.';
+  }
+  // Default: no special instruction needed (Latin-based languages)
+  return '';
+}
+
 // Helper to clean and parse JSON from LLM responses
 function parseJSONFromResponse(response: string): object {
   console.log('Raw LLM response length:', response.length);
@@ -526,6 +560,9 @@ export async function generateIllustratedOutline(bookData: {
 }): Promise<{
   chapters: VisualChapter[];
 }> {
+  // Detect language from title and premise
+  const languageInstruction = detectLanguageInstruction(bookData.title + ' ' + bookData.premise);
+
   const isComicStyle = bookData.dialogueStyle === 'bubbles';
   const wordsPerPage = Math.ceil(bookData.targetWords / bookData.targetChapters);
 
@@ -560,7 +597,7 @@ Keep text short and age-appropriate (${wordsPerPage} words average per page).
 `;
 
   const prompt = `You are creating a detailed page-by-page outline for an illustrated ${isComicStyle ? 'comic/graphic story' : 'picture book'}.
-
+${languageInstruction ? `\n${languageInstruction}\n` : ''}
 BOOK DETAILS:
 - Title: "${bookData.title}"
 - Genre: ${bookData.genre}
@@ -672,7 +709,11 @@ export async function generateOutline(bookData: {
     targetWords: number;
   }[];
 }> {
+  // Detect language from title and premise
+  const languageInstruction = detectLanguageInstruction(bookData.title + ' ' + bookData.premise);
+
   const prompt = `You are a professional book outliner. Create a detailed chapter-by-chapter outline.
+${languageInstruction ? `\n${languageInstruction}\n` : ''}
 
 BOOK DETAILS:
 - Title: ${bookData.title}
@@ -742,8 +783,11 @@ export async function generateChapter(data: {
     pov: `Start with "${data.chapterPov?.toUpperCase() || 'NARRATOR'}\n\nChapter ${data.chapterNumber}"`,
   }[data.chapterFormat] || `Start with "Chapter ${data.chapterNumber}: ${data.chapterTitle}"`;
 
-  const prompt = `You are a novelist writing in ${data.writingStyle} style. Write a complete chapter.
+  // Detect language from title to ensure content matches input language
+  const languageInstruction = detectLanguageInstruction(data.title);
 
+  const prompt = `You are a novelist writing in ${data.writingStyle} style. Write a complete chapter.
+${languageInstruction ? `\n${languageInstruction}\n` : ''}
 BOOK: "${data.title}" (${data.genre} ${data.bookType})
 
 FULL OUTLINE:
