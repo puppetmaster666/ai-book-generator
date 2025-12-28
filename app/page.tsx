@@ -39,6 +39,7 @@ export default function Home() {
   const [lightboxImage, setLightboxImage] = useState<{ src: string; label: string } | null>(null);
   const [ideaCategory, setIdeaCategory] = useState<IdeaCategory>('random');
   const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
+  const [selectedComicCard, setSelectedComicCard] = useState<number | null>(null);
 
   const handleFindIdea = async () => {
     setIsGeneratingIdea(true);
@@ -358,13 +359,16 @@ export default function Home() {
                   { src: '/images/illustration-cmjpl7qcr0003la045b05wbvs.jpeg', rotate: 6, left: 90 },
                   { src: '/images/illustration-cmjpl7r9e0003l404sadbtfwh.jpeg', rotate: 12, left: 120 },
                 ].map((card, i) => (
-                  <div
+                  <button
                     key={i}
-                    className="absolute top-0 w-48 aspect-[2/3] rounded-lg overflow-hidden shadow-xl border-2 border-white bg-white transition-transform hover:scale-105 hover:z-50"
+                    onClick={() => setSelectedComicCard(selectedComicCard === i ? null : i)}
+                    className={`absolute top-0 w-48 aspect-[2/3] rounded-lg overflow-hidden shadow-xl border-2 border-white bg-white transition-all duration-300 cursor-pointer ${
+                      selectedComicCard === i ? 'scale-110 shadow-2xl' : 'hover:scale-105'
+                    }`}
                     style={{
-                      transform: `rotate(${card.rotate}deg)`,
+                      transform: `rotate(${selectedComicCard === i ? 0 : card.rotate}deg)`,
                       left: `${card.left}px`,
-                      zIndex: i + 1,
+                      zIndex: selectedComicCard === i ? 10 : i + 1,
                     }}
                   >
                     <Image
@@ -373,7 +377,7 @@ export default function Home() {
                       fill
                       className="object-cover"
                     />
-                  </div>
+                  </button>
                 ))}
               </div>
             </div>
