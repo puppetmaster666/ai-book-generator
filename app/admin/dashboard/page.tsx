@@ -598,7 +598,8 @@ export default function AdminDashboard() {
                         {book.totalWords.toLocaleString()}
                       </td>
                       <td className="py-3 px-2 text-neutral-500">
-                        {new Date(book.createdAt).toLocaleDateString()}
+                        <div>{new Date(book.createdAt).toLocaleDateString()}</div>
+                        <div className="text-xs text-neutral-400">{new Date(book.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
                       </td>
                     </tr>
                   ))}
@@ -789,7 +790,8 @@ export default function AdminDashboard() {
                         {user.booksCount}
                       </td>
                       <td className="py-3 px-2 text-neutral-500">
-                        {new Date(user.createdAt).toLocaleDateString()}
+                        <div>{new Date(user.createdAt).toLocaleDateString()}</div>
+                        <div className="text-xs text-neutral-400">{new Date(user.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
                       </td>
                     </tr>
                   ))}
