@@ -280,6 +280,12 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
           console.log(`[Session ${currentSession}] Orchestrating: generating next chapter...`);
           const res = await fetch(`/api/books/${id}/generate-next`, { method: 'POST' });
 
+          // Detect Vercel timeouts (502, 503, 504) - these need retry
+          if (res.status === 502 || res.status === 503 || res.status === 504) {
+            console.error(`[Session ${currentSession}] Server timeout (${res.status}), will retry...`);
+            throw new Error(`Server timeout (${res.status})`);
+          }
+
           // Handle empty/malformed responses
           let data;
           try {
@@ -326,6 +332,19 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
           if (retryCount >= maxRetries) {
             console.error(`[Session ${currentSession}] Max retries (${maxRetries}) reached, stopping orchestration`);
             orchestrationRef.current = false;
+
+            // Mark book as failed so UI shows the error
+            try {
+              await fetch(`/api/books/${id}/cancel`, { method: 'POST' });
+              // Refresh book data to show failed state
+              const failedRes = await fetch(`/api/books/${id}`);
+              if (failedRes.ok) {
+                const failedData = await failedRes.json();
+                setBook(failedData.book);
+              }
+            } catch (cancelErr) {
+              console.error('Failed to mark book as failed:', cancelErr);
+            }
             break;
           }
 
