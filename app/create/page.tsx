@@ -6,8 +6,19 @@ import { useSession } from 'next-auth/react';
 import Image from 'next/image';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
-import { ArrowLeft, ArrowRight, Sparkles, Loader2, BookOpen, Palette, Layers } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Sparkles, Loader2, BookOpen, Palette, Layers, ChevronDown } from 'lucide-react';
 import { BOOK_PRESETS, ART_STYLES, GENRES, type BookPresetKey, type ArtStyleKey } from '@/lib/constants';
+
+// Idea categories for the Surprise Me feature
+type IdeaCategory = 'random' | 'novel' | 'childrens' | 'comic' | 'adult_comic';
+
+const IDEA_CATEGORIES: { value: IdeaCategory; label: string; emoji: string }[] = [
+  { value: 'random', label: 'Surprise Me', emoji: '🎲' },
+  { value: 'novel', label: 'Novel', emoji: '📖' },
+  { value: 'childrens', label: "Children's", emoji: '🧒' },
+  { value: 'comic', label: 'Comic', emoji: '💥' },
+  { value: 'adult_comic', label: 'Adult Comic', emoji: '🔞' },
+];
 
 // Icons for book types
 const PRESET_ICONS = {
@@ -40,6 +51,8 @@ export default function CreateBook() {
   const [isGeneratingIdea, setIsGeneratingIdea] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [ideaCategory, setIdeaCategory] = useState<IdeaCategory>('random');
+  const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
 
   // Get user ID from session if logged in
   const userId = (session?.user as { id?: string })?.id;
@@ -59,7 +72,11 @@ export default function CreateBook() {
     setIsGeneratingIdea(true);
     setError('');
     try {
-      const response = await fetch('/api/generate-idea', { method: 'POST' });
+      const response = await fetch('/api/generate-idea', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ category: ideaCategory }),
+      });
       if (!response.ok) throw new Error('Failed to generate idea');
       const data = await response.json();
       setIdea(data.idea);
@@ -322,19 +339,53 @@ export default function CreateBook() {
                 />
 
                 <div className="flex items-center justify-between mt-4">
-                  <button
-                    type="button"
-                    onClick={handleGenerateIdea}
-                    disabled={isGeneratingIdea || isSubmitting}
-                    className="flex items-center gap-2 text-neutral-500 hover:text-neutral-900 disabled:opacity-50 px-3 py-2 rounded-lg hover:bg-neutral-100 transition-colors"
-                  >
-                    {isGeneratingIdea ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Sparkles className="h-4 w-4" />
-                    )}
-                    {isGeneratingIdea ? 'Generating...' : 'Surprise me'}
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={handleGenerateIdea}
+                      disabled={isGeneratingIdea || isSubmitting}
+                      className="flex items-center gap-2 text-neutral-500 hover:text-neutral-900 disabled:opacity-50 px-3 py-2 rounded-lg hover:bg-neutral-100 transition-colors"
+                    >
+                      {isGeneratingIdea ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Sparkles className="h-4 w-4" />
+                      )}
+                      {isGeneratingIdea ? 'Generating...' : 'Surprise me'}
+                    </button>
+
+                    {/* Category Dropdown */}
+                    <div className="relative">
+                      <button
+                        type="button"
+                        onClick={() => setShowCategoryDropdown(!showCategoryDropdown)}
+                        className="flex items-center gap-1 text-sm text-neutral-500 hover:text-neutral-900 px-2 py-1 rounded-lg hover:bg-neutral-100 transition-colors"
+                      >
+                        <span>{IDEA_CATEGORIES.find(c => c.value === ideaCategory)?.emoji}</span>
+                        <ChevronDown className="h-3 w-3" />
+                      </button>
+                      {showCategoryDropdown && (
+                        <div className="absolute left-0 top-full mt-1 bg-white border border-neutral-200 rounded-lg shadow-lg py-1 z-10 min-w-[140px]">
+                          {IDEA_CATEGORIES.map((cat) => (
+                            <button
+                              key={cat.value}
+                              type="button"
+                              onClick={() => {
+                                setIdeaCategory(cat.value);
+                                setShowCategoryDropdown(false);
+                              }}
+                              className={`w-full text-left px-3 py-2 text-sm hover:bg-neutral-50 flex items-center gap-2 ${
+                                ideaCategory === cat.value ? 'bg-neutral-50 font-medium' : ''
+                              }`}
+                            >
+                              <span>{cat.emoji}</span>
+                              {cat.label}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
 
                   <span className="text-sm text-neutral-500">
                     {idea.length} characters
