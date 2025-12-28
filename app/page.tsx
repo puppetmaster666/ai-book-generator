@@ -650,8 +650,8 @@ export default function Home() {
       <VideoModal
         isOpen={showVideoModal}
         onClose={() => setShowVideoModal(false)}
-        videoId="dQw4w9WgXcQ"
-        title="How DraftMyBook Works"
+        videoId="XalUtL0ofEg"
+        title="How to Create an AI Book"
       />
     </div>
   );
