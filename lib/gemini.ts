@@ -962,7 +962,7 @@ ${bookData.visualStyleGuide ? '6. Matches the color palette and mood of the inte
 
 The cover MUST include:
 - The title "${bookData.title}" prominently displayed
-- The author name "${bookData.authorName}" at the bottom
+- "by ${bookData.authorName}" at the bottom (include the word "by" before the author name)
 
 The cover must NOT include:
 - Any other text besides title and author name

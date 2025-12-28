@@ -203,15 +203,43 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
           setGeneratingBookId(id);
           console.log('Visual book detected, generating outline and redirecting...');
 
-          const genRes = await fetch(`/api/books/${id}/generate`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ outlineOnly: true }),
-          });
-          const genData = await genRes.json();
-          if (genData.success || genData.outlineOnly) {
+          try {
+            const genRes = await fetch(`/api/books/${id}/generate`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ outlineOnly: true }),
+            });
+            const genData = await genRes.json();
+
+            // Always redirect to comic generation page for visual books
+            // Even if outline generation returned an unexpected response,
+            // the comic page can handle resuming from wherever we are
+            if (genData.success || genData.outlineOnly || genData.alreadyComplete) {
+              router.replace(`/generate-comic?bookId=${id}`);
+              return;
+            }
+
+            // If we got an error response, still try redirecting - the comic page
+            // can show appropriate status/errors
+            console.log('Generate response:', genData);
             router.replace(`/generate-comic?bookId=${id}`);
-            return; // Don't show this page at all
+            return;
+          } catch (err) {
+            console.error('Error starting visual book generation:', err);
+            // On error, still redirect - comic page can handle recovery
+            router.replace(`/generate-comic?bookId=${id}`);
+            return;
+          }
+        }
+
+        // Also check if it's a visual book that's already generating/has outline
+        // and redirect to the comic generation page
+        if (isVisual && loadedBook?.status !== 'completed' && loadedBook?.status !== 'failed' && isOwner) {
+          const hasOutline = loadedBook?.outline && typeof loadedBook.outline === 'object';
+          if (hasOutline || loadedBook?.status === 'generating' || loadedBook?.status === 'outlining') {
+            console.log('Visual book already in progress, redirecting to comic generation page...');
+            router.replace(`/generate-comic?bookId=${id}`);
+            return;
           }
         }
 

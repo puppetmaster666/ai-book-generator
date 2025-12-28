@@ -94,6 +94,33 @@ Speech bubble style guidelines:
 `;
 }
 
+// Build story text instructions for children's picture books
+// The text appears at the bottom of the image, integrated into the illustration
+function buildPictureBookTextPrompt(storyText: string): string {
+  if (!storyText || storyText.trim().length === 0) return '';
+
+  // Clean up the text - keep it short for picture books
+  const cleanText = storyText.trim().slice(0, 200);
+
+  return `
+STORY TEXT - CHILDREN'S PICTURE BOOK:
+This is a children's picture book page. You MUST include the story text as part of the illustration.
+
+TEXT TO INCLUDE (write this EXACTLY):
+"${cleanText}"
+
+Text placement and style:
+- Place the text at the BOTTOM of the image, in a clear readable area
+- Use a clean, child-friendly font style (rounded, friendly letterforms)
+- Text should be large enough to read easily (suitable for young children)
+- Text color should contrast well with the background (use white text with dark outline if on complex background)
+- Leave adequate padding/margin around the text
+- The text area can have a subtle semi-transparent background if needed for readability
+- DO NOT abbreviate or modify the text - use it EXACTLY as provided
+- The illustration should occupy approximately the top 70-80% of the image, with text below
+`;
+}
+
 export async function POST(request: NextRequest) {
   try {
     const {
@@ -156,10 +183,16 @@ export async function POST(request: NextRequest) {
     // Add format instructions
     prompt += `\n\nFORMAT: ${dimensions.prompt}`;
 
+    // Determine if this is a children's picture book (not a comic with speech bubbles)
+    const isPictureBook = bookFormat === 'picture_book' && !hasDialogue;
+
     // For comics with dialogue: add speech bubble instructions
-    // For non-dialogue images: add no-text instruction
+    // For picture books with story text: add story text at bottom of image
+    // For other images: add no-text instruction
     if (hasDialogue) {
       prompt += buildSpeechBubblePrompt(dialogue as DialogueBubble[]);
+    } else if (isPictureBook && chapterText && chapterText.trim().length > 0) {
+      prompt += buildPictureBookTextPrompt(chapterText);
     } else {
       prompt += `\n${NO_TEXT_INSTRUCTION}`;
     }
