@@ -806,24 +806,24 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
 
           {/* Failed Section - Retry Available */}
           {book.status === 'failed' && (
-            <div className="bg-white rounded-2xl border border-red-200 p-8 mb-6">
+            <div className="bg-white rounded-2xl border border-neutral-200 p-8 mb-6">
               <div className="text-center">
-                <div className="w-16 h-16 mx-auto mb-4 bg-red-50 rounded-full flex items-center justify-center">
-                  <AlertCircle className="h-8 w-8 text-red-600" />
+                <div className="w-16 h-16 mx-auto mb-4 bg-neutral-100 rounded-full flex items-center justify-center">
+                  <AlertCircle className="h-8 w-8 text-neutral-600" />
                 </div>
                 <h2 className="text-xl font-semibold text-neutral-900 mb-2">
-                  Generation Encountered an Issue
+                  Generation Paused
                 </h2>
                 <p className="text-neutral-600 mb-2">
-                  Don&apos;t worry - your progress has been saved.
+                  Your progress has been saved.
                 </p>
                 {book.currentChapter > 0 && (
-                  <p className="text-sm text-green-600 mb-4">
-                    ✓ {book.currentChapter} chapter{book.currentChapter > 1 ? 's' : ''} already completed ({book.totalWords.toLocaleString()} words)
+                  <p className="text-sm text-neutral-600 mb-4">
+                    {book.currentChapter} chapter{book.currentChapter > 1 ? 's' : ''} completed ({book.totalWords.toLocaleString()} words)
                   </p>
                 )}
                 <p className="text-sm text-neutral-500 mb-6">
-                  Click retry to continue from where we left off. This is free - you&apos;ve already paid!
+                  Click retry to continue from where you left off.
                 </p>
                 <button
                   onClick={handleRetry}
@@ -838,7 +838,7 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
                   ) : (
                     <>
                       <Zap className="h-5 w-5" />
-                      Retry Generation
+                      Resume Generation
                     </>
                   )}
                 </button>
@@ -874,31 +874,31 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
                 </div>
               </div>
 
-              {/* Safe to leave message - only for text-only books (novels) */}
-              {!isIllustrated && (
-                <div className="space-y-3 mb-6">
-                  <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-xl">
-                    <Check className="h-4 w-4 text-green-600 flex-shrink-0" />
-                    <p className="text-sm text-green-800">
-                      <span className="font-medium">Safe to leave!</span> Your book will continue generating in the background. Use the notification badge in the header to track progress.
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2 p-3 bg-blue-50 border border-blue-200 rounded-xl">
-                    <Clock className="h-4 w-4 text-blue-600 flex-shrink-0" />
-                    <p className="text-sm text-blue-800">
-                      <span className="font-medium">Estimated time: 30-60 minutes</span> for a full novel. Each chapter takes 2-4 minutes to write with rich, detailed prose.
-                    </p>
+              {/* Info messages */}
+              {!isIllustrated ? (
+                <div className="bg-neutral-50 border border-neutral-200 rounded-xl p-4 mb-6">
+                  <div className="flex items-start gap-3">
+                    <Check className="h-5 w-5 text-neutral-600 flex-shrink-0 mt-0.5" />
+                    <div className="space-y-1">
+                      <p className="text-sm text-neutral-700">
+                        <span className="font-medium">Safe to leave.</span> Your book will continue generating in the background.
+                      </p>
+                      <p className="text-xs text-neutral-500">
+                        Estimated: 30-60 minutes for a full novel. Each chapter takes 2-4 minutes.
+                      </p>
+                    </div>
                   </div>
                 </div>
-              )}
-
-              {/* Stay on page warning - illustrated books only */}
-              {isIllustrated && (
-                <div className="flex items-center gap-2 p-3 bg-amber-50 border border-amber-200 rounded-xl mb-6">
-                  <AlertTriangle className="h-4 w-4 text-amber-600 flex-shrink-0" />
-                  <p className="text-sm text-amber-800">
-                    <span className="font-medium">Please stay on this page.</span> Illustrated books require an active connection to generate images.
-                  </p>
+              ) : (
+                <div className="bg-neutral-50 border border-neutral-200 rounded-xl p-4 mb-6">
+                  <div className="flex items-start gap-3">
+                    <AlertTriangle className="h-5 w-5 text-neutral-600 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-sm text-neutral-700">
+                        <span className="font-medium">Please stay on this page.</span> Illustrated books require an active connection to generate images.
+                      </p>
+                    </div>
+                  </div>
                 </div>
               )}
 
@@ -952,7 +952,7 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
                 <button
                   onClick={handleCancelGeneration}
                   disabled={cancelling}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-3 text-red-600 hover:text-red-700 hover:bg-red-50 border border-red-200 rounded-xl font-medium transition-colors disabled:opacity-50"
+                  className="w-full flex items-center justify-center gap-2 px-4 py-3 text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100 border border-neutral-200 rounded-xl font-medium transition-colors disabled:opacity-50"
                 >
                   {cancelling ? (
                     <>
@@ -960,10 +960,7 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
                       Cancelling...
                     </>
                   ) : (
-                    <>
-                      <AlertCircle className="h-4 w-4" />
-                      Cancel Generation
-                    </>
+                    'Cancel Generation'
                   )}
                 </button>
                 <p className="text-xs text-neutral-400 text-center mt-2">
