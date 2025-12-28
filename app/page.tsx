@@ -28,7 +28,7 @@ const ACCENT = {
 export default function Home() {
   const router = useRouter();
   const [bookIdea, setBookIdea] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading] = useState(false);
   const [error, setError] = useState('');
   const [isGeneratingIdea, setIsGeneratingIdea] = useState(false);
   const [lightboxImage, setLightboxImage] = useState<{ src: string; label: string } | null>(null);
@@ -223,7 +223,7 @@ export default function Home() {
       </section>
 
       {/* Success Story - Blood & Silver */}
-      <section className="py-20 px-6 bg-lime-50">
+      <section className="py-20 px-6 bg-white">
         <div className="max-w-6xl mx-auto">
           <div className="grid md:grid-cols-2 gap-12 items-center">
             {/* Book Cover */}
@@ -253,11 +253,16 @@ export default function Home() {
             {/* Content */}
             <div>
               <div className="inline-flex items-center gap-2 bg-neutral-100 px-4 py-2 rounded-full text-sm text-neutral-600 mb-6">
-                <span className="w-2 h-2 bg-neutral-400 rounded-full" />
+                <span className="w-2 h-2 bg-lime-400 rounded-full" />
                 Published on Amazon KDP
               </div>
               <h2 className="text-4xl md:text-5xl font-bold tracking-tight mb-6 text-neutral-900" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>
-                Blood & Silver
+                Blood &{' '}
+                <span className="relative inline-block">
+                  <span className="absolute inset-0 bg-black -skew-y-2 translate-x-1 translate-y-1" aria-hidden="true" />
+                  <span className={`absolute inset-0 ${ACCENT.bg} -skew-y-2`} aria-hidden="true" />
+                  <span className="relative text-neutral-900 px-3 py-0.5">Silver</span>
+                </span>
               </h2>
               <p className="text-xl text-neutral-600 mb-4">
                 by Freddie Fabrevoie
@@ -287,7 +292,12 @@ export default function Home() {
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-4xl md:text-5xl font-bold tracking-tight mb-4" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>
-              Three steps to your book
+              Three steps to{' '}
+              <span className="relative inline-block">
+                <span className="absolute inset-0 bg-black -skew-y-2 translate-x-1 translate-y-1" aria-hidden="true" />
+                <span className={`absolute inset-0 ${ACCENT.bg} -skew-y-2`} aria-hidden="true" />
+                <span className="relative text-neutral-900 px-3 py-0.5">your book</span>
+              </span>
             </h2>
             <p className="text-lg text-neutral-600">
               From idea to published manuscript in minutes
@@ -334,13 +344,19 @@ export default function Home() {
       </section>
 
       {/* Showcase */}
-      <section className="py-24 px-6 bg-lime-50">
+      <section className="py-24 px-6 bg-neutral-900">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold tracking-tight mb-4" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>
-              Publication-ready formatting
+            <h2 className="text-4xl md:text-5xl font-bold tracking-tight mb-4 text-white" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>
+              Publication-
+              <span className="relative inline-block">
+                <span className="absolute inset-0 bg-black -skew-y-2 translate-x-1 translate-y-1" aria-hidden="true" />
+                <span className={`absolute inset-0 ${ACCENT.bg} -skew-y-2`} aria-hidden="true" />
+                <span className="relative text-neutral-900 px-3 py-0.5">ready</span>
+              </span>
+              {' '}formatting
             </h2>
-            <p className="text-lg text-neutral-600 max-w-2xl mx-auto">
+            <p className="text-lg text-neutral-400 max-w-2xl mx-auto">
               Every book meets Amazon KDP specifications. Proper chapter breaks, table of contents,
               metadata, and cover dimensions included.
             </p>
@@ -357,8 +373,8 @@ export default function Home() {
                 onClick={() => setLightboxImage(item)}
                 className="group text-left cursor-pointer"
               >
-                <div className="bg-white rounded-2xl border border-neutral-200 p-4 card-hover hover:border-neutral-300">
-                  <div className="aspect-[3/4] relative overflow-hidden rounded-xl bg-neutral-100">
+                <div className="bg-neutral-800 rounded-2xl border border-neutral-700 p-4 card-hover hover:border-neutral-600">
+                  <div className="aspect-[3/4] relative overflow-hidden rounded-xl bg-neutral-700">
                     <Image
                       src={item.src}
                       alt={item.label}
@@ -372,7 +388,7 @@ export default function Home() {
                     </div>
                   </div>
                 </div>
-                <p className="text-center text-sm text-neutral-600 mt-4">{item.label}</p>
+                <p className="text-center text-sm text-neutral-400 mt-4">{item.label}</p>
               </button>
             ))}
           </div>
@@ -390,7 +406,12 @@ export default function Home() {
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-12">
             <h2 className="text-4xl md:text-5xl font-bold tracking-tight mb-4" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>
-              Simple pricing
+              Simple{' '}
+              <span className="relative inline-block">
+                <span className="absolute inset-0 bg-black -skew-y-2 translate-x-1 translate-y-1" aria-hidden="true" />
+                <span className={`absolute inset-0 ${ACCENT.bg} -skew-y-2`} aria-hidden="true" />
+                <span className="relative text-neutral-900 px-3 py-0.5">pricing</span>
+              </span>
             </h2>
             <p className="text-lg text-neutral-600">
               Start free, then pay as you go
@@ -402,7 +423,7 @@ export default function Home() {
             {/* Free Tier */}
             <button
               onClick={() => router.push('/signup')}
-              className="group bg-lime-50 rounded-2xl p-6 border-2 border-lime-200 hover:border-lime-400 card-hover text-left cursor-pointer"
+              className="group bg-white rounded-2xl p-6 border-2 border-lime-400 hover:border-lime-500 card-hover text-left cursor-pointer"
             >
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-10 h-10 bg-lime-400 rounded-lg flex items-center justify-center">
@@ -544,17 +565,23 @@ export default function Home() {
       </section>
 
       {/* CTA */}
-      <section className="py-24 px-6 bg-lime-50">
+      <section className="py-24 px-6 bg-neutral-900">
         <div className="max-w-4xl mx-auto text-center">
-          <h2 className="text-4xl md:text-5xl font-bold tracking-tight mb-6" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>
-            Ready to write your book?
+          <h2 className="text-4xl md:text-5xl font-bold tracking-tight mb-6 text-white" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>
+            Ready to write{' '}
+            <span className="relative inline-block">
+              <span className="absolute inset-0 bg-black -skew-y-2 translate-x-1 translate-y-1" aria-hidden="true" />
+              <span className={`absolute inset-0 ${ACCENT.bg} -skew-y-2`} aria-hidden="true" />
+              <span className="relative text-neutral-900 px-3 py-0.5">your book</span>
+            </span>
+            ?
           </h2>
-          <p className="text-lg text-neutral-600 mb-10">
+          <p className="text-lg text-neutral-400 mb-10">
             Start with a free book. No credit card required.
           </p>
           <button
             onClick={() => router.push('/signup')}
-            className="bg-neutral-900 text-white px-8 py-4 rounded-full text-base font-medium hover:bg-neutral-800 transition-all hover:scale-105 inline-flex items-center gap-2"
+            className="bg-lime-400 text-neutral-900 px-8 py-4 rounded-full text-base font-medium hover:bg-lime-300 transition-all hover:scale-105 inline-flex items-center gap-2"
           >
             Get your free book
             <ArrowRight className="h-5 w-5" />
