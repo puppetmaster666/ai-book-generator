@@ -273,6 +273,13 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
           const data = await res.json();
 
           if (!res.ok) {
+            // If book was deleted, stop orchestrating silently
+            if (data.aborted) {
+              console.log('Book was deleted, stopping orchestration');
+              orchestrationRef.current = false;
+              setOrchestrating(false);
+              break;
+            }
             throw new Error(data.error || 'Generation failed');
           }
 

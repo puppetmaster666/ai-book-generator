@@ -24,8 +24,10 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  // Extract id outside try-catch so it's available in error handler
+  const { id } = await params;
+
   try {
-    const { id } = await params;
 
     // Fetch book with current state
     const book = await prisma.book.findUnique({
@@ -148,6 +150,20 @@ export async function POST(
     // Update story so far
     storySoFar += `\n\nChapter ${nextChapterNum}: ${chapterPlan.title}\n${summary}`;
 
+    // Verify book still exists before saving (user may have deleted it)
+    const bookStillExists = await prisma.book.findUnique({
+      where: { id },
+      select: { id: true },
+    });
+
+    if (!bookStillExists) {
+      console.log(`Book ${id} was deleted during generation, aborting`);
+      return NextResponse.json({
+        error: 'Book was deleted during generation',
+        aborted: true,
+      }, { status: 404 });
+    }
+
     // Save chapter
     await prisma.chapter.create({
       data: {
@@ -191,15 +207,19 @@ export async function POST(
   } catch (error) {
     console.error('Error generating next chapter:', error);
 
-    // Update book with error status
-    const { id } = await params;
-    await prisma.book.update({
-      where: { id },
-      data: {
-        status: 'failed',
-        errorMessage: error instanceof Error ? error.message : 'Unknown error',
-      },
-    });
+    // Try to update book with error status (may fail if book was deleted)
+    try {
+      await prisma.book.update({
+        where: { id },
+        data: {
+          status: 'failed',
+          errorMessage: error instanceof Error ? error.message : 'Unknown error',
+        },
+      });
+    } catch (updateError) {
+      // Book may have been deleted, log and continue
+      console.error('Failed to update book status (book may have been deleted):', updateError);
+    }
 
     return NextResponse.json(
       { error: 'Failed to generate chapter', message: error instanceof Error ? error.message : 'Unknown error' },
