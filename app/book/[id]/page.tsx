@@ -127,6 +127,8 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
   const startTimeRef = useRef<number | null>(null);
   const orchestrationRef = useRef<boolean>(false);
   const autoRetryRef = useRef<boolean>(false);
+  // Session ID to prevent multiple orchestration loops - incremented on each new generation attempt
+  const orchestrationSessionRef = useRef<number>(0);
   const { setGeneratingBookId } = useGeneratingBook();
 
   // Claim book for user after Google sign-in redirect
@@ -259,6 +261,10 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
 
     if (!shouldOrchestrate) return;
 
+    // Increment session ID to invalidate any previous loops
+    orchestrationSessionRef.current += 1;
+    const currentSession = orchestrationSessionRef.current;
+
     const orchestrateGeneration = async () => {
       orchestrationRef.current = true;
       setOrchestrating(true);
@@ -266,16 +272,30 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
       let retryCount = 0;
       const maxRetries = 3;
 
-      while (orchestrationRef.current) {
+      while (orchestrationRef.current && orchestrationSessionRef.current === currentSession) {
         try {
-          console.log(`Orchestrating: generating next chapter...`);
+          // Check if this session is still valid
+          if (orchestrationSessionRef.current !== currentSession) {
+            console.log(`Session ${currentSession} superseded by session ${orchestrationSessionRef.current}, stopping`);
+            break;
+          }
+
+          console.log(`[Session ${currentSession}] Orchestrating: generating next chapter...`);
           const res = await fetch(`/api/books/${id}/generate-next`, { method: 'POST' });
-          const data = await res.json();
+
+          // Handle empty/malformed responses
+          let data;
+          try {
+            data = await res.json();
+          } catch (parseError) {
+            console.error('Failed to parse response:', parseError);
+            throw new Error('Server returned invalid response');
+          }
 
           if (!res.ok) {
-            // If book was deleted, stop orchestrating silently
-            if (data.aborted) {
-              console.log('Book was deleted, stopping orchestration');
+            // If book was deleted or not found, stop orchestrating silently
+            if (data.aborted || res.status === 404) {
+              console.log('Book was deleted or not found, stopping orchestration');
               orchestrationRef.current = false;
               setOrchestrating(false);
               break;
@@ -287,7 +307,7 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
           retryCount = 0;
 
           if (data.done) {
-            console.log('Orchestration complete: all chapters generated');
+            console.log(`[Session ${currentSession}] Orchestration complete: all chapters generated`);
             orchestrationRef.current = false;
             setOrchestrating(false);
             // Fetch full book data
@@ -299,17 +319,17 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
             break;
           }
 
-          console.log(`Chapter ${data.currentChapter}/${data.totalChapters} complete`);
+          console.log(`[Session ${currentSession}] Chapter ${data.currentChapter}/${data.totalChapters} complete`);
 
           // Small delay between chapters to avoid overwhelming the API
           await new Promise(resolve => setTimeout(resolve, 500));
 
         } catch (err) {
-          console.error('Orchestration error:', err);
+          console.error(`[Session ${currentSession}] Orchestration error:`, err);
           retryCount++;
 
           if (retryCount >= maxRetries) {
-            console.error(`Max retries (${maxRetries}) reached, stopping orchestration`);
+            console.error(`[Session ${currentSession}] Max retries (${maxRetries}) reached, stopping orchestration`);
             orchestrationRef.current = false;
             setOrchestrating(false);
             break;
@@ -317,7 +337,7 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
 
           // Wait before retrying (exponential backoff)
           const waitTime = Math.min(1000 * Math.pow(2, retryCount), 10000);
-          console.log(`Retrying in ${waitTime}ms (attempt ${retryCount}/${maxRetries})`);
+          console.log(`[Session ${currentSession}] Retrying in ${waitTime}ms (attempt ${retryCount}/${maxRetries})`);
           await new Promise(resolve => setTimeout(resolve, waitTime));
         }
       }
