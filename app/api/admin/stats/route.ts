@@ -110,11 +110,11 @@ export async function GET() {
       // Daily stats for last 30 days
       prisma.$queryRaw`
         SELECT
-          DATE(created_at) as date,
+          DATE("createdAt") as date,
           COUNT(*) as books_created
         FROM "Book"
-        WHERE created_at > NOW() - INTERVAL '30 days'
-        GROUP BY DATE(created_at)
+        WHERE "createdAt" > NOW() - INTERVAL '30 days'
+        GROUP BY DATE("createdAt")
         ORDER BY date DESC
       ` as Promise<Array<{ date: Date; books_created: bigint }>>,
     ]);
