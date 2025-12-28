@@ -306,6 +306,81 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Comic Book Showcase - The Weaver's Mark */}
+      <section className="py-20 px-6 bg-neutral-50 overflow-hidden">
+        <div className="max-w-6xl mx-auto">
+          <div className="grid md:grid-cols-2 gap-12 items-center">
+            {/* Content - Left side on desktop */}
+            <div className="order-2 md:order-1">
+              <div className="inline-flex items-center gap-2 bg-white px-4 py-2 rounded-full text-sm text-neutral-600 mb-6 border border-neutral-200">
+                <span className="w-2 h-2 bg-lime-400 rounded-full" />
+                Comic Book - 3 minutes to create
+              </div>
+              <h2 className="text-4xl md:text-5xl font-bold tracking-tight mb-6 text-neutral-900" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>
+                The Weaver&apos;s{' '}
+                <span className="relative inline-block">
+                  <span className="absolute -inset-x-1 -inset-y-1 bg-black -skew-y-2 translate-x-1 translate-y-1" aria-hidden="true" />
+                  <span className={`absolute -inset-x-1 -inset-y-1 ${ACCENT.bg} -skew-y-2`} aria-hidden="true" />
+                  <span className="relative text-neutral-900 px-2">Mark</span>
+                </span>
+              </h2>
+              <p className="text-xl text-neutral-600 mb-4">
+                by Jack Ripper
+              </p>
+              <p className="text-neutral-500 mb-8 leading-relaxed">
+                A stunning illustrated comic book with AI-generated artwork and professional panel layouts.
+                Each page features consistent character designs and dynamic compositions - all created in just 3 minutes.
+              </p>
+              <div className="flex flex-wrap gap-4 text-sm text-neutral-500">
+                <span className="flex items-center gap-2">
+                  <Check className="h-4 w-4 text-lime-500" />
+                  AI illustrations
+                </span>
+                <span className="flex items-center gap-2">
+                  <Check className="h-4 w-4 text-lime-500" />
+                  Panel layouts
+                </span>
+                <span className="flex items-center gap-2">
+                  <Check className="h-4 w-4 text-lime-500" />
+                  Speech bubbles
+                </span>
+              </div>
+            </div>
+
+            {/* Overlapping Cards - Right side */}
+            <div className="order-1 md:order-2 flex justify-center">
+              <div className="relative w-80 h-96">
+                {/* Card Stack - Poker hand style */}
+                {[
+                  { src: '/images/illustration-cmjpl7ohv0003l804g1nj9jp8.jpeg', rotate: -12, left: 0 },
+                  { src: '/images/illustration-cmjpl7q3x0003l8042kvaamsm.jpeg', rotate: -6, left: 30 },
+                  { src: '/images/The_Weaver_s_Mark_cover.png', rotate: 0, left: 60 },
+                  { src: '/images/illustration-cmjpl7qcr0003la045b05wbvs.jpeg', rotate: 6, left: 90 },
+                  { src: '/images/illustration-cmjpl7r9e0003l404sadbtfwh.jpeg', rotate: 12, left: 120 },
+                ].map((card, i) => (
+                  <div
+                    key={i}
+                    className="absolute top-0 w-48 aspect-[2/3] rounded-lg overflow-hidden shadow-xl border-2 border-white bg-white transition-transform hover:scale-105 hover:z-50"
+                    style={{
+                      transform: `rotate(${card.rotate}deg)`,
+                      left: `${card.left}px`,
+                      zIndex: i + 1,
+                    }}
+                  >
+                    <Image
+                      src={card.src}
+                      alt={`The Weaver's Mark - Page ${i + 1}`}
+                      fill
+                      className="object-cover"
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* How it works */}
       <section className="py-24 px-6 bg-white">
         <div className="max-w-6xl mx-auto">
