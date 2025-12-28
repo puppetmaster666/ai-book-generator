@@ -483,8 +483,9 @@ export async function POST(
 
     // RACE CONDITION GUARD: If generation is actively in progress (updated recently), skip
     // This prevents duplicate generation from webhook + page load happening simultaneously
+    // But allow retry if there's an error message (generation failed and needs to be resumed)
     const twoMinutesAgo = new Date(Date.now() - 2 * 60 * 1000);
-    if ((book.status === 'outlining' || book.status === 'generating') && book.updatedAt > twoMinutesAgo) {
+    if ((book.status === 'outlining' || book.status === 'generating') && book.updatedAt > twoMinutesAgo && !book.errorMessage) {
       console.log(`Generation already in progress for book ${id}, skipping duplicate request`);
       return NextResponse.json({
         message: 'Generation already in progress',

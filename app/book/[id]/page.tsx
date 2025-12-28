@@ -521,19 +521,35 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
     orchestrationRef.current = false; // Reset orchestration state
 
     try {
-      // For visual books, call generate without outlineOnly (they have their own flow)
-      // For text books, use outlineOnly so client-side orchestration takes over
-      const isVisual = isVisualBook;
-      const res = await fetch(`/api/books/${id}/generate`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ outlineOnly: !isVisual }),
-      });
-      if (!res.ok) {
-        const data = await res.json();
-        console.error('Retry failed:', data.error);
+      // Check if this is a text book with an existing outline (has chapters to resume)
+      const hasOutline = book.outline && typeof book.outline === 'object';
+      const hasChapters = book.chapters && book.chapters.length > 0;
+      const isTextBook = !isVisualBook;
+
+      if (isTextBook && hasOutline && hasChapters) {
+        // Resume text book: Just update status and let orchestration continue
+        // Don't call /generate which would delete existing chapters
+        console.log('Resuming text book from chapter', book.currentChapter);
+        const res = await fetch(`/api/books/${id}/resume`, {
+          method: 'POST',
+        });
+        if (!res.ok) {
+          const data = await res.json();
+          console.error('Resume failed:', data.error);
+        }
+      } else {
+        // For visual books or books without outline, call generate
+        const res = await fetch(`/api/books/${id}/generate`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ outlineOnly: isTextBook }),
+        });
+        if (!res.ok) {
+          const data = await res.json();
+          console.error('Retry failed:', data.error);
+        }
       }
-      // After outline is ready, the orchestration effect will pick up and continue
+      // After ready, the orchestration effect will pick up and continue
     } catch (err) {
       console.error('Retry error:', err);
     } finally {
