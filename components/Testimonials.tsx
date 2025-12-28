@@ -1,6 +1,7 @@
 'use client';
 
 import { Star } from 'lucide-react';
+import Image from 'next/image';
 
 interface Testimonial {
   quote: string;
@@ -8,32 +9,36 @@ interface Testimonial {
   role: string;
   bookTitle?: string;
   rating: number;
+  image: string;
 }
 
 const testimonials: Testimonial[] = [
   {
     quote:
-      "I wrote my first children's book in under 2 minutes. The illustrations were exactly what I imagined. Now it's published on Amazon!",
-    author: 'Sarah M.',
+      "I wrote my first children's book in under 2 hours. The illustrations were exactly what I imagined. Now it's published on Amazon!",
+    author: 'Sarah Mitchell',
     role: "Children's Book Author",
     bookTitle: 'The Magic Garden',
     rating: 5,
+    image: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop&crop=face',
   },
   {
     quote:
-      "As a busy mom, I never had time to write the novel I always dreamed of. This tool made it possible. 50,000 words in an hour - unbelievable.",
-    author: 'Jennifer K.',
+      "As a busy professional, I never had time to write the novel I always dreamed of. This tool made it possible. 50,000 words in an afternoon.",
+    author: 'Jennifer Kowalski',
     role: 'First-time Author',
     bookTitle: 'Whispers in the Wind',
     rating: 5,
+    image: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&fit=crop&crop=face',
   },
   {
     quote:
       "The comic book generator blew my mind. Professional quality panels with speech bubbles, consistent characters - it's like having a team of artists.",
-    author: 'Mike R.',
+    author: 'Michael Reynolds',
     role: 'Comic Creator',
     bookTitle: 'Shadow Knight Chronicles',
     rating: 5,
+    image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face',
   },
 ];
 
@@ -81,8 +86,14 @@ export default function Testimonials() {
               </blockquote>
 
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-neutral-200 rounded-full flex items-center justify-center text-neutral-600 font-medium">
-                  {testimonial.author[0]}
+                <div className="w-10 h-10 rounded-full overflow-hidden bg-neutral-200 flex-shrink-0">
+                  <Image
+                    src={testimonial.image}
+                    alt={testimonial.author}
+                    width={40}
+                    height={40}
+                    className="w-full h-full object-cover"
+                  />
                 </div>
                 <div>
                   <p className="font-medium text-neutral-900">
