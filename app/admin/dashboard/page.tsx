@@ -20,6 +20,10 @@ import {
   Gift,
   Send,
   RotateCcw,
+  Download,
+  ChevronLeft,
+  ChevronRight,
+  ExternalLink,
 } from 'lucide-react';
 
 interface AdminStats {
@@ -42,7 +46,7 @@ interface AdminStats {
     createdAt: string;
     booksCount: number;
   }>;
-  recentBooks: Array<{
+  books: Array<{
     id: string;
     title: string;
     authorName: string;
@@ -52,11 +56,18 @@ interface AdminStats {
     paymentStatus: string;
     totalWords: number;
     totalChapters: number;
+    currentChapter: number;
     createdAt: string;
     completedAt: string | null;
     email: string | null;
     user: { email: string; name: string | null } | null;
   }>;
+  booksPagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
   booksByFormat: Array<{ format: string; count: number }>;
   booksByGenre: Array<{ genre: string; count: number }>;
   dailyStats: Array<{ date: string; booksCreated: number }>;
@@ -125,11 +136,13 @@ export default function AdminDashboard() {
   const [emailResult, setEmailResult] = useState<{ success: boolean; message: string } | null>(null);
   const [restartingBookId, setRestartingBookId] = useState<string | null>(null);
   const [restartResult, setRestartResult] = useState<{ success: boolean; message: string } | null>(null);
+  const [booksPage, setBooksPage] = useState(1);
+  const [isLoadingBooks, setIsLoadingBooks] = useState(false);
 
-  const fetchStats = async (showRefresh = false) => {
+  const fetchStats = async (showRefresh = false, page = booksPage) => {
     if (showRefresh) setIsRefreshing(true);
     try {
-      const response = await fetch('/api/admin/stats');
+      const response = await fetch(`/api/admin/stats?booksPage=${page}&booksLimit=50`);
       const data = await response.json();
 
       if (!response.ok) {
@@ -168,10 +181,10 @@ export default function AdminDashboard() {
 
   const toggleAllBooks = () => {
     if (!stats) return;
-    if (selectedBooks.size === stats.recentBooks.length) {
+    if (selectedBooks.size === stats.books.length) {
       setSelectedBooks(new Set());
     } else {
-      setSelectedBooks(new Set(stats.recentBooks.map(b => b.id)));
+      setSelectedBooks(new Set(stats.books.map(b => b.id)));
     }
   };
 
@@ -366,6 +379,13 @@ export default function AdminDashboard() {
     }
   };
 
+  const handleBooksPageChange = async (newPage: number) => {
+    setIsLoadingBooks(true);
+    setBooksPage(newPage);
+    await fetchStats(false, newPage);
+    setIsLoadingBooks(false);
+  };
+
   useEffect(() => {
     if (sessionStatus === 'loading') return;
     if (!session) {
@@ -553,10 +573,18 @@ export default function AdminDashboard() {
           )}
         </div>
 
-        {/* Recent Books */}
+        {/* All Books */}
         <div className="bg-white rounded-xl border border-neutral-200 p-6 mb-8">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold">Recent Books</h2>
+            <div className="flex items-center gap-3">
+              <h2 className="text-lg font-semibold">All Books</h2>
+              {stats.booksPagination && (
+                <span className="text-sm text-neutral-500">
+                  ({stats.booksPagination.total} total)
+                </span>
+              )}
+              {isLoadingBooks && <Loader2 className="h-4 w-4 animate-spin text-neutral-400" />}
+            </div>
             {selectedBooks.size > 0 && (
               <div className="flex items-center gap-3">
                 <span className="text-sm text-neutral-600">
@@ -596,7 +624,7 @@ export default function AdminDashboard() {
               {restartResult.message}
             </div>
           )}
-          {stats.recentBooks.length > 0 ? (
+          {stats.books.length > 0 ? (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
@@ -604,7 +632,7 @@ export default function AdminDashboard() {
                     <th className="text-left py-3 px-2 font-medium text-neutral-500 w-10">
                       <input
                         type="checkbox"
-                        checked={selectedBooks.size === stats.recentBooks.length && stats.recentBooks.length > 0}
+                        checked={selectedBooks.size === stats.books.length && stats.books.length > 0}
                         onChange={toggleAllBooks}
                         className="w-4 h-4 rounded border-neutral-300 text-neutral-900 focus:ring-neutral-500 cursor-pointer"
                       />
@@ -621,7 +649,7 @@ export default function AdminDashboard() {
                   </tr>
                 </thead>
                 <tbody>
-                  {stats.recentBooks.map((book) => (
+                  {stats.books.map((book) => (
                     <tr
                       key={book.id}
                       className={`border-b border-neutral-100 hover:bg-neutral-50 ${selectedBooks.has(book.id) ? 'bg-blue-50' : ''}`}
@@ -672,18 +700,41 @@ export default function AdminDashboard() {
                         <div className="text-xs text-neutral-400">{new Date(book.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
                       </td>
                       <td className="py-3 px-2">
-                        <button
-                          onClick={() => handleRestartBook(book.id, book.title)}
-                          disabled={restartingBookId === book.id}
-                          title="Restart from scratch (keeps original input)"
-                          className="p-2 text-neutral-500 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-colors disabled:opacity-50"
-                        >
-                          {restartingBookId === book.id ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <RotateCcw className="h-4 w-4" />
+                        <div className="flex items-center gap-1">
+                          {/* View Book */}
+                          <a
+                            href={`/book/${book.id}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            title="View book page"
+                            className="p-2 text-neutral-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                          >
+                            <ExternalLink className="h-4 w-4" />
+                          </a>
+                          {/* Download (only for completed) */}
+                          {book.status === 'completed' && (
+                            <a
+                              href={`/api/books/${book.id}/download`}
+                              title="Download book"
+                              className="p-2 text-neutral-500 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                            >
+                              <Download className="h-4 w-4" />
+                            </a>
                           )}
-                        </button>
+                          {/* Restart */}
+                          <button
+                            onClick={() => handleRestartBook(book.id, book.title)}
+                            disabled={restartingBookId === book.id}
+                            title="Restart from scratch (keeps original input)"
+                            className="p-2 text-neutral-500 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-colors disabled:opacity-50"
+                          >
+                            {restartingBookId === book.id ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <RotateCcw className="h-4 w-4" />
+                            )}
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -692,6 +743,33 @@ export default function AdminDashboard() {
             </div>
           ) : (
             <p className="text-neutral-400 text-sm">No books yet</p>
+          )}
+
+          {/* Pagination */}
+          {stats.booksPagination && stats.booksPagination.totalPages > 1 && (
+            <div className="flex items-center justify-between mt-4 pt-4 border-t border-neutral-200">
+              <p className="text-sm text-neutral-500">
+                Page {stats.booksPagination.page} of {stats.booksPagination.totalPages}
+              </p>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => handleBooksPageChange(booksPage - 1)}
+                  disabled={booksPage <= 1 || isLoadingBooks}
+                  className="flex items-center gap-1 px-3 py-1.5 text-sm text-neutral-600 hover:bg-neutral-100 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                  Previous
+                </button>
+                <button
+                  onClick={() => handleBooksPageChange(booksPage + 1)}
+                  disabled={booksPage >= stats.booksPagination.totalPages || isLoadingBooks}
+                  className="flex items-center gap-1 px-3 py-1.5 text-sm text-neutral-600 hover:bg-neutral-100 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  Next
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
           )}
         </div>
 

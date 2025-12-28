@@ -1,9 +1,13 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    const { searchParams } = new URL(request.url);
+    const booksPage = parseInt(searchParams.get('booksPage') || '1');
+    const booksLimit = parseInt(searchParams.get('booksLimit') || '50');
+    const booksOffset = (booksPage - 1) * booksLimit;
     // Check if user is authenticated and is admin
     const session = await auth();
     if (!session?.user) {
@@ -75,9 +79,10 @@ export async function GET() {
           _count: { select: { books: true } },
         },
       }),
-      // Recent books (last 20)
+      // Paginated books
       prisma.book.findMany({
-        take: 20,
+        skip: booksOffset,
+        take: booksLimit,
         orderBy: { createdAt: 'desc' },
         select: {
           id: true,
@@ -89,6 +94,7 @@ export async function GET() {
           paymentStatus: true,
           totalWords: true,
           totalChapters: true,
+          currentChapter: true,
           createdAt: true,
           completedAt: true,
           email: true,
@@ -138,7 +144,13 @@ export async function GET() {
         ...u,
         booksCount: u._count.books,
       })),
-      recentBooks,
+      books: recentBooks,
+      booksPagination: {
+        page: booksPage,
+        limit: booksLimit,
+        total: totalBooks,
+        totalPages: Math.ceil(totalBooks / booksLimit),
+      },
       booksByFormat: booksByFormat.map(b => ({
         format: b.bookFormat,
         count: b._count,
