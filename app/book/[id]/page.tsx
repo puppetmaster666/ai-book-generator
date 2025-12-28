@@ -127,6 +127,8 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
   const orchestrationRef = useRef<boolean>(false);
   // Session ID to prevent multiple orchestration loops - incremented on each new generation attempt
   const orchestrationSessionRef = useRef<number>(0);
+  // Track chapter count to detect new chapters in status polling (avoids stale closure issues)
+  const lastKnownChapterCountRef = useRef<number>(0);
   const { setGeneratingBookId } = useGeneratingBook();
 
   // Claim book for user after Google sign-in redirect
@@ -203,6 +205,7 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
 
         // Not a comic, or already in progress - show this page
         setBook(loadedBook);
+        lastKnownChapterCountRef.current = loadedBook?.chapters?.length || 0;
         setLoading(false);
       } catch (err) {
         setError('Failed to load book');
@@ -316,6 +319,7 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
             if (fullRes.ok) {
               const fullData = await fullRes.json();
               setBook(fullData.book);
+              lastKnownChapterCountRef.current = fullData.book?.chapters?.length || 0;
             }
             break;
           }
@@ -327,6 +331,7 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
           if (updatedRes.ok) {
             const updatedData = await updatedRes.json();
             setBook(updatedData.book);
+            lastKnownChapterCountRef.current = updatedData.book?.chapters?.length || 0;
           }
 
           // Small delay between chapters to avoid overwhelming the API
@@ -348,6 +353,7 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
               if (failedRes.ok) {
                 const failedData = await failedRes.json();
                 setBook(failedData.book);
+                lastKnownChapterCountRef.current = failedData.book?.chapters?.length || 0;
               }
             } catch (cancelErr) {
               console.error('Failed to mark book as failed:', cancelErr);
@@ -437,23 +443,31 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
           setServerStartTime(new Date(status.generationStartedAt));
         }
 
-        // Update book with status info (preserves existing heavy data)
-        setBook(prev => prev ? {
-          ...prev,
-          status: status.status,
-          paymentStatus: status.paymentStatus,
-          currentChapter: status.currentChapter,
-          totalChapters: status.totalChapters,
-          totalWords: status.totalWords,
-        } : prev);
+        // Check if there are new chapters we don't have locally (use ref to avoid stale closure)
+        const localChapterCount = lastKnownChapterCountRef.current;
+        const serverChapterCount = status.chapterCount || 0;
+        const hasNewChapters = serverChapterCount > localChapterCount;
 
-        // When generation completes, fetch full book with all content
-        if (status.status === 'completed' && book?.status !== 'completed') {
+        // Fetch full book data if there are new chapters OR status completed
+        if (hasNewChapters || (status.status === 'completed' && book?.status !== 'completed')) {
+          console.log(`Fetching full book data: ${hasNewChapters ? 'new chapters detected' : 'book completed'} (local: ${localChapterCount}, server: ${serverChapterCount})`);
           const fullRes = await fetch(`/api/books/${id}`);
           if (fullRes.ok) {
             const fullData = await fullRes.json();
             setBook(fullData.book);
+            // Update ref with new chapter count
+            lastKnownChapterCountRef.current = fullData.book?.chapters?.length || 0;
           }
+        } else {
+          // Just update status fields (preserves existing heavy data)
+          setBook(prev => prev ? {
+            ...prev,
+            status: status.status,
+            paymentStatus: status.paymentStatus,
+            currentChapter: status.currentChapter,
+            totalChapters: status.totalChapters,
+            totalWords: status.totalWords,
+          } : prev);
         }
       } catch (err) {
         console.error('Status poll error:', err);
@@ -528,6 +542,7 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
           if (bookRes.ok) {
             const bookData = await bookRes.json();
             setBook(bookData.book);
+            lastKnownChapterCountRef.current = bookData.book?.chapters?.length || 0;
           }
         }
       } else {
@@ -553,6 +568,7 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
           if (bookRes.ok) {
             const bookData = await bookRes.json();
             setBook(bookData.book);
+            lastKnownChapterCountRef.current = bookData.book?.chapters?.length || 0;
           }
         }
       }
@@ -579,6 +595,7 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
       if (res.ok) {
         const data = await res.json();
         setBook(data.book);
+        lastKnownChapterCountRef.current = data.book?.chapters?.length || 0;
       }
     } catch (err) {
       console.error('Cancel error:', err);
