@@ -121,6 +121,7 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
   const [bookClaimed, setBookClaimed] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
   const [serverStartTime, setServerStartTime] = useState<Date | null>(null);
   const [orchestrating, setOrchestrating] = useState(false);
   const [autoRetryCount, setAutoRetryCount] = useState(0);
@@ -540,14 +541,46 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
     }
   };
 
+  const handleCancelGeneration = async () => {
+    if (!book || cancelling) return;
+
+    setCancelling(true);
+    try {
+      // Stop the orchestration loop
+      orchestrationRef.current = false;
+      setOrchestrating(false);
+
+      // Update book status to 'cancelled' on the server
+      await fetch(`/api/books/${id}/cancel`, { method: 'POST' });
+
+      // Refresh book data to show updated status
+      const res = await fetch(`/api/books/${id}`);
+      if (res.ok) {
+        const data = await res.json();
+        setBook(data.book);
+      }
+    } catch (err) {
+      console.error('Cancel error:', err);
+    } finally {
+      setCancelling(false);
+    }
+  };
+
   const handleDelete = async () => {
     if (!book || deleting) return;
 
     setDeleting(true);
+    // Stop any ongoing orchestration first
+    orchestrationRef.current = false;
+    setOrchestrating(false);
+
     try {
       const res = await fetch(`/api/books/${id}`, { method: 'DELETE' });
       if (res.ok) {
-        router.push('/');
+        // Clear generating book ID from context
+        setGeneratingBookId(null);
+        // Redirect to profile if logged in, otherwise home
+        router.push(session ? '/profile' : '/');
       } else {
         const data = await res.json();
         console.error('Delete failed:', data.error);
@@ -912,6 +945,30 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
                   <p className="text-2xl font-bold text-neutral-900">~{Math.round(book.totalWords / 250)}</p>
                   <p className="text-xs text-neutral-500">Pages</p>
                 </div>
+              </div>
+
+              {/* Cancel Generation Button */}
+              <div className="mt-6 pt-6 border-t border-neutral-100">
+                <button
+                  onClick={handleCancelGeneration}
+                  disabled={cancelling}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-3 text-red-600 hover:text-red-700 hover:bg-red-50 border border-red-200 rounded-xl font-medium transition-colors disabled:opacity-50"
+                >
+                  {cancelling ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Cancelling...
+                    </>
+                  ) : (
+                    <>
+                      <AlertCircle className="h-4 w-4" />
+                      Cancel Generation
+                    </>
+                  )}
+                </button>
+                <p className="text-xs text-neutral-400 text-center mt-2">
+                  Progress will be saved. You can retry later.
+                </p>
               </div>
 
               {/* Live Content Preview - Text Only Books */}
