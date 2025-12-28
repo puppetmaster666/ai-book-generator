@@ -1,7 +1,10 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  // Include font files in serverless function bundles
+  outputFileTracingIncludes: {
+    '/api/**/*': ['./assets/fonts/**/*'],
+  },
 };
 
 export default nextConfig;

@@ -38,20 +38,30 @@ function base64ToBuffer(dataUrl: string): Buffer | null {
   }
 }
 
-// Get font paths - handles both local dev and Vercel deployment
-function getFontPath(fontName: string): string {
-  // Try public/fonts first (works in development)
-  const publicPath = path.join(process.cwd(), 'public', 'fonts', fontName);
-  if (fs.existsSync(publicPath)) {
-    return publicPath;
+// Load font as buffer - works in both dev and Vercel serverless
+function loadFontBuffer(fontName: string): Buffer | null {
+  const possiblePaths = [
+    // Assets folder (bundled with serverless function)
+    path.join(process.cwd(), 'assets', 'fonts', fontName),
+    // Public folder (development)
+    path.join(process.cwd(), 'public', 'fonts', fontName),
+    // Vercel serverless paths
+    path.join(__dirname, '..', 'assets', 'fonts', fontName),
+    path.join(__dirname, '..', '..', 'assets', 'fonts', fontName),
+  ];
+
+  for (const fontPath of possiblePaths) {
+    try {
+      if (fs.existsSync(fontPath)) {
+        return fs.readFileSync(fontPath);
+      }
+    } catch {
+      continue;
+    }
   }
-  // Fallback for Vercel - fonts should be in .next/server/public/fonts
-  const vercelPath = path.join(process.cwd(), '.next', 'server', 'public', 'fonts', fontName);
-  if (fs.existsSync(vercelPath)) {
-    return vercelPath;
-  }
-  // Last resort - return public path and hope for the best
-  return publicPath;
+
+  console.warn(`Font not found: ${fontName}, tried paths:`, possiblePaths);
+  return null;
 }
 
 export async function generatePdf(bookData: BookData): Promise<Buffer> {
@@ -71,11 +81,16 @@ export async function generatePdf(bookData: BookData): Promise<Buffer> {
       });
 
       // Register custom fonts to avoid AFM file issues on Vercel
-      const regularFontPath = getFontPath('WorkSans-Regular.ttf');
-      const boldFontPath = getFontPath('Raleway-Bold.ttf');
+      const regularFontBuffer = loadFontBuffer('WorkSans-Regular.ttf');
+      const boldFontBuffer = loadFontBuffer('Raleway-Bold.ttf');
 
-      doc.registerFont('Regular', regularFontPath);
-      doc.registerFont('Bold', boldFontPath);
+      if (regularFontBuffer && boldFontBuffer) {
+        doc.registerFont('Regular', regularFontBuffer);
+        doc.registerFont('Bold', boldFontBuffer);
+      } else {
+        // Fonts not found - this will fail, but let's provide a clear error
+        throw new Error('Required fonts not found. Ensure WorkSans-Regular.ttf and Raleway-Bold.ttf are in assets/fonts/');
+      }
 
       doc.on('data', (chunk) => chunks.push(chunk));
       doc.on('end', () => resolve(Buffer.concat(chunks)));
