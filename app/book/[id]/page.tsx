@@ -322,6 +322,13 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
 
           console.log(`[Session ${currentSession}] Chapter ${data.currentChapter}/${data.totalChapters} complete`);
 
+          // Fetch updated book data to show new chapters in UI
+          const updatedRes = await fetch(`/api/books/${id}`);
+          if (updatedRes.ok) {
+            const updatedData = await updatedRes.json();
+            setBook(updatedData.book);
+          }
+
           // Small delay between chapters to avoid overwhelming the API
           await new Promise(resolve => setTimeout(resolve, 500));
 
@@ -508,6 +515,20 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
         if (!res.ok) {
           const data = await res.json();
           console.error('Resume failed:', data.error);
+          // Show error to user if concurrent generation limit hit
+          if (res.status === 409 && data.existingBookTitle) {
+            setError(`You already have "${data.existingBookTitle}" generating. Please wait for it to complete or cancel it first.`);
+          } else {
+            setError(data.error || 'Failed to resume generation');
+          }
+        } else {
+          setError(null);
+          // Refresh book data to update local state - this triggers orchestration
+          const bookRes = await fetch(`/api/books/${id}`);
+          if (bookRes.ok) {
+            const bookData = await bookRes.json();
+            setBook(bookData.book);
+          }
         }
       } else {
         // For visual books or books without outline, call generate
@@ -519,9 +540,22 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
         if (!res.ok) {
           const data = await res.json();
           console.error('Retry failed:', data.error);
+          // Show error to user if concurrent generation limit hit
+          if (res.status === 409 && data.existingBookTitle) {
+            setError(`You already have "${data.existingBookTitle}" generating. Please wait for it to complete or cancel it first.`);
+          } else {
+            setError(data.error || 'Failed to start generation');
+          }
+        } else {
+          setError(null);
+          // Refresh book data to update local state - this triggers orchestration
+          const bookRes = await fetch(`/api/books/${id}`);
+          if (bookRes.ok) {
+            const bookData = await bookRes.json();
+            setBook(bookData.book);
+          }
         }
       }
-      // After ready, the orchestration effect will pick up and continue
     } catch (err) {
       console.error('Retry error:', err);
     } finally {
@@ -828,6 +862,9 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
                     </>
                   )}
                 </button>
+                {error && (
+                  <p className="text-red-600 text-sm mt-4">{error}</p>
+                )}
               </div>
             </div>
           )}

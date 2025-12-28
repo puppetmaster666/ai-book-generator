@@ -22,6 +22,7 @@ export async function POST(
         currentChapter: true,
         totalChapters: true,
         outline: true,
+        userId: true,
         _count: {
           select: { chapters: true },
         },
@@ -37,6 +38,33 @@ export async function POST(
       return NextResponse.json({
         error: 'No outline found. Cannot resume - use /generate instead.',
       }, { status: 400 });
+    }
+
+    // Check if user already has another book generating (non-admins only)
+    if (book.userId) {
+      const user = await prisma.user.findUnique({
+        where: { id: book.userId },
+        select: { isAdmin: true },
+      });
+
+      if (!user?.isAdmin) {
+        const otherGeneratingBook = await prisma.book.findFirst({
+          where: {
+            userId: book.userId,
+            id: { not: id }, // Exclude current book
+            status: { in: ['generating', 'outlining'] },
+          },
+          select: { id: true, title: true },
+        });
+
+        if (otherGeneratingBook) {
+          return NextResponse.json({
+            error: 'You already have a book generating. Please wait for it to complete or cancel it first.',
+            existingBookId: otherGeneratingBook.id,
+            existingBookTitle: otherGeneratingBook.title,
+          }, { status: 409 });
+        }
+      }
     }
 
     // Update book status to generating and clear error
