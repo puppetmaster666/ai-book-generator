@@ -47,6 +47,16 @@ export async function GET(
       );
     }
 
+    // Check if user is eligible for free book
+    let freeBookEligible = false;
+    if (book.userId) {
+      const user = await prisma.user.findUnique({
+        where: { id: book.userId },
+        select: { freeBookUsed: true },
+      });
+      freeBookEligible = user ? !user.freeBookUsed : false;
+    }
+
     // Transform illustrations to use API URLs instead of inline base64
     const transformedBook = {
       ...book,
@@ -63,7 +73,7 @@ export async function GET(
       })),
     };
 
-    return NextResponse.json({ book: transformedBook });
+    return NextResponse.json({ book: transformedBook, freeBookEligible });
   } catch (error) {
     console.error('Error fetching book:', error);
     return NextResponse.json(

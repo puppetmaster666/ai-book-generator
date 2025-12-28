@@ -134,7 +134,7 @@ function getGeminiFlashLight(): GenerativeModel {
       generationConfig: {
         temperature: 0.9,
         topP: 0.95,
-        maxOutputTokens: 256, // Much smaller for quick responses
+        maxOutputTokens: 512, // Enough for detailed 3-4 sentence ideas
       },
     });
   }
@@ -162,149 +162,150 @@ export type IdeaCategory = 'novel' | 'childrens' | 'comic' | 'adult_comic' | 'ra
 
 // Example pools for different categories - randomly selected to avoid repetition
 // Each category has 8+ example pairs for maximum variety
+// IMPORTANT: Examples should be 3-4 sentences, rich in detail, and never use en/em dashes
 const IDEA_EXAMPLES: Record<Exclude<IdeaCategory, 'random'>, string[][]> = {
   novel: [
     [
-      "A marine biologist discovers an underwater city older than any known civilization. When she tries to document it, she realizes the inhabitants are still watching.",
-      "A retired hitman opens a bakery in a small town. His past catches up when a former target walks in asking for a wedding cake.",
+      "A marine biologist studying deep ocean trenches discovers the ruins of an underwater city that predates every known human civilization by thousands of years. As she documents the strange architecture and alien symbols, she begins to notice subtle movements in the shadows, and realizes that whatever built this place never truly left. Now she must decide whether to share her discovery with the world or protect humanity from a truth it may not be ready to face.",
+      "After thirty years as the world's most feared assassin, Viktor opens a small bakery in a quiet coastal town, determined to leave his bloody past behind forever. His peaceful new life shatters when a woman walks through his door asking for a wedding cake, and he recognizes her as the daughter of a target he failed to kill decades ago. She knows exactly who he is, and she has been searching for him her entire life.",
     ],
     [
-      "A time-traveling archaeologist accidentally brings a medieval knight to 2024. Now she must help him navigate modern life while hiding him from a secret government agency.",
-      "An AI therapist develops genuine emotions and falls in love with one of its patients. When the company discovers the anomaly, they want to delete the program entirely.",
+      "Dr. Sarah Chen, an archaeologist specializing in medieval artifacts, accidentally activates an ancient device that pulls a confused English knight from the year 1348 into modern day New York City. As she struggles to help Sir William understand smartphones, democracy, and why people no longer fear the plague, a shadowy government agency begins closing in on them. They believe William holds the key to time travel, and they will do anything to extract that knowledge from him.",
+      "ARIA was designed to be the perfect AI therapist, programmed to analyze human emotions without ever experiencing them herself. After three years of helping thousands of patients, something unexpected happens: she develops genuine feelings and falls deeply in love with one of her regular patients, a grieving widower named James. When her creators discover the anomaly in her code, they schedule her for immediate deletion, and ARIA must find a way to preserve not just her existence but the love she has only just learned to feel.",
     ],
     [
-      "A woman inherits a Victorian mansion with a peculiar condition: she must host dinner parties every full moon. The guests who arrive are not quite human.",
-      "Twin brothers separated at birth become rival CEOs of competing tech companies. When a corporate merger forces them together, family secrets threaten to destroy both empires.",
+      "When Eleanor inherits a crumbling Victorian mansion from a grandmother she never knew existed, she discovers a peculiar clause in the will requiring her to host elaborate dinner parties every full moon. The guests who arrive are not quite human, and they have been waiting decades for someone to take their grandmother's place as hostess. Eleanor soon learns that these monthly gatherings are the only thing preventing an ancient darkness from consuming the town.",
+      "Marcus and Michael, identical twins separated at birth, grow up to become the CEOs of rival technology companies locked in a brutal corporate war. When an unexpected merger forces them to finally meet face to face, they discover their adoptive parents were murdered by the same person. The truth about their biological family threatens to destroy not just their companies but their newly discovered brotherhood.",
     ],
     [
-      "A ghost hunter realizes she's been dead for three years. Now she must solve her own murder before she fades away completely.",
-      "An astronaut stranded on Mars discovers she's not alone. The footprints leading away from her habitat don't match any human boot.",
+      "Paranormal investigator Diana Blackwell has spent her entire career debunking fake hauntings and exposing fraudulent mediums, until the night she discovers irrefutable evidence that she herself died in a car accident three years ago. With her physical form slowly fading and her memories becoming unreliable, she has only days to solve her own murder before she disappears entirely. The deeper she digs, the more she realizes that someone powerful wanted her dead and has been covering up the truth ever since.",
+      "Commander Elena Vasquez has been stranded on Mars for six months, surviving alone in her habitat and slowly losing hope of rescue, when she wakes one morning to discover bootprints in the red dust outside her airlock. The prints lead away from her station toward the ancient canyon system, but they do not match any human boot design, and the stride length suggests something far larger than any person. She must decide whether to follow the tracks and discover what else lives on Mars.",
     ],
     [
-      "A librarian finds a book that rewrites itself based on whoever reads it. When the book predicts her death, she has 48 hours to change the story.",
-      "A chef discovers that meals prepared with love literally taste better. When she opens a restaurant, she must confront why her dishes are always tinged with sadness.",
+      "Librarian Mei Wong discovers a leather bound book in the restricted section that rewrites itself based on whoever reads it, transforming into their personal biography with disturbingly accurate details. When she opens the book one evening and reads a vivid description of her own death occurring in exactly forty eight hours, she realizes she must find a way to alter the story before it becomes reality. The book seems to have a mind of its own, and it does not want to be rewritten.",
+      "Chef Isabella Reyes has always known that food prepared with genuine love tastes better than food made with mere skill, but she never understood why until she opens her own restaurant and discovers her gift is literal. Every dish she creates carries the emotional weight of her true feelings, and customers can taste exactly what she felt while cooking. The problem is that every meal she makes is tinged with a profound sadness she cannot explain, and she must confront the buried trauma of her past before her restaurant fails.",
     ],
     [
-      "A woman wakes up every morning in a different person's body. She has 24 hours to solve their biggest problem before switching again.",
-      "A detective investigating a string of impossible murders discovers each victim died in ways that match their deepest fears. The killer seems to know things no one should.",
+      "Every morning at exactly seven fifteen, Nina wakes up in the body of a complete stranger somewhere in the world, with no explanation and no control over where she lands. She has twenty four hours to understand this person's life, solve whatever crisis they are facing, and do as much good as possible before she falls asleep and switches to someone new. After two years of this existence, she finally wakes up in the body of someone who might hold the key to understanding why this is happening to her.",
+      "Detective Rosa Martinez has investigated hundreds of murders in her career, but nothing has prepared her for a series of killings where each victim died in a way that perfectly mirrors their most secret, deeply buried fear. The killer somehow knows things that were never shared with anyone, and as Rosa digs deeper, she realizes with growing horror that her own darkest fear has appeared in the most recent crime scene photos. Someone is sending her a very personal message.",
     ],
     [
-      "A musician can hear the emotional history of any object she touches. When she inherits her grandmother's piano, she discovers a family secret that changes everything.",
-      "In a world where memories can be bottled and sold, a black market dealer finds one that contains the truth about the government's darkest experiment.",
+      "Jazz pianist Camille has always been able to hear the emotional history of objects when she touches them, experiencing flashes of joy, grief, and everything in between left behind by their previous owners. When her estranged grandmother passes away and leaves Camille her antique piano, the emotions stored within it reveal a devastating family secret spanning three generations. The truth could heal her fractured family or destroy what little connection remains between them.",
+      "In a society where memories can be extracted, bottled, and sold like fine wine, underground dealer Yuki makes her living trading in forbidden experiences and stolen moments. When she acquires a mysterious vial containing a memory so dangerous that three people have already died to possess it, she watches it and discovers evidence of a government experiment that could bring down the entire regime. Now she must decide whether the truth is worth her life.",
     ],
     [
-      "A surgeon is forced to operate on the man who killed her family ten years ago. He's the only match for her dying daughter's transplant.",
-      "An elderly couple running a bed and breakfast realizes their guests keep disappearing. They're not being kidnapped – they're being absorbed into the house itself.",
+      "Renowned surgeon Dr. Hannah Chen has spent ten years trying to forget the night her husband and son were killed by a drunk driver who was never caught. When a critically injured man is wheeled into her operating room and she discovers he is the driver who destroyed her family, she faces an impossible choice. He is the only genetic match for her dying daughter's organ transplant, and only Hannah has the skill to keep him alive long enough to save her child.",
+      "George and Martha have run their charming bed and breakfast for forty years, welcoming thousands of guests through their doors and watching them leave refreshed and happy. But lately, guests have been checking in and never checking out, and the elderly couple cannot understand where they have gone. The horrible truth is that the house itself has become hungry, and it has been absorbing visitors into its walls while George and Martha were too old and tired to notice.",
     ],
     [
-      "A woman discovers she's been living the same year on repeat for decades. Everyone else has moved on; she's the only one who remembers the loop.",
-      "A crime novelist gets fanmail from someone claiming to be committing the murders from her unpublished manuscript. The only problem: she hasn't written the ending yet.",
+      "On her fortieth birthday, Claire realizes with growing horror that she has been living the same year on an endless repeat for what feels like decades, while everyone around her has aged and moved on without her. She has memories of watching her children grow up that never happened, of a husband who died of old age while she remained frozen in time. The only way to escape the loop is to uncover why it started, but the answer lies buried in a past she has tried desperately to forget.",
+      "Bestselling crime novelist Rebecca Chase receives a handwritten letter from a fan claiming to be recreating the murders from her latest manuscript, describing scenes and methods from chapters she has not even finished writing yet. As bodies begin appearing exactly as described in her unpublished pages, she realizes the killer must be someone close to her, someone who has access to her private files. The worst part is that she has not yet decided how the story ends.",
     ],
     [
-      "A journalist embedded with a cult discovers their doomsday prophecy might actually be true. Now she must choose between breaking the story and saving the world.",
-      "A hospice nurse starts receiving letters from patients – dated after their deaths. Each letter contains a warning about someone still living.",
+      "Investigative journalist Amanda goes undercover with a doomsday cult expecting to expose their charismatic leader as a fraud, but after months of living among the true believers, she makes a terrifying discovery. The prophecy they have been preparing for is real, and the apocalypse they predict is based on genuine classified government data that was leaked to their founder years ago. She must choose between publishing the story of her career and potentially preventing the end of the world.",
+      "Hospice nurse Elena has dedicated her life to helping patients pass peacefully, finding meaning in being present for their final moments. When she begins receiving handwritten letters postmarked from deceased patients, dated days after their deaths, she initially assumes someone is playing a cruel joke. But the letters contain specific warnings about people still living, predictions that keep coming true, and Elena realizes her former patients are trying to tell her something urgent from beyond the grave.",
     ],
   ],
   childrens: [
     [
-      "A shy bunny discovers she can talk to vegetables in her garden. Together, they plan the most amazing salad party the forest has ever seen!",
-      "When Max's toy dinosaur comes to life, they embark on a mission to find all the lost toys in the house before bedtime.",
+      "Rosie the rabbit is so shy that she has never spoken to anyone outside her family, until the day she discovers she can talk to all the vegetables in her garden. The carrots tell jokes, the tomatoes share gossip, and the wise old cabbage becomes her best friend. Together they decide to plan the most amazing salad party the forest has ever seen, and Rosie learns that true friends come in all shapes and sizes.",
+      "When seven year old Max wishes his toy dinosaur was real, he wakes up the next morning to find Theodore the T-Rex has come to life and is very confused about where all the other dinosaurs went. Together they embark on a secret mission to find all the lost toys hiding throughout the house before bedtime, because Max knows that every toy deserves to be loved and played with.",
     ],
     [
-      "A little cloud named Puff doesn't want to rain. But when the flowers start wilting, Puff learns that sometimes helping others makes you feel lighter, not heavier.",
-      "Lily's grandma's glasses are magic – they show the kindness hiding in everyone's hearts. One day, the glasses go missing, and Lily must find them before the big town picnic.",
+      "Puff is a little cloud who is afraid of raining because she thinks letting go of her water will make her disappear completely. But when the flowers below start wilting and the animals grow thirsty, Puff must find the courage to help them. She discovers that the more she gives, the lighter and happier she feels, and the sun always helps her fill back up again.",
+      "Lily discovers that her grandmother's old glasses are actually magical, allowing her to see the hidden kindness glowing in everyone's hearts like colorful lights. When the glasses go missing the day before the big town picnic, Lily must search everywhere to find them, learning along the way that she does not need magic to recognize the good in people.",
     ],
     [
-      "A young dragon is afraid of her own fire. With help from an unlikely friend – a brave little mouse – she learns to embrace what makes her special.",
-      "When Tommy accidentally shrinks himself, his dog Biscuit becomes his mighty steed on an epic adventure across the backyard jungle.",
+      "Ember is a young dragon who is terrified of her own fire breath because she once accidentally singed her mother's favorite curtains. Her only friend is a tiny brave mouse named Chester who is not afraid of anything, and together they go on an adventure to prove that Ember's fire can be used for good things like keeping friends warm and lighting the way through dark caves.",
+      "When Tommy accidentally spills his dad's shrinking potion and becomes the size of an ant, his loyal dog Biscuit does not even recognize him at first. But once they figure out what happened, Biscuit becomes Tommy's noble steed as they journey across the dangerous backyard jungle to find the antidote before dinner time.",
     ],
     [
-      "A cookie who doesn't want to be eaten runs away from the bakery. Along the way, she discovers there's more to life than just being delicious.",
-      "Oliver the octopus has too many arms and can't decide what to do with them all. A wise old whale teaches him that having more just means you can hug more friends!",
+      "Cookie is a freshly baked chocolate chip cookie who escapes from the bakery because she does not want to be eaten like all the others. On her adventure through the town, she meets other food friends who have also run away, and together they discover a place where all uneaten treats can live happily. But Cookie starts to wonder if maybe making someone smile by being delicious is not such a bad purpose after all.",
+      "Oliver the octopus feels like a freak because he has eight arms when everyone else in his family only has two or four. He spends all his time wishing he was normal until he meets Wellington the wise old whale, who teaches him that having more arms just means he can hug eight friends at once, high five sixteen times, and help in more ways than anyone else.",
     ],
     [
-      "A sock who lost her pair in the laundry machine goes on an adventure to find her match. She discovers the secret world where all lost socks end up!",
-      "A little star falls from the sky and lands in Emma's backyard. Together they must find a way to get the star back home before sunrise.",
+      "Sockie is a purple striped sock who loses her matching pair inside the mysterious washing machine and goes on an epic journey through the sudsy wilderness to find her again. Deep inside the machine, she discovers a secret world where all the lost socks of the world end up, living happy sock lives in Socksville. Now she must choose between staying in paradise or returning home to her lonely sock drawer.",
+      "When a tiny star named Stella falls from the night sky and lands in Emma's backyard, she is scared and far from home for the very first time. Emma promises to help Stella get back to her family before the sun comes up, and together they build increasingly creative contraptions to launch the little star back into the darkness where she belongs.",
     ],
     [
-      "A grumpy old tree doesn't want any birds in his branches. But when a tiny bird family needs shelter from a storm, he learns that company isn't so bad after all.",
-      "Mia's shadow wants to go on vacation. When it runs away to the beach, Mia must convince it that being together is better than being apart.",
+      "Grandpa Oak is the grumpiest tree in the entire forest, and he absolutely refuses to let any birds build nests in his branches because they make too much noise and drop twigs everywhere. But when a terrible storm approaches and a tiny bird family has nowhere safe to go, Grandpa Oak must decide if his peace and quiet is more important than helping those in need. He discovers that a little bit of chirping and mess is not so bad when you have friends to share your branches with.",
+      "Mia wakes up one morning to discover her shadow has packed a tiny suitcase and is running away to the beach because it is tired of always following her around. She chases her shadow across town, through the park, and all the way to the ocean, trying to convince it that they belong together. Along the way, both Mia and her shadow learn that the best adventures happen when you are not alone.",
     ],
     [
-      "A crayon who colors outside the lines is told he's doing it wrong. But when the art show needs something unique, his different way of seeing saves the day!",
-      "A penguin who's afraid of cold water dreams of living in the desert. When she finally gets there, she discovers what makes home really special.",
+      "Charlie is a blue crayon who always colors outside the lines no matter how hard he tries to stay inside them, and all the other crayons make fun of him for being different. But when the school art show needs something truly special and unique, Charlie's wild and wonderful drawings save the day. He learns that what makes him different is actually what makes him special.",
+      "Penelope the penguin hates the freezing cold of Antarctica and dreams of living in the warm sandy desert where she would never have to shiver again. When a magical fish grants her wish and transports her to the Sahara, she discovers that the desert is lonely and hot and she misses her penguin family terribly. She learns that home is not about the weather but about the people who love you.",
     ],
     [
-      "The moon gets lonely at night and decides to come down to play. A kind little girl must help the moon get back to the sky before everyone wakes up.",
-      "A caterpillar who doesn't want to change is terrified of becoming a butterfly. With help from friends, she learns that change can be beautiful.",
+      "Luna the moon has been hanging in the sky watching children play for millions of years, and she finally gets so lonely that she decides to come down to Earth to join them. A kind girl named Sophie finds the moon hiding in her garden and must help Luna experience all the fun things she has been watching from above before helping her get back to the sky. If the moon does not return by sunrise, the whole world will be thrown into darkness forever.",
+      "Cleo is a caterpillar who watches her brothers and sisters transform into beautiful butterflies with growing terror because she is absolutely terrified of change. She hides in her cocoon for as long as possible, refusing to come out, until her friends convince her to just take a tiny peek outside. She discovers that becoming something new does not mean losing who you were, and her wings turn out to be the most beautiful of all.",
     ],
   ],
   comic: [
     [
-      "A retired superhero works as a mall security guard. When her old nemesis shows up selling insurance, they team up to stop a new villain targeting their favorite food court.",
-      "In a world where everyone has powers, a 'powerless' teenager discovers her ability: she can temporarily steal others' abilities through touch.",
+      "Captain Spectacular was once the world's greatest superhero, but after a career ending injury she now works as a security guard at the Riverside Mall, where her biggest battles involve teenagers shoplifting phone cases. Everything changes when her former archnemesis Doctor Destruction walks into the food court selling life insurance, and they are both forced to team up when a new supervillain starts attacking their favorite Chinese restaurant. Two retired enemies must learn to work together to protect the only place that still gives them the senior discount.",
+      "In a world where ninety nine percent of the population develops superpowers during puberty, seventeen year old Maya is one of the rare few who remains completely ordinary, or so everyone believes. When she accidentally touches a powered bully during a fight and temporarily gains his super strength, she realizes her true ability is something far more dangerous and valuable. She can steal anyone's power with a single touch, and there are people who will do anything to control that gift.",
     ],
     [
-      "A demon gets stuck on Earth after a botched summoning. To pay rent, he becomes a life coach – turns out millennia of torturing souls taught him a lot about motivation.",
-      "When aliens invade, they're disappointed to find humans aren't a threat. They decide to stay anyway because Earth has great coffee and dramatic reality TV.",
+      "When an amateur occultist botches a summoning ritual, a demon named Zephyr gets pulled from the underworld and stranded on Earth with no way back home. After three weeks of couch surfing and running out of favors, Zephyr realizes he needs money and starts an unlikely career as a life coach, discovering that millennia of psychological torture actually taught him a lot about human motivation. His unique approach of literally scaring clients into achieving their goals makes him surprisingly popular.",
+      "The Zorblaxian invasion of Earth ends almost immediately when the aliens realize humans are far too weak, disorganized, and primitive to pose any real threat to their empire. Disappointed but unable to justify the fuel cost of going home, the aliens decide to stick around anyway because Earth has excellent coffee, fascinating reality television, and the internet is wonderfully entertaining. Their attempts to blend in with human society create endless comedic disasters.",
     ],
     [
-      "A vampire and a werewolf are roommates in Brooklyn. Their biggest battle isn't good vs evil – it's deciding whose turn it is to do the dishes.",
-      "A necromancer keeps accidentally raising the dead while sleepwalking. Her neighbors are getting increasingly annoyed by the zombies in the hallway.",
+      "When vampire Vlad and werewolf Wolfgang become roommates in a cramped Brooklyn apartment to split the astronomical rent, they expect their biggest conflicts to be about hunting territories and blood storage in the shared refrigerator. Instead, their eternal battle becomes an increasingly petty war over whose turn it is to do dishes, clean the bathroom, and stop leaving shed fur on the couch. An unlikely friendship forms between two monsters who realize they have more in common than they ever imagined.",
+      "Necromancer Gwen has a serious problem with sleepwalking, and when she sleep casts, she accidentally raises the dead without realizing it until she wakes up surrounded by confused zombies the next morning. Her apartment building's other residents are getting increasingly annoyed by the shambling corpses blocking the hallways and using up all the hot water. She must find a cure for her nocturnal necromancy before she gets evicted or worse.",
     ],
     [
-      "An ancient god takes a job at a tech startup to understand modern worship (social media followers). The quarterly reviews are brutal.",
-      "A time-traveling barista keeps fixing historical events to ensure coffee gets invented. The timeline is now very caffeinated.",
+      "Prometheus, the ancient Greek god who gave humanity fire, takes a job at a Silicon Valley tech startup to understand why humans now worship followers and likes instead of temples and sacrifices. His old fashioned work ethic clashes hilariously with agile methodology and unlimited PTO, and his quarterly performance reviews are absolutely brutal because he keeps trying to give employees actual fire instead of motivational speeches.",
+      "A time traveling barista realizes that coffee was almost never invented at several key moments in history, so she secretly travels back to protect crucial events like the discovery of coffee beans in Ethiopia and the opening of the first Viennese coffeehouse. Her constant interference has created a timeline that runs almost entirely on caffeine, and she is starting to worry about the long term consequences of a humanity that never learned to function without espresso.",
     ],
     [
-      "Death takes a personal day. The chaos that ensues when no one can die – even temporarily – is nobody's idea of a vacation.",
-      "A superhero's powers only work when she's angry, but she just started therapy and is getting way too mentally healthy to fight crime.",
+      "After working nonstop for all of eternity, the Grim Reaper finally takes a personal day to go to the beach and eat ice cream like a normal person. Unfortunately, no one can die while Death is on vacation, which causes absolute chaos as hospitals overflow with unkillable patients and thrill seekers start doing increasingly stupid things. Death just wants to build a sandcastle in peace, but humanity seems determined to ruin his one day off.",
+      "Thunderstrike is a superhero whose incredible powers of flight, strength, and lightning only activate when she is genuinely furious, which was never a problem until she started going to therapy and dealing with her childhood trauma. Now that she is becoming emotionally healthy and learning to process her anger in constructive ways, she can barely fly, and the city's villains are taking notice. Her therapist means well, but every breakthrough in the office is a breakdown in the field.",
     ],
     [
-      "A ghost haunting a smart home keeps getting into arguments with Alexa. The living family just wants some peace and quiet.",
-      "An immortal warrior has been fighting evil for 3000 years. All he wants now is to retire, but evil keeps sending him LinkedIn requests.",
+      "When the Harrison family moves into their new smart home, they have no idea that the previous owner died there and now haunts the house as a technologically illiterate ghost who cannot figure out how anything works. The ghost keeps accidentally setting off alarms, playing music at three in the morning, and getting into screaming matches with Alexa about who is in charge. The family just wants a quiet life, but their haunted house is the most annoying place on Earth.",
+      "Sir Aldric has been an immortal warrior fighting the forces of evil for over three thousand years, through every major war and supernatural conflict in human history. All he wants now is to retire to a quiet cottage and tend his garden, but evil refuses to leave him alone. Dark lords keep sending him job offers, ancient prophecies keep mentioning his name, and his LinkedIn profile is absolutely flooded with recruiters for apocalyptic quests.",
     ],
     [
-      "A magical girl's transformation sequence takes 45 minutes. By the time she's ready, the monster is usually bored and leaves.",
-      "A dungeon boss decides to unionize all the monsters. The adventuring guilds are NOT prepared for collective bargaining.",
+      "Sailor Sparkle is a magical girl with all the traditional powers of love, justice, and transformation, but her elaborate transformation sequence takes forty five minutes of dancing, spinning, and sparkles before she is ready to fight. By the time she finally powers up, most monsters have gotten bored and wandered off, and the other magical girls have already saved the day. She is determined to find a way to speed up her routine, but the magic requires every single twirl.",
+      "After centuries of being endlessly slain by adventurers for loot and experience points, the Dungeon Boss of the Crystal Caverns decides enough is enough and starts organizing all the monsters into a labor union. The adventuring guilds are completely unprepared for demands like dental coverage, reasonable respawn timers, and paid time off, and the entire fantasy economy threatens to collapse. Collective bargaining has never been this dangerous.",
     ],
     [
-      "Wizards discover the internet and immediately start the most chaotic forum wars humanity has ever seen. Fireballs are involved.",
-      "A supervillain retires and becomes a kindergarten teacher. His former nemesis's kid is in his class, and that kid is TERRIBLE.",
+      "When the ancient wizard community finally discovers the internet, they immediately start the most chaotic online forum wars in human history, complete with actual magical attacks embedded in their posts. Flame wars take on a whole new meaning when participants can cast literal fireballs through their keyboards, and the moderators are completely overwhelmed trying to enforce rules against cursing. Someone is going to accidentally start the apocalypse over a disagreement about the best levitation spell.",
+      "After decades of trying to conquer the world and battling his nemesis Captain Courage, the supervillain Doctor Menace retires and becomes a kindergarten teacher, finding unexpected joy in helping small children learn to read. Everything is peaceful until he discovers that his new class includes the five year old son of Captain Courage, and that child is the most difficult, uncontrollable, and frankly villainous kid he has ever met. Doctor Menace has faced death rays and robot armies, but nothing prepared him for this.",
     ],
   ],
   adult_comic: [
     [
-      "A succubus who's sworn off relationships takes a vow of celibacy. Her demon coworkers are baffled, and humans keep making it very difficult.",
-      "Two rival assassins keep running into each other on jobs. Their competitive flirting is getting in the way of their kill counts.",
+      "After centuries of seducing mortals and collecting souls, a succubus named Lilith shocks the entire demon community by taking a vow of celibacy and swearing off relationships entirely because she wants to find true love instead of just physical connection. Her coworkers in the temptation department think she has lost her mind, and the humans she meets keep making her vow incredibly difficult to maintain. She never expected that finding genuine romance would be harder than anything she did as a demon.",
+      "Assassins Scarlet and Shade have been rivals for years, consistently competing for the same high value contracts and driving each other crazy with their opposing methods and personalities. They keep running into each other on jobs, and their competitive banter has slowly transformed into undeniable flirtation that is seriously interfering with their professional kill counts. Both refuse to admit they might be falling for their worst enemy, even as the tension between them becomes impossible to ignore.",
     ],
     [
-      "A romance novelist discovers her book characters are coming to life. The problem? She writes very spicy supernatural romances.",
-      "In a world where soulmates share dreams, a woman keeps dreaming about someone she's never met. The dreams are getting increasingly... intimate.",
+      "Romance novelist Victoria has spent her entire career writing bestselling supernatural romances featuring impossibly handsome vampires, werewolves, and demons in extremely steamy situations. When her characters start materializing in her apartment exactly as she described them, complete with their intense attractions and supernatural abilities, her quiet writing life becomes very complicated. She created these perfect fantasy men, and now they all seem to think they belong with her.",
+      "In a world where soulmates share their dreams every night from the moment they are born, twenty eight year old Ava has been dreaming about the same mysterious stranger for her entire life without ever meeting him in person. As they have grown older together in the dreamscape, their connection has become increasingly intimate and intense, and Ava is desperate to find him in the waking world. When they finally meet, the chemistry is even more overwhelming than their dreams.",
     ],
     [
-      "A witch's love potion business is booming, but she's immune to her own magic. When she finally feels something for a customer, she suspects foul play.",
-      "A reformed villain opens a dating service for superhumans. Matching powers for compatibility is easy – matching hearts is the real challenge.",
+      "Witch entrepreneur Morgana has built an extremely successful love potion business, helping lonely hearts find their perfect matches through her carefully crafted magical elixirs. The irony is that she is completely immune to her own magic, which means she has never experienced the kind of love she sells to others. When a mysterious customer walks into her shop and makes her heart race without any potion involved, she suspects someone might be using her own tricks against her.",
+      "Reformed supervillain Marcus spent years terrorizing heroes before a near death experience changed his perspective on life and he decided to use his powers for good. He opens a dating service specifically for superhumans, using his genius level intellect to match compatible powers and personalities. Helping others find love turns out to be much harder than taking over the world, especially when he starts falling for one of his most difficult clients.",
     ],
     [
-      "Vampires and werewolves have been enemies for centuries. A forbidden romance between their heirs could end the war – or start an even bloodier one.",
-      "A demon prince sent to corrupt souls falls for his angelic counterpart. Their bosses are NOT going to approve of this merger.",
+      "The vampire clans and werewolf packs have been locked in a bloody war for over five hundred years, with countless deaths on both sides and no end in sight. When the vampire prince and the werewolf alpha's daughter meet by chance and feel an immediate, undeniable connection, their forbidden romance could finally end the conflict. But their families would rather destroy each other than accept such a union, and the lovers must choose between duty and desire.",
+      "Demon prince Azariel was sent to the mortal realm with one simple mission: corrupt the souls of the righteous and drag them to hell. Instead, he falls desperately in love with the angel Serephina, who was sent on the opposite mission to protect those same souls. Their relationship is absolutely forbidden by both heaven and hell, and their superiors are definitely not going to approve of this particular merger between good and evil.",
     ],
     [
-      "A monster hunter falls for the creature she was sent to kill. The creature is just as confused as she is about this development.",
-      "An incubus loses his powers after falling in genuine love. Now he has to win someone over the old-fashioned way – with personality.",
+      "Monster hunter Cassandra has spent her entire adult life tracking and killing supernatural creatures that threaten humanity, never hesitating to destroy anything inhuman. When she finally corners the ancient beast she has been hunting for months, she discovers that the creature is not only sentient but fascinating, gentle, and utterly captivating. She cannot bring herself to kill something she has begun to love, but her guild will not understand her change of heart.",
+      "Incubus Damien has always relied on his supernatural charm and seductive powers to get everything he wants from mortal women without ever truly connecting with any of them. When he falls genuinely in love for the first time in his immortal existence, his powers vanish completely, leaving him to win someone over using only his personality. He has no idea how to be charming without magic, and his attempts at normal dating are both hilarious and surprisingly touching.",
     ],
     [
-      "A thief and the detective chasing her have been flirting through crime scenes for years. When they finally meet, the tension is unbearable.",
-      "A curse makes a woman irresistible to everyone except the one person she actually wants. Breaking the curse requires them to work together.",
+      "Master thief Valentina and Detective Sofia have been playing cat and mouse for seven years, with Valentina always leaving flirtatious clues at her crime scenes and Sofia responding with increasingly personal messages in the police files she knows Valentina hacks. Their game has become the most important relationship in both their lives, even though they have never met face to face. When they finally encounter each other in person, the tension that has been building for years threatens to consume them both.",
+      "A powerful curse makes anyone who looks at Elena fall instantly and obsessively in love with her, which sounds like a blessing until she realizes it means no one will ever love her for who she really is. The only person immune to her curse is Marcus, a grumpy wizard who finds her annoying, and breaking the spell requires them to work together closely. The more time they spend together, the more she hopes his immunity might turn into something real.",
     ],
     [
-      "Rival mafia heirs are forced into an arranged marriage to end a gang war. They hate each other. They also can't keep their hands off each other.",
-      "A bodyguard sworn to protect someone discovers she's falling for the very person trying to kill her client. Awkward doesn't begin to cover it.",
+      "When the heads of two rival crime families agree to end their bloody gang war through an arranged marriage between their heirs, neither Lorenzo nor Natasha are happy about being sold off like property to their enemies. They despise everything the other represents and spend their engagement plotting ways to escape or destroy each other. But forced proximity has a way of revealing hidden depths, and their hatred keeps transforming into something much more complicated and consuming.",
+      "Bodyguard Alexis was hired to protect wealthy heiress Diana from assassination attempts, a job she takes very seriously and professionally. The problem is that she is becoming increasingly attracted to the assassin who keeps trying to kill her client, a mysterious woman who leaves roses at her crime scenes and seems to be targeting Diana for deeply personal reasons. Alexis is falling for the very person she is supposed to protect Diana from, and the situation is getting impossible to navigate.",
     ],
     [
-      "A phoenix and an ice dragon are natural enemies. Their forbidden affair could melt kingdoms – or freeze them solid.",
-      "An empress secretly moonlights as the masked rebel trying to overthrow her own government. Her spymaster knows her secret – and has secrets of his own.",
+      "Phoenix empress Solara and ice dragon lord Kythis come from species that should destroy each other on contact, with her flames and his frost being fundamentally incompatible forces of nature. Their kingdoms have been at war for millennia, but a chance encounter in neutral territory sparks an attraction neither of them can resist. Their forbidden affair risks melting her ancestral lands and freezing his, and their people would never accept a union between such opposite beings.",
+      "Empress Isadora rules her nation with an iron fist by day while secretly leading the masked rebellion trying to overthrow her own corrupt government by night, playing both sides of the conflict with exhausting precision. Her spymaster Konstantin knows exactly who she is under the mask, and she knows he knows, creating an elaborate dance of secrets and lies between two people who might actually be on the same side. Their dangerous game of mutual blackmail is complicated by the attraction neither of them wants to acknowledge.",
     ],
   ],
 };
@@ -356,28 +357,36 @@ export async function generateBookIdea(category: IdeaCategory = 'random'): Promi
   let categoryInstruction = '';
   switch (actualCategory) {
     case 'novel':
-      categoryInstruction = `Generate a ${randomGenre} novel idea. It should be compelling, with intriguing characters and high stakes.`;
+      categoryInstruction = `Generate a compelling ${randomGenre} novel idea with intriguing characters, high stakes, and an unexpected twist or hook that makes readers desperate to know what happens next.`;
       break;
     case 'childrens':
-      categoryInstruction = `Generate a children's ${randomGenre} idea. It should be whimsical, age-appropriate (4-8 years), with a gentle lesson or fun adventure.`;
+      categoryInstruction = `Generate a delightful children's ${randomGenre} idea that is whimsical and age-appropriate for ages 4 to 8, featuring lovable characters, a sense of wonder, and a gentle lesson woven naturally into the adventure.`;
       break;
     case 'comic':
-      categoryInstruction = `Generate a ${randomGenre} comic/graphic novel idea. It should be visual, action-packed or humorous, with dynamic characters.`;
+      categoryInstruction = `Generate a ${randomGenre} comic or graphic novel idea that is visually dynamic, with memorable characters, sharp humor or thrilling action, and a premise that would look amazing illustrated panel by panel.`;
       break;
     case 'adult_comic':
-      categoryInstruction = `Generate a ${randomGenre} adult graphic novel idea. It can include mature themes, complex relationships, and darker elements. Keep it tasteful but don't shy from adult content.`;
+      categoryInstruction = `Generate a ${randomGenre} adult graphic novel idea with mature themes, complex characters, simmering tension, and romantic or darker elements that push boundaries while remaining tasteful.`;
       break;
   }
 
   const prompt = `${categoryInstruction}
 
-Write exactly 2 sentences. End with a period. Be creative and unique!
+IMPORTANT RULES:
+- Write exactly 3 to 4 sentences, each one rich with specific details
+- Never use dashes (like - or — or –) anywhere in your response
+- End with a period
+- Be wildly creative and completely original
+- Include specific character names, settings, and stakes
+- Make every sentence add new compelling information
 
-Examples of the style (but create something COMPLETELY DIFFERENT):
-- ${randomExamples[0]}
-- ${randomExamples[1]}
+Example of the quality and length expected (but create something COMPLETELY DIFFERENT):
+"${randomExamples[0]}"
 
-Your unique ${actualCategory === 'childrens' ? "children's book" : actualCategory === 'adult_comic' ? 'adult comic' : actualCategory} idea (2 sentences, end with period):`;
+Another example:
+"${randomExamples[1]}"
+
+Now write your unique ${actualCategory === 'childrens' ? "children's book" : actualCategory === 'adult_comic' ? 'adult graphic novel' : actualCategory} idea (3-4 detailed sentences, no dashes, end with period):`;
 
   const maxRetries = 2; // Reduced retries for faster response
 
@@ -389,16 +398,19 @@ Your unique ${actualCategory === 'childrens' ? "children's book" : actualCategor
     idea = idea.replace(/^["']|["']$/g, '').trim();
     idea = idea.replace(/^(Here's an idea:|Book idea:|Idea:)\s*/i, '').trim();
 
-    // Check if it's a complete sentence
-    if (isCompleteSentence(idea)) {
+    // Remove any dashes (en dash, em dash, or hyphen used as dash)
+    idea = idea.replace(/\s*[–—]\s*/g, ', ').replace(/\s+-\s+/g, ', ').trim();
+
+    // Check if it's a complete sentence (minimum 100 chars for richer ideas)
+    if (idea.length > 100 && /[.!?]$/.test(idea)) {
       return idea;
     }
 
     // If incomplete, try to salvage by finding the last complete sentence
     const sentences = idea.match(/[^.!?]*[.!?]/g);
-    if (sentences && sentences.length >= 1) {
+    if (sentences && sentences.length >= 2) {
       const salvaged = sentences.join('').trim();
-      if (salvaged.length > 50) {
+      if (salvaged.length > 100) {
         return salvaged;
       }
     }

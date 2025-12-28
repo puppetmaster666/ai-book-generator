@@ -30,6 +30,12 @@ interface BookData {
   }>;
 }
 
+interface ApiResponse {
+  book: BookData;
+  freeBookEligible: boolean;
+  error?: string;
+}
+
 function ReviewContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -40,6 +46,7 @@ function ReviewContent() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [freeBookEligible, setFreeBookEligible] = useState(false);
 
   // User details
   const [email, setEmail] = useState('');
@@ -59,12 +66,13 @@ function ReviewContent() {
 
     fetch(`/api/books/${bookId}`)
       .then(res => res.json())
-      .then(data => {
+      .then((data: ApiResponse) => {
         if (data.error) {
           setError('Book not found');
         } else {
           setBook(data.book);
           setAuthorName(data.book.authorName || '');
+          setFreeBookEligible(data.freeBookEligible || false);
         }
         setIsLoading(false);
       })
@@ -135,9 +143,13 @@ function ReviewContent() {
   const originalPrice = getBasePrice() / 100;
   let finalPrice = originalPrice;
   let discountLabel = '';
-  const isFree = promoDiscount === 1;
+  // Book is free if user is eligible for free book OR has 100% promo discount
+  const isFree = freeBookEligible || promoDiscount === 1;
 
-  if (promoDiscount) {
+  if (freeBookEligible) {
+    finalPrice = 0;
+    discountLabel = 'First book FREE!';
+  } else if (promoDiscount) {
     finalPrice = originalPrice * (1 - promoDiscount);
     discountLabel = promoDiscount === 1 ? 'FREE' : `${Math.round(promoDiscount * 100)}% off`;
   }
@@ -166,8 +178,31 @@ function ReviewContent() {
       // Continue even if update fails
     }
 
-    // If 100% discount, use free-order flow
-    if (isFree) {
+    // If user is eligible for free book (first book free)
+    if (freeBookEligible) {
+      try {
+        const response = await fetch('/api/claim-free-book', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            bookId,
+            email: email.trim().toLowerCase(),
+          }),
+        });
+
+        const data = await response.json();
+        if (data.success) {
+          router.push(`/book/${bookId}?success=true`);
+        } else {
+          setError(data.error || 'Failed to claim free book');
+          setIsSubmitting(false);
+        }
+      } catch {
+        setError('Something went wrong. Please try again.');
+        setIsSubmitting(false);
+      }
+    } else if (promoDiscount === 1) {
+      // 100% promo code discount
       try {
         const response = await fetch('/api/free-order', {
           method: 'POST',
@@ -279,17 +314,26 @@ function ReviewContent() {
                 <p className="text-neutral-500">by {book.authorName}</p>
               </div>
               <div className="text-left md:text-right">
-                {promoDiscount ? (
+                {freeBookEligible ? (
+                  <>
+                    <span className="text-lg text-neutral-400 line-through mr-2">${originalPrice.toFixed(2)}</span>
+                    <span className="text-2xl font-bold text-green-600">FREE</span>
+                    <p className="text-sm text-green-600 font-medium">First book free!</p>
+                  </>
+                ) : promoDiscount ? (
                   <>
                     <span className="text-lg text-neutral-400 line-through mr-2">${originalPrice.toFixed(2)}</span>
                     <span className="text-2xl font-bold text-green-600">
                       {isFree ? 'FREE' : `$${finalPrice.toFixed(2)}`}
                     </span>
+                    <p className="text-sm text-neutral-500">{getFormatLabel()}</p>
                   </>
                 ) : (
-                  <span className="text-2xl font-bold">${originalPrice.toFixed(2)}</span>
+                  <>
+                    <span className="text-2xl font-bold">${originalPrice.toFixed(2)}</span>
+                    <p className="text-sm text-neutral-500">{getFormatLabel()}</p>
+                  </>
                 )}
-                <p className="text-sm text-neutral-500">{getFormatLabel()}</p>
               </div>
             </div>
 
@@ -385,51 +429,53 @@ function ReviewContent() {
             </div>
           </div>
 
-          {/* Promo Code */}
-          <div className="bg-white rounded-2xl border border-neutral-200 p-6 mb-6">
-            <h3 className="font-semibold text-lg mb-4">Have a promo code?</h3>
-            <div className="flex gap-2">
-              <div className="relative flex-1">
-                <Tag className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-400" />
-                <input
-                  type="text"
-                  value={promoCode}
-                  onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
-                  placeholder="Enter code"
-                  className="w-full pl-10 pr-10 py-3 border border-neutral-200 rounded-xl focus:border-neutral-900 focus:outline-none transition-colors uppercase"
-                  disabled={!!promoDiscount}
-                />
-                {promoCode && !promoDiscount && (
+          {/* Promo Code - only show if user is not eligible for free book */}
+          {!freeBookEligible && (
+            <div className="bg-white rounded-2xl border border-neutral-200 p-6 mb-6">
+              <h3 className="font-semibold text-lg mb-4">Have a promo code?</h3>
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <Tag className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-400" />
+                  <input
+                    type="text"
+                    value={promoCode}
+                    onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
+                    placeholder="Enter code"
+                    className="w-full pl-10 pr-10 py-3 border border-neutral-200 rounded-xl focus:border-neutral-900 focus:outline-none transition-colors uppercase"
+                    disabled={!!promoDiscount}
+                  />
+                  {promoCode && !promoDiscount && (
+                    <button
+                      onClick={clearPromoCode}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
+                {promoDiscount ? (
                   <button
                     onClick={clearPromoCode}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600"
+                    className="px-4 py-3 bg-green-100 text-green-700 rounded-xl font-medium flex items-center gap-2"
                   >
-                    <X className="h-4 w-4" />
+                    <Check className="h-4 w-4" />
+                    {discountLabel}
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => validatePromoCode(promoCode)}
+                    disabled={!promoCode.trim() || isValidatingPromo}
+                    className="px-4 py-3 bg-neutral-900 text-white rounded-xl font-medium hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    {isValidatingPromo ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Apply'}
                   </button>
                 )}
               </div>
-              {promoDiscount ? (
-                <button
-                  onClick={clearPromoCode}
-                  className="px-4 py-3 bg-green-100 text-green-700 rounded-xl font-medium flex items-center gap-2"
-                >
-                  <Check className="h-4 w-4" />
-                  {discountLabel}
-                </button>
-              ) : (
-                <button
-                  onClick={() => validatePromoCode(promoCode)}
-                  disabled={!promoCode.trim() || isValidatingPromo}
-                  className="px-4 py-3 bg-neutral-900 text-white rounded-xl font-medium hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                >
-                  {isValidatingPromo ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Apply'}
-                </button>
+              {promoError && (
+                <p className="text-xs text-red-600 mt-2">{promoError}</p>
               )}
             </div>
-            {promoError && (
-              <p className="text-xs text-red-600 mt-2">{promoError}</p>
-            )}
-          </div>
+          )}
 
           {/* Your Details */}
           <div className="bg-white rounded-2xl border border-neutral-200 p-6 mb-6">
@@ -514,7 +560,12 @@ function ReviewContent() {
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-neutral-900 text-white rounded-2xl p-6">
             <div>
               <p className="text-neutral-400 text-sm mb-1">Total</p>
-              {promoDiscount ? (
+              {freeBookEligible ? (
+                <div className="flex items-center gap-2">
+                  <span className="text-lg text-neutral-400 line-through">${originalPrice.toFixed(2)}</span>
+                  <span className="text-3xl font-bold text-green-400">FREE</span>
+                </div>
+              ) : promoDiscount ? (
                 <div className="flex items-center gap-2">
                   <span className="text-lg text-neutral-400 line-through">${originalPrice.toFixed(2)}</span>
                   <span className="text-3xl font-bold text-green-400">
