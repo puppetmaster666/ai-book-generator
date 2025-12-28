@@ -8,7 +8,6 @@ import { ArrowRight, Loader2, Sparkles, X, Check, ChevronRight, Zap, BookOpen, D
 import Footer from '@/components/Footer';
 import NewYearPopup from '@/components/NewYearPopup';
 import Header from '@/components/Header';
-import VideoModal from '@/components/VideoModal';
 import StatsBar from '@/components/StatsBar';
 import Testimonials from '@/components/Testimonials';
 import FAQ from '@/components/FAQ';
@@ -40,7 +39,6 @@ export default function Home() {
   const [lightboxImage, setLightboxImage] = useState<{ src: string; label: string } | null>(null);
   const [ideaCategory, setIdeaCategory] = useState<IdeaCategory>('random');
   const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
-  const [showVideoModal, setShowVideoModal] = useState(false);
 
   const handleFindIdea = async () => {
     setIsGeneratingIdea(true);
@@ -226,9 +224,9 @@ export default function Home() {
               </span>
             </div>
 
-            {/* Watch Demo Button */}
+            {/* Watch Demo Button - scrolls to video section */}
             <button
-              onClick={() => setShowVideoModal(true)}
+              onClick={() => document.getElementById('video-tutorial')?.scrollIntoView({ behavior: 'smooth' })}
               className="mt-8 inline-flex items-center gap-2 text-white/80 hover:text-white transition-colors group"
             >
               <div className="w-10 h-10 rounded-full bg-white/20 backdrop-blur flex items-center justify-center group-hover:bg-white/30 transition-colors">
@@ -361,6 +359,41 @@ export default function Home() {
               </div>
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* Video Tutorial Section */}
+      <section id="video-tutorial" className="py-24 px-6 bg-neutral-50">
+        <div className="max-w-4xl mx-auto">
+          <div className="text-center mb-12">
+            <h2 className="text-4xl md:text-5xl font-bold tracking-tight mb-4" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>
+              See it in{' '}
+              <span className="relative inline-block">
+                <span className="absolute -inset-x-1 -inset-y-1 bg-black -skew-y-2 translate-x-1 translate-y-1" aria-hidden="true" />
+                <span className={`absolute -inset-x-1 -inset-y-1 ${ACCENT.bg} -skew-y-2`} aria-hidden="true" />
+                <span className="relative text-neutral-900 px-2">action</span>
+              </span>
+            </h2>
+            <p className="text-lg text-neutral-600">
+              Watch how to create a complete book in minutes
+            </p>
+          </div>
+
+          {/* YouTube Embed */}
+          <div className="relative w-full aspect-video rounded-2xl overflow-hidden shadow-2xl bg-neutral-900">
+            <iframe
+              src="https://www.youtube.com/embed/XalUtL0ofEg?rel=0"
+              title="How to Create an AI Book - Tutorial"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+              allowFullScreen
+              className="absolute inset-0 w-full h-full"
+              loading="eager"
+            />
+          </div>
+
+          <p className="text-center text-sm text-neutral-500 mt-6">
+            Full walkthrough: from idea to published EPUB in under 10 minutes
+          </p>
         </div>
       </section>
 
@@ -645,14 +678,6 @@ export default function Home() {
 
       {/* New Year Promo Popup */}
       <NewYearPopup />
-
-      {/* Video Modal */}
-      <VideoModal
-        isOpen={showVideoModal}
-        onClose={() => setShowVideoModal(false)}
-        videoId="XalUtL0ofEg"
-        title="How to Create an AI Book"
-      />
     </div>
   );
 }

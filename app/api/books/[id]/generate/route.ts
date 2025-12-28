@@ -514,10 +514,13 @@ export async function POST(
       });
     }
 
-    // Start generation process
+    // Start generation process - set start time only if not already set (preserves original time on retry)
     await prisma.book.update({
       where: { id },
-      data: { status: 'outlining' },
+      data: {
+        status: 'outlining',
+        generationStartedAt: book.generationStartedAt || new Date(),
+      },
     });
 
     // Determine if this is a visual book that uses the new parallel generation flow
@@ -632,16 +635,14 @@ export async function POST(
       }
     }
 
-    // For comics with outlineOnly mode, return here so client can do parallel panel generation
-    // The client will fire all /api/generate-panel requests in parallel
-    if (outlineOnly && dialogueStyle === 'bubbles') {
-      console.log(`OutlineOnly mode: returning outline with ${outline.chapters.length} panels for client-side parallel generation`);
+    // For outlineOnly mode, return here after generating the outline
+    // For comics: client will fire parallel /api/generate-panel requests
+    // For text books: client will call /api/books/[id]/generate-next repeatedly
+    if (outlineOnly) {
+      const isComicFlow = dialogueStyle === 'bubbles';
+      console.log(`OutlineOnly mode: returning outline with ${outline.chapters.length} ${isComicFlow ? 'panels' : 'chapters'} for client-side ${isComicFlow ? 'parallel panel' : 'sequential chapter'} generation`);
 
-      // Update status to 'generating' to indicate panels are being generated
-      await prisma.book.update({
-        where: { id },
-        data: { status: 'generating' },
-      });
+      // Status is already 'generating' from the outline save above
 
       // Refetch book with updated data
       const updatedBook = await prisma.book.findUnique({
@@ -656,6 +657,8 @@ export async function POST(
           visualStyleGuide: true,
           outline: true,
           status: true,
+          totalChapters: true,
+          currentChapter: true,
         },
       });
 
@@ -664,7 +667,10 @@ export async function POST(
         outlineOnly: true,
         book: updatedBook,
         totalPanels: outline.chapters.length,
-        message: 'Outline generated. Ready for parallel panel generation.',
+        totalChapters: outline.chapters.length,
+        message: isComicFlow
+          ? 'Outline generated. Ready for parallel panel generation.'
+          : 'Outline generated. Ready for chapter-by-chapter generation.',
       });
     }
 

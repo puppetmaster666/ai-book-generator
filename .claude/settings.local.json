@@ -32,7 +32,10 @@
       "Bash(git restore:*)",
       "Bash(curl -s -o /dev/null -w \"%{http_code}\" -X POST https://www.draftmybook.com/api/generate-idea -H \"Content-Type: application/json\" -d '{\"\"category\"\":\"\"random\"\"}' --max-time 30)",
       "Bash(npm uninstall:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(node check-book.js:*)",
+      "Bash(node fix-book.js:*)",
+      "Bash(npx tsc:*)"
     ]
   }
 }

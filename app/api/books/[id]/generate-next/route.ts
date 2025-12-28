@@ -1,0 +1,293 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/lib/db';
+import {
+  generateChapter,
+  summarizeChapter,
+  updateCharacterStates,
+  generateCoverPrompt,
+  generateCoverImage,
+} from '@/lib/gemini';
+import { countWords } from '@/lib/epub';
+import { sendEmail, getBookReadyEmail } from '@/lib/email';
+
+/**
+ * Generate the next chapter of a book.
+ * This endpoint generates ONE chapter at a time to avoid Vercel timeout limits.
+ * The client should call this repeatedly until all chapters are generated.
+ *
+ * Returns:
+ * - { done: false, currentChapter, totalChapters } - more chapters to generate
+ * - { done: true, book } - book is complete
+ * - { error: string } - generation failed
+ */
+export async function POST(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+
+    // Fetch book with current state
+    const book = await prisma.book.findUnique({
+      where: { id },
+      include: {
+        chapters: {
+          orderBy: { number: 'asc' },
+          select: { number: true },
+        },
+      },
+    });
+
+    if (!book) {
+      return NextResponse.json({ error: 'Book not found' }, { status: 404 });
+    }
+
+    // Check if book is already complete
+    if (book.status === 'completed') {
+      return NextResponse.json({
+        done: true,
+        message: 'Book is already complete',
+        currentChapter: book.currentChapter,
+        totalChapters: book.totalChapters,
+      });
+    }
+
+    // Check if payment is complete
+    if (book.paymentStatus !== 'completed') {
+      return NextResponse.json({ error: 'Payment not completed' }, { status: 402 });
+    }
+
+    const outline = book.outline as {
+      chapters: Array<{
+        number: number;
+        title: string;
+        summary: string;
+        pov?: string;
+        targetWords: number;
+      }>;
+    } | null;
+
+    // If no outline, need to call the main generate endpoint first
+    if (!outline || !outline.chapters || outline.chapters.length === 0) {
+      return NextResponse.json({
+        error: 'No outline found. Call /api/books/[id]/generate first to create the outline.',
+        needsOutline: true,
+      }, { status: 400 });
+    }
+
+    const nextChapterNum = book.currentChapter + 1;
+    const totalChapters = outline.chapters.length;
+
+    // Check if all chapters are done
+    if (nextChapterNum > totalChapters) {
+      // All chapters complete - finalize book
+      return await finalizeBook(id, book);
+    }
+
+    // Update status to generating if not already
+    if (book.status !== 'generating') {
+      await prisma.book.update({
+        where: { id },
+        data: {
+          status: 'generating',
+          generationStartedAt: book.generationStartedAt || new Date(),
+        },
+      });
+    }
+
+    const chapterPlan = outline.chapters[nextChapterNum - 1];
+    const characters = (book.characters as Array<{ name: string; description: string }>) || [];
+
+    // Get current story state
+    let storySoFar = book.storySoFar || '';
+    let characterStates = (book.characterStates as Record<string, object>) || {};
+    let totalWords = book.totalWords || 0;
+
+    console.log(`Generating chapter ${nextChapterNum}/${totalChapters} for book ${id}`);
+
+    // Generate chapter content
+    const chapterContent = await generateChapter({
+      title: book.title,
+      genre: book.genre,
+      bookType: book.bookType,
+      writingStyle: book.writingStyle,
+      outline: outline,
+      storySoFar,
+      characterStates,
+      chapterNumber: chapterPlan.number,
+      chapterTitle: chapterPlan.title,
+      chapterPlan: chapterPlan.summary,
+      chapterPov: chapterPlan.pov,
+      targetWords: chapterPlan.targetWords,
+      chapterFormat: book.chapterFormat,
+    });
+
+    const wordCount = countWords(chapterContent);
+    totalWords += wordCount;
+
+    // Generate chapter summary (with fallback)
+    let summary: string;
+    try {
+      summary = await summarizeChapter(chapterContent);
+    } catch (summaryError) {
+      console.error(`Failed to summarize chapter ${nextChapterNum}:`, summaryError);
+      summary = chapterContent.substring(0, 500) + '...';
+    }
+
+    // Update character states (with fallback)
+    try {
+      characterStates = await updateCharacterStates(
+        characterStates,
+        chapterContent,
+        nextChapterNum
+      );
+    } catch (stateError) {
+      console.error(`Failed to update character states for chapter ${nextChapterNum}:`, stateError);
+    }
+
+    // Update story so far
+    storySoFar += `\n\nChapter ${nextChapterNum}: ${chapterPlan.title}\n${summary}`;
+
+    // Save chapter
+    await prisma.chapter.create({
+      data: {
+        bookId: id,
+        number: nextChapterNum,
+        title: chapterPlan.title,
+        content: chapterContent,
+        summary,
+        wordCount,
+      },
+    });
+    console.log(`Chapter ${nextChapterNum} saved. Word count: ${wordCount}`);
+
+    // Update book progress
+    await prisma.book.update({
+      where: { id },
+      data: {
+        currentChapter: nextChapterNum,
+        totalChapters,
+        totalWords,
+        storySoFar,
+        characterStates,
+        errorMessage: null, // Clear any previous error
+      },
+    });
+
+    // Check if this was the last chapter
+    if (nextChapterNum >= totalChapters) {
+      return await finalizeBook(id, book);
+    }
+
+    // More chapters to generate
+    return NextResponse.json({
+      done: false,
+      currentChapter: nextChapterNum,
+      totalChapters,
+      totalWords,
+      message: `Chapter ${nextChapterNum} complete. ${totalChapters - nextChapterNum} remaining.`,
+    });
+
+  } catch (error) {
+    console.error('Error generating next chapter:', error);
+
+    // Update book with error status
+    const { id } = await params;
+    await prisma.book.update({
+      where: { id },
+      data: {
+        status: 'failed',
+        errorMessage: error instanceof Error ? error.message : 'Unknown error',
+      },
+    });
+
+    return NextResponse.json(
+      { error: 'Failed to generate chapter', message: error instanceof Error ? error.message : 'Unknown error' },
+      { status: 500 }
+    );
+  }
+}
+
+/**
+ * Finalize a completed book - generate cover and send email
+ */
+async function finalizeBook(id: string, book: {
+  title: string;
+  genre: string;
+  authorName: string;
+  premise: string;
+  characters: unknown;
+  email: string | null;
+  userId: string | null;
+  coverImageUrl: string | null;
+}) {
+  console.log(`All chapters complete for book ${id}. Finalizing...`);
+
+  // Generate cover if not already done
+  if (!book.coverImageUrl) {
+    try {
+      const coverPrompt = await generateCoverPrompt({
+        title: book.title,
+        genre: book.genre,
+        bookType: 'novel', // Default for text books
+        premise: book.premise,
+        authorName: book.authorName,
+      });
+
+      const coverImageUrl = await generateCoverImage(coverPrompt);
+
+      if (coverImageUrl) {
+        await prisma.book.update({
+          where: { id },
+          data: {
+            coverImageUrl,
+            coverPrompt,
+          },
+        });
+      }
+    } catch (coverError) {
+      console.error('Failed to generate cover:', coverError);
+      // Continue without cover - not critical
+    }
+  }
+
+  // Mark as completed
+  await prisma.book.update({
+    where: { id },
+    data: {
+      status: 'completed',
+      completedAt: new Date(),
+    },
+  });
+
+  // Send completion email
+  const email = book.email || (book.userId ? await getUserEmail(book.userId) : null);
+  if (email) {
+    try {
+      const bookUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://www.draftmybook.com'}/book/${id}`;
+      const emailContent = getBookReadyEmail(book.title, book.authorName, bookUrl);
+      await sendEmail({
+        to: email,
+        subject: emailContent.subject,
+        html: emailContent.html,
+      });
+    } catch (emailError) {
+      console.error('Failed to send completion email:', emailError);
+    }
+  }
+
+  return NextResponse.json({
+    done: true,
+    message: 'Book generation complete!',
+    currentChapter: book.userId ? undefined : 0, // Don't expose internal state
+    totalChapters: book.userId ? undefined : 0,
+  });
+}
+
+async function getUserEmail(userId: string): Promise<string | null> {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { email: true },
+  });
+  return user?.email || null;
+}

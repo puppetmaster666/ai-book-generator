@@ -29,6 +29,7 @@ export async function GET(
         bookPreset: true,
         artStyle: true,
         completedAt: true,
+        generationStartedAt: true,
         // Only count chapters/illustrations, don't fetch content
         _count: {
           select: {
@@ -59,6 +60,7 @@ export async function GET(
         bookPreset: book.bookPreset,
         artStyle: book.artStyle,
         completedAt: book.completedAt,
+        generationStartedAt: book.generationStartedAt,
         chapterCount: book._count.chapters,
         illustrationCount: book._count.illustrations,
       },

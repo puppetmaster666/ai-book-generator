@@ -124,6 +124,7 @@ model Book {
   totalChapters   Int       @default(0)
   totalWords      Int       @default(0)
   errorMessage    String?   @db.Text
+  generationStartedAt DateTime?  // When generation actually started
 
   // Payment
   paymentId       String?
