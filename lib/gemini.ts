@@ -1,5 +1,42 @@
 import { GoogleGenerativeAI, GenerativeModel } from '@google/generative-ai';
 
+// Retry utility with exponential backoff for rate limit handling
+async function withRetry<T>(
+  fn: () => Promise<T>,
+  maxRetries: number = 3,
+  baseDelayMs: number = 5000
+): Promise<T> {
+  let lastError: Error | null = null;
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (error) {
+      lastError = error as Error;
+      const errorMessage = lastError.message?.toLowerCase() || '';
+
+      // Check if it's a rate limit or quota error
+      const isRateLimitError =
+        errorMessage.includes('rate limit') ||
+        errorMessage.includes('quota') ||
+        errorMessage.includes('429') ||
+        errorMessage.includes('resource exhausted') ||
+        errorMessage.includes('too many requests');
+
+      if (!isRateLimitError || attempt === maxRetries) {
+        throw lastError;
+      }
+
+      // Exponential backoff: 5s, 10s, 20s
+      const delay = baseDelayMs * Math.pow(2, attempt);
+      console.log(`Rate limit hit, retrying in ${delay/1000}s (attempt ${attempt + 1}/${maxRetries})...`);
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+  }
+
+  throw lastError;
+}
+
 // Helper to clean and parse JSON from LLM responses
 function parseJSONFromResponse(response: string): object {
   console.log('Raw LLM response length:', response.length);
@@ -1102,19 +1139,20 @@ export function buildIllustrationPromptFromScene(
 export async function generateCoverImage(coverPrompt: string): Promise<string> {
   const fullPrompt = `Professional book cover, high quality, 1600x2560 aspect ratio, suitable for Amazon KDP. ${coverPrompt}`;
 
-  const result = await getGeminiImage().generateContent(fullPrompt);
+  return withRetry(async () => {
+    const result = await getGeminiImage().generateContent(fullPrompt);
 
-  // Extract image URL or base64 from response
-  const response = result.response;
+    // Extract image URL or base64 from response
+    const response = result.response;
 
-  // Handle the image response based on Gemini 3 Pro Image API format
-  // This may need adjustment based on actual API response structure
-  if (response.candidates?.[0]?.content?.parts?.[0]?.inlineData) {
-    const imageData = response.candidates[0].content.parts[0].inlineData;
-    return `data:${imageData.mimeType};base64,${imageData.data}`;
-  }
+    // Handle the image response based on Gemini 3 Pro Image API format
+    if (response.candidates?.[0]?.content?.parts?.[0]?.inlineData) {
+      const imageData = response.candidates[0].content.parts[0].inlineData;
+      return `data:${imageData.mimeType};base64,${imageData.data}`;
+    }
 
-  throw new Error('Failed to generate cover image');
+    throw new Error('Failed to generate cover image');
+  });
 }
 
 // Generate detailed visual character sheets for consistent illustrations

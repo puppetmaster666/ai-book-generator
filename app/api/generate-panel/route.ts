@@ -4,6 +4,43 @@ import { prisma } from '@/lib/db';
 import { ART_STYLES, ILLUSTRATION_DIMENSIONS, type ArtStyleKey } from '@/lib/constants';
 import { buildIllustrationPromptFromScene, SceneDescription, type PanelLayout } from '@/lib/gemini';
 
+// Retry utility with exponential backoff for rate limit handling
+async function withRetry<T>(
+  fn: () => Promise<T>,
+  maxRetries: number = 3,
+  baseDelayMs: number = 5000
+): Promise<T> {
+  let lastError: Error | null = null;
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (error) {
+      lastError = error as Error;
+      const errorMessage = lastError.message?.toLowerCase() || '';
+
+      // Check if it's a rate limit or quota error
+      const isRateLimitError =
+        errorMessage.includes('rate limit') ||
+        errorMessage.includes('quota') ||
+        errorMessage.includes('429') ||
+        errorMessage.includes('resource exhausted') ||
+        errorMessage.includes('too many requests');
+
+      if (!isRateLimitError || attempt === maxRetries) {
+        throw lastError;
+      }
+
+      // Exponential backoff: 5s, 10s, 20s
+      const delay = baseDelayMs * Math.pow(2, attempt);
+      console.log(`Rate limit hit, retrying in ${delay/1000}s (attempt ${attempt + 1}/${maxRetries})...`);
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+  }
+
+  throw lastError;
+}
+
 // Lazy initialization
 let genAI: GoogleGenerativeAI | null = null;
 
@@ -129,12 +166,12 @@ export async function POST(request: NextRequest) {
 
     console.log(`[Panel ${panelNumber}] Generating illustration for book ${bookId}`);
 
-    // Generate image using Gemini Image model
+    // Generate image using Gemini Image model with retry for rate limits
     const model = getGenAI().getGenerativeModel({
       model: 'gemini-3-pro-image-preview',
     });
 
-    const result = await model.generateContent(prompt);
+    const result = await withRetry(() => model.generateContent(prompt));
     const response = result.response;
 
     // Check for content policy blocks

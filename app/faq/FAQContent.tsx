@@ -20,7 +20,7 @@ const faqs = [
       },
       {
         q: 'How long does it take to generate a book?',
-        a: 'Typically 30-60 minutes depending on the target length. A 50,000 word book takes about 30-40 minutes, while a 100,000 word epic fantasy might take 45-60 minutes. You can watch progress in real-time.'
+        a: 'Typically 1-2 minutes for picture books and comics. Novels take longer depending on length - about 5-10 minutes for a full-length book. You can watch progress in real-time.'
       },
       {
         q: 'Can I edit the book after generation?',

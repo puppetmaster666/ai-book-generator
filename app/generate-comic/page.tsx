@@ -402,13 +402,16 @@ function GenerateComicContent() {
             )}
 
             {errorCount > 0 && !isGenerating && (
-              <button
-                onClick={retryAllFailed}
-                className="flex items-center gap-2 px-6 py-3 bg-neutral-700 text-white rounded-full hover:bg-neutral-600 transition-colors"
-              >
-                <RefreshCw className="h-4 w-4" />
-                Retry {errorCount} Failed
-              </button>
+              <div className="flex flex-col items-center gap-2">
+                <button
+                  onClick={retryAllFailed}
+                  className="flex items-center gap-2 px-6 py-3 bg-neutral-700 text-white rounded-full hover:bg-neutral-600 transition-colors"
+                >
+                  <RefreshCw className="h-4 w-4" />
+                  Retry {errorCount} Failed
+                </button>
+                <p className="text-sm text-neutral-500">Wait 5-10 seconds between retries for best results</p>
+              </div>
             )}
 
             {allComplete && (
@@ -459,7 +462,7 @@ function GenerateComicContent() {
                   <span className="font-medium">Please do not leave this page</span>
                 </div>
                 <p className="text-sm text-neutral-600">
-                  This typically takes <strong>3-5 minutes</strong> for {panels.length} {bookData?.dialogueStyle === 'bubbles' ? 'panels' : 'pages'}.
+                  This typically takes <strong>1-2 minutes</strong> for {panels.length} {bookData?.dialogueStyle === 'bubbles' ? 'panels' : 'pages'}.
                   Your book is being generated in parallel for faster results.
                 </p>
               </div>
@@ -553,7 +556,7 @@ function GenerateComicContent() {
                 Click the button above to start. All {panels.length} {bookData?.dialogueStyle === 'bubbles' ? 'panels' : 'pages'} will be generated in parallel.
               </p>
               <p className="text-xs mt-2">
-                This typically takes 3-5 minutes depending on the number of illustrations.
+                This typically takes 1-2 minutes depending on the number of illustrations.
               </p>
             </div>
           )}
