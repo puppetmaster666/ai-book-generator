@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Menu, X, ChevronDown, LogOut, User, BookOpen, Loader2, Check, AlertCircle } from 'lucide-react';
+import { Menu, X, ChevronDown, LogOut, User, BookOpen, Loader2, Check, AlertCircle, Shield } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import { useSession, signOut } from 'next-auth/react';
 import { useGeneratingBook } from '@/contexts/GeneratingBookContext';
@@ -15,11 +15,24 @@ export default function Header({ variant = 'default' }: HeaderProps) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [navDropdownOpen, setNavDropdownOpen] = useState(false);
   const [genDropdownOpen, setGenDropdownOpen] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const navDropdownRef = useRef<HTMLDivElement>(null);
   const genDropdownRef = useRef<HTMLDivElement>(null);
   const { data: session, status } = useSession();
   const { generatingBook } = useGeneratingBook();
+
+  // Check if user is admin
+  useEffect(() => {
+    if (session?.user) {
+      fetch('/api/admin/check')
+        .then(res => res.json())
+        .then(data => setIsAdmin(data.isAdmin))
+        .catch(() => setIsAdmin(false));
+    } else {
+      setIsAdmin(false);
+    }
+  }, [session]);
 
   // Close dropdowns when clicking outside
   useEffect(() => {
@@ -244,6 +257,16 @@ export default function Header({ variant = 'default' }: HeaderProps) {
                       <User className="h-4 w-4" />
                       Create New Book
                     </Link>
+                    {isAdmin && (
+                      <Link
+                        href="/admin/dashboard"
+                        className="flex items-center gap-3 px-4 py-2.5 text-sm text-purple-700 hover:bg-purple-50 transition-colors"
+                        onClick={() => setDropdownOpen(false)}
+                      >
+                        <Shield className="h-4 w-4" />
+                        Admin Dashboard
+                      </Link>
+                    )}
                     <div className="border-t border-neutral-100 mt-1 pt-1">
                       <button
                         onClick={handleSignOut}
@@ -389,6 +412,11 @@ export default function Header({ variant = 'default' }: HeaderProps) {
                   <Link href="/create" className="text-lg" onClick={() => setMenuOpen(false)}>
                     Create New Book
                   </Link>
+                  {isAdmin && (
+                    <Link href="/admin/dashboard" className="text-lg text-purple-700" onClick={() => setMenuOpen(false)}>
+                      Admin Dashboard
+                    </Link>
+                  )}
                   <button
                     onClick={() => {
                       setMenuOpen(false);

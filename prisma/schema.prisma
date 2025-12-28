@@ -24,6 +24,9 @@ model User {
   // Free tier tracking
   freeBookUsed  Boolean   @default(false)
 
+  // Admin
+  isAdmin       Boolean   @default(false)
+
   // NextAuth relations
   accounts      Account[]
   sessions      Session[]
