@@ -66,7 +66,7 @@ function getGeminiPro(): GenerativeModel {
         temperature: 0.8,
         topP: 0.95,
         topK: 40,
-        maxOutputTokens: 8192,
+        maxOutputTokens: 65536, // Increased for large comic outlines (24 panels with scene descriptions)
       },
     });
   }
