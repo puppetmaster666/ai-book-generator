@@ -33,6 +33,7 @@ const ART_STYLE_IMAGES: Partial<Record<ArtStyleKey, string>> = {
   watercolor: '/images/illustrations/watercolor.png',
   cartoon: '/images/illustrations/cartoon.png',
   storybook: '/images/illustrations/classicstory.png',
+  fantasy: '/images/illustrations/fantasy.png',
   // Comic book styles
   noir: '/images/illustrations/noir.png',
   manga: '/images/illustrations/manga.png',
