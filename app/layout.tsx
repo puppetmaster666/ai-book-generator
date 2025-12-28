@@ -18,7 +18,7 @@ export const metadata: Metadata = {
     apple: '/images/favicon.png',
   },
   description: "Transform your ideas into professionally written books with AI. Fiction, non-fiction, romance, thriller, self-help and more. Download as EPUB, ready for Amazon KDP.",
-  keywords: ["AI book generator", "write a book", "book writing", "self-publishing", "Amazon KDP", "EPUB generator", "AI writer", "book creator", "novel generator"],
+  keywords: ["AI book generator", "comic book generator", "AI comic creator", "picture book generator", "children's book maker", "write a book", "book writing", "self-publishing", "Amazon KDP", "EPUB generator", "AI writer", "book creator", "novel generator", "illustrated book creator"],
   authors: [{ name: "Draft My Book" }],
   creator: "Draft My Book",
   publisher: "Draft My Book",
