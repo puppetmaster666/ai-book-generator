@@ -123,11 +123,8 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
   const [deleting, setDeleting] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [serverStartTime, setServerStartTime] = useState<Date | null>(null);
-  const [orchestrating, setOrchestrating] = useState(false);
-  const [autoRetryCount, setAutoRetryCount] = useState(0);
   const startTimeRef = useRef<number | null>(null);
   const orchestrationRef = useRef<boolean>(false);
-  const autoRetryRef = useRef<boolean>(false);
   // Session ID to prevent multiple orchestration loops - incremented on each new generation attempt
   const orchestrationSessionRef = useRef<number>(0);
   const { setGeneratingBookId } = useGeneratingBook();
@@ -268,7 +265,6 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
 
     const orchestrateGeneration = async () => {
       orchestrationRef.current = true;
-      setOrchestrating(true);
 
       let retryCount = 0;
       const maxRetries = 3;
@@ -298,7 +294,6 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
             if (data.aborted || res.status === 404) {
               console.log('Book was deleted or not found, stopping orchestration');
               orchestrationRef.current = false;
-              setOrchestrating(false);
               break;
             }
             throw new Error(data.error || 'Generation failed');
@@ -310,7 +305,6 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
           if (data.done) {
             console.log(`[Session ${currentSession}] Orchestration complete: all chapters generated`);
             orchestrationRef.current = false;
-            setOrchestrating(false);
             // Fetch full book data
             const fullRes = await fetch(`/api/books/${id}`);
             if (fullRes.ok) {
@@ -332,7 +326,6 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
           if (retryCount >= maxRetries) {
             console.error(`[Session ${currentSession}] Max retries (${maxRetries}) reached, stopping orchestration`);
             orchestrationRef.current = false;
-            setOrchestrating(false);
             break;
           }
 
@@ -352,50 +345,9 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
     };
   }, [book?.status, book?.currentChapter, book?.totalChapters, id, isOwner, isVisualBook, redirectingToComic]);
 
-  // Auto-retry for failed generations (max 2 automatic retries)
-  useEffect(() => {
-    if (!book || isVisualBook || redirectingToComic) return;
-    if (!isOwner) return; // Don't auto-retry for other users' books
-    if (autoRetryRef.current) return; // Already retrying
-
-    const MAX_AUTO_RETRIES = 2;
-
-    // Auto-retry when book fails and we haven't exceeded retry limit
-    if (book.status === 'failed' && autoRetryCount < MAX_AUTO_RETRIES) {
-      autoRetryRef.current = true;
-
-      // Wait a moment before retrying
-      const retryDelay = (autoRetryCount + 1) * 3000; // 3s, 6s
-      console.log(`Auto-retry ${autoRetryCount + 1}/${MAX_AUTO_RETRIES} in ${retryDelay}ms...`);
-
-      const timer = setTimeout(async () => {
-        try {
-          console.log(`Executing auto-retry ${autoRetryCount + 1}...`);
-          setAutoRetryCount(prev => prev + 1);
-          orchestrationRef.current = false; // Reset orchestration
-
-          const res = await fetch(`/api/books/${id}/generate`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ outlineOnly: true }),
-          });
-
-          if (res.ok) {
-            console.log('Auto-retry initiated successfully');
-          } else {
-            const data = await res.json();
-            console.error('Auto-retry failed:', data.error);
-          }
-        } catch (err) {
-          console.error('Auto-retry error:', err);
-        } finally {
-          autoRetryRef.current = false;
-        }
-      }, retryDelay);
-
-      return () => clearTimeout(timer);
-    }
-  }, [book?.status, autoRetryCount, id, isOwner, isVisualBook, redirectingToComic]);
+  // Auto-retry removed - was causing race conditions with manual resume
+  // The orchestration loop already has its own retry logic (3 retries with backoff)
+  // Users can manually click "Resume" if generation fails
 
   // Timer for elapsed time during generation OR preparation
   // Uses server's generationStartedAt when available for accurate time across page visits
@@ -565,7 +517,6 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
     try {
       // Stop the orchestration loop
       orchestrationRef.current = false;
-      setOrchestrating(false);
 
       // Update book status to 'cancelled' on the server
       await fetch(`/api/books/${id}/cancel`, { method: 'POST' });
@@ -589,7 +540,6 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
     setDeleting(true);
     // Stop any ongoing orchestration first
     orchestrationRef.current = false;
-    setOrchestrating(false);
 
     try {
       const res = await fetch(`/api/books/${id}`, { method: 'DELETE' });
