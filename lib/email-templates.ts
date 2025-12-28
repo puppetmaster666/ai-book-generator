@@ -39,18 +39,6 @@ function emailWrapper(content: string): string {
 `;
 }
 
-// Skewed accent text with shadow - matching homepage style
-function skewedHighlight(text: string): string {
-  return `
-    <span style="position: relative; display: inline-block;">
-      <span style="position: absolute; top: 2px; left: 2px; right: -2px; bottom: -2px; background-color: #171717; transform: skewY(-2deg);"></span>
-      <span style="position: relative; display: inline-block; background-color: #BFFF00; padding: 4px 12px; transform: skewY(-2deg);">
-        <span style="display: inline-block; transform: skewY(2deg); font-weight: 600; color: #171717;">${text}</span>
-      </span>
-    </span>
-  `;
-}
-
 // Primary CTA Button
 function ctaButton(text: string, url: string): string {
   return `
