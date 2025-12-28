@@ -23,7 +23,7 @@ export async function sendEmail({ to, subject, html }: EmailOptions): Promise<bo
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        from: process.env.EMAIL_FROM || 'BookForge <noreply@bookforge.ai>',
+        from: process.env.EMAIL_FROM || 'DraftMyBook <lhllparis@gmail.com>',
         to,
         subject,
         html,
@@ -55,7 +55,7 @@ export function getBookReadyEmail(bookTitle: string, authorName: string, bookUrl
         </head>
         <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #171717; max-width: 600px; margin: 0 auto; padding: 20px;">
           <div style="text-align: center; margin-bottom: 32px;">
-            <h1 style="font-size: 24px; font-weight: bold; margin: 0;">BookForge</h1>
+            <h1 style="font-size: 24px; font-weight: bold; margin: 0;">DraftMyBook</h1>
           </div>
 
           <div style="background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%); border-radius: 16px; padding: 32px; text-align: center; margin-bottom: 24px;">
@@ -78,9 +78,9 @@ export function getBookReadyEmail(bookTitle: string, authorName: string, bookUrl
           </div>
 
           <div style="border-top: 1px solid #e5e5e5; padding-top: 24px; text-align: center; color: #737373; font-size: 14px;">
-            <p style="margin: 0 0 8px 0;">Thank you for using BookForge!</p>
+            <p style="margin: 0 0 8px 0;">Thank you for using DraftMyBook!</p>
             <p style="margin: 0;">
-              <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://bookforge.ai'}" style="color: #171717;">Create another book</a>
+              <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://www.draftmybook.com'}" style="color: #171717;">Create another book</a>
             </p>
           </div>
         </body>

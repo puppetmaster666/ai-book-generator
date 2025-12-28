@@ -16,6 +16,9 @@ import {
   RefreshCw,
   TrendingUp,
   Trash2,
+  Mail,
+  Gift,
+  Send,
 } from 'lucide-react';
 
 interface AdminStats {
@@ -110,6 +113,16 @@ export default function AdminDashboard() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState('');
 
+  // User selection and email state
+  const [selectedUsers, setSelectedUsers] = useState<Set<string>>(new Set());
+  const [emailTemplate, setEmailTemplate] = useState<'welcome' | 'free_credit' | 'announcement'>('welcome');
+  const [customMessage, setCustomMessage] = useState('');
+  const [customSubject, setCustomSubject] = useState('');
+  const [creditsToGift, setCreditsToGift] = useState(1);
+  const [isSendingEmail, setIsSendingEmail] = useState(false);
+  const [isGiftingCredits, setIsGiftingCredits] = useState(false);
+  const [emailResult, setEmailResult] = useState<{ success: boolean; message: string } | null>(null);
+
   const fetchStats = async (showRefresh = false) => {
     if (showRefresh) setIsRefreshing(true);
     try {
@@ -156,6 +169,105 @@ export default function AdminDashboard() {
       setSelectedBooks(new Set());
     } else {
       setSelectedBooks(new Set(stats.recentBooks.map(b => b.id)));
+    }
+  };
+
+  const toggleUserSelection = (userId: string) => {
+    setSelectedUsers(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(userId)) {
+        newSet.delete(userId);
+      } else {
+        newSet.add(userId);
+      }
+      return newSet;
+    });
+  };
+
+  const toggleAllUsers = () => {
+    if (!stats) return;
+    if (selectedUsers.size === stats.recentUsers.length) {
+      setSelectedUsers(new Set());
+    } else {
+      setSelectedUsers(new Set(stats.recentUsers.map(u => u.id)));
+    }
+  };
+
+  const handleSendEmail = async () => {
+    if (selectedUsers.size === 0) return;
+
+    setIsSendingEmail(true);
+    setEmailResult(null);
+
+    try {
+      const response = await fetch('/api/admin/email/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userIds: Array.from(selectedUsers),
+          template: emailTemplate,
+          customMessage: emailTemplate === 'announcement' ? customMessage : undefined,
+          customSubject: emailTemplate === 'announcement' ? customSubject : undefined,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to send emails');
+      }
+
+      setEmailResult({
+        success: true,
+        message: `Sent ${data.sent} email(s) successfully${data.failed > 0 ? `, ${data.failed} failed` : ''}`,
+      });
+      setSelectedUsers(new Set());
+    } catch (err) {
+      setEmailResult({
+        success: false,
+        message: err instanceof Error ? err.message : 'Failed to send emails',
+      });
+    } finally {
+      setIsSendingEmail(false);
+    }
+  };
+
+  const handleGiftCredits = async () => {
+    if (selectedUsers.size === 0) return;
+
+    setIsGiftingCredits(true);
+    setEmailResult(null);
+
+    try {
+      const response = await fetch('/api/admin/credits/gift', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userIds: Array.from(selectedUsers),
+          credits: creditsToGift,
+          sendEmailNotification: true,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to gift credits');
+      }
+
+      setEmailResult({
+        success: true,
+        message: `Gifted ${creditsToGift} credit(s) to ${data.creditsAdded} user(s), sent ${data.emailsSent} email(s)`,
+      });
+      setSelectedUsers(new Set());
+      await fetchStats(true);
+    } catch (err) {
+      setEmailResult({
+        success: false,
+        message: err instanceof Error ? err.message : 'Failed to gift credits',
+      });
+    } finally {
+      setIsGiftingCredits(false);
     }
   };
 
@@ -500,12 +612,135 @@ export default function AdminDashboard() {
 
         {/* Recent Users */}
         <div className="bg-white rounded-xl border border-neutral-200 p-6">
-          <h2 className="text-lg font-semibold mb-4">Recent Users</h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold">Recent Users</h2>
+            {selectedUsers.size > 0 && (
+              <span className="text-sm text-neutral-600">
+                {selectedUsers.size} selected
+              </span>
+            )}
+          </div>
+
+          {/* Email Action Panel */}
+          {selectedUsers.size > 0 && (
+            <div className="mb-6 p-4 bg-neutral-50 rounded-xl border border-neutral-200">
+              <div className="flex flex-wrap items-end gap-4">
+                {/* Template Select */}
+                <div className="flex-1 min-w-[200px]">
+                  <label className="block text-sm font-medium text-neutral-700 mb-1">
+                    Email Template
+                  </label>
+                  <select
+                    value={emailTemplate}
+                    onChange={(e) => setEmailTemplate(e.target.value as typeof emailTemplate)}
+                    className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:ring-2 focus:ring-neutral-900 focus:border-transparent"
+                  >
+                    <option value="welcome">Thanks for Joining</option>
+                    <option value="free_credit">Free Credit Notification</option>
+                    <option value="announcement">Custom Announcement</option>
+                  </select>
+                </div>
+
+                {/* Credits Input (for gift) */}
+                <div className="w-24">
+                  <label className="block text-sm font-medium text-neutral-700 mb-1">
+                    Credits
+                  </label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={100}
+                    value={creditsToGift}
+                    onChange={(e) => setCreditsToGift(parseInt(e.target.value) || 1)}
+                    className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:ring-2 focus:ring-neutral-900 focus:border-transparent"
+                  />
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleSendEmail}
+                    disabled={isSendingEmail}
+                    className="flex items-center gap-2 px-4 py-2 bg-neutral-900 text-white rounded-lg text-sm font-medium hover:bg-neutral-800 disabled:opacity-50 transition-colors"
+                  >
+                    {isSendingEmail ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Send className="h-4 w-4" />
+                    )}
+                    Send Email
+                  </button>
+                  <button
+                    onClick={handleGiftCredits}
+                    disabled={isGiftingCredits}
+                    className="flex items-center gap-2 px-4 py-2 bg-lime-400 text-neutral-900 rounded-lg text-sm font-medium hover:bg-lime-500 disabled:opacity-50 transition-colors"
+                  >
+                    {isGiftingCredits ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Gift className="h-4 w-4" />
+                    )}
+                    Gift {creditsToGift} Credit{creditsToGift > 1 ? 's' : ''}
+                  </button>
+                </div>
+              </div>
+
+              {/* Custom Message for Announcement */}
+              {emailTemplate === 'announcement' && (
+                <div className="mt-4 space-y-3">
+                  <div>
+                    <label className="block text-sm font-medium text-neutral-700 mb-1">
+                      Subject
+                    </label>
+                    <input
+                      type="text"
+                      value={customSubject}
+                      onChange={(e) => setCustomSubject(e.target.value)}
+                      placeholder="Email subject..."
+                      className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:ring-2 focus:ring-neutral-900 focus:border-transparent"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-neutral-700 mb-1">
+                      Message
+                    </label>
+                    <textarea
+                      value={customMessage}
+                      onChange={(e) => setCustomMessage(e.target.value)}
+                      placeholder="Your message..."
+                      rows={3}
+                      className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:ring-2 focus:ring-neutral-900 focus:border-transparent resize-none"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Result Message */}
+              {emailResult && (
+                <div className={`mt-4 p-3 rounded-lg text-sm ${
+                  emailResult.success
+                    ? 'bg-green-50 text-green-700 border border-green-200'
+                    : 'bg-red-50 text-red-700 border border-red-200'
+                }`}>
+                  {emailResult.message}
+                </div>
+              )}
+            </div>
+          )}
+
           {stats.recentUsers.length > 0 ? (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-neutral-200">
+                    <th className="text-left py-3 px-2 font-medium text-neutral-500 w-10">
+                      <input
+                        type="checkbox"
+                        checked={selectedUsers.size === stats.recentUsers.length && stats.recentUsers.length > 0}
+                        onChange={toggleAllUsers}
+                        className="w-4 h-4 rounded border-neutral-300 text-neutral-900 focus:ring-neutral-500 cursor-pointer"
+                      />
+                    </th>
                     <th className="text-left py-3 px-2 font-medium text-neutral-500">Email</th>
                     <th className="text-left py-3 px-2 font-medium text-neutral-500">Name</th>
                     <th className="text-left py-3 px-2 font-medium text-neutral-500">Plan</th>
@@ -516,7 +751,18 @@ export default function AdminDashboard() {
                 </thead>
                 <tbody>
                   {stats.recentUsers.map((user) => (
-                    <tr key={user.id} className="border-b border-neutral-100 hover:bg-neutral-50">
+                    <tr
+                      key={user.id}
+                      className={`border-b border-neutral-100 hover:bg-neutral-50 ${selectedUsers.has(user.id) ? 'bg-lime-50' : ''}`}
+                    >
+                      <td className="py-3 px-2">
+                        <input
+                          type="checkbox"
+                          checked={selectedUsers.has(user.id)}
+                          onChange={() => toggleUserSelection(user.id)}
+                          className="w-4 h-4 rounded border-neutral-300 text-neutral-900 focus:ring-neutral-500 cursor-pointer"
+                        />
+                      </td>
                       <td className="py-3 px-2 font-medium text-neutral-900">
                         {user.email}
                       </td>

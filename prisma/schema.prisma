@@ -23,6 +23,7 @@ model User {
 
   // Free tier tracking
   freeBookUsed  Boolean   @default(false)
+  freeCredits   Int       @default(0) // Free book credits from admin
 
   // Admin
   isAdmin       Boolean   @default(false)
@@ -32,6 +33,7 @@ model User {
   sessions      Session[]
 
   books         Book[]
+  notifications Notification[]
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 }
@@ -235,4 +237,17 @@ model PromoCodeUsage {
   @@index([promoCodeId])
   @@index([email])
   @@index([ipAddress])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String   // 'free_credit', 'welcome', 'promo', etc.
+  title     String
+  message   String   @db.Text
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId])
 }

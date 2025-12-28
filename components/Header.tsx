@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Menu, X, ChevronDown, LogOut, User, BookOpen, Loader2, Check, AlertCircle, Shield } from 'lucide-react';
+import { Menu, X, ChevronDown, LogOut, User, BookOpen, Loader2, Check, AlertCircle, Shield, Bell, Gift } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import { useSession, signOut } from 'next-auth/react';
 import { useGeneratingBook } from '@/contexts/GeneratingBookContext';
@@ -15,22 +15,49 @@ export default function Header({ variant = 'default' }: HeaderProps) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [navDropdownOpen, setNavDropdownOpen] = useState(false);
   const [genDropdownOpen, setGenDropdownOpen] = useState(false);
+  const [notifDropdownOpen, setNotifDropdownOpen] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [notifications, setNotifications] = useState<Array<{
+    id: string;
+    type: string;
+    title: string;
+    message: string;
+    read: boolean;
+    createdAt: string;
+  }>>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [freeCredits, setFreeCredits] = useState(0);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const navDropdownRef = useRef<HTMLDivElement>(null);
   const genDropdownRef = useRef<HTMLDivElement>(null);
+  const notifDropdownRef = useRef<HTMLDivElement>(null);
   const { data: session, status } = useSession();
   const { generatingBook } = useGeneratingBook();
 
-  // Check if user is admin
+  // Check if user is admin and fetch notifications
   useEffect(() => {
     if (session?.user) {
       fetch('/api/admin/check')
         .then(res => res.json())
         .then(data => setIsAdmin(data.isAdmin))
         .catch(() => setIsAdmin(false));
+
+      // Fetch notifications
+      fetch('/api/user/notifications')
+        .then(res => res.json())
+        .then(data => {
+          if (data.notifications) {
+            setNotifications(data.notifications);
+            setUnreadCount(data.unreadCount || 0);
+            setFreeCredits(data.freeCredits || 0);
+          }
+        })
+        .catch(() => {});
     } else {
       setIsAdmin(false);
+      setNotifications([]);
+      setUnreadCount(0);
+      setFreeCredits(0);
     }
   }, [session]);
 
@@ -46,10 +73,27 @@ export default function Header({ variant = 'default' }: HeaderProps) {
       if (genDropdownRef.current && !genDropdownRef.current.contains(event.target as Node)) {
         setGenDropdownOpen(false);
       }
+      if (notifDropdownRef.current && !notifDropdownRef.current.contains(event.target as Node)) {
+        setNotifDropdownOpen(false);
+      }
     }
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  const markAllNotificationsRead = async () => {
+    try {
+      await fetch('/api/user/notifications', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ markAllRead: true }),
+      });
+      setUnreadCount(0);
+      setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+    } catch (err) {
+      console.error('Failed to mark notifications as read:', err);
+    }
+  };
 
   // Calculate progress percentage
   const progress = generatingBook?.totalChapters
@@ -206,6 +250,88 @@ export default function Header({ variant = 'default' }: HeaderProps) {
                     >
                       {isCompleted ? 'View Book' : 'View Progress'}
                     </Link>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Notification Bell */}
+            {session?.user && (unreadCount > 0 || freeCredits > 0) && (
+              <div className="relative" ref={notifDropdownRef}>
+                <button
+                  onClick={() => setNotifDropdownOpen(!notifDropdownOpen)}
+                  className="relative p-2 rounded-full hover:bg-neutral-100 transition-colors"
+                >
+                  <Bell className="h-5 w-5 text-neutral-600" />
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-0.5 -right-0.5 w-5 h-5 bg-red-500 text-white text-xs font-medium rounded-full flex items-center justify-center">
+                      {unreadCount > 9 ? '9+' : unreadCount}
+                    </span>
+                  )}
+                </button>
+
+                {notifDropdownOpen && (
+                  <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl border border-neutral-200 shadow-lg py-2 z-50">
+                    <div className="px-4 py-2 border-b border-neutral-100 flex items-center justify-between">
+                      <p className="font-medium text-sm">Notifications</p>
+                      {unreadCount > 0 && (
+                        <button
+                          onClick={markAllNotificationsRead}
+                          className="text-xs text-neutral-500 hover:text-neutral-900"
+                        >
+                          Mark all read
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Free Credits Banner */}
+                    {freeCredits > 0 && (
+                      <div className="mx-3 my-2 p-3 bg-lime-50 border border-lime-200 rounded-lg">
+                        <div className="flex items-center gap-2">
+                          <Gift className="h-5 w-5 text-lime-600" />
+                          <div>
+                            <p className="text-sm font-medium text-lime-900">
+                              {freeCredits} Free Credit{freeCredits > 1 ? 's' : ''}
+                            </p>
+                            <p className="text-xs text-lime-700">Available to use</p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Notifications List */}
+                    <div className="max-h-64 overflow-y-auto">
+                      {notifications.length > 0 ? (
+                        notifications.slice(0, 5).map((notif) => (
+                          <div
+                            key={notif.id}
+                            className={`px-4 py-3 hover:bg-neutral-50 transition-colors ${!notif.read ? 'bg-blue-50/50' : ''}`}
+                          >
+                            <p className="text-sm font-medium text-neutral-900">{notif.title}</p>
+                            <p className="text-xs text-neutral-500 mt-0.5 line-clamp-2">{notif.message}</p>
+                            <p className="text-xs text-neutral-400 mt-1">
+                              {new Date(notif.createdAt).toLocaleDateString()}
+                            </p>
+                          </div>
+                        ))
+                      ) : (
+                        <p className="px-4 py-6 text-sm text-neutral-400 text-center">
+                          No notifications yet
+                        </p>
+                      )}
+                    </div>
+
+                    {notifications.length > 0 && (
+                      <div className="px-4 py-2 border-t border-neutral-100">
+                        <Link
+                          href="/dashboard"
+                          className="text-xs text-neutral-600 hover:text-neutral-900"
+                          onClick={() => setNotifDropdownOpen(false)}
+                        >
+                          View all notifications
+                        </Link>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
