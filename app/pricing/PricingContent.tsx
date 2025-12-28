@@ -1,12 +1,14 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { Check, ArrowRight } from 'lucide-react';
 
 export default function PricingContent() {
   const router = useRouter();
+  const { data: session } = useSession();
 
   return (
     <div className="min-h-screen bg-white">
@@ -141,7 +143,7 @@ export default function PricingContent() {
                 </li>
               </ul>
               <button
-                onClick={() => router.push('/signup?plan=monthly')}
+                onClick={() => router.push(session ? '/checkout?plan=monthly' : '/signup?plan=monthly')}
                 className="w-full bg-neutral-900 text-white py-3 rounded-full hover:bg-neutral-800 transition-colors font-medium mt-8"
               >
                 Subscribe Monthly
@@ -181,7 +183,7 @@ export default function PricingContent() {
                 </li>
               </ul>
               <button
-                onClick={() => router.push('/signup?plan=yearly')}
+                onClick={() => router.push(session ? '/checkout?plan=yearly' : '/signup?plan=yearly')}
                 className="w-full bg-white text-neutral-900 py-3 rounded-full border-2 border-neutral-900 hover:bg-neutral-900 hover:text-white transition-colors font-medium mt-8"
               >
                 Subscribe Yearly

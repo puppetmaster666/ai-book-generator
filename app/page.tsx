@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import Image from 'next/image';
 import { ArrowRight, Loader2, Sparkles, X, Check, ChevronRight, Zap, BookOpen, Download, ExternalLink, ChevronDown } from 'lucide-react';
 import Footer from '@/components/Footer';
@@ -27,6 +28,7 @@ const ACCENT = {
 
 export default function Home() {
   const router = useRouter();
+  const { data: session } = useSession();
   const [bookIdea, setBookIdea] = useState('');
   const [isLoading] = useState(false);
   const [error, setError] = useState('');
@@ -105,9 +107,9 @@ export default function Home() {
               <br />
               <span className="relative inline-block">
                 {/* Shadow rectangle */}
-                <span className="absolute -inset-x-1 inset-y-0.5 bg-black -skew-y-2 translate-x-1" aria-hidden="true" />
+                <span className="absolute -inset-x-1 -inset-y-1 bg-black -skew-y-2 translate-x-1 translate-y-1" aria-hidden="true" />
                 {/* Colored rectangle */}
-                <span className={`absolute -inset-x-1 inset-y-0.5 ${ACCENT.bg} -skew-y-2`} aria-hidden="true" />
+                <span className={`absolute -inset-x-1 -inset-y-1 ${ACCENT.bg} -skew-y-2`} aria-hidden="true" />
                 {/* Text */}
                 <span className="relative text-neutral-900 px-2">a complete book</span>
               </span>
@@ -259,8 +261,8 @@ export default function Home() {
               <h2 className="text-4xl md:text-5xl font-bold tracking-tight mb-6 text-neutral-900" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>
                 Blood &{' '}
                 <span className="relative inline-block">
-                  <span className="absolute -inset-x-1 inset-y-0.5 bg-black -skew-y-2 translate-x-1" aria-hidden="true" />
-                  <span className={`absolute -inset-x-1 inset-y-0.5 ${ACCENT.bg} -skew-y-2`} aria-hidden="true" />
+                  <span className="absolute -inset-x-1 -inset-y-1 bg-black -skew-y-2 translate-x-1 translate-y-1" aria-hidden="true" />
+                  <span className={`absolute -inset-x-1 -inset-y-1 ${ACCENT.bg} -skew-y-2`} aria-hidden="true" />
                   <span className="relative text-neutral-900 px-2">Silver</span>
                 </span>
               </h2>
@@ -294,8 +296,8 @@ export default function Home() {
             <h2 className="text-4xl md:text-5xl font-bold tracking-tight mb-4" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>
               Three steps to{' '}
               <span className="relative inline-block">
-                <span className="absolute -inset-x-1 inset-y-0.5 bg-black -skew-y-2 translate-x-1" aria-hidden="true" />
-                <span className={`absolute -inset-x-1 inset-y-0.5 ${ACCENT.bg} -skew-y-2`} aria-hidden="true" />
+                <span className="absolute -inset-x-1 -inset-y-1 bg-black -skew-y-2 translate-x-1 translate-y-1" aria-hidden="true" />
+                <span className={`absolute -inset-x-1 -inset-y-1 ${ACCENT.bg} -skew-y-2`} aria-hidden="true" />
                 <span className="relative text-neutral-900 px-2">your book</span>
               </span>
             </h2>
@@ -350,8 +352,8 @@ export default function Home() {
             <h2 className="text-4xl md:text-5xl font-bold tracking-tight mb-4 text-white" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>
               Publication-
               <span className="relative inline-block">
-                <span className="absolute -inset-x-1 inset-y-0.5 bg-white/20 -skew-y-2 translate-x-1" aria-hidden="true" />
-                <span className={`absolute -inset-x-1 inset-y-0.5 ${ACCENT.bg} -skew-y-2`} aria-hidden="true" />
+                <span className="absolute -inset-x-1 -inset-y-1 bg-white/20 -skew-y-2 translate-x-1 translate-y-1" aria-hidden="true" />
+                <span className={`absolute -inset-x-1 -inset-y-1 ${ACCENT.bg} -skew-y-2`} aria-hidden="true" />
                 <span className="relative text-neutral-900 px-2">ready</span>
               </span>
               {' '}formatting
@@ -406,8 +408,8 @@ export default function Home() {
             <h2 className="text-4xl md:text-5xl font-bold tracking-tight mb-4" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>
               Simple{' '}
               <span className="relative inline-block">
-                <span className="absolute -inset-x-1 inset-y-0.5 bg-black -skew-y-2 translate-x-1" aria-hidden="true" />
-                <span className={`absolute -inset-x-1 inset-y-0.5 ${ACCENT.bg} -skew-y-2`} aria-hidden="true" />
+                <span className="absolute -inset-x-1 -inset-y-1 bg-black -skew-y-2 translate-x-1 translate-y-1" aria-hidden="true" />
+                <span className={`absolute -inset-x-1 -inset-y-1 ${ACCENT.bg} -skew-y-2`} aria-hidden="true" />
                 <span className="relative text-neutral-900 px-2">pricing</span>
               </span>
             </h2>
@@ -420,7 +422,7 @@ export default function Home() {
           <div className="grid md:grid-cols-4 gap-5">
             {/* Free Tier */}
             <button
-              onClick={() => router.push('/signup')}
+              onClick={() => router.push(session ? '/create' : '/signup')}
               className="group bg-white rounded-2xl p-6 border-2 border-lime-400 hover:border-lime-500 card-hover text-left cursor-pointer"
             >
               <div className="flex items-center gap-3 mb-4">
@@ -488,7 +490,7 @@ export default function Home() {
 
             {/* Monthly Subscription */}
             <button
-              onClick={() => router.push('/signup?plan=monthly')}
+              onClick={() => router.push(session ? '/checkout?plan=monthly' : '/signup?plan=monthly')}
               className="group bg-neutral-900 text-white rounded-2xl p-6 border-2 border-neutral-900 card-hover text-left cursor-pointer relative"
             >
               <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-lime-400 text-neutral-900 px-3 py-1 rounded-full text-xs font-medium">
@@ -526,7 +528,7 @@ export default function Home() {
 
             {/* Yearly Subscription */}
             <button
-              onClick={() => router.push('/signup?plan=yearly')}
+              onClick={() => router.push(session ? '/checkout?plan=yearly' : '/signup?plan=yearly')}
               className="group bg-white rounded-2xl p-6 border-2 border-neutral-200 hover:border-neutral-900 card-hover text-left cursor-pointer"
             >
               <div className="flex items-center gap-3 mb-4">
@@ -568,19 +570,20 @@ export default function Home() {
           <h2 className="text-4xl md:text-5xl font-bold tracking-tight mb-6 text-white" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>
             Ready to write{' '}
             <span className="relative inline-block">
-              <span className="absolute -inset-x-1 inset-y-0.5 bg-white/20 -skew-y-2 translate-x-1" aria-hidden="true" />
-              <span className={`absolute -inset-x-1 inset-y-0.5 ${ACCENT.bg} -skew-y-2`} aria-hidden="true" />
+              <span className="absolute -inset-x-1 -inset-y-1 bg-white/20 -skew-y-2 translate-x-1 translate-y-1" aria-hidden="true" />
+              <span className={`absolute -inset-x-1 -inset-y-1 ${ACCENT.bg} -skew-y-2`} aria-hidden="true" />
               <span className="relative text-neutral-900 px-2">your book</span>
-            </span>?
+            </span>
+            <span className="text-white">?</span>
           </h2>
           <p className="text-lg text-neutral-400 mb-10">
-            Start with a free book. No credit card required.
+            {session ? 'Your next masterpiece is just a few clicks away.' : 'Start with a free book. No credit card required.'}
           </p>
           <button
-            onClick={() => router.push('/signup')}
+            onClick={() => router.push(session ? '/create' : '/signup')}
             className="bg-lime-400 text-neutral-900 px-8 py-4 rounded-full text-base font-medium hover:bg-lime-300 transition-all hover:scale-105 inline-flex items-center gap-2"
           >
-            Get your free book
+            {session ? 'Create a book' : 'Get your free book'}
             <ArrowRight className="h-5 w-5" />
           </button>
         </div>
