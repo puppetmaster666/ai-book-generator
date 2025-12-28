@@ -102,3 +102,52 @@ export async function PATCH(
     );
   }
 }
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+
+    // Verify the book exists
+    const book = await prisma.book.findUnique({
+      where: { id },
+      select: { id: true, title: true },
+    });
+
+    if (!book) {
+      return NextResponse.json({ error: 'Book not found' }, { status: 404 });
+    }
+
+    // Delete all related data (illustrations, chapters) then the book
+    // Prisma should handle cascading deletes based on schema, but let's be explicit
+    await prisma.$transaction([
+      // Delete illustrations (both direct and chapter-linked)
+      prisma.illustration.deleteMany({
+        where: {
+          OR: [
+            { bookId: id },
+            { chapter: { bookId: id } },
+          ],
+        },
+      }),
+      // Delete chapters
+      prisma.chapter.deleteMany({
+        where: { bookId: id },
+      }),
+      // Delete the book
+      prisma.book.delete({
+        where: { id },
+      }),
+    ]);
+
+    return NextResponse.json({ success: true, message: `Book "${book.title}" deleted` });
+  } catch (error) {
+    console.error('Error deleting book:', error);
+    return NextResponse.json(
+      { error: 'Failed to delete book' },
+      { status: 500 }
+    );
+  }
+}

@@ -1,7 +1,10 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  // Include pdfkit font files in serverless bundle for Vercel deployment
+  outputFileTracingIncludes: {
+    '/api/books/[id]/download': ['./node_modules/pdfkit/js/data/**/*'],
+  },
 };
 
 export default nextConfig;

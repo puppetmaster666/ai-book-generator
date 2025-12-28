@@ -4,7 +4,7 @@ import { useState, useEffect, use, useRef } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import Header from '@/components/Header';
-import { Download, BookOpen, Loader2, Check, AlertCircle, ImageIcon, Mail, Palette, PenTool, Clock, Zap, AlertTriangle, Save } from 'lucide-react';
+import { Download, BookOpen, Loader2, Check, AlertCircle, ImageIcon, Mail, Palette, PenTool, Clock, Zap, AlertTriangle, Save, Trash2 } from 'lucide-react';
 import { useGeneratingBook } from '@/contexts/GeneratingBookContext';
 import Link from 'next/link';
 
@@ -117,6 +117,8 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
   const [elapsedTime, setElapsedTime] = useState(0);
   const [retrying, setRetrying] = useState(false);
   const [bookClaimed, setBookClaimed] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const startTimeRef = useRef<number | null>(null);
   const { setGeneratingBookId } = useGeneratingBook();
 
@@ -329,6 +331,27 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
     }
   };
 
+  const handleDelete = async () => {
+    if (!book || deleting) return;
+
+    setDeleting(true);
+    try {
+      const res = await fetch(`/api/books/${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        router.push('/');
+      } else {
+        const data = await res.json();
+        console.error('Delete failed:', data.error);
+        setShowDeleteConfirm(false);
+      }
+    } catch (err) {
+      console.error('Delete error:', err);
+      setShowDeleteConfirm(false);
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   if (loading || redirectingToComic) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
@@ -385,6 +408,49 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
     <div className="min-h-screen bg-white">
       <Header />
 
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+          <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-xl">
+            <div className="text-center mb-6">
+              <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Trash2 className="h-8 w-8 text-red-600" />
+              </div>
+              <h2 className="text-xl font-bold text-neutral-900 mb-2">Delete Book?</h2>
+              <p className="text-neutral-600">
+                This will permanently delete &quot;{book?.title}&quot; and all its content. This action cannot be undone.
+              </p>
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                disabled={deleting}
+                className="flex-1 px-4 py-3 bg-neutral-100 text-neutral-700 rounded-xl hover:bg-neutral-200 font-medium transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDelete}
+                disabled={deleting}
+                className="flex-1 px-4 py-3 bg-red-600 text-white rounded-xl hover:bg-red-700 font-medium transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {deleting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="h-4 w-4" />
+                    Delete
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <main className="pt-24 pb-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-3xl mx-auto">
           {/* Book Header */}
@@ -438,6 +504,15 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
                     </span>
                   </div>
                 )}
+
+                {/* Delete Button */}
+                <button
+                  onClick={() => setShowDeleteConfirm(true)}
+                  className="mt-4 inline-flex items-center gap-1.5 px-3 py-1.5 text-sm text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  Delete Book
+                </button>
               </div>
             </div>
           </div>
