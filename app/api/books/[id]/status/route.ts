@@ -12,8 +12,10 @@ import { prisma } from '@/lib/db';
  * without progress, automatically marks it as failed (handles Vercel timeout cases).
  */
 
-// Stale generation threshold: 10 minutes without progress
-const STALE_GENERATION_MS = 10 * 60 * 1000;
+// Stale generation threshold: 15 minutes without progress
+// Each chapter generation updates the book timestamp as a "heartbeat"
+// so this should only trigger on genuine failures
+const STALE_GENERATION_MS = 15 * 60 * 1000;
 
 export async function GET(
   request: NextRequest,

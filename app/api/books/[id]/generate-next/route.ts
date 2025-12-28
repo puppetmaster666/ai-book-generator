@@ -123,16 +123,16 @@ export async function POST(
       });
     }
 
-    // Update status to generating if not already
-    if (book.status !== 'generating') {
-      await prisma.book.update({
-        where: { id },
-        data: {
-          status: 'generating',
-          generationStartedAt: book.generationStartedAt || new Date(),
-        },
-      });
-    }
+    // Always update timestamp before starting chapter generation
+    // This serves as a "heartbeat" so stale detection knows we're actively working
+    await prisma.book.update({
+      where: { id },
+      data: {
+        status: 'generating',
+        generationStartedAt: book.generationStartedAt || new Date(),
+        // updatedAt is automatically set by Prisma
+      },
+    });
 
     const chapterPlan = outline.chapters[nextChapterNum - 1];
     const characters = (book.characters as Array<{ name: string; description: string }>) || [];
