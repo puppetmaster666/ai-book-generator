@@ -51,8 +51,18 @@ export async function POST(request: NextRequest) {
     let emailsSent = 0;
     const errors: string[] = [];
 
+    // Helper to delay between emails (avoid rate limiting - Resend allows 2/sec)
+    const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
     // Process each user
-    for (const targetUser of users) {
+    for (let i = 0; i < users.length; i++) {
+      const targetUser = users[i];
+
+      // Add delay between emails (500ms = max 2 per second)
+      if (i > 0 && sendEmailNotification) {
+        await delay(500);
+      }
+
       try {
         // Add credits and create notification in a transaction
         await prisma.$transaction([
@@ -83,13 +93,40 @@ export async function POST(request: NextRequest) {
             html: emailContent.html,
           });
 
+          // Log the email
+          await prisma.emailLog.create({
+            data: {
+              to: targetUser.email,
+              subject: emailContent.subject,
+              template: 'free_credit',
+              status: sent ? 'sent' : 'failed',
+              userId: targetUser.id,
+              metadata: { creditsGifted: credits },
+            },
+          });
+
           if (sent) {
             emailsSent++;
           }
         }
       } catch (err) {
         failCount++;
-        errors.push(`Error for ${targetUser.email}: ${err instanceof Error ? err.message : 'Unknown error'}`);
+        const errorMsg = err instanceof Error ? err.message : 'Unknown error';
+        errors.push(`Error for ${targetUser.email}: ${errorMsg}`);
+
+        // Log failed email if we were trying to send
+        if (sendEmailNotification) {
+          await prisma.emailLog.create({
+            data: {
+              to: targetUser.email,
+              subject: `[free_credit] ${credits} credit(s)`,
+              template: 'free_credit',
+              status: 'failed',
+              error: errorMsg,
+              userId: targetUser.id,
+            },
+          }).catch(() => {}); // Don't fail if logging fails
+        }
       }
     }
 
