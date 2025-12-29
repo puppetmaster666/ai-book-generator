@@ -67,6 +67,7 @@ interface AdminStats {
     totalWords: number;
     totalChapters: number;
     currentChapter: number;
+    illustrationCount: number;
     createdAt: string;
     completedAt: string | null;
     email: string | null;
@@ -845,6 +846,7 @@ export default function AdminDashboard() {
                     <th className="text-left py-3 px-2 font-medium text-neutral-500">Status</th>
                     <th className="text-left py-3 px-2 font-medium text-neutral-500">Payment</th>
                     <th className="text-left py-3 px-2 font-medium text-neutral-500">Words</th>
+                    <th className="text-left py-3 px-2 font-medium text-neutral-500">Images</th>
                     <th className="text-left py-3 px-2 font-medium text-neutral-500">Created</th>
                     <th className="text-left py-3 px-2 font-medium text-neutral-500">Actions</th>
                   </tr>
@@ -895,6 +897,15 @@ export default function AdminDashboard() {
                       </td>
                       <td className="py-3 px-2 text-neutral-600">
                         {book.totalWords.toLocaleString()}
+                      </td>
+                      <td className="py-3 px-2 text-neutral-600">
+                        {book.illustrationCount > 0 ? (
+                          <span className="px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                            {book.illustrationCount}
+                          </span>
+                        ) : (
+                          <span className="text-neutral-400">-</span>
+                        )}
                       </td>
                       <td className="py-3 px-2 text-neutral-500">
                         <div>{new Date(book.createdAt).toLocaleDateString()}</div>
@@ -953,7 +964,7 @@ export default function AdminDashboard() {
                     {/* Expanded Book Details */}
                     {expandedBooks.has(book.id) && (
                       <tr className="bg-purple-50/50 border-b border-purple-100">
-                        <td colSpan={10} className="py-4 px-4">
+                        <td colSpan={11} className="py-4 px-4">
                           <div className="grid gap-4 md:grid-cols-2">
                             {/* Premise */}
                             <div className="md:col-span-2">

@@ -114,6 +114,10 @@ export async function GET(request: NextRequest) {
           user: {
             select: { email: true, name: true },
           },
+          // Count illustrations for visual books
+          _count: {
+            select: { illustrations: true },
+          },
         },
       }),
       // Books by format
@@ -190,7 +194,11 @@ export async function GET(request: NextRequest) {
         total: totalUsers,
         totalPages: Math.ceil(totalUsers / usersLimit),
       },
-      books: recentBooks,
+      books: recentBooks.map(b => ({
+        ...b,
+        illustrationCount: b._count.illustrations,
+        _count: undefined,
+      })),
       booksPagination: {
         page: booksPage,
         limit: booksLimit,

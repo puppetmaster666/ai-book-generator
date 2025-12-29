@@ -194,8 +194,9 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
         const data = await res.json();
         const loadedBook = data.book;
 
-        // Check if current user owns this book (or it's a guest book with no owner, or user is admin)
-        const isOwner = !loadedBook?.userId || loadedBook?.userId === currentUserId || isAdminUser;
+        // Check if current user is the ACTUAL owner (for triggering generation)
+        // Admins can view but shouldn't auto-trigger generation
+        const isActualOwnerOrGuest = !loadedBook?.userId || loadedBook?.userId === currentUserId;
 
         // Check if this is a visual book that needs generation (comics OR picture books)
         const isVisual = loadedBook?.bookFormat === 'picture_book' ||
@@ -205,8 +206,8 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
         const needsGeneration = success === 'true' ||
           (loadedBook?.paymentStatus === 'completed' && loadedBook?.status === 'pending');
 
-        // If it's a visual book that needs generation AND user owns it, redirect IMMEDIATELY
-        if (isVisual && needsGeneration && isOwner) {
+        // If it's a visual book that needs generation AND user is actual owner (not just admin viewing), redirect IMMEDIATELY
+        if (isVisual && needsGeneration && isActualOwnerOrGuest) {
           setRedirectingToComic(true);
           // Start timer for preparation phase
           startTimeRef.current = Date.now();
@@ -253,7 +254,9 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
 
         // Also check if it's a visual book that's already generating/has outline
         // and redirect to the comic generation page
-        if (isVisual && loadedBook?.status !== 'completed' && loadedBook?.status !== 'failed' && isOwner) {
+        // Note: Only redirect the ACTUAL owner (not admins viewing) - admins can view the status without running generation
+        const isActualOwner = loadedBook?.userId === currentUserId;
+        if (isVisual && loadedBook?.status !== 'completed' && loadedBook?.status !== 'failed' && isActualOwner) {
           const hasOutline = loadedBook?.outline && typeof loadedBook.outline === 'object';
           if (hasOutline || loadedBook?.status === 'generating' || loadedBook?.status === 'outlining') {
             console.log('Visual book already in progress, redirecting to comic generation page...');
@@ -331,7 +334,10 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
   // This avoids Vercel's 300-second timeout by breaking generation into smaller chunks
   useEffect(() => {
     if (!book || isVisualBook || redirectingToComic) return;
-    if (!isOwner) return; // Don't orchestrate for other users' books
+    // Only the ACTUAL owner should orchestrate (not admins viewing)
+    // This prevents conflicts when admin views while user is generating
+    const isActualOwnerForOrchestration = !book?.userId || book?.userId === currentUserId;
+    if (!isActualOwnerForOrchestration) return;
 
     // Start orchestrating when:
     // 1. Book is in 'generating' status (outline is ready)
