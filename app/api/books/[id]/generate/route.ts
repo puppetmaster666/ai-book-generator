@@ -1099,17 +1099,31 @@ export async function POST(
     console.error('Error generating book:', error);
 
     const { id } = await params;
+
+    // Check if this is a content moderation block
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const isContentBlocked = errorMessage.includes('PROHIBITED_CONTENT') ||
+                             errorMessage.includes('blocked') ||
+                             errorMessage.includes('safety');
+
     await prisma.book.update({
       where: { id },
       data: {
         status: 'failed',
-        errorMessage: error instanceof Error ? error.message : 'Unknown error',
+        errorMessage: isContentBlocked
+          ? 'content_blocked'
+          : errorMessage,
       },
     });
 
     return NextResponse.json(
-      { error: 'Failed to generate book' },
-      { status: 500 }
+      {
+        error: isContentBlocked
+          ? 'Content was blocked by AI safety filters. Please try with different content.'
+          : 'Failed to generate book',
+        contentBlocked: isContentBlocked,
+      },
+      { status: isContentBlocked ? 400 : 500 }
     );
   }
 }

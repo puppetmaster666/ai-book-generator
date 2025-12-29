@@ -112,6 +112,13 @@ function GenerateComicContent() {
         const data = await response.json();
         setBookData(data.book);
 
+        // Check if book failed due to content moderation
+        if (data.book.status === 'failed' && data.book.errorMessage === 'content_blocked') {
+          setError('Your book content was blocked by AI safety filters. Please create a new book with different content (avoid adult themes, violence, or controversial topics).');
+          setIsLoading(false);
+          return;
+        }
+
         // Initialize panels from outline
         if (data.book.outline?.chapters) {
           const initialPanels: Panel[] = data.book.outline.chapters.map((ch: Panel) => ({

@@ -46,6 +46,7 @@ interface Book {
   dialogueStyle: string | null;
   bookPreset: string | null;
   userId: string | null;
+  errorMessage?: string | null;
   outline?: {
     chapters: Array<{
       number: number;
@@ -213,6 +214,14 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
               body: JSON.stringify({ outlineOnly: true }),
             });
             const genData = await genRes.json();
+
+            // Check for content blocked error - don't redirect, show error
+            if (genData.contentBlocked) {
+              setRedirectingToComic(false);
+              setError('Your book content was blocked by AI safety filters. Please create a new book with different content (avoid adult themes, violence, or controversial topics).');
+              setLoading(false);
+              return;
+            }
 
             // Always redirect to comic generation page for visual books
             // Even if outline generation returned an unexpected response,
@@ -1035,8 +1044,34 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
             </div>
           )}
 
+          {/* Failed Section - Content Blocked */}
+          {book.status === 'failed' && book.errorMessage === 'content_blocked' && (
+            <div className="bg-white rounded-2xl border border-red-200 p-8 mb-6">
+              <div className="text-center">
+                <div className="w-16 h-16 mx-auto mb-4 bg-red-50 rounded-full flex items-center justify-center">
+                  <AlertCircle className="h-8 w-8 text-red-500" />
+                </div>
+                <h2 className="text-xl font-semibold text-neutral-900 mb-2">
+                  Content Blocked
+                </h2>
+                <p className="text-neutral-600 mb-4">
+                  Your book content was blocked by AI safety filters.
+                </p>
+                <p className="text-sm text-neutral-500 mb-6">
+                  Please create a new book with different content. Avoid adult themes, explicit violence, or controversial topics.
+                </p>
+                <Link
+                  href="/create"
+                  className="inline-flex items-center gap-2 px-6 py-3 bg-neutral-900 text-white rounded-full hover:bg-neutral-800 font-medium transition-colors"
+                >
+                  Create New Book
+                </Link>
+              </div>
+            </div>
+          )}
+
           {/* Failed Section - Retry Available */}
-          {book.status === 'failed' && (
+          {book.status === 'failed' && book.errorMessage !== 'content_blocked' && (
             <div className="bg-white rounded-2xl border border-neutral-200 p-8 mb-6">
               <div className="text-center">
                 <div className="w-16 h-16 mx-auto mb-4 bg-neutral-100 rounded-full flex items-center justify-center">
