@@ -84,9 +84,9 @@ export const ART_STYLES = {
   },
   manga: {
     label: 'Manga',
-    description: 'Japanese manga black and white',
-    prompt: 'manga illustration style, black and white, screentones, expressive eyes, dynamic action lines, Japanese comic aesthetic, monochrome ink style',
-    coverStyle: 'manga style artwork',
+    description: 'Japanese anime-style with vibrant colors',
+    prompt: 'anime illustration style, vibrant colors, expressive eyes, dynamic action lines, Japanese anime aesthetic, clean linework, cel-shaded coloring, beautiful detailed backgrounds',
+    coverStyle: 'anime style artwork with vibrant colors',
     category: 'comic',
   },
   superhero: {

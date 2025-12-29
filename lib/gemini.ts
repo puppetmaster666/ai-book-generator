@@ -307,6 +307,10 @@ const IDEA_EXAMPLES: Record<Exclude<IdeaCategory, 'random'>, string[][]> = {
       "When the ancient wizard community finally discovers the internet, they immediately start the most chaotic online forum wars in human history, complete with actual magical attacks embedded in their posts. Flame wars take on a whole new meaning when participants can cast literal fireballs through their keyboards, and the moderators are completely overwhelmed trying to enforce rules against cursing. Someone is going to accidentally start the apocalypse over a disagreement about the best levitation spell.",
       "After decades of trying to conquer the world and battling his nemesis Captain Courage, the supervillain Doctor Menace retires and becomes a kindergarten teacher, finding unexpected joy in helping small children learn to read. Everything is peaceful until he discovers that his new class includes the five year old son of Captain Courage, and that child is the most difficult, uncontrollable, and frankly villainous kid he has ever met. Doctor Menace has faced death rays and robot armies, but nothing prepared him for this.",
     ],
+    [
+      "Sakura Amano, a shy high school girl with long pink hair, discovers she can see and talk to ghosts after finding a mysterious ancient mirror hidden in her grandmother's attic. The spirits reveal they are trapped between worlds because of unfinished business, and only Sakura can help them find peace by solving the mysteries of their deaths. But the more she helps the dead, the more attention she attracts from a dangerous spirit collector who wants to use her gift for darker purposes.",
+      "Transfer student Hiro Nakamura discovers that his new school is secretly a training academy for teenagers who can transform into powerful elemental warriors, and he is the only student in a hundred years born with all five elemental affinities. His classmates are suspicious of his overwhelming power, his teachers push him to his limits, and a mysterious organization is already hunting him before he even learns to control his abilities. The fate of two worlds rests on whether he can master his powers before graduation.",
+    ],
   ],
   adult_comic: [
     [
@@ -1154,7 +1158,8 @@ export function buildIllustrationPromptFromScene(
     if (relevantChars.length > 0) {
       characterDescriptions = relevantChars.map(c => {
         const action = scene.characterActions[c.name] || '';
-        return `${c.name}: ${c.physicalDescription}, wearing ${c.clothing}, ${c.distinctiveFeatures}${action ? `. Action: ${action}` : ''}`;
+        // Include color palette for better consistency
+        return `${c.name}: ${c.physicalDescription}, wearing ${c.clothing}, ${c.distinctiveFeatures}. Colors: ${c.colorPalette}${action ? `. Action: ${action}` : ''}`;
       }).join('. ');
     }
   }
@@ -1170,9 +1175,9 @@ export function buildIllustrationPromptFromScene(
   // Add scene description
   prompt += `${scene.description}. `;
 
-  // Add character details
+  // Add character details with consistency emphasis
   if (characterDescriptions) {
-    prompt += `Characters: ${characterDescriptions}. `;
+    prompt += `IMPORTANT - Draw these characters EXACTLY as described (maintain consistent appearance): ${characterDescriptions}. `;
   } else if (scene.characters.length > 0) {
     const actions = Object.entries(scene.characterActions)
       .map(([char, action]) => `${char}: ${action}`)
@@ -1201,6 +1206,11 @@ export function buildIllustrationPromptFromScene(
       'four-panel': 'IMPORTANT: Draw this as a COMIC PAGE with 4 PANELS in a 2x2 grid layout. Each panel shows a quick sequential moment for action pacing. Use clear panel borders and consistent gutters.',
     };
     prompt += ` ${layoutInstructions[panelLayout]} `;
+  }
+
+  // Add consistency reminder for character appearances
+  if (characterDescriptions) {
+    prompt += 'Ensure all characters match their described physical features, hair color, eye color, and clothing exactly. ';
   }
 
   // Add critical instructions
