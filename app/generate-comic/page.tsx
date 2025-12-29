@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
-import { Loader2, Check, X, Download, AlertCircle, RefreshCw, StopCircle, Clock } from 'lucide-react';
+import { Loader2, Check, X, Download, AlertCircle, RefreshCw, StopCircle, Clock, ShieldAlert } from 'lucide-react';
 
 // Format elapsed time as MM:SS
 function formatTime(seconds: number): string {
@@ -67,6 +67,8 @@ function GenerateComicContent() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [isAssembling, setIsAssembling] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [isEmergencyStopping, setIsEmergencyStopping] = useState(false);
   const [error, setError] = useState('');
   const [allComplete, setAllComplete] = useState(false);
   const [elapsedTime, setElapsedTime] = useState(0);
@@ -119,12 +121,44 @@ function GenerateComicContent() {
           return;
         }
 
-        // Initialize panels from outline
+        // If book is already completed, redirect to book page
+        if (data.book.status === 'completed') {
+          router.replace(`/book/${bookId}`);
+          return;
+        }
+
+        // Check if current user is admin
+        try {
+          const userRes = await fetch('/api/user');
+          if (userRes.ok) {
+            const userData = await userRes.json();
+            setIsAdmin(userData.user?.isAdmin || false);
+          }
+        } catch {
+          // Ignore - just means not admin
+        }
+
+        // Initialize panels from outline, checking for existing illustrations
         if (data.book.outline?.chapters) {
-          const initialPanels: Panel[] = data.book.outline.chapters.map((ch: Panel) => ({
-            ...ch,
-            status: 'pending' as const,
-          }));
+          // Get existing illustrations by chapter/page number
+          const existingIllustrations = new Map<number, string>();
+          if (data.book.illustrations) {
+            data.book.illustrations.forEach((ill: { pageNumber?: number; chapterNumber?: number; imageUrl?: string }) => {
+              const num = ill.pageNumber || ill.chapterNumber;
+              if (num && ill.imageUrl) {
+                existingIllustrations.set(num, ill.imageUrl);
+              }
+            });
+          }
+
+          const initialPanels: Panel[] = data.book.outline.chapters.map((ch: Panel) => {
+            const existingImage = existingIllustrations.get(ch.number);
+            return {
+              ...ch,
+              status: existingImage ? 'done' as const : 'pending' as const,
+              imageUrl: existingImage,
+            };
+          });
           setPanels(initialPanels);
         }
       } catch (err) {
@@ -136,7 +170,7 @@ function GenerateComicContent() {
     };
 
     loadBook();
-  }, [bookId]);
+  }, [bookId, router]);
 
   // Check if all panels are complete
   useEffect(() => {
@@ -266,6 +300,38 @@ function GenerateComicContent() {
         console.error('Failed to delete book:', e);
       }
       router.push('/');
+    }
+  }, [bookId, router]);
+
+  // Emergency stop for admins - marks book as completed immediately
+  const emergencyStop = useCallback(async () => {
+    if (!confirm('ADMIN: Force mark this book as completed? This will stop all generation.')) {
+      return;
+    }
+
+    setIsEmergencyStopping(true);
+
+    // Abort all pending requests
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+
+    try {
+      // Call API to mark book as completed
+      const response = await fetch(`/api/books/${bookId}/emergency-stop`, {
+        method: 'POST',
+      });
+
+      if (response.ok) {
+        router.replace(`/book/${bookId}`);
+      } else {
+        setError('Failed to stop generation');
+        setIsEmergencyStopping(false);
+      }
+    } catch (err) {
+      console.error('Emergency stop failed:', err);
+      setError('Failed to stop generation');
+      setIsEmergencyStopping(false);
     }
   }, [bookId, router]);
 
@@ -425,6 +491,27 @@ function GenerateComicContent() {
                   <>
                     <StopCircle className="h-5 w-5" />
                     Cancel Generation
+                  </>
+                )}
+              </button>
+            )}
+
+            {/* Admin Emergency Stop */}
+            {isAdmin && (
+              <button
+                onClick={emergencyStop}
+                disabled={isEmergencyStopping}
+                className="flex items-center gap-2 px-6 py-4 bg-red-600 text-white rounded-full hover:bg-red-700 disabled:opacity-50 font-medium transition-all"
+              >
+                {isEmergencyStopping ? (
+                  <>
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                    Stopping...
+                  </>
+                ) : (
+                  <>
+                    <ShieldAlert className="h-5 w-5" />
+                    ADMIN: Force Complete
                   </>
                 )}
               </button>

@@ -145,6 +145,23 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Check if book is already completed - prevent generating more panels
+    const book = await prisma.book.findUnique({
+      where: { id: bookId },
+      select: { status: true },
+    });
+
+    if (!book) {
+      return NextResponse.json({ error: 'Book not found' }, { status: 404 });
+    }
+
+    if (book.status === 'completed') {
+      return NextResponse.json(
+        { error: 'Book is already completed. Cannot generate more panels.' },
+        { status: 400 }
+      );
+    }
+
     // Get art style prompt
     const styleConfig = artStyle ? ART_STYLES[artStyle as ArtStyleKey] : null;
     const artStylePrompt = styleConfig?.prompt || 'professional book illustration';
