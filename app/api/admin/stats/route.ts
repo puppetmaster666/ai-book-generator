@@ -80,6 +80,7 @@ export async function GET(request: NextRequest) {
           plan: true,
           freeBookUsed: true,
           freeCredits: true,
+          passwordHash: true, // To determine auth method (email vs Google)
           createdAt: true,
           _count: { select: { books: true } },
         },
@@ -146,8 +147,15 @@ export async function GET(request: NextRequest) {
         totalTransactions,
       },
       users: recentUsers.map(u => ({
-        ...u,
+        id: u.id,
+        email: u.email,
+        name: u.name,
+        plan: u.plan,
+        freeBookUsed: u.freeBookUsed,
+        freeCredits: u.freeCredits,
+        createdAt: u.createdAt,
         booksCount: u._count.books,
+        authMethod: u.passwordHash ? 'email' : 'google', // Determine based on password presence
       })),
       usersPagination: {
         page: usersPage,
