@@ -8,6 +8,7 @@ import {
   getFreeCreditEmail,
   getAnnouncementEmail,
   getAnnouncementEmailWithCredit,
+  getBugApologyEmail,
   EmailTemplateId,
 } from '@/lib/email-templates';
 
@@ -111,6 +112,23 @@ export async function POST(request: NextRequest) {
                 customMessage
               );
             }
+            break;
+          case 'bug_apology':
+            // Bug apology template - always includes 1 claimable credit
+            const bugToken = randomBytes(32).toString('hex');
+
+            // Create CreditClaim record (expires in 30 days)
+            await prisma.creditClaim.create({
+              data: {
+                token: bugToken,
+                userId: targetUser.id,
+                credits: 1,
+                expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
+              },
+            });
+
+            const bugClaimUrl = `${APP_URL}/claim-credit?token=${bugToken}`;
+            emailContent = getBugApologyEmail(targetUser.name || 'there', bugClaimUrl);
             break;
           default:
             throw new Error(`Unknown template: ${template}`);

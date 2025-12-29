@@ -201,6 +201,11 @@ export const EMAIL_TEMPLATES = {
     label: 'Announcement',
     description: 'Custom message',
   },
+  bug_apology: {
+    id: 'bug_apology',
+    label: 'Bug Apology',
+    description: 'Apologize for generation bug + 1 free credit',
+  },
 } as const;
 
 export type EmailTemplateId = keyof typeof EMAIL_TEMPLATES;
@@ -255,6 +260,43 @@ export function getAnnouncementEmailWithCredit(
 
       <p style="color: #737373; font-size: 14px; margin-top: 32px;">
         — DraftMyBook
+      </p>
+    `),
+  };
+}
+
+// Bug apology email - sent when a generation bug occurred
+export function getBugApologyEmail(
+  userName: string,
+  claimUrl: string
+): { subject: string; html: string } {
+  const firstName = userName?.split(' ')[0] || 'there';
+
+  return {
+    subject: "We're sorry - here's a free credit on us",
+    html: emailWrapper(`
+      <p style="color: #525252; font-size: 15px; margin: 0 0 24px 0;">Hi ${firstName},</p>
+
+      <div style="color: #171717; font-size: 15px; line-height: 1.7;">
+        <p style="margin: 0 0 16px 0;">
+          We noticed that something went wrong during your recent book generation, and we sincerely apologize for the inconvenience.
+        </p>
+        <p style="margin: 0 0 16px 0;">
+          DraftMyBook is still in beta, and while we're working hard to squash every bug, sometimes things slip through. We really appreciate your patience as we continue to improve.
+        </p>
+        <p style="margin: 0 0 16px 0;">
+          To make it up to you, we're giving you <strong>1 free book credit</strong> so you can try again. Just click the button below to claim it.
+        </p>
+      </div>
+
+      ${getCreditGiftSection(1, claimUrl)}
+
+      <p style="color: #171717; font-size: 15px; line-height: 1.7; margin: 0 0 16px 0;">
+        Thank you for being an early supporter of DraftMyBook. Your feedback helps us build a better product for everyone.
+      </p>
+
+      <p style="color: #737373; font-size: 14px; margin-top: 32px;">
+        — The DraftMyBook Team
       </p>
     `),
   };
