@@ -7,6 +7,7 @@ import Header from '@/components/Header';
 import { Download, BookOpen, Loader2, Check, AlertCircle, ImageIcon, Mail, Palette, PenTool, Clock, Zap, AlertTriangle, Save, Trash2, RefreshCw, X } from 'lucide-react';
 import { useGeneratingBook } from '@/contexts/GeneratingBookContext';
 import Link from 'next/link';
+import FirstBookDiscountPopup from '@/components/FirstBookDiscountPopup';
 
 interface Chapter {
   id: string;
@@ -133,6 +134,8 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [cancelling, setCancelling] = useState(false);
+  const [showFirstBookDiscount, setShowFirstBookDiscount] = useState(false);
+  const [isFirstCompletedBook, setIsFirstCompletedBook] = useState(false);
   const [chapterStatuses, setChapterStatuses] = useState<ChapterCardStatus[]>([]);
   const [serverStartTime, setServerStartTime] = useState<Date | null>(null);
   const startTimeRef = useRef<number | null>(null);
@@ -246,6 +249,7 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
         // Not a comic, or already in progress - show this page
         setBook(loadedBook);
         lastKnownChapterCountRef.current = loadedBook?.chapters?.length || 0;
+        setIsFirstCompletedBook(data.isFirstCompletedBook || false);
         setLoading(false);
       } catch (err) {
         setError('Failed to load book');
@@ -617,6 +621,28 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
     return () => clearInterval(interval);
   }, [id, book?.status, retrying, serverStartTime]);
 
+  // Show first book discount popup
+  useEffect(() => {
+    if (book?.status === 'completed' && isFirstCompletedBook) {
+      // Check if user has already seen this popup
+      const dismissedKey = `firstBookDiscount_${id}`;
+      const dismissed = localStorage.getItem(dismissedKey);
+      if (!dismissed) {
+        // Small delay to let the completion UI render first
+        const timer = setTimeout(() => {
+          setShowFirstBookDiscount(true);
+        }, 1500);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [book?.status, isFirstCompletedBook, id]);
+
+  const handleDismissFirstBookDiscount = () => {
+    setShowFirstBookDiscount(false);
+    // Remember that user dismissed this popup
+    localStorage.setItem(`firstBookDiscount_${id}`, 'true');
+  };
+
   const handleDownload = () => {
     window.open(`/api/books/${id}/download`, '_blank');
   };
@@ -849,6 +875,11 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
   return (
     <div className="min-h-screen bg-white">
       <Header />
+
+      {/* First Book Discount Popup */}
+      {showFirstBookDiscount && (
+        <FirstBookDiscountPopup onDismiss={handleDismissFirstBookDiscount} />
+      )}
 
       {/* Delete Confirmation Modal */}
       {showDeleteConfirm && (

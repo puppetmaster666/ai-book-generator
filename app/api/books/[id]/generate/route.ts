@@ -1068,7 +1068,20 @@ export async function POST(
     // Send email notification if email is available
     if (book.email) {
       const bookUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/book/${id}`;
-      const emailContent = getBookReadyEmail(book.title, book.authorName, bookUrl);
+
+      // Check if this is the user's first completed book (for discount offer)
+      let isFirstBook = false;
+      if (book.userId) {
+        const completedBooksCount = await prisma.book.count({
+          where: {
+            userId: book.userId,
+            status: 'completed',
+          },
+        });
+        isFirstBook = completedBooksCount === 1; // This book is the only completed one
+      }
+
+      const emailContent = getBookReadyEmail(book.title, book.authorName, bookUrl, { isFirstBook });
       await sendEmail({
         to: book.email,
         subject: emailContent.subject,

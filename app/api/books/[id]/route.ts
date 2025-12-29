@@ -49,12 +49,24 @@ export async function GET(
 
     // Check if user is eligible for free book
     let freeBookEligible = false;
+    let isFirstCompletedBook = false;
     if (book.userId) {
       const user = await prisma.user.findUnique({
         where: { id: book.userId },
         select: { freeBookUsed: true },
       });
       freeBookEligible = user ? !user.freeBookUsed : false;
+
+      // Check if this is user's first completed book (for discount popup)
+      if (book.status === 'completed') {
+        const completedBooksCount = await prisma.book.count({
+          where: {
+            userId: book.userId,
+            status: 'completed',
+          },
+        });
+        isFirstCompletedBook = completedBooksCount === 1;
+      }
     }
 
     // Transform illustrations to use API URLs instead of inline base64
@@ -73,7 +85,7 @@ export async function GET(
       })),
     };
 
-    return NextResponse.json({ book: transformedBook, freeBookEligible });
+    return NextResponse.json({ book: transformedBook, freeBookEligible, isFirstCompletedBook });
   } catch (error) {
     console.error('Error fetching book:', error);
     return NextResponse.json(

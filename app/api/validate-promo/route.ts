@@ -8,6 +8,11 @@ const HARDCODED_PROMOS: Record<string, { discount: number; validUntil: Date; des
     validUntil: new Date('2026-01-02T00:00:00Z'),
     description: 'New Year 2026 Special - 50% Off',
   },
+  'SECOND50': {
+    discount: 0.50,
+    validUntil: new Date('2030-01-01T00:00:00Z'),
+    description: '50% Off Your Second Book',
+  },
 };
 
 export async function POST(request: NextRequest) {

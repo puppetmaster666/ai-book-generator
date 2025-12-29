@@ -121,7 +121,20 @@ export function getFreeCreditEmail(userName: string, credits: number): { subject
   };
 }
 
-export function getBookReadyEmail(bookTitle: string, authorName: string, bookUrl: string): { subject: string; html: string } {
+export function getBookReadyEmail(
+  bookTitle: string,
+  authorName: string,
+  bookUrl: string,
+  options?: { isFirstBook?: boolean }
+): { subject: string; html: string } {
+  const firstBookDiscount = options?.isFirstBook ? `
+      <div style="background-color: #171717; border-radius: 12px; padding: 24px; margin: 24px 0; text-align: center;">
+        <p style="color: #ffffff; font-size: 14px; margin: 0 0 8px 0;">Your next book is</p>
+        <p style="color: #BFFF00; font-size: 32px; font-weight: 700; margin: 0 0 8px 0; line-height: 1;">50% OFF</p>
+        <p style="color: #a3a3a3; font-size: 13px; margin: 0 0 16px 0;">Use code <strong style="color: #ffffff;">SECOND50</strong> at checkout</p>
+      </div>
+  ` : '';
+
   return {
     subject: `Your book is ready: ${bookTitle}`,
     html: emailWrapper(`
@@ -159,6 +172,8 @@ export function getBookReadyEmail(bookTitle: string, authorName: string, bookUrl
       </div>
 
       ${ctaButton('Download Book', bookUrl)}
+
+      ${firstBookDiscount}
 
       <p style="color: #737373; font-size: 13px; margin: 32px 0 0 0; text-align: center;">
         <a href="${APP_URL}/create" style="color: #171717; text-decoration: none;">Create another book</a>
