@@ -333,8 +333,8 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
     const orchestrateGeneration = async () => {
       orchestrationRef.current = true;
 
-      let retryCount = 0;
-      const maxRetries = 3;
+      let consecutiveErrors = 0;
+      const maxConsecutiveErrors = 10; // Only stop after 10 consecutive REAL errors (not timeouts)
 
       while (orchestrationRef.current && orchestrationSessionRef.current === currentSession) {
         try {
@@ -344,8 +344,45 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
             break;
           }
 
+          // First, check current book status - the chapter might have completed during a timeout
+          const statusRes = await fetch(`/api/books/${id}/status`);
+          if (statusRes.ok) {
+            const statusData = await statusRes.json();
+            const serverChapterCount = statusData.status?.chapterCount || 0;
+            const localChapterCount = lastKnownChapterCountRef.current;
+
+            // If server has more chapters, fetch full data and update
+            if (serverChapterCount > localChapterCount) {
+              console.log(`[Session ${currentSession}] Detected new chapters on server (${localChapterCount} -> ${serverChapterCount})`);
+              const fullRes = await fetch(`/api/books/${id}`);
+              if (fullRes.ok) {
+                const fullData = await fullRes.json();
+                setBook(fullData.book);
+                lastKnownChapterCountRef.current = fullData.book?.chapters?.length || 0;
+
+                // Update chapter statuses
+                if (fullData.book?.chapters) {
+                  setChapterStatuses(prev => prev.map(ch => {
+                    const serverChapter = fullData.book.chapters.find((c: { number: number }) => c.number === ch.number);
+                    if (serverChapter) {
+                      return { ...ch, status: 'done' as const, wordCount: serverChapter.wordCount };
+                    }
+                    return ch;
+                  }));
+                }
+
+                // Check if book is complete
+                if (fullData.book?.status === 'completed') {
+                  console.log(`[Session ${currentSession}] Book completed!`);
+                  orchestrationRef.current = false;
+                  break;
+                }
+              }
+            }
+          }
+
           // Mark current chapter as generating in the UI
-          const nextChapterNum = book.currentChapter + 1;
+          const nextChapterNum = (lastKnownChapterCountRef.current || 0) + 1;
           setChapterStatuses(prev => prev.map(ch =>
             ch.number === nextChapterNum ? { ...ch, status: 'generating' as const, error: undefined } : ch
           ));
@@ -353,10 +390,14 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
           console.log(`[Session ${currentSession}] Orchestrating: generating chapter ${nextChapterNum}...`);
           const res = await fetch(`/api/books/${id}/generate-next`, { method: 'POST' });
 
-          // Detect Vercel timeouts (502, 503, 504) - these need retry
+          // Detect Vercel timeouts (502, 503, 504) - these are NOT failures, just timeouts
+          // The chapter generation might have actually completed on the server
           if (res.status === 502 || res.status === 503 || res.status === 504) {
-            console.error(`[Session ${currentSession}] Server timeout (${res.status}), will retry...`);
-            throw new Error(`Server timeout (${res.status})`);
+            console.log(`[Session ${currentSession}] Server timeout (${res.status}) - will check status and retry...`);
+            // Don't increment error count for timeouts - they're expected with long generations
+            // Wait a bit then check if chapter completed
+            await new Promise(resolve => setTimeout(resolve, 5000));
+            continue; // Go back to top of loop which checks status first
           }
 
           // Handle empty/malformed responses
@@ -365,7 +406,9 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
             data = await res.json();
           } catch (parseError) {
             console.error('Failed to parse response:', parseError);
-            throw new Error('Server returned invalid response');
+            // Might be a timeout, check status and retry
+            await new Promise(resolve => setTimeout(resolve, 3000));
+            continue;
           }
 
           if (!res.ok) {
@@ -378,8 +421,8 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
             throw new Error(data.error || 'Generation failed');
           }
 
-          // Reset retry count on success
-          retryCount = 0;
+          // Reset error count on success
+          consecutiveErrors = 0;
 
           if (data.done) {
             console.log(`[Session ${currentSession}] Orchestration complete: all chapters generated`);
@@ -416,10 +459,11 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
 
         } catch (err) {
           console.error(`[Session ${currentSession}] Orchestration error:`, err);
-          retryCount++;
+          consecutiveErrors++;
 
-          if (retryCount >= maxRetries) {
-            console.error(`[Session ${currentSession}] Max retries (${maxRetries}) reached, stopping orchestration`);
+          // Only stop after many consecutive REAL errors (not timeouts)
+          if (consecutiveErrors >= maxConsecutiveErrors) {
+            console.error(`[Session ${currentSession}] Too many consecutive errors (${maxConsecutiveErrors}), stopping orchestration`);
             orchestrationRef.current = false;
 
             // Mark current chapter as error in the UI
@@ -444,9 +488,9 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
             break;
           }
 
-          // Wait before retrying (exponential backoff)
-          const waitTime = Math.min(1000 * Math.pow(2, retryCount), 10000);
-          console.log(`[Session ${currentSession}] Retrying in ${waitTime}ms (attempt ${retryCount}/${maxRetries})`);
+          // Wait before retrying (exponential backoff, capped at 30 seconds)
+          const waitTime = Math.min(1000 * Math.pow(2, consecutiveErrors), 30000);
+          console.log(`[Session ${currentSession}] Retrying in ${waitTime}ms (consecutive errors: ${consecutiveErrors}/${maxConsecutiveErrors})`);
           await new Promise(resolve => setTimeout(resolve, waitTime));
         }
       }
