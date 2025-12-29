@@ -72,10 +72,55 @@ function detectLanguageInstruction(text: string): string {
 }
 
 // Helper to clean and parse JSON from LLM responses
+// Check if JSON appears to be truncated (incomplete)
+function isJSONTruncated(response: string): boolean {
+  const cleaned = response
+    .replace(/```json\s*/gi, '')
+    .replace(/```\s*/g, '')
+    .trim();
+
+  // Count opening and closing braces/brackets
+  let braceCount = 0;
+  let bracketCount = 0;
+  let inString = false;
+  let escapeNext = false;
+
+  for (const char of cleaned) {
+    if (escapeNext) {
+      escapeNext = false;
+      continue;
+    }
+    if (char === '\\' && inString) {
+      escapeNext = true;
+      continue;
+    }
+    if (char === '"') {
+      inString = !inString;
+      continue;
+    }
+    if (!inString) {
+      if (char === '{') braceCount++;
+      if (char === '}') braceCount--;
+      if (char === '[') bracketCount++;
+      if (char === ']') bracketCount--;
+    }
+  }
+
+  // If we're still inside a string or have unbalanced braces, it's truncated
+  return inString || braceCount !== 0 || bracketCount !== 0;
+}
+
 function parseJSONFromResponse(response: string): object {
   console.log('Raw LLM response length:', response.length);
   console.log('Raw LLM response start:', response.substring(0, 300));
   console.log('Raw LLM response end:', response.substring(response.length - 200));
+
+  // Check for truncation before attempting parse
+  if (isJSONTruncated(response)) {
+    console.error('JSON appears to be truncated (unbalanced braces/brackets or unclosed string)');
+    console.error('Response ends with:', response.substring(response.length - 500));
+    throw new Error('JSON_TRUNCATED: Response was cut off before completion');
+  }
 
   // Remove markdown code blocks if present
   let cleaned = response
@@ -655,6 +700,14 @@ STORY PACING:
 15. Include intimate moments (close-ups of faces/hands)
 16. Avoid repetitive staging - no "character standing and talking" on multiple pages
 
+CRITICAL - CONCISE OUTPUT:
+17. Keep ALL descriptions SHORT (1-2 sentences max per field)
+18. Scene descriptions: MAX 20 words
+19. Character actions: MAX 10 words per character
+20. Background: MAX 15 words
+21. Do NOT pad with unnecessary words - be direct and specific
+22. Complete the ENTIRE JSON structure - do not stop mid-response
+
 Output ONLY valid JSON:
 {
   "chapters": [
@@ -684,12 +737,45 @@ Output ONLY valid JSON:
   ]
 }`;
 
-  const result = await getGeminiPro().generateContent(prompt);
-  const response = result.response.text();
+  // Retry logic for truncation
+  const maxAttempts = 3;
+  let lastError: Error | null = null;
 
-  return parseJSONFromResponse(response) as {
-    chapters: VisualChapter[];
-  };
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      console.log(`generateIllustratedOutline: attempt ${attempt}/${maxAttempts}`);
+      const result = await getGeminiPro().generateContent(prompt);
+      const response = result.response.text();
+
+      // Log finish reason for debugging
+      const candidate = result.response.candidates?.[0];
+      if (candidate?.finishReason) {
+        console.log(`Finish reason: ${candidate.finishReason}`);
+        if (candidate.finishReason === 'MAX_TOKENS') {
+          console.warn('Response hit MAX_TOKENS limit - may be truncated');
+        }
+      }
+
+      return parseJSONFromResponse(response) as {
+        chapters: VisualChapter[];
+      };
+    } catch (error) {
+      lastError = error as Error;
+      const errorMsg = lastError.message || '';
+
+      // Only retry on truncation errors
+      if (errorMsg.includes('JSON_TRUNCATED') && attempt < maxAttempts) {
+        console.log(`JSON truncation detected, retrying (attempt ${attempt + 1}/${maxAttempts})...`);
+        // Small delay before retry
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        continue;
+      }
+
+      throw lastError;
+    }
+  }
+
+  throw lastError || new Error('Failed to generate illustrated outline after retries');
 }
 
 export async function generateOutline(bookData: {

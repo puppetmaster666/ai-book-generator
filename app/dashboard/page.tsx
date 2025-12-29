@@ -6,7 +6,7 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
-import { BookOpen, Plus, Download, Clock, Check, AlertCircle, Coins, Gift, Sparkles } from 'lucide-react';
+import { BookOpen, Plus, Download, Clock, Check, AlertCircle } from 'lucide-react';
 
 interface Book {
   id: string;
@@ -115,49 +115,26 @@ export default function Dashboard() {
 
           {/* Credits Section */}
           {userInfo && (
-            <div className="mb-8 bg-gradient-to-r from-neutral-50 to-neutral-100 rounded-2xl border border-neutral-200 p-6">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-neutral-900 rounded-xl flex items-center justify-center">
-                    <Coins className="h-6 w-6 text-white" />
-                  </div>
-                  <div>
-                    <h2 className="font-semibold text-lg" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>
-                      Your Credits
-                    </h2>
-                    <p className="text-neutral-600 text-sm">
-                      {userInfo.plan === 'free' ? 'Free Plan' : userInfo.plan === 'monthly' ? 'Monthly Plan' : 'Yearly Plan'}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-6">
-                  {/* First Book Free Badge */}
-                  {userInfo.hasFirstBookFree && (
-                    <div className="flex items-center gap-2 px-4 py-2 bg-green-50 border border-green-200 rounded-xl">
-                      <Gift className="h-5 w-5 text-green-600" />
-                      <span className="text-green-700 font-medium">First Book FREE!</span>
-                    </div>
-                  )}
-
-                  {/* Credits Count */}
-                  {userInfo.totalCredits > 0 && (
-                    <div className="flex items-center gap-2 px-4 py-2 bg-amber-50 border border-amber-200 rounded-xl">
-                      <Sparkles className="h-5 w-5 text-amber-600" />
-                      <span className="text-amber-700 font-medium">
-                        {userInfo.totalCredits} Credit{userInfo.totalCredits !== 1 ? 's' : ''} Available
-                      </span>
-                    </div>
-                  )}
-
-                  {/* No Credits Message */}
-                  {!userInfo.hasFirstBookFree && userInfo.totalCredits === 0 && (
-                    <div className="text-neutral-500 text-sm">
-                      No credits available
-                    </div>
-                  )}
-                </div>
-              </div>
+            <div className="mb-8 flex items-center gap-4 text-sm">
+              {userInfo.hasFirstBookFree && (
+                <Link
+                  href="/create"
+                  className="px-3 py-1.5 bg-neutral-100 border border-neutral-200 rounded-lg hover:bg-neutral-200 transition-colors font-medium text-neutral-900"
+                >
+                  First book free
+                </Link>
+              )}
+              {userInfo.totalCredits > 0 && (
+                <Link
+                  href="/create"
+                  className="px-3 py-1.5 bg-neutral-100 border border-neutral-200 rounded-lg hover:bg-neutral-200 transition-colors font-medium text-neutral-900"
+                >
+                  Credits: {userInfo.totalCredits}
+                </Link>
+              )}
+              {!userInfo.hasFirstBookFree && userInfo.totalCredits === 0 && (
+                <span className="text-neutral-500">No credits</span>
+              )}
             </div>
           )}
 
