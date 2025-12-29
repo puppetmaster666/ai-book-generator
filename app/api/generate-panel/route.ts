@@ -151,6 +151,8 @@ export async function POST(request: NextRequest) {
       select: {
         status: true,
         bookFormat: true,
+        dialogueStyle: true,
+        bookPreset: true,
         _count: { select: { illustrations: true } },
       },
     });
@@ -167,7 +169,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Check max illustrations limit based on format
-    const maxIllustrations = book.bookFormat === 'comic' ? 24 : 20;
+    // Comics (24 panels): bookFormat=comic_book OR dialogueStyle=bubbles OR bookPreset=comic_story
+    // Picture books (20 pages): everything else
+    const isComic = book.bookFormat === 'comic_book' ||
+                    book.bookFormat === 'comic' ||
+                    book.dialogueStyle === 'bubbles' ||
+                    book.bookPreset === 'comic_story';
+    const maxIllustrations = isComic ? 24 : 20;
     if (book._count.illustrations >= maxIllustrations) {
       return NextResponse.json(
         { error: `Maximum illustrations (${maxIllustrations}) reached for this book format.` },
