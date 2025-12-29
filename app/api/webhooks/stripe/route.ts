@@ -43,11 +43,16 @@ export async function POST(request: NextRequest) {
 
         // Handle one-time purchase
         if (productType === 'one-time' && bookId) {
+          // Save the customer email to the book for completion notifications
+          const customerEmail = session.customer_email;
+
           await prisma.book.update({
             where: { id: bookId },
             data: {
               paymentStatus: 'completed',
               paymentId: session.id,
+              // Save email for completion notification (only if book doesn't have one yet)
+              ...(customerEmail && { email: customerEmail.toLowerCase() }),
             },
           });
 

@@ -52,6 +52,7 @@ export async function GET(request: NextRequest) {
       booksByFormat,
       booksByGenre,
       dailyStats,
+      anonymousContacts,
     ] = await Promise.all([
       // Total users
       prisma.user.count(),
@@ -129,6 +130,26 @@ export async function GET(request: NextRequest) {
         GROUP BY DATE("createdAt")
         ORDER BY date DESC
       ` as Promise<Array<{ date: Date; books_created: bigint }>>,
+      // Anonymous contacts (books with email but no userId that have paid)
+      prisma.book.findMany({
+        where: {
+          userId: null,
+          email: { not: null },
+          paymentStatus: 'completed',
+        },
+        orderBy: { createdAt: 'desc' },
+        select: {
+          id: true,
+          email: true,
+          title: true,
+          authorName: true,
+          status: true,
+          bookFormat: true,
+          genre: true,
+          createdAt: true,
+          completedAt: true,
+        },
+      }),
     ]);
 
     // Calculate revenue
@@ -182,6 +203,37 @@ export async function GET(request: NextRequest) {
         date: d.date,
         booksCreated: Number(d.books_created),
       })),
+      // Group anonymous contacts by email (one person may have multiple books)
+      anonymousContacts: Object.values(
+        anonymousContacts.reduce((acc, book) => {
+          const email = book.email!.toLowerCase();
+          if (!acc[email]) {
+            acc[email] = {
+              email,
+              books: [],
+              firstPurchase: book.createdAt,
+              lastPurchase: book.createdAt,
+            };
+          }
+          acc[email].books.push({
+            id: book.id,
+            title: book.title,
+            authorName: book.authorName,
+            status: book.status,
+            bookFormat: book.bookFormat,
+            genre: book.genre,
+            createdAt: book.createdAt,
+            completedAt: book.completedAt,
+          });
+          if (book.createdAt < acc[email].firstPurchase) {
+            acc[email].firstPurchase = book.createdAt;
+          }
+          if (book.createdAt > acc[email].lastPurchase) {
+            acc[email].lastPurchase = book.createdAt;
+          }
+          return acc;
+        }, {} as Record<string, { email: string; books: Array<{ id: string; title: string; authorName: string; status: string; bookFormat: string; genre: string; createdAt: Date; completedAt: Date | null }>; firstPurchase: Date; lastPurchase: Date }>)
+      ),
     });
   } catch (error) {
     console.error('Admin stats error:', error);

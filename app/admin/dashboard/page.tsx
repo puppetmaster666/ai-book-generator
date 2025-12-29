@@ -79,6 +79,21 @@ interface AdminStats {
   booksByFormat: Array<{ format: string; count: number }>;
   booksByGenre: Array<{ genre: string; count: number }>;
   dailyStats: Array<{ date: string; booksCreated: number }>;
+  anonymousContacts: Array<{
+    email: string;
+    books: Array<{
+      id: string;
+      title: string;
+      authorName: string;
+      status: string;
+      bookFormat: string;
+      genre: string;
+      createdAt: string;
+      completedAt: string | null;
+    }>;
+    firstPurchase: string;
+    lastPurchase: string;
+  }>;
 }
 
 const formatLabels: Record<string, string> = {
@@ -151,6 +166,13 @@ export default function AdminDashboard() {
   const [usersPage, setUsersPage] = useState(1);
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
   const [showToast, setShowToast] = useState(false);
+  const [selectedAnonymous, setSelectedAnonymous] = useState<Set<string>>(new Set());
+  const [isSendingAnonymousEmail, setIsSendingAnonymousEmail] = useState(false);
+  const [anonymousEmailTemplate, setAnonymousEmailTemplate] = useState<'announcement' | 'bug_apology'>('announcement');
+  const [anonymousCustomMessage, setAnonymousCustomMessage] = useState('');
+  const [anonymousCustomSubject, setAnonymousCustomSubject] = useState('');
+  const [anonymousIncludeCredit, setAnonymousIncludeCredit] = useState(false);
+  const [anonymousCreditAmount, setAnonymousCreditAmount] = useState(1);
 
   const fetchStats = async (showRefresh = false, booksPg = booksPage, usersPg = usersPage) => {
     if (showRefresh) setIsRefreshing(true);
@@ -414,6 +436,72 @@ export default function AdminDashboard() {
     setUsersPage(newPage);
     await fetchStats(false, booksPage, newPage);
     setIsLoadingUsers(false);
+  };
+
+  const toggleAnonymousSelection = (email: string) => {
+    setSelectedAnonymous(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(email)) {
+        newSet.delete(email);
+      } else {
+        newSet.add(email);
+      }
+      return newSet;
+    });
+  };
+
+  const toggleAllAnonymous = () => {
+    if (!stats) return;
+    if (selectedAnonymous.size === stats.anonymousContacts.length) {
+      setSelectedAnonymous(new Set());
+    } else {
+      setSelectedAnonymous(new Set(stats.anonymousContacts.map(c => c.email)));
+    }
+  };
+
+  const handleSendAnonymousEmail = async () => {
+    if (selectedAnonymous.size === 0) return;
+
+    setIsSendingAnonymousEmail(true);
+    setEmailResult(null);
+
+    try {
+      const response = await fetch('/api/admin/email/send-anonymous', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          emails: Array.from(selectedAnonymous),
+          template: anonymousEmailTemplate,
+          customMessage: anonymousEmailTemplate === 'announcement' ? anonymousCustomMessage : undefined,
+          customSubject: anonymousEmailTemplate === 'announcement' ? anonymousCustomSubject : undefined,
+          includeCredit: anonymousEmailTemplate === 'announcement' ? anonymousIncludeCredit : undefined,
+          creditAmount: anonymousEmailTemplate === 'announcement' && anonymousIncludeCredit ? anonymousCreditAmount : undefined,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to send emails');
+      }
+
+      setEmailResult({
+        success: true,
+        message: `Sent ${data.sent} email(s) successfully${data.failed > 0 ? `, ${data.failed} failed` : ''}`,
+      });
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 5000);
+      setSelectedAnonymous(new Set());
+    } catch (err) {
+      setEmailResult({
+        success: false,
+        message: err instanceof Error ? err.message : 'Failed to send emails',
+      });
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 5000);
+    } finally {
+      setIsSendingAnonymousEmail(false);
+    }
   };
 
   useEffect(() => {
@@ -1117,6 +1205,207 @@ export default function AdminDashboard() {
                 </button>
               </div>
             </div>
+          )}
+        </div>
+
+        {/* Anonymous Contacts (non-registered purchasers) */}
+        <div className="bg-white rounded-xl border border-neutral-200 p-6 mt-8">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <h2 className="text-lg font-semibold">Anonymous Purchasers</h2>
+              <span className="text-sm text-neutral-500">
+                ({stats.anonymousContacts?.length || 0} contacts)
+              </span>
+              <span className="px-2 py-0.5 text-xs font-medium bg-orange-100 text-orange-700 rounded-full">
+                Not Registered
+              </span>
+            </div>
+            {selectedAnonymous.size > 0 && (
+              <span className="text-sm text-neutral-600">
+                {selectedAnonymous.size} selected
+              </span>
+            )}
+          </div>
+
+          {/* Email Action Panel for Anonymous */}
+          {selectedAnonymous.size > 0 && (
+            <div className="mb-6 p-4 bg-orange-50 rounded-xl border border-orange-200">
+              <div className="flex flex-wrap items-end gap-4">
+                {/* Template Select */}
+                <div className="flex-1 min-w-[200px]">
+                  <label className="block text-sm font-medium text-neutral-700 mb-1">
+                    Email Template
+                  </label>
+                  <select
+                    value={anonymousEmailTemplate}
+                    onChange={(e) => setAnonymousEmailTemplate(e.target.value as typeof anonymousEmailTemplate)}
+                    className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                  >
+                    <option value="announcement">Custom Announcement</option>
+                    <option value="bug_apology">Bug Apology (+ 1 free credit)</option>
+                  </select>
+                </div>
+
+                {/* Action Button */}
+                <button
+                  onClick={handleSendAnonymousEmail}
+                  disabled={isSendingAnonymousEmail || (anonymousEmailTemplate === 'announcement' && !anonymousCustomMessage)}
+                  className="flex items-center gap-2 px-4 py-2 bg-orange-600 text-white rounded-lg text-sm font-medium hover:bg-orange-700 disabled:opacity-50 transition-colors"
+                >
+                  {isSendingAnonymousEmail ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Send className="h-4 w-4" />
+                  )}
+                  Send Email
+                </button>
+              </div>
+
+              {/* Custom Message for Announcement */}
+              {anonymousEmailTemplate === 'announcement' && (
+                <div className="mt-4 space-y-3">
+                  <div>
+                    <label className="block text-sm font-medium text-neutral-700 mb-1">
+                      Subject
+                    </label>
+                    <input
+                      type="text"
+                      value={anonymousCustomSubject}
+                      onChange={(e) => setAnonymousCustomSubject(e.target.value)}
+                      placeholder="Email subject..."
+                      className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-neutral-700 mb-1">
+                      Message
+                    </label>
+                    <textarea
+                      value={anonymousCustomMessage}
+                      onChange={(e) => setAnonymousCustomMessage(e.target.value)}
+                      placeholder="Your message..."
+                      rows={3}
+                      className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent resize-none"
+                    />
+                  </div>
+
+                  {/* Include Credit Gift Option */}
+                  <div className="flex items-center gap-4 pt-2 border-t border-orange-200">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={anonymousIncludeCredit}
+                        onChange={(e) => setAnonymousIncludeCredit(e.target.checked)}
+                        className="w-4 h-4 rounded border-neutral-300 text-orange-500 focus:ring-orange-500"
+                      />
+                      <span className="text-sm font-medium text-neutral-700">
+                        Include claimable credit gift
+                      </span>
+                    </label>
+                    {anonymousIncludeCredit && (
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="number"
+                          min={1}
+                          max={100}
+                          value={anonymousCreditAmount}
+                          onChange={(e) => setAnonymousCreditAmount(parseInt(e.target.value) || 1)}
+                          className="w-16 px-2 py-1 border border-neutral-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                        />
+                        <span className="text-sm text-neutral-500">credit{anonymousCreditAmount > 1 ? 's' : ''}</span>
+                      </div>
+                    )}
+                  </div>
+                  {anonymousIncludeCredit && (
+                    <p className="text-xs text-neutral-500">
+                      Credits will be claimable via a unique link. They must register to claim.
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {anonymousEmailTemplate === 'bug_apology' && (
+                <p className="mt-3 text-sm text-neutral-600">
+                  This will send an apology email with a link to claim 1 free credit. They must register to claim.
+                </p>
+              )}
+            </div>
+          )}
+
+          {stats.anonymousContacts && stats.anonymousContacts.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-neutral-200">
+                    <th className="text-left py-3 px-2 font-medium text-neutral-500 w-10">
+                      <input
+                        type="checkbox"
+                        checked={selectedAnonymous.size === stats.anonymousContacts.length && stats.anonymousContacts.length > 0}
+                        onChange={toggleAllAnonymous}
+                        className="w-4 h-4 rounded border-neutral-300 text-orange-500 focus:ring-orange-500 cursor-pointer"
+                      />
+                    </th>
+                    <th className="text-left py-3 px-2 font-medium text-neutral-500">Email</th>
+                    <th className="text-left py-3 px-2 font-medium text-neutral-500">Books</th>
+                    <th className="text-left py-3 px-2 font-medium text-neutral-500">Latest Book</th>
+                    <th className="text-left py-3 px-2 font-medium text-neutral-500">Status</th>
+                    <th className="text-left py-3 px-2 font-medium text-neutral-500">First Purchase</th>
+                    <th className="text-left py-3 px-2 font-medium text-neutral-500">Last Purchase</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {stats.anonymousContacts.map((contact) => (
+                    <tr
+                      key={contact.email}
+                      className={`border-b border-neutral-100 hover:bg-neutral-50 ${selectedAnonymous.has(contact.email) ? 'bg-orange-50' : ''}`}
+                    >
+                      <td className="py-3 px-2">
+                        <input
+                          type="checkbox"
+                          checked={selectedAnonymous.has(contact.email)}
+                          onChange={() => toggleAnonymousSelection(contact.email)}
+                          className="w-4 h-4 rounded border-neutral-300 text-orange-500 focus:ring-orange-500 cursor-pointer"
+                        />
+                      </td>
+                      <td className="py-3 px-2 font-medium text-neutral-900">
+                        {contact.email}
+                      </td>
+                      <td className="py-3 px-2 text-neutral-600">
+                        <span className="px-2 py-1 rounded-full text-xs font-medium bg-neutral-100 text-neutral-700">
+                          {contact.books.length}
+                        </span>
+                      </td>
+                      <td className="py-3 px-2">
+                        <a
+                          href={`/book/${contact.books[0]?.id}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-neutral-900 hover:text-blue-600 truncate max-w-[200px] block"
+                        >
+                          {contact.books[0]?.title}
+                        </a>
+                        <p className="text-xs text-neutral-500">{contact.books[0]?.authorName}</p>
+                      </td>
+                      <td className="py-3 px-2">
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusColors[contact.books[0]?.status] || 'bg-neutral-100 text-neutral-800'}`}>
+                          {contact.books[0]?.status}
+                        </span>
+                      </td>
+                      <td className="py-3 px-2 text-neutral-500">
+                        <div>{new Date(contact.firstPurchase).toLocaleDateString()}</div>
+                        <div className="text-xs text-neutral-400">{new Date(contact.firstPurchase).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+                      </td>
+                      <td className="py-3 px-2 text-neutral-500">
+                        <div>{new Date(contact.lastPurchase).toLocaleDateString()}</div>
+                        <div className="text-xs text-neutral-400">{new Date(contact.lastPurchase).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p className="text-neutral-400 text-sm">No anonymous purchasers yet</p>
           )}
         </div>
       </main>

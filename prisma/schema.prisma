@@ -256,8 +256,9 @@ model Notification {
 model CreditClaim {
   id        String   @id @default(cuid())
   token     String   @unique
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String?  // Optional - null for anonymous claims
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  email     String?  // For anonymous claims - email to match when claiming
   credits   Int      @default(1)
   claimed   Boolean  @default(false)
   expiresAt DateTime
@@ -265,4 +266,5 @@ model CreditClaim {
 
   @@index([userId])
   @@index([token])
+  @@index([email])
 }

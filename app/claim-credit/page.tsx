@@ -12,12 +12,15 @@ function ClaimCreditContent() {
   const router = useRouter();
   const token = searchParams.get('token');
 
-  const [status, setStatus] = useState<'loading' | 'ready' | 'claiming' | 'success' | 'error'>('loading');
+  const [status, setStatus] = useState<'loading' | 'ready' | 'claiming' | 'success' | 'error' | 'requires_login'>('loading');
   const [claimData, setClaimData] = useState<{
     credits: number;
     userEmail: string;
     claimed: boolean;
     expired: boolean;
+    isAnonymousClaim?: boolean;
+    requiresLogin?: boolean;
+    targetEmail?: string;
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -47,6 +50,8 @@ function ClaimCreditContent() {
         } else if (data.expired) {
           setStatus('error');
           setError('This link has expired');
+        } else if (data.requiresLogin) {
+          setStatus('requires_login');
         } else {
           setStatus('ready');
         }
@@ -164,6 +169,50 @@ function ClaimCreditContent() {
               <p className="text-sm text-neutral-500 mt-4">
                 Your credit will be automatically applied at checkout.
               </p>
+            </div>
+          )}
+
+          {/* Requires Login (anonymous claim) */}
+          {status === 'requires_login' && claimData && (
+            <div className="bg-white rounded-2xl border border-neutral-200 p-8 text-center">
+              <div className="w-20 h-20 bg-neutral-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                <Gift className="h-10 w-10 text-neutral-700" />
+              </div>
+
+              <h1 className="text-2xl font-bold text-neutral-900 mb-2">
+                You&apos;ve Been Gifted!
+              </h1>
+
+              <p className="text-neutral-600 mb-6">
+                {claimData.credits} free book credit{claimData.credits > 1 ? 's' : ''} {claimData.credits > 1 ? 'are' : 'is'} waiting for you.
+              </p>
+
+              {claimData.targetEmail && (
+                <div className="bg-neutral-50 rounded-xl p-4 mb-6">
+                  <p className="text-sm text-neutral-500 mb-1">This credit is for</p>
+                  <p className="font-medium text-neutral-900">{claimData.targetEmail}</p>
+                </div>
+              )}
+
+              <p className="text-neutral-600 mb-4 text-sm">
+                Sign in or create an account{claimData.targetEmail ? ` with ${claimData.targetEmail}` : ''} to claim your free credit.
+              </p>
+
+              <div className="space-y-3">
+                <Link
+                  href={`/login?callbackUrl=${encodeURIComponent(`/claim-credit?token=${token}`)}`}
+                  className="w-full inline-flex items-center justify-center gap-2 px-6 py-4 bg-neutral-900 text-white rounded-xl hover:bg-black font-medium transition-colors"
+                >
+                  Sign In to Claim
+                  <ArrowRight className="h-5 w-5" />
+                </Link>
+                <Link
+                  href={`/signup?callbackUrl=${encodeURIComponent(`/claim-credit?token=${token}`)}`}
+                  className="w-full inline-flex items-center justify-center gap-2 px-6 py-4 bg-neutral-100 text-neutral-700 rounded-xl hover:bg-neutral-200 font-medium transition-colors"
+                >
+                  Create Account
+                </Link>
+              </div>
             </div>
           )}
 
