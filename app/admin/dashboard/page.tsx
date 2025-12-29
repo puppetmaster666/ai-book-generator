@@ -150,7 +150,7 @@ export default function AdminDashboard() {
 
   // User selection and email state
   const [selectedUsers, setSelectedUsers] = useState<Set<string>>(new Set());
-  const [emailTemplate, setEmailTemplate] = useState<'welcome' | 'free_credit' | 'announcement'>('welcome');
+  const [emailTemplate, setEmailTemplate] = useState<'welcome' | 'free_credit' | 'announcement' | 'bug_apology'>('welcome');
   const [customMessage, setCustomMessage] = useState('');
   const [customSubject, setCustomSubject] = useState('');
   const [creditsToGift, setCreditsToGift] = useState(1);
@@ -949,8 +949,9 @@ export default function AdminDashboard() {
                     className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:ring-2 focus:ring-neutral-900 focus:border-transparent"
                   >
                     <option value="welcome">Thanks for Joining</option>
-                    <option value="free_credit">Free Credit Notification</option>
+                    <option value="free_credit">Account Updated</option>
                     <option value="announcement">Custom Announcement</option>
+                    <option value="bug_apology">Bug Apology (+ 1 book)</option>
                   </select>
                 </div>
 

@@ -5,7 +5,12 @@
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://www.draftmybook.com';
 
 // Base email wrapper with DraftMyBook branding
-function emailWrapper(content: string): string {
+function emailWrapper(content: string, preheader?: string): string {
+  // Preheader is hidden text that appears in email previews
+  const preheaderHtml = preheader
+    ? `<div style="display:none;font-size:1px;color:#f5f5f5;line-height:1px;max-height:0px;max-width:0px;opacity:0;overflow:hidden;">${preheader}</div>`
+    : '';
+
   return `
 <!DOCTYPE html>
 <html>
@@ -15,6 +20,7 @@ function emailWrapper(content: string): string {
     <title>DraftMyBook</title>
   </head>
   <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.5; color: #171717; max-width: 600px; margin: 0 auto; padding: 0; background-color: #f5f5f5;">
+    ${preheaderHtml}
     <div style="background-color: #ffffff; margin: 20px; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);">
 
       <!-- Header -->
@@ -82,7 +88,7 @@ export function getWelcomeEmail(userName: string): { subject: string; html: stri
       <p style="color: #737373; font-size: 13px; margin: 32px 0 0 0; text-align: center;">
         Questions? Reply to this email.
       </p>
-    `),
+    `, 'Your account is ready. Create your first book now.'),
   };
 }
 
@@ -111,7 +117,7 @@ export function getFreeCreditEmail(userName: string, credits: number): { subject
       </p>
 
       ${ctaButton('Create a Book', `${APP_URL}/create`)}
-    `),
+    `, `We've added ${credits} ${bookWord} to your account.`),
   };
 }
 
@@ -157,7 +163,7 @@ export function getBookReadyEmail(bookTitle: string, authorName: string, bookUrl
       <p style="color: #737373; font-size: 13px; margin: 32px 0 0 0; text-align: center;">
         <a href="${APP_URL}/create" style="color: #171717; text-decoration: none;">Create another book</a>
       </p>
-    `),
+    `, `${bookTitle} is ready to download.`),
   };
 }
 
@@ -180,7 +186,7 @@ export function getAnnouncementEmail(userName: string, title: string, message: s
       <p style="color: #737373; font-size: 14px; margin-top: 32px;">
         — DraftMyBook
       </p>
-    `),
+    `, message.split('\n')[0].slice(0, 100)),
   };
 }
 
@@ -261,7 +267,7 @@ export function getAnnouncementEmailWithCredit(
       <p style="color: #737373; font-size: 14px; margin-top: 32px;">
         — DraftMyBook
       </p>
-    `),
+    `, message.split('\n')[0].slice(0, 100)),
   };
 }
 
@@ -277,27 +283,15 @@ export function getBugApologyEmail(
     html: emailWrapper(`
       <p style="color: #525252; font-size: 15px; margin: 0 0 24px 0;">Hi ${firstName},</p>
 
-      <div style="color: #171717; font-size: 15px; line-height: 1.7;">
-        <p style="margin: 0 0 16px 0;">
-          We noticed that something went wrong during your recent book generation, and we sincerely apologize for the inconvenience.
-        </p>
-        <p style="margin: 0 0 16px 0;">
-          DraftMyBook is still in beta, and while we're working hard to squash every bug, sometimes things slip through. We really appreciate your patience as we continue to improve.
-        </p>
-        <p style="margin: 0 0 16px 0;">
-          To make it up to you, we've added <strong>1 additional book</strong> to your account so you can try again. Just click the button below to get started.
-        </p>
-      </div>
+      <p style="color: #171717; font-size: 15px; line-height: 1.7; margin: 0 0 16px 0;">
+        Something went wrong with your recent book. We've added 1 book to your account so you can try again.
+      </p>
 
       ${getCreditGiftSection(1, claimUrl)}
 
-      <p style="color: #171717; font-size: 15px; line-height: 1.7; margin: 0 0 16px 0;">
-        Thank you for being an early supporter of DraftMyBook. Your feedback helps us build a better product for everyone.
-      </p>
-
       <p style="color: #737373; font-size: 14px; margin-top: 32px;">
-        — The DraftMyBook Team
+        — DraftMyBook
       </p>
-    `),
+    `, 'Something went wrong. We added 1 book to your account.'),
   };
 }
