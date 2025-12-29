@@ -207,7 +207,8 @@ function GenerateComicContent() {
     }
   }, [bookData, panels]);
 
-  // Generate ALL panels in parallel
+  // Generate panels SEQUENTIALLY to avoid rate limits
+  // Each image takes ~15 seconds, so this naturally stays under 20 RPM
   const generateAllPanels = useCallback(async () => {
     if (!bookData || panels.length === 0) return;
 
@@ -218,9 +219,22 @@ function GenerateComicContent() {
     setIsGenerating(true);
     setError('');
 
-    // Fire ALL generations at once - true parallel!
-    const promises = panels.map((_, index) => generatePanel(index, signal));
-    await Promise.allSettled(promises);
+    // Generate panels one at a time to stay under rate limits
+    for (let i = 0; i < panels.length; i++) {
+      // Check if cancelled
+      if (signal.aborted) break;
+
+      // Skip already completed panels
+      if (panels[i].status === 'done') continue;
+
+      // Generate this panel
+      await generatePanel(i, signal);
+
+      // Small delay between requests (2 seconds) to be safe with rate limits
+      if (i < panels.length - 1 && !signal.aborted) {
+        await new Promise(resolve => setTimeout(resolve, 2000));
+      }
+    }
 
     if (!signal.aborted) {
       setIsGenerating(false);
@@ -260,13 +274,21 @@ function GenerateComicContent() {
     generatePanel(index);
   }, [generatePanel]);
 
-  // Retry all failed panels
-  const retryAllFailed = useCallback(() => {
+  // Retry all failed panels (sequentially to avoid rate limits)
+  const retryAllFailed = useCallback(async () => {
     const failedIndices = panels
       .map((p, i) => p.status === 'error' ? i : -1)
       .filter(i => i !== -1);
 
-    failedIndices.forEach(index => generatePanel(index));
+    setIsGenerating(true);
+    for (const index of failedIndices) {
+      await generatePanel(index);
+      // Small delay between retries
+      if (index !== failedIndices[failedIndices.length - 1]) {
+        await new Promise(resolve => setTimeout(resolve, 2000));
+      }
+    }
+    setIsGenerating(false);
   }, [panels, generatePanel]);
 
   // Assemble the book when all panels are complete
@@ -469,8 +491,8 @@ function GenerateComicContent() {
                   <span className="font-medium">Please do not leave this page</span>
                 </div>
                 <p className="text-sm text-neutral-600">
-                  This typically takes <strong>1-2 minutes</strong> for {panels.length} {bookData?.dialogueStyle === 'bubbles' ? 'panels' : 'pages'}.
-                  Your book is being generated in parallel for faster results.
+                  This typically takes <strong>5-10 minutes</strong> for {panels.length} {bookData?.dialogueStyle === 'bubbles' ? 'panels' : 'pages'}.
+                  Images are generated one at a time to ensure quality and reliability.
                 </p>
               </div>
             </div>
@@ -560,10 +582,10 @@ function GenerateComicContent() {
           {pendingCount === panels.length && !isGenerating && (
             <div className="mt-12 text-center text-neutral-500">
               <p className="text-sm">
-                Click the button above to start. All {panels.length} {bookData?.dialogueStyle === 'bubbles' ? 'panels' : 'pages'} will be generated in parallel.
+                Click the button above to start. All {panels.length} {bookData?.dialogueStyle === 'bubbles' ? 'panels' : 'pages'} will be generated one at a time.
               </p>
               <p className="text-xs mt-2">
-                This typically takes 1-2 minutes depending on the number of illustrations.
+                This typically takes 5-10 minutes depending on the number of illustrations.
               </p>
             </div>
           )}
