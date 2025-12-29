@@ -145,10 +145,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if book is already completed - prevent generating more panels
+    // Check if book is already completed or has reached max illustrations
     const book = await prisma.book.findUnique({
       where: { id: bookId },
-      select: { status: true },
+      select: {
+        status: true,
+        bookFormat: true,
+        _count: { select: { illustrations: true } },
+      },
     });
 
     if (!book) {
@@ -158,6 +162,15 @@ export async function POST(request: NextRequest) {
     if (book.status === 'completed') {
       return NextResponse.json(
         { error: 'Book is already completed. Cannot generate more panels.' },
+        { status: 400 }
+      );
+    }
+
+    // Check max illustrations limit based on format
+    const maxIllustrations = book.bookFormat === 'comic' ? 24 : 20;
+    if (book._count.illustrations >= maxIllustrations) {
+      return NextResponse.json(
+        { error: `Maximum illustrations (${maxIllustrations}) reached for this book format.` },
         { status: 400 }
       );
     }
