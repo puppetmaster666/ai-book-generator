@@ -60,7 +60,7 @@ export function getWelcomeEmail(userName: string): { subject: string; html: stri
   const firstName = userName?.split(' ')[0] || 'there';
 
   return {
-    subject: 'Welcome to DraftMyBook',
+    subject: 'Your DraftMyBook account is ready',
     html: emailWrapper(`
       <h2 style="font-size: 24px; font-weight: 600; margin: 0 0 16px 0; color: #171717;">
         Welcome, ${firstName}.
@@ -71,9 +71,9 @@ export function getWelcomeEmail(userName: string): { subject: string; html: stri
       </p>
 
       <div style="background-color: #fafafa; border-radius: 8px; padding: 24px; margin: 24px 0;">
-        <p style="margin: 0 0 16px 0; font-size: 13px; color: #737373; text-transform: uppercase; letter-spacing: 0.5px;">Your first book is free</p>
+        <p style="margin: 0 0 16px 0; font-size: 13px; color: #737373; text-transform: uppercase; letter-spacing: 0.5px;">Your first book is on us</p>
         <p style="margin: 0; font-size: 15px; color: #171717; line-height: 1.6;">
-          50,000+ words, professionally formatted, ready to publish. No credit card required.
+          50,000+ words, professionally formatted, ready to publish.
         </p>
       </div>
 
@@ -91,19 +91,19 @@ export function getFreeCreditEmail(userName: string, credits: number): { subject
   const bookWord = credits === 1 ? 'book' : 'books';
 
   return {
-    subject: `You've received ${credits} free book credit${credits > 1 ? 's' : ''}`,
+    subject: `Your account has been updated`,
     html: emailWrapper(`
       <h2 style="font-size: 24px; font-weight: 600; margin: 0 0 16px 0; color: #171717;">
-        ${firstName}, you have free credits.
+        ${firstName}, we've added ${credits} ${bookWord} to your account.
       </h2>
 
       <p style="color: #525252; font-size: 15px; margin: 0 0 24px 0; line-height: 1.6;">
-        We've added book credits to your account.
+        You can now create ${credits} additional ${bookWord} on us.
       </p>
 
       <div style="background-color: #171717; border-radius: 8px; padding: 32px; margin: 24px 0; text-align: center;">
         <p style="color: #BFFF00; font-size: 48px; font-weight: 700; margin: 0; line-height: 1;">${credits}</p>
-        <p style="color: #a3a3a3; font-size: 14px; margin: 8px 0 0 0;">${bookWord} to create</p>
+        <p style="color: #a3a3a3; font-size: 14px; margin: 8px 0 0 0;">${bookWord} ready to create</p>
       </div>
 
       <p style="color: #525252; font-size: 15px; margin: 0 0 8px 0; line-height: 1.6;">
@@ -193,8 +193,8 @@ export const EMAIL_TEMPLATES = {
   },
   free_credit: {
     id: 'free_credit',
-    label: 'Free Credits',
-    description: 'Notify user of gifted credits',
+    label: 'Account Updated',
+    description: 'Notify user of added books',
   },
   announcement: {
     id: 'announcement',
@@ -204,26 +204,26 @@ export const EMAIL_TEMPLATES = {
   bug_apology: {
     id: 'bug_apology',
     label: 'Bug Apology',
-    description: 'Apologize for generation bug + 1 free credit',
+    description: 'Apologize for generation bug + 1 book',
   },
 } as const;
 
 export type EmailTemplateId = keyof typeof EMAIL_TEMPLATES;
 
-// Credit gift button for claimable credits in emails
+// Credit section for claimable books in emails
 export function getCreditGiftSection(credits: number, claimUrl: string): string {
-  const bookWord = credits === 1 ? 'book credit' : 'book credits';
+  const bookWord = credits === 1 ? 'book' : 'books';
 
   return `
     <div style="background-color: #171717; border-radius: 12px; padding: 32px; margin: 28px 0; text-align: center;">
-      <p style="color: #ffffff; font-size: 16px; margin: 0 0 8px 0; font-weight: 500;">You've been gifted</p>
+      <p style="color: #ffffff; font-size: 16px; margin: 0 0 8px 0; font-weight: 500;">We've added to your account</p>
       <p style="color: #BFFF00; font-size: 56px; font-weight: 700; margin: 0; line-height: 1;">${credits}</p>
-      <p style="color: #a3a3a3; font-size: 14px; margin: 8px 0 24px 0;">free ${bookWord}</p>
+      <p style="color: #a3a3a3; font-size: 14px; margin: 8px 0 24px 0;">${bookWord} on the house</p>
       <table cellpadding="0" cellspacing="0" style="margin: 0 auto;">
         <tr>
           <td style="background-color: #BFFF00; border-radius: 8px;">
             <a href="${claimUrl}" style="display: inline-block; color: #171717; text-decoration: none; padding: 14px 32px; font-weight: 600; font-size: 15px;">
-              Claim Your Free Credit${credits > 1 ? 's' : ''}
+              Activate Your ${bookWord === 'book' ? 'Book' : 'Books'}
             </a>
           </td>
         </tr>
@@ -273,7 +273,7 @@ export function getBugApologyEmail(
   const firstName = userName?.split(' ')[0] || 'there';
 
   return {
-    subject: "We're sorry - here's a free credit on us",
+    subject: 'A note about your recent book',
     html: emailWrapper(`
       <p style="color: #525252; font-size: 15px; margin: 0 0 24px 0;">Hi ${firstName},</p>
 
@@ -285,7 +285,7 @@ export function getBugApologyEmail(
           DraftMyBook is still in beta, and while we're working hard to squash every bug, sometimes things slip through. We really appreciate your patience as we continue to improve.
         </p>
         <p style="margin: 0 0 16px 0;">
-          To make it up to you, we're giving you <strong>1 free book credit</strong> so you can try again. Just click the button below to claim it.
+          To make it up to you, we've added <strong>1 additional book</strong> to your account so you can try again. Just click the button below to get started.
         </p>
       </div>
 
