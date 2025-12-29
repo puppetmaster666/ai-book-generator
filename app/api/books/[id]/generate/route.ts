@@ -21,13 +21,78 @@ import {
 import { countWords } from '@/lib/epub';
 import { BOOK_FORMATS, ART_STYLES, ILLUSTRATION_DIMENSIONS, BOOK_PRESETS, type BookFormatKey, type ArtStyleKey, type BookPresetKey } from '@/lib/constants';
 import { sendEmail, getBookReadyEmail } from '@/lib/email';
-import { addSpeechBubbles, type DialogueBubble } from '@/lib/bubbles';
 
 // Timeout for illustration generation (30 seconds) - prevents 504 Gateway Timeout
 const ILLUSTRATION_TIMEOUT_MS = 30000;
 
 // Maximum retries for content-blocked illustrations
 const MAX_ILLUSTRATION_RETRIES = 3;
+
+// Interface for dialogue bubbles
+interface DialogueBubble {
+  speaker: string;
+  text: string;
+  position: string;
+  type?: 'speech' | 'thought' | 'shout';
+}
+
+// No text instruction for illustrations without dialogue
+const NO_TEXT_INSTRUCTION = `CRITICAL: Do NOT include any text, words, letters, numbers, signs, labels, or written characters anywhere in the image. The image must be purely visual with no readable text elements whatsoever.`;
+
+// Build speech bubble instructions for the AI to draw
+function buildSpeechBubblePrompt(dialogue: DialogueBubble[]): string {
+  if (!dialogue || dialogue.length === 0) return '';
+
+  const bubbleInstructions = dialogue.map((d, i) => {
+    const bubbleType = d.type === 'thought' ? 'thought bubble (cloud-shaped)' :
+                       d.type === 'shout' ? 'jagged/spiky speech bubble' :
+                       'speech bubble';
+    const position = d.position.replace('-', ' '); // "top-left" -> "top left"
+
+    return `Speech Bubble ${i + 1}: Draw a ${bubbleType} in the ${position} area of the image. Inside the bubble, write the text: "${d.text}" (spoken by ${d.speaker})`;
+  }).join('\n');
+
+  return `
+SPEECH BUBBLES - IMPORTANT:
+This is a comic panel. You MUST include the following speech bubbles with the EXACT text written inside them:
+
+${bubbleInstructions}
+
+Speech bubble style guidelines:
+- Draw clear white speech bubbles with black outlines
+- Each bubble should have a tail/pointer aimed toward the speaker
+- Text should be clearly readable, using a comic-style font
+- Position bubbles so they don't cover character faces
+- Keep the bubble text EXACTLY as specified above - do not change or abbreviate it
+`;
+}
+
+// Build story text instructions for children's picture books
+// The text appears at the bottom of the image, integrated into the illustration
+function buildPictureBookTextPrompt(storyText: string): string {
+  if (!storyText || storyText.trim().length === 0) return '';
+
+  // Clean up the text - keep it short for picture books
+  const cleanText = storyText.trim().slice(0, 200);
+
+  return `
+STORY TEXT - CHILDREN'S PICTURE BOOK:
+This is a children's picture book page. You MUST include the story text as part of the illustration.
+
+TEXT TO INCLUDE (write this EXACTLY):
+"${cleanText}"
+
+Text placement and style:
+- Place the text at the BOTTOM of the image, in a clear readable area
+- Use a clean, child-friendly font style (rounded, friendly letterforms)
+- Text should be large enough to read easily (suitable for young children)
+- Text color should contrast well with the background (use white text with dark outline if on complex background)
+- Leave adequate padding/margin around the text
+- The text area can have a subtle semi-transparent background if needed for readability
+- DO NOT abbreviate or modify the text - use it EXACTLY as provided
+- The illustration should occupy approximately the top 70-80% of the image, with text below
+`;
+}
 
 // Sanitize a scene description by removing/replacing sensitive words
 function sanitizeSceneForRetry(scene: string, retryLevel: number): string {
@@ -295,8 +360,8 @@ async function generateIllustrationsInParallel(
     characterVisualGuide?: CharacterVisualGuide;
     visualStyleGuide?: VisualStyleGuide;
   }
-): Promise<Map<number, { imageUrl: string; originalUrl?: string; altText: string; width: number; height: number }>> {
-  const results = new Map<number, { imageUrl: string; originalUrl?: string; altText: string; width: number; height: number }>();
+): Promise<Map<number, { imageUrl: string; altText: string; width: number; height: number }>> {
+  const results = new Map<number, { imageUrl: string; altText: string; width: number; height: number }>();
 
   // Process in batches of 3 to avoid overwhelming the API
   const batchSize = 3;
@@ -308,16 +373,43 @@ async function generateIllustrationsInParallel(
         return null;
       }
 
+      // Determine if we need text baked into the image
+      const hasDialogue = bookData.dialogueStyle === 'bubbles' && chapter.dialogue && chapter.dialogue.length > 0;
+      const isPictureBook = bookData.bookFormat === 'picture_book' && !hasDialogue;
+      const hasStoryText = isPictureBook && !!chapter.text && chapter.text.trim().length > 0;
+      const needsTextBaking = !!(hasDialogue || hasStoryText);
+
       // Build prompt from scene description (with panel layout for comics)
-      const illustrationPrompt = buildIllustrationPromptFromScene(
+      // Skip the "NO TEXT" instruction if we need to bake text into the image
+      let illustrationPrompt = buildIllustrationPromptFromScene(
         chapter.scene,
         bookData.artStylePrompt,
         bookData.characterVisualGuide,
         bookData.visualStyleGuide,
-        chapter.panelLayout // Pass panel layout for multi-panel comics
+        chapter.panelLayout, // Pass panel layout for multi-panel comics
+        { skipNoTextInstruction: needsTextBaking }
       );
 
-      console.log(`Generating illustration for page ${chapter.number}...`);
+      // Append text instructions based on book type
+      if (hasDialogue && chapter.dialogue) {
+        // Comic with speech bubbles - bake bubbles into the AI image
+        const bubbles: DialogueBubble[] = chapter.dialogue.map(d => ({
+          speaker: d.speaker,
+          text: d.text,
+          position: d.position,
+          type: d.type,
+        }));
+        illustrationPrompt += buildSpeechBubblePrompt(bubbles);
+        console.log(`Generating illustration with ${bubbles.length} speech bubbles for page ${chapter.number}...`);
+      } else if (hasStoryText) {
+        // Picture book with story text - bake text at bottom of image
+        illustrationPrompt += buildPictureBookTextPrompt(chapter.text);
+        console.log(`Generating illustration with story text for page ${chapter.number}...`);
+      } else {
+        // No text needed - add explicit no-text instruction
+        illustrationPrompt += `\n${NO_TEXT_INSTRUCTION}`;
+        console.log(`Generating illustration for page ${chapter.number}...`);
+      }
 
       const result = await generateIllustrationImage({
         scene: illustrationPrompt,
@@ -334,39 +426,9 @@ async function generateIllustrationsInParallel(
       });
 
       if (result) {
-        let finalImageUrl = result.imageUrl;
-        let originalUrl: string | undefined;
-
-        // Apply speech bubbles for comic style
-        if (bookData.dialogueStyle === 'bubbles' && chapter.dialogue && chapter.dialogue.length > 0) {
-          try {
-            console.log(`Adding speech bubbles to page ${chapter.number}...`);
-            originalUrl = result.imageUrl;
-
-            // Convert DialogueEntry to DialogueBubble format
-            const bubbles: DialogueBubble[] = chapter.dialogue.map(d => ({
-              speaker: d.speaker,
-              text: d.text,
-              position: d.position,
-              type: d.type,
-            }));
-
-            // Extract base64 from data URI
-            const base64Match = result.imageUrl.match(/^data:[^;]+;base64,(.+)$/);
-            if (base64Match) {
-              const withBubbles = await addSpeechBubbles(base64Match[1], bubbles);
-              finalImageUrl = `data:image/png;base64,${withBubbles}`;
-            }
-          } catch (bubbleError) {
-            console.error(`Failed to add speech bubbles to page ${chapter.number}:`, bubbleError);
-            // Use original image without bubbles
-          }
-        }
-
         return {
           chapterNumber: chapter.number,
-          imageUrl: finalImageUrl,
-          originalUrl,
+          imageUrl: result.imageUrl,
           altText: chapter.scene.description,
           width: result.width,
           height: result.height,
@@ -380,7 +442,6 @@ async function generateIllustrationsInParallel(
       if (result) {
         results.set(result.chapterNumber, {
           imageUrl: result.imageUrl,
-          originalUrl: result.originalUrl,
           altText: result.altText,
           width: result.width,
           height: result.height,
@@ -784,7 +845,6 @@ export async function POST(
               bookId: id,
               chapterId: chapter.id,
               imageUrl: illustration.imageUrl,
-              originalUrl: illustration.originalUrl || null,
               prompt: chapterPlan.scene?.description || `Page ${i} illustration`,
               altText: illustration.altText,
               position: 0,

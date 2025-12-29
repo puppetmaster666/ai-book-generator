@@ -1141,7 +1141,8 @@ export function buildIllustrationPromptFromScene(
     moodAndAtmosphere: string;
     consistencyRules: string[];
   },
-  panelLayout?: PanelLayout
+  panelLayout?: PanelLayout,
+  options?: { skipNoTextInstruction?: boolean }
 ): string {
   // Build character descriptions for characters in this scene
   let characterDescriptions = '';
@@ -1203,7 +1204,10 @@ export function buildIllustrationPromptFromScene(
   }
 
   // Add critical instructions
-  prompt += 'NO TEXT or letters in the image. Full color illustration.';
+  if (!options?.skipNoTextInstruction) {
+    prompt += 'NO TEXT or letters in the image. ';
+  }
+  prompt += 'Full color illustration.';
 
   return prompt;
 }
