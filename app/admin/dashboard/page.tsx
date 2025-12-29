@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import {
@@ -23,6 +23,8 @@ import {
   Download,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
+  ChevronUp,
   ExternalLink,
 } from 'lucide-react';
 
@@ -68,6 +70,12 @@ interface AdminStats {
     createdAt: string;
     completedAt: string | null;
     email: string | null;
+    // Original book input
+    premise: string | null;
+    beginning: string | null;
+    middle: string | null;
+    ending: string | null;
+    errorMessage: string | null;
     user: { email: string; name: string | null } | null;
   }>;
   booksPagination: {
@@ -145,6 +153,7 @@ export default function AdminDashboard() {
   const [error, setError] = useState('');
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [selectedBooks, setSelectedBooks] = useState<Set<string>>(new Set());
+  const [expandedBooks, setExpandedBooks] = useState<Set<string>>(new Set());
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState('');
 
@@ -238,6 +247,18 @@ export default function AdminDashboard() {
     } else {
       setSelectedBooks(new Set(stats.books.map(b => b.id)));
     }
+  };
+
+  const toggleBookExpanded = (bookId: string) => {
+    setExpandedBooks(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(bookId)) {
+        newSet.delete(bookId);
+      } else {
+        newSet.add(bookId);
+      }
+      return newSet;
+    });
   };
 
   const toggleUserSelection = (userId: string) => {
@@ -830,8 +851,8 @@ export default function AdminDashboard() {
                 </thead>
                 <tbody>
                   {stats.books.map((book) => (
+                    <React.Fragment key={book.id}>
                     <tr
-                      key={book.id}
                       className={`border-b border-neutral-100 hover:bg-neutral-50 ${selectedBooks.has(book.id) ? 'bg-blue-50' : ''}`}
                     >
                       <td className="py-3 px-2">
@@ -881,6 +902,18 @@ export default function AdminDashboard() {
                       </td>
                       <td className="py-3 px-2">
                         <div className="flex items-center gap-1">
+                          {/* Expand/Collapse */}
+                          <button
+                            onClick={() => toggleBookExpanded(book.id)}
+                            title={expandedBooks.has(book.id) ? "Hide details" : "Show original idea"}
+                            className="p-2 text-neutral-500 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
+                          >
+                            {expandedBooks.has(book.id) ? (
+                              <ChevronUp className="h-4 w-4" />
+                            ) : (
+                              <ChevronDown className="h-4 w-4" />
+                            )}
+                          </button>
                           {/* View Book */}
                           <a
                             href={`/book/${book.id}`}
@@ -917,6 +950,63 @@ export default function AdminDashboard() {
                         </div>
                       </td>
                     </tr>
+                    {/* Expanded Book Details */}
+                    {expandedBooks.has(book.id) && (
+                      <tr className="bg-purple-50/50 border-b border-purple-100">
+                        <td colSpan={10} className="py-4 px-4">
+                          <div className="grid gap-4 md:grid-cols-2">
+                            {/* Premise */}
+                            <div className="md:col-span-2">
+                              <label className="block text-xs font-semibold text-purple-700 uppercase tracking-wide mb-1">
+                                Premise / Idea
+                              </label>
+                              <p className="text-sm text-neutral-700 bg-white rounded-lg p-3 border border-purple-100">
+                                {book.premise || <span className="text-neutral-400 italic">No premise provided</span>}
+                              </p>
+                            </div>
+                            {/* Beginning */}
+                            <div>
+                              <label className="block text-xs font-semibold text-purple-700 uppercase tracking-wide mb-1">
+                                Beginning
+                              </label>
+                              <p className="text-sm text-neutral-700 bg-white rounded-lg p-3 border border-purple-100 min-h-[60px]">
+                                {book.beginning || <span className="text-neutral-400 italic">No beginning specified</span>}
+                              </p>
+                            </div>
+                            {/* Middle */}
+                            <div>
+                              <label className="block text-xs font-semibold text-purple-700 uppercase tracking-wide mb-1">
+                                Middle
+                              </label>
+                              <p className="text-sm text-neutral-700 bg-white rounded-lg p-3 border border-purple-100 min-h-[60px]">
+                                {book.middle || <span className="text-neutral-400 italic">No middle specified</span>}
+                              </p>
+                            </div>
+                            {/* Ending */}
+                            <div className="md:col-span-2">
+                              <label className="block text-xs font-semibold text-purple-700 uppercase tracking-wide mb-1">
+                                Ending
+                              </label>
+                              <p className="text-sm text-neutral-700 bg-white rounded-lg p-3 border border-purple-100">
+                                {book.ending || <span className="text-neutral-400 italic">No ending specified</span>}
+                              </p>
+                            </div>
+                            {/* Error Message (if failed) */}
+                            {book.errorMessage && (
+                              <div className="md:col-span-2">
+                                <label className="block text-xs font-semibold text-red-700 uppercase tracking-wide mb-1">
+                                  Error Message
+                                </label>
+                                <p className="text-sm text-red-700 bg-red-50 rounded-lg p-3 border border-red-200">
+                                  {book.errorMessage}
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
                   ))}
                 </tbody>
               </table>

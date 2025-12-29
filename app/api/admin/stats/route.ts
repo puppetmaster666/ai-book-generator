@@ -105,6 +105,12 @@ export async function GET(request: NextRequest) {
           createdAt: true,
           completedAt: true,
           email: true,
+          // Original book input
+          premise: true,
+          beginning: true,
+          middle: true,
+          ending: true,
+          errorMessage: true,
           user: {
             select: { email: true, name: true },
           },

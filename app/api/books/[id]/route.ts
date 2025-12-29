@@ -103,12 +103,19 @@ export async function PATCH(
     const { id } = await params;
     const body = await request.json();
 
-    const { email, authorName } = body;
+    const { email, authorName, title, premise, beginning, middle, ending, characters } = body;
 
     // Only allow updating certain fields
-    const updateData: { email?: string; authorName?: string } = {};
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const updateData: Record<string, any> = {};
     if (email !== undefined) updateData.email = email;
     if (authorName !== undefined) updateData.authorName = authorName;
+    if (title !== undefined) updateData.title = title;
+    if (premise !== undefined) updateData.premise = premise;
+    if (beginning !== undefined) updateData.beginning = beginning;
+    if (middle !== undefined) updateData.middle = middle;
+    if (ending !== undefined) updateData.ending = ending;
+    if (characters !== undefined) updateData.characters = characters;
 
     const book = await prisma.book.update({
       where: { id },

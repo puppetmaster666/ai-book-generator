@@ -4,7 +4,7 @@ import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
-import { ArrowLeft, ArrowRight, Loader2, BookOpen, Palette, FileText, Check, Users, Tag, X, Mail, Pencil, Gift, User } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Loader2, BookOpen, Palette, FileText, Check, Users, Tag, X, Mail, Pencil, Gift, User, Save, Plus, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
 import { PRICING, BOOK_FORMATS, ART_STYLES } from '@/lib/constants';
@@ -63,6 +63,19 @@ function ReviewContent() {
   const [promoDiscount, setPromoDiscount] = useState<number | null>(null);
   const [promoError, setPromoError] = useState('');
   const [isValidatingPromo, setIsValidatingPromo] = useState(false);
+
+  // Editing state
+  const [editingSection, setEditingSection] = useState<'title' | 'premise' | 'arcs' | 'characters' | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState('');
+
+  // Edit form values
+  const [editTitle, setEditTitle] = useState('');
+  const [editPremise, setEditPremise] = useState('');
+  const [editBeginning, setEditBeginning] = useState('');
+  const [editMiddle, setEditMiddle] = useState('');
+  const [editEnding, setEditEnding] = useState('');
+  const [editCharacters, setEditCharacters] = useState<Array<{ name: string; description: string }>>([]);
 
   useEffect(() => {
     if (!bookId) {
@@ -133,6 +146,117 @@ function ReviewContent() {
     setPromoCode('');
     setPromoDiscount(null);
     setPromoError('');
+  };
+
+  // Start editing a section
+  const startEditing = (section: 'title' | 'premise' | 'arcs' | 'characters') => {
+    if (!book) return;
+    setSaveError('');
+    setEditingSection(section);
+
+    switch (section) {
+      case 'title':
+        setEditTitle(book.title);
+        break;
+      case 'premise':
+        setEditPremise(book.premise);
+        break;
+      case 'arcs':
+        setEditBeginning(book.beginning);
+        setEditMiddle(book.middle);
+        setEditEnding(book.ending);
+        break;
+      case 'characters':
+        setEditCharacters(book.characters ? [...book.characters] : []);
+        break;
+    }
+  };
+
+  // Cancel editing
+  const cancelEditing = () => {
+    setEditingSection(null);
+    setSaveError('');
+  };
+
+  // Save edits
+  const saveEdits = async () => {
+    if (!book || !bookId) return;
+
+    setIsSaving(true);
+    setSaveError('');
+
+    try {
+      let updates: Partial<BookData> = {};
+
+      switch (editingSection) {
+        case 'title':
+          if (!editTitle.trim()) {
+            setSaveError('Title cannot be empty');
+            setIsSaving(false);
+            return;
+          }
+          updates = { title: editTitle.trim() };
+          break;
+        case 'premise':
+          if (!editPremise.trim()) {
+            setSaveError('Premise cannot be empty');
+            setIsSaving(false);
+            return;
+          }
+          updates = { premise: editPremise.trim() };
+          break;
+        case 'arcs':
+          if (!editBeginning.trim() || !editMiddle.trim() || !editEnding.trim()) {
+            setSaveError('All story arc sections are required');
+            setIsSaving(false);
+            return;
+          }
+          updates = {
+            beginning: editBeginning.trim(),
+            middle: editMiddle.trim(),
+            ending: editEnding.trim(),
+          };
+          break;
+        case 'characters':
+          // Filter out empty characters
+          const validCharacters = editCharacters.filter(c => c.name.trim());
+          updates = { characters: validCharacters };
+          break;
+      }
+
+      const response = await fetch(`/api/books/${bookId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to save changes');
+      }
+
+      // Update local state
+      setBook({ ...book, ...updates });
+      setEditingSection(null);
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : 'Failed to save changes');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // Character editing helpers
+  const addCharacter = () => {
+    setEditCharacters([...editCharacters, { name: '', description: '' }]);
+  };
+
+  const updateCharacter = (index: number, field: 'name' | 'description', value: string) => {
+    const updated = [...editCharacters];
+    updated[index] = { ...updated[index], [field]: value };
+    setEditCharacters(updated);
+  };
+
+  const removeCharacter = (index: number) => {
+    setEditCharacters(editCharacters.filter((_, i) => i !== index));
   };
 
   const getBasePrice = () => {
@@ -313,11 +437,52 @@ function ReviewContent() {
           {/* Book Overview Card */}
           <div className="bg-white rounded-2xl border border-neutral-200 p-8 mb-6">
             <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 mb-6">
-              <div>
-                <h2 className="text-2xl font-bold mb-2" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>
-                  {book.title}
-                </h2>
-                <p className="text-neutral-500">by {book.authorName}</p>
+              <div className="flex-1">
+                {editingSection === 'title' ? (
+                  <div className="space-y-3">
+                    <input
+                      type="text"
+                      value={editTitle}
+                      onChange={(e) => setEditTitle(e.target.value)}
+                      className="w-full text-2xl font-bold px-3 py-2 border border-neutral-300 rounded-lg focus:border-neutral-900 focus:outline-none"
+                      style={{ fontFamily: 'FoundersGrotesk, system-ui' }}
+                      placeholder="Book title"
+                    />
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={saveEdits}
+                        disabled={isSaving}
+                        className="flex items-center gap-1 px-3 py-1.5 bg-neutral-900 text-white rounded-lg text-sm hover:bg-neutral-800 disabled:opacity-50"
+                      >
+                        {isSaving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
+                        Save
+                      </button>
+                      <button
+                        onClick={cancelEditing}
+                        className="px-3 py-1.5 text-neutral-600 hover:text-neutral-900 text-sm"
+                      >
+                        Cancel
+                      </button>
+                      {saveError && <span className="text-red-600 text-sm">{saveError}</span>}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="group">
+                    <div className="flex items-center gap-2">
+                      <h2 className="text-2xl font-bold" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>
+                        {book.title}
+                      </h2>
+                      <button
+                        onClick={() => startEditing('title')}
+                        className="opacity-0 group-hover:opacity-100 p-1.5 text-neutral-400 hover:text-neutral-900 hover:bg-neutral-100 rounded-lg transition-all"
+                        title="Edit title"
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </button>
+                    </div>
+                    <p className="text-neutral-500 mt-2">by {book.authorName}</p>
+                  </div>
+                )}
               </div>
               <div className="text-left md:text-right">
                 {freeBookEligible ? (
@@ -364,52 +529,232 @@ function ReviewContent() {
 
             {/* Premise */}
             <div className="mb-6">
-              <h3 className="font-semibold text-lg mb-2 flex items-center gap-2">
-                <BookOpen className="h-5 w-5 text-neutral-400" />
-                Story Premise
-              </h3>
-              <p className="text-neutral-700 leading-relaxed">{book.premise}</p>
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="font-semibold text-lg flex items-center gap-2">
+                  <BookOpen className="h-5 w-5 text-neutral-400" />
+                  Story Premise
+                </h3>
+                {editingSection !== 'premise' && (
+                  <button
+                    onClick={() => startEditing('premise')}
+                    className="p-1.5 text-neutral-400 hover:text-neutral-900 hover:bg-neutral-100 rounded-lg transition-all"
+                    title="Edit premise"
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
+              {editingSection === 'premise' ? (
+                <div className="space-y-3">
+                  <textarea
+                    value={editPremise}
+                    onChange={(e) => setEditPremise(e.target.value)}
+                    rows={4}
+                    className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:border-neutral-900 focus:outline-none resize-none"
+                    placeholder="Describe your story premise..."
+                  />
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={saveEdits}
+                      disabled={isSaving}
+                      className="flex items-center gap-1 px-3 py-1.5 bg-neutral-900 text-white rounded-lg text-sm hover:bg-neutral-800 disabled:opacity-50"
+                    >
+                      {isSaving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
+                      Save
+                    </button>
+                    <button
+                      onClick={cancelEditing}
+                      className="px-3 py-1.5 text-neutral-600 hover:text-neutral-900 text-sm"
+                    >
+                      Cancel
+                    </button>
+                    {saveError && <span className="text-red-600 text-sm">{saveError}</span>}
+                  </div>
+                </div>
+              ) : (
+                <p className="text-neutral-700 leading-relaxed">{book.premise}</p>
+              )}
             </div>
 
             {/* Story Arc */}
             <div className="mb-6">
-              <h3 className="font-semibold text-lg mb-3 flex items-center gap-2">
-                <FileText className="h-5 w-5 text-neutral-400" />
-                Story Arc
-              </h3>
-              <div className="grid md:grid-cols-3 gap-4">
-                <div className="bg-neutral-50 rounded-xl p-4">
-                  <h4 className="font-medium text-sm text-neutral-500 mb-2">Beginning</h4>
-                  <p className="text-sm text-neutral-700">{book.beginning}</p>
-                </div>
-                <div className="bg-neutral-50 rounded-xl p-4">
-                  <h4 className="font-medium text-sm text-neutral-500 mb-2">Middle</h4>
-                  <p className="text-sm text-neutral-700">{book.middle}</p>
-                </div>
-                <div className="bg-neutral-50 rounded-xl p-4">
-                  <h4 className="font-medium text-sm text-neutral-500 mb-2">Ending</h4>
-                  <p className="text-sm text-neutral-700">{book.ending}</p>
-                </div>
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-semibold text-lg flex items-center gap-2">
+                  <FileText className="h-5 w-5 text-neutral-400" />
+                  Story Arc
+                </h3>
+                {editingSection !== 'arcs' && (
+                  <button
+                    onClick={() => startEditing('arcs')}
+                    className="p-1.5 text-neutral-400 hover:text-neutral-900 hover:bg-neutral-100 rounded-lg transition-all"
+                    title="Edit story arcs"
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </button>
+                )}
               </div>
+              {editingSection === 'arcs' ? (
+                <div className="space-y-4">
+                  <div className="grid md:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block font-medium text-sm text-neutral-500 mb-2">Beginning</label>
+                      <textarea
+                        value={editBeginning}
+                        onChange={(e) => setEditBeginning(e.target.value)}
+                        rows={4}
+                        className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:border-neutral-900 focus:outline-none resize-none text-sm"
+                        placeholder="How does the story begin?"
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-medium text-sm text-neutral-500 mb-2">Middle</label>
+                      <textarea
+                        value={editMiddle}
+                        onChange={(e) => setEditMiddle(e.target.value)}
+                        rows={4}
+                        className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:border-neutral-900 focus:outline-none resize-none text-sm"
+                        placeholder="What happens in the middle?"
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-medium text-sm text-neutral-500 mb-2">Ending</label>
+                      <textarea
+                        value={editEnding}
+                        onChange={(e) => setEditEnding(e.target.value)}
+                        rows={4}
+                        className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:border-neutral-900 focus:outline-none resize-none text-sm"
+                        placeholder="How does it end?"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={saveEdits}
+                      disabled={isSaving}
+                      className="flex items-center gap-1 px-3 py-1.5 bg-neutral-900 text-white rounded-lg text-sm hover:bg-neutral-800 disabled:opacity-50"
+                    >
+                      {isSaving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
+                      Save
+                    </button>
+                    <button
+                      onClick={cancelEditing}
+                      className="px-3 py-1.5 text-neutral-600 hover:text-neutral-900 text-sm"
+                    >
+                      Cancel
+                    </button>
+                    {saveError && <span className="text-red-600 text-sm">{saveError}</span>}
+                  </div>
+                </div>
+              ) : (
+                <div className="grid md:grid-cols-3 gap-4">
+                  <div className="bg-neutral-50 rounded-xl p-4">
+                    <h4 className="font-medium text-sm text-neutral-500 mb-2">Beginning</h4>
+                    <p className="text-sm text-neutral-700">{book.beginning}</p>
+                  </div>
+                  <div className="bg-neutral-50 rounded-xl p-4">
+                    <h4 className="font-medium text-sm text-neutral-500 mb-2">Middle</h4>
+                    <p className="text-sm text-neutral-700">{book.middle}</p>
+                  </div>
+                  <div className="bg-neutral-50 rounded-xl p-4">
+                    <h4 className="font-medium text-sm text-neutral-500 mb-2">Ending</h4>
+                    <p className="text-sm text-neutral-700">{book.ending}</p>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Characters */}
-            {book.characters && book.characters.length > 0 && (
+            {(book.characters && book.characters.length > 0) || editingSection === 'characters' ? (
               <div className="mb-6">
-                <h3 className="font-semibold text-lg mb-3 flex items-center gap-2">
-                  <Users className="h-5 w-5 text-neutral-400" />
-                  Characters
-                </h3>
-                <div className="grid md:grid-cols-2 gap-3">
-                  {book.characters.map((char, idx) => (
-                    <div key={idx} className="bg-neutral-50 rounded-lg p-3">
-                      <span className="font-medium">{char.name}</span>
-                      <p className="text-sm text-neutral-600 mt-1">{char.description}</p>
-                    </div>
-                  ))}
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="font-semibold text-lg flex items-center gap-2">
+                    <Users className="h-5 w-5 text-neutral-400" />
+                    Characters
+                  </h3>
+                  {editingSection !== 'characters' && (
+                    <button
+                      onClick={() => startEditing('characters')}
+                      className="p-1.5 text-neutral-400 hover:text-neutral-900 hover:bg-neutral-100 rounded-lg transition-all"
+                      title="Edit characters"
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </button>
+                  )}
                 </div>
+                {editingSection === 'characters' ? (
+                  <div className="space-y-4">
+                    {editCharacters.map((char, idx) => (
+                      <div key={idx} className="bg-neutral-50 rounded-lg p-4">
+                        <div className="flex items-start gap-3">
+                          <div className="flex-1 grid md:grid-cols-2 gap-3">
+                            <div>
+                              <label className="block text-xs font-medium text-neutral-500 mb-1">Name</label>
+                              <input
+                                type="text"
+                                value={char.name}
+                                onChange={(e) => updateCharacter(idx, 'name', e.target.value)}
+                                className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:border-neutral-900 focus:outline-none text-sm"
+                                placeholder="Character name"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-medium text-neutral-500 mb-1">Description</label>
+                              <input
+                                type="text"
+                                value={char.description}
+                                onChange={(e) => updateCharacter(idx, 'description', e.target.value)}
+                                className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:border-neutral-900 focus:outline-none text-sm"
+                                placeholder="Brief description"
+                              />
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => removeCharacter(idx)}
+                            className="p-2 text-neutral-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            title="Remove character"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                    <button
+                      onClick={addCharacter}
+                      className="flex items-center gap-2 px-4 py-2 text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100 rounded-lg transition-colors text-sm"
+                    >
+                      <Plus className="h-4 w-4" />
+                      Add Character
+                    </button>
+                    <div className="flex items-center gap-2 pt-2">
+                      <button
+                        onClick={saveEdits}
+                        disabled={isSaving}
+                        className="flex items-center gap-1 px-3 py-1.5 bg-neutral-900 text-white rounded-lg text-sm hover:bg-neutral-800 disabled:opacity-50"
+                      >
+                        {isSaving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
+                        Save
+                      </button>
+                      <button
+                        onClick={cancelEditing}
+                        className="px-3 py-1.5 text-neutral-600 hover:text-neutral-900 text-sm"
+                      >
+                        Cancel
+                      </button>
+                      {saveError && <span className="text-red-600 text-sm">{saveError}</span>}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="grid md:grid-cols-2 gap-3">
+                    {book.characters?.map((char, idx) => (
+                      <div key={idx} className="bg-neutral-50 rounded-lg p-3">
+                        <span className="font-medium">{char.name}</span>
+                        <p className="text-sm text-neutral-600 mt-1">{char.description}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
-            )}
+            ) : null}
 
             {/* Book Details */}
             <div className="border-t border-neutral-200 pt-6">

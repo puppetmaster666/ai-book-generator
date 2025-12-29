@@ -58,16 +58,56 @@ export default function CreateBook() {
   // Get user ID from session if logged in
   const userId = (session?.user as { id?: string })?.id;
 
-  // Check if coming from homepage with an idea
+  // Storage key for form state
+  const FORM_STATE_KEY = 'createBookFormState';
+
+  // Load saved form state on mount
   useEffect(() => {
+    // First check for homepage idea
     const savedIdea = sessionStorage.getItem('bookIdea') || sessionStorage.getItem('originalIdea');
     if (savedIdea) {
       setIdea(savedIdea);
       setHasIdeaFromHomepage(true);
       sessionStorage.removeItem('bookIdea');
       sessionStorage.removeItem('originalIdea');
+      return;
+    }
+
+    // Otherwise, restore saved form state (for back navigation)
+    const savedState = sessionStorage.getItem(FORM_STATE_KEY);
+    if (savedState) {
+      try {
+        const state = JSON.parse(savedState);
+        if (state.idea) setIdea(state.idea);
+        if (state.selectedPreset) setSelectedPreset(state.selectedPreset);
+        if (state.selectedArtStyle) setSelectedArtStyle(state.selectedArtStyle);
+        if (state.step) setStep(state.step);
+        if (state.ideaCategory) setIdeaCategory(state.ideaCategory);
+      } catch (e) {
+        console.error('Failed to restore form state:', e);
+      }
     }
   }, []);
+
+  // Save form state when values change
+  useEffect(() => {
+    // Only save if we have meaningful state
+    if (idea || selectedPreset || selectedArtStyle) {
+      const state = {
+        idea,
+        selectedPreset,
+        selectedArtStyle,
+        step,
+        ideaCategory,
+      };
+      sessionStorage.setItem(FORM_STATE_KEY, JSON.stringify(state));
+    }
+  }, [idea, selectedPreset, selectedArtStyle, step, ideaCategory]);
+
+  // Clear form state when navigating away after successful submission
+  const clearFormState = () => {
+    sessionStorage.removeItem(FORM_STATE_KEY);
+  };
 
   const handleGenerateIdea = async () => {
     setIsGeneratingIdea(true);
@@ -152,6 +192,7 @@ export default function CreateBook() {
       if (!response.ok) throw new Error('Failed to create book');
 
       const { bookId } = await response.json();
+      clearFormState();
       router.push(`/review?bookId=${bookId}`);
     } catch (err) {
       console.error('Error:', err);
@@ -214,6 +255,7 @@ export default function CreateBook() {
       if (!response.ok) throw new Error('Failed to create book');
 
       const { bookId } = await response.json();
+      clearFormState();
       router.push(`/review?bookId=${bookId}`);
     } catch (err) {
       console.error('Error:', err);
