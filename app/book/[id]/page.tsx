@@ -137,6 +137,8 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
   const [deleting, setDeleting] = useState(false);
   const [deleted, setDeleted] = useState(false);
   const [cancelling, setCancelling] = useState(false);
+  const [restarting, setRestarting] = useState(false);
+  const [showRestartConfirm, setShowRestartConfirm] = useState(false);
   const [showFirstBookDiscount, setShowFirstBookDiscount] = useState(false);
   const [isFirstCompletedBook, setIsFirstCompletedBook] = useState(false);
   const [chapterStatuses, setChapterStatuses] = useState<ChapterCardStatus[]>([]);
@@ -178,6 +180,9 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
 
   // Get current user ID for ownership check
   const currentUserId = (session?.user as { id?: string })?.id;
+  const currentUserEmail = session?.user?.email;
+  const ADMIN_EMAILS = ['lhllparis@gmail.com'];
+  const isAdminUser = currentUserEmail && ADMIN_EMAILS.includes(currentUserEmail);
 
   // First: Load book and check if we need to redirect to visual generation page
   // This happens BEFORE any UI is shown
@@ -189,8 +194,8 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
         const data = await res.json();
         const loadedBook = data.book;
 
-        // Check if current user owns this book (or it's a guest book with no owner)
-        const isOwner = !loadedBook?.userId || loadedBook?.userId === currentUserId;
+        // Check if current user owns this book (or it's a guest book with no owner, or user is admin)
+        const isOwner = !loadedBook?.userId || loadedBook?.userId === currentUserId || isAdminUser;
 
         // Check if this is a visual book that needs generation (comics OR picture books)
         const isVisual = loadedBook?.bookFormat === 'picture_book' ||
@@ -270,12 +275,10 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
     };
 
     loadAndCheck();
-  }, [id, success, router, currentUserId, setGeneratingBookId]);
+  }, [id, success, router, currentUserId, isAdminUser, setGeneratingBookId]);
 
-  // Check if current user owns this book (or is admin)
-  const ADMIN_EMAILS = ['lhllparis@gmail.com'];
-  const isAdmin = session?.user?.email && ADMIN_EMAILS.includes(session.user.email);
-  const isOwner = !book?.userId || book?.userId === currentUserId || isAdmin;
+  // Check if current user owns this book (or is admin) - for UI display purposes
+  const isOwner = !book?.userId || book?.userId === currentUserId || isAdminUser;
 
   // Initialize chapter statuses from outline when book loads
   useEffect(() => {
@@ -840,6 +843,61 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
     }
   };
 
+  // Admin-only: Restart book generation from scratch
+  const handleRestart = async () => {
+    if (!book || restarting || !isAdminUser) return;
+
+    setRestarting(true);
+    // Stop any ongoing orchestration first
+    orchestrationRef.current = false;
+
+    try {
+      // Step 1: Call restart API to reset the book
+      const restartRes = await fetch(`/api/admin/books/${id}/restart`, { method: 'POST' });
+      if (!restartRes.ok) {
+        const data = await restartRes.json();
+        console.error('Restart failed:', data.error);
+        alert(`Restart failed: ${data.error || 'Unknown error'}`);
+        setShowRestartConfirm(false);
+        setRestarting(false);
+        return;
+      }
+
+      // Step 2: Check if this is a visual book and route appropriately
+      const isVisual = book.bookFormat === 'picture_book' ||
+                       book.dialogueStyle === 'bubbles' ||
+                       book.bookPreset === 'comic_story' ||
+                       book.bookPreset === 'childrens_picture';
+
+      // Step 3: Trigger outline generation
+      const genRes = await fetch(`/api/books/${id}/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ outlineOnly: true }),
+      });
+
+      if (!genRes.ok) {
+        const genData = await genRes.json();
+        console.error('Generate after restart failed:', genData.error);
+        // Even if generate fails, the restart was successful - page will show appropriate state
+      }
+
+      // Step 4: Navigate appropriately based on book type
+      if (isVisual) {
+        // Visual books should go to the comic generation page
+        router.push(`/generate-comic?bookId=${id}`);
+      } else {
+        // Text books - reload the page to restart orchestration
+        window.location.reload();
+      }
+    } catch (err) {
+      console.error('Restart error:', err);
+      alert('Restart failed. Please try again.');
+      setShowRestartConfirm(false);
+      setRestarting(false);
+    }
+  };
+
   // Show clean redirect screen when book is deleted
   if (deleted) {
     return (
@@ -955,6 +1013,52 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
         </div>
       )}
 
+      {/* Restart Confirmation Modal (Admin Only) */}
+      {showRestartConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+          <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-xl">
+            <div className="text-center mb-6">
+              <div className="w-16 h-16 bg-amber-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                <RefreshCw className="h-8 w-8 text-amber-600" />
+              </div>
+              <h2 className="text-xl font-bold text-neutral-900 mb-2">Restart Generation?</h2>
+              <p className="text-neutral-600">
+                This will DELETE all chapters, illustrations, and generated content for &quot;{book?.title}&quot;.
+              </p>
+              <p className="text-neutral-500 text-sm mt-2">
+                The original book settings (title, premise, characters, etc.) will be kept.
+              </p>
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowRestartConfirm(false)}
+                disabled={restarting}
+                className="flex-1 px-4 py-3 bg-neutral-100 text-neutral-700 rounded-xl hover:bg-neutral-200 font-medium transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleRestart}
+                disabled={restarting}
+                className="flex-1 px-4 py-3 bg-amber-600 text-white rounded-xl hover:bg-amber-700 font-medium transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {restarting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Restarting...
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className="h-4 w-4" />
+                    Restart
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <main className="pt-24 pb-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-3xl mx-auto">
           {/* Book Header */}
@@ -1016,6 +1120,18 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
                       {book.artStyle.charAt(0).toUpperCase() + book.artStyle.slice(1)} Style
                     </span>
                   </div>
+                )}
+
+                {/* Admin Restart Button */}
+                {isAdminUser && (
+                  <button
+                    onClick={() => setShowRestartConfirm(true)}
+                    disabled={restarting}
+                    className="mt-4 mr-2 inline-flex items-center gap-1.5 px-3 py-1.5 text-sm text-amber-600 hover:text-amber-700 hover:bg-amber-50 rounded-lg transition-colors disabled:opacity-50"
+                  >
+                    <RefreshCw className={`h-4 w-4 ${restarting ? 'animate-spin' : ''}`} />
+                    {restarting ? 'Restarting...' : 'Restart Generation'}
+                  </button>
                 )}
 
                 {/* Delete Button */}
