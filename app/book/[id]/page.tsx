@@ -134,6 +134,7 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
   const [bookClaimed, setBookClaimed] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [deleted, setDeleted] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [showFirstBookDiscount, setShowFirstBookDiscount] = useState(false);
   const [isFirstCompletedBook, setIsFirstCompletedBook] = useState(false);
@@ -570,8 +571,14 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
 
   // Poll for book status using lightweight endpoint (saves ~99% bandwidth)
   useEffect(() => {
+    // Don't poll if book is deleted
+    if (deleted) return;
+
     // Lightweight status fetch for polling (only essential fields, no content/images)
     const fetchStatus = async () => {
+      // Double-check deleted state before fetching
+      if (deleted) return;
+
       try {
         const res = await fetch(`/api/books/${id}/status`);
         if (!res.ok) throw new Error('Failed to fetch status');
@@ -622,13 +629,13 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
     // Poll every 15 seconds during generation (chapters take 2-4 minutes each)
     // This reduces database load while still providing reasonable update frequency
     const interval = setInterval(() => {
-      if (book?.status === 'generating' || book?.status === 'outlining' || book?.status === 'pending' || retrying) {
+      if (!deleted && (book?.status === 'generating' || book?.status === 'outlining' || book?.status === 'pending' || retrying)) {
         fetchStatus();
       }
     }, 15000);
 
     return () => clearInterval(interval);
-  }, [id, book?.status, retrying, serverStartTime]);
+  }, [id, book?.status, retrying, serverStartTime, deleted]);
 
   // Show first book discount popup
   useEffect(() => {
@@ -813,6 +820,8 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
     try {
       const res = await fetch(`/api/books/${id}`, { method: 'DELETE' });
       if (res.ok) {
+        // Mark as deleted to prevent 404 screen from showing
+        setDeleted(true);
         // Clear generating book ID from context
         setGeneratingBookId(null);
         // Redirect to profile if logged in, otherwise home
@@ -821,14 +830,26 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
         const data = await res.json();
         console.error('Delete failed:', data.error);
         setShowDeleteConfirm(false);
+        setDeleting(false);
       }
     } catch (err) {
       console.error('Delete error:', err);
       setShowDeleteConfirm(false);
-    } finally {
       setDeleting(false);
     }
   };
+
+  // Show clean redirect screen when book is deleted
+  if (deleted) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="h-12 w-12 animate-spin text-neutral-900 mx-auto mb-4" />
+          <p className="text-neutral-600">Book deleted. Redirecting...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (loading || redirectingToComic) {
     return (
