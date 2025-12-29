@@ -47,6 +47,7 @@ interface Book {
   bookPreset: string | null;
   userId: string | null;
   errorMessage?: string | null;
+  premise?: string | null;
   outline?: {
     chapters: Array<{
       number: number;
@@ -978,7 +979,16 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
                 <h1 className="text-2xl font-bold text-neutral-900 mb-1" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>
                   {book.title}
                 </h1>
-                <p className="text-neutral-600 mb-4">by {book.authorName}</p>
+                <p className="text-neutral-600 mb-3">by {book.authorName}</p>
+
+                {/* Original Prompt / Premise */}
+                {book.premise && (
+                  <div className="mb-4 text-sm">
+                    <p className="text-neutral-500 leading-relaxed line-clamp-3">
+                      {book.premise}
+                    </p>
+                  </div>
+                )}
 
                 {/* Status Badge */}
                 <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium ${
