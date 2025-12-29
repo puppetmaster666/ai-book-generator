@@ -37,15 +37,22 @@ interface AdminStats {
     totalRevenue: number;
     totalTransactions: number;
   };
-  recentUsers: Array<{
+  users: Array<{
     id: string;
     email: string;
     name: string | null;
     plan: string;
     freeBookUsed: boolean;
+    freeCredits: number;
     createdAt: string;
     booksCount: number;
   }>;
+  usersPagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
   books: Array<{
     id: string;
     title: string;
@@ -140,11 +147,14 @@ export default function AdminDashboard() {
   const [restartResult, setRestartResult] = useState<{ success: boolean; message: string } | null>(null);
   const [booksPage, setBooksPage] = useState(1);
   const [isLoadingBooks, setIsLoadingBooks] = useState(false);
+  const [usersPage, setUsersPage] = useState(1);
+  const [isLoadingUsers, setIsLoadingUsers] = useState(false);
+  const [showToast, setShowToast] = useState(false);
 
-  const fetchStats = async (showRefresh = false, page = booksPage) => {
+  const fetchStats = async (showRefresh = false, booksPg = booksPage, usersPg = usersPage) => {
     if (showRefresh) setIsRefreshing(true);
     try {
-      const response = await fetch(`/api/admin/stats?booksPage=${page}&booksLimit=50`);
+      const response = await fetch(`/api/admin/stats?booksPage=${booksPg}&booksLimit=50&usersPage=${usersPg}&usersLimit=50`);
       const data = await response.json();
 
       if (!response.ok) {
@@ -204,10 +214,10 @@ export default function AdminDashboard() {
 
   const toggleAllUsers = () => {
     if (!stats) return;
-    if (selectedUsers.size === stats.recentUsers.length) {
+    if (selectedUsers.size === stats.users.length) {
       setSelectedUsers(new Set());
     } else {
-      setSelectedUsers(new Set(stats.recentUsers.map(u => u.id)));
+      setSelectedUsers(new Set(stats.users.map(u => u.id)));
     }
   };
 
@@ -241,12 +251,16 @@ export default function AdminDashboard() {
         success: true,
         message: `Sent ${data.sent} email(s) successfully${data.failed > 0 ? `, ${data.failed} failed` : ''}`,
       });
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 5000);
       setSelectedUsers(new Set());
     } catch (err) {
       setEmailResult({
         success: false,
         message: err instanceof Error ? err.message : 'Failed to send emails',
       });
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 5000);
     } finally {
       setIsSendingEmail(false);
     }
@@ -279,6 +293,8 @@ export default function AdminDashboard() {
         success: true,
         message: `Gifted ${creditsToGift} credit(s) to ${data.creditsAdded} user(s), sent ${data.emailsSent} email(s)`,
       });
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 5000);
       setSelectedUsers(new Set());
       await fetchStats(true);
     } catch (err) {
@@ -286,6 +302,8 @@ export default function AdminDashboard() {
         success: false,
         message: err instanceof Error ? err.message : 'Failed to gift credits',
       });
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 5000);
     } finally {
       setIsGiftingCredits(false);
     }
@@ -386,8 +404,15 @@ export default function AdminDashboard() {
   const handleBooksPageChange = async (newPage: number) => {
     setIsLoadingBooks(true);
     setBooksPage(newPage);
-    await fetchStats(false, newPage);
+    await fetchStats(false, newPage, usersPage);
     setIsLoadingBooks(false);
+  };
+
+  const handleUsersPageChange = async (newPage: number) => {
+    setIsLoadingUsers(true);
+    setUsersPage(newPage);
+    await fetchStats(false, booksPage, newPage);
+    setIsLoadingUsers(false);
   };
 
   useEffect(() => {
@@ -429,6 +454,30 @@ export default function AdminDashboard() {
 
   return (
     <div className="min-h-screen bg-neutral-50">
+      {/* Toast Notification */}
+      {showToast && emailResult && (
+        <div className="fixed top-4 right-4 z-[100] animate-in slide-in-from-top-2 duration-300">
+          <div className={`flex items-center gap-3 px-5 py-4 rounded-xl shadow-lg border ${
+            emailResult.success
+              ? 'bg-green-50 border-green-200 text-green-800'
+              : 'bg-red-50 border-red-200 text-red-800'
+          }`}>
+            {emailResult.success ? (
+              <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0" />
+            ) : (
+              <XCircle className="h-5 w-5 text-red-500 flex-shrink-0" />
+            )}
+            <span className="font-medium">{emailResult.message}</span>
+            <button
+              onClick={() => setShowToast(false)}
+              className="ml-2 text-neutral-400 hover:text-neutral-600"
+            >
+              <XCircle className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <header className="bg-white border-b border-neutral-200 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
@@ -777,10 +826,18 @@ export default function AdminDashboard() {
           )}
         </div>
 
-        {/* Recent Users */}
+        {/* All Users */}
         <div className="bg-white rounded-xl border border-neutral-200 p-6">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold">Recent Users</h2>
+            <div className="flex items-center gap-3">
+              <h2 className="text-lg font-semibold">All Users</h2>
+              {stats.usersPagination && (
+                <span className="text-sm text-neutral-500">
+                  ({stats.usersPagination.total} total)
+                </span>
+              )}
+              {isLoadingUsers && <Loader2 className="h-4 w-4 animate-spin text-neutral-400" />}
+            </div>
             {selectedUsers.size > 0 && (
               <span className="text-sm text-neutral-600">
                 {selectedUsers.size} selected
@@ -928,7 +985,7 @@ export default function AdminDashboard() {
             </div>
           )}
 
-          {stats.recentUsers.length > 0 ? (
+          {stats.users.length > 0 ? (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
@@ -936,7 +993,7 @@ export default function AdminDashboard() {
                     <th className="text-left py-3 px-2 font-medium text-neutral-500 w-10">
                       <input
                         type="checkbox"
-                        checked={selectedUsers.size === stats.recentUsers.length && stats.recentUsers.length > 0}
+                        checked={selectedUsers.size === stats.users.length && stats.users.length > 0}
                         onChange={toggleAllUsers}
                         className="w-4 h-4 rounded border-neutral-300 text-neutral-900 focus:ring-neutral-500 cursor-pointer"
                       />
@@ -945,12 +1002,13 @@ export default function AdminDashboard() {
                     <th className="text-left py-3 px-2 font-medium text-neutral-500">Name</th>
                     <th className="text-left py-3 px-2 font-medium text-neutral-500">Plan</th>
                     <th className="text-left py-3 px-2 font-medium text-neutral-500">Free Used</th>
+                    <th className="text-left py-3 px-2 font-medium text-neutral-500">Credits</th>
                     <th className="text-left py-3 px-2 font-medium text-neutral-500">Books</th>
                     <th className="text-left py-3 px-2 font-medium text-neutral-500">Joined</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {stats.recentUsers.map((user) => (
+                  {stats.users.map((user) => (
                     <tr
                       key={user.id}
                       className={`border-b border-neutral-100 hover:bg-neutral-50 ${selectedUsers.has(user.id) ? 'bg-lime-50' : ''}`}
@@ -986,6 +1044,15 @@ export default function AdminDashboard() {
                         )}
                       </td>
                       <td className="py-3 px-2 text-neutral-600">
+                        {user.freeCredits > 0 ? (
+                          <span className="px-2 py-1 rounded-full text-xs font-medium bg-lime-100 text-lime-800">
+                            {user.freeCredits}
+                          </span>
+                        ) : (
+                          <span className="text-neutral-400">0</span>
+                        )}
+                      </td>
+                      <td className="py-3 px-2 text-neutral-600">
                         {user.booksCount}
                       </td>
                       <td className="py-3 px-2 text-neutral-500">
@@ -999,6 +1066,33 @@ export default function AdminDashboard() {
             </div>
           ) : (
             <p className="text-neutral-400 text-sm">No users yet</p>
+          )}
+
+          {/* Users Pagination */}
+          {stats.usersPagination && stats.usersPagination.totalPages > 1 && (
+            <div className="flex items-center justify-between mt-4 pt-4 border-t border-neutral-200">
+              <p className="text-sm text-neutral-500">
+                Page {stats.usersPagination.page} of {stats.usersPagination.totalPages}
+              </p>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => handleUsersPageChange(usersPage - 1)}
+                  disabled={usersPage <= 1 || isLoadingUsers}
+                  className="flex items-center gap-1 px-3 py-1.5 text-sm text-neutral-600 hover:bg-neutral-100 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                  Previous
+                </button>
+                <button
+                  onClick={() => handleUsersPageChange(usersPage + 1)}
+                  disabled={usersPage >= stats.usersPagination.totalPages || isLoadingUsers}
+                  className="flex items-center gap-1 px-3 py-1.5 text-sm text-neutral-600 hover:bg-neutral-100 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  Next
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
           )}
         </div>
       </main>

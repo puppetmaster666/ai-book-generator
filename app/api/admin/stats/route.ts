@@ -8,6 +8,9 @@ export async function GET(request: NextRequest) {
     const booksPage = parseInt(searchParams.get('booksPage') || '1');
     const booksLimit = parseInt(searchParams.get('booksLimit') || '50');
     const booksOffset = (booksPage - 1) * booksLimit;
+    const usersPage = parseInt(searchParams.get('usersPage') || '1');
+    const usersLimit = parseInt(searchParams.get('usersLimit') || '50');
+    const usersOffset = (usersPage - 1) * usersLimit;
     // Check if user is authenticated and is admin
     const session = await auth();
     if (!session?.user) {
@@ -65,9 +68,10 @@ export async function GET(request: NextRequest) {
         _sum: { amount: true },
         _count: true,
       }),
-      // Recent users (last 10)
+      // Paginated users
       prisma.user.findMany({
-        take: 10,
+        skip: usersOffset,
+        take: usersLimit,
         orderBy: { createdAt: 'desc' },
         select: {
           id: true,
@@ -75,6 +79,7 @@ export async function GET(request: NextRequest) {
           name: true,
           plan: true,
           freeBookUsed: true,
+          freeCredits: true,
           createdAt: true,
           _count: { select: { books: true } },
         },
@@ -140,10 +145,16 @@ export async function GET(request: NextRequest) {
         totalRevenue,
         totalTransactions,
       },
-      recentUsers: recentUsers.map(u => ({
+      users: recentUsers.map(u => ({
         ...u,
         booksCount: u._count.books,
       })),
+      usersPagination: {
+        page: usersPage,
+        limit: usersLimit,
+        total: totalUsers,
+        totalPages: Math.ceil(totalUsers / usersLimit),
+      },
       books: recentBooks,
       booksPagination: {
         page: booksPage,
