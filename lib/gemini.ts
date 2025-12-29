@@ -1234,18 +1234,26 @@ export function buildIllustrationPromptFromScene(
   panelLayout?: PanelLayout,
   options?: { skipNoTextInstruction?: boolean }
 ): string {
-  // Build character descriptions for characters in this scene
+  // Build character descriptions for characters in this scene - with STRONG consistency emphasis
   let characterDescriptions = '';
+  let characterConsistencyReminder = '';
   if (characterVisualGuide) {
     const sceneCharacters = scene.characters;
     const relevantChars = characterVisualGuide.characters.filter(c =>
       sceneCharacters.some(sc => sc.toLowerCase() === c.name.toLowerCase())
     );
     if (relevantChars.length > 0) {
+      // Build detailed character descriptions with emphasis on recognizable features
       characterDescriptions = relevantChars.map(c => {
         const action = scene.characterActions[c.name] || '';
-        // Include color palette for better consistency
-        return `${c.name}: ${c.physicalDescription}, wearing ${c.clothing}, ${c.distinctiveFeatures}. Colors: ${c.colorPalette}${action ? `. Action: ${action}` : ''}`;
+        // Include ALL visual details for maximum consistency
+        return `${c.name}: ${c.physicalDescription}. CLOTHING: ${c.clothing}. DISTINCTIVE FEATURES: ${c.distinctiveFeatures}. COLOR PALETTE: ${c.colorPalette}${action ? `. CURRENT ACTION: ${action}` : ''}`;
+      }).join('\n\n');
+
+      // Build a specific consistency reminder for hair and face
+      characterConsistencyReminder = relevantChars.map(c => {
+        // Extract key identifiers from physical description for emphasis
+        return `${c.name} MUST have the EXACT same: hair color, hair style, face shape, and distinctive features as described above`;
       }).join('. ');
     }
   }
@@ -1261,9 +1269,18 @@ export function buildIllustrationPromptFromScene(
   // Add scene description
   prompt += `${scene.description}. `;
 
-  // Add character details with consistency emphasis
+  // Add character details with STRONG consistency emphasis
   if (characterDescriptions) {
-    prompt += `IMPORTANT - Draw these characters EXACTLY as described (maintain consistent appearance): ${characterDescriptions}. `;
+    prompt += `
+
+=== CRITICAL CHARACTER CONSISTENCY REQUIREMENTS ===
+You MUST draw these characters EXACTLY as described. Do NOT change their hair color, hair style, face shape, or distinctive features. Each character must be INSTANTLY recognizable.
+
+${characterDescriptions}
+
+=== END CHARACTER DESCRIPTIONS ===
+
+`;
   } else if (scene.characters.length > 0) {
     const actions = Object.entries(scene.characterActions)
       .map(([char, action]) => `${char}: ${action}`)
@@ -1294,9 +1311,9 @@ export function buildIllustrationPromptFromScene(
     prompt += ` ${layoutInstructions[panelLayout]} `;
   }
 
-  // Add consistency reminder for character appearances
-  if (characterDescriptions) {
-    prompt += 'Ensure all characters match their described physical features, hair color, eye color, and clothing exactly. ';
+  // Add STRONG consistency reminder for character appearances at the end
+  if (characterDescriptions && characterConsistencyReminder) {
+    prompt += `FINAL REMINDER - CHARACTER CONSISTENCY IS CRITICAL: ${characterConsistencyReminder}. DO NOT deviate from the described hair color, hair style, face shape, skin tone, or clothing. The characters must look IDENTICAL across all illustrations. `;
   }
 
   // Add critical instructions
@@ -1351,13 +1368,27 @@ The illustrations will be in ${data.artStyle} style.
 CHARACTERS TO DESIGN:
 ${data.characters.map(c => `- ${c.name}: ${c.description}`).join('\n')}
 
-Create DETAILED visual descriptions for each character that an illustrator can follow consistently across all illustrations. For each character provide:
+Create EXTREMELY DETAILED visual descriptions for each character that an illustrator can follow consistently across ALL illustrations. These must be specific enough that the character is INSTANTLY recognizable in every single image.
 
-1. Physical Description: Age appearance, height/build, face shape, hair (color, style, length), eye color, skin tone
-2. Clothing: Their typical outfit in detail (colors, style, accessories)
-3. Distinctive Features: Unique identifying marks, props they carry, signature poses/gestures
-4. Color Palette: 3-4 specific colors associated with this character
-5. Expression Notes: How this character typically expresses emotion, their default expression
+For each character provide:
+
+1. Physical Description (BE EXTREMELY SPECIFIC):
+   - EXACT hair color (e.g., "golden blonde", "jet black", "auburn red", "chocolate brown" - NOT just "brown" or "blonde")
+   - EXACT hair style and length (e.g., "shoulder-length wavy hair with side-swept bangs", "short spiky hair", "long straight hair in a ponytail")
+   - Face shape (oval, round, square, heart-shaped, angular)
+   - Eye color AND eye shape (almond-shaped, round, etc.)
+   - Skin tone (fair, olive, tan, dark brown, etc.)
+   - Age appearance (child around 6, teenager, young adult in 20s, etc.)
+   - Height/build (tall and lanky, short and stocky, average height with athletic build)
+   - Nose shape and any notable facial features
+
+2. Clothing: Their CONSISTENT outfit throughout the story (colors, style, accessories they always wear)
+
+3. Distinctive Features: Unique visual identifiers that make them INSTANTLY recognizable (glasses, freckles, a specific accessory, a scar, etc.)
+
+4. Color Palette: 3-4 SPECIFIC hex-describable colors (like "bright red #E74C3C", "navy blue", "sunny yellow")
+
+5. Expression Notes: Their default facial expression and how they typically emote
 
 Also provide overall style notes for maintaining consistency across illustrations.
 
