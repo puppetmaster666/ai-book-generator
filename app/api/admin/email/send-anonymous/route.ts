@@ -50,17 +50,29 @@ export async function POST(request: NextRequest) {
     let failCount = 0;
     const errors: string[] = [];
 
-    // Send emails to each anonymous contact
-    for (const email of emails) {
+    // Helper to delay between emails (avoid rate limiting - Resend allows 2/sec)
+    const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+    // Send emails to each anonymous contact with rate limiting
+    for (let i = 0; i < emails.length; i++) {
+      const email = emails[i];
+
+      // Add delay between emails (500ms = max 2 per second)
+      if (i > 0) {
+        await delay(500);
+      }
+
       try {
         let emailContent: { subject: string; html: string };
         let claimToken: string | null = null;
+        let creditsIncluded = 0;
 
         // For credits, we create a pending claim that requires registration
         // The token is stored with email instead of userId - they must register to claim
         if (template === 'bug_apology' || (template === 'announcement' && includeCredit && creditAmount && creditAmount > 0)) {
           claimToken = randomBytes(32).toString('hex');
           const creditsToGive = template === 'bug_apology' ? 1 : creditAmount!;
+          creditsIncluded = creditsToGive;
 
           // Create an anonymous credit claim - email-based, userId is null
           await prisma.creditClaim.create({
@@ -107,21 +119,45 @@ export async function POST(request: NextRequest) {
             throw new Error(`Unknown template: ${template}`);
         }
 
-        const sent = await sendEmail({
+        const result = await sendEmail({
           to: email,
           subject: emailContent.subject,
           html: emailContent.html,
         });
 
-        if (sent) {
+        // Log the email
+        await prisma.emailLog.create({
+          data: {
+            to: email,
+            subject: emailContent.subject,
+            template,
+            status: result ? 'sent' : 'failed',
+            metadata: creditsIncluded > 0 ? { creditsIncluded, anonymous: true } : { anonymous: true },
+          },
+        });
+
+        if (result) {
           successCount++;
         } else {
           failCount++;
           errors.push(`Failed to send to ${email}`);
         }
       } catch (err) {
+        const errorMsg = err instanceof Error ? err.message : 'Unknown error';
         failCount++;
-        errors.push(`Error for ${email}: ${err instanceof Error ? err.message : 'Unknown error'}`);
+        errors.push(`Error for ${email}: ${errorMsg}`);
+
+        // Log failed email
+        await prisma.emailLog.create({
+          data: {
+            to: email,
+            subject: `[${template}]`,
+            template,
+            status: 'failed',
+            error: errorMsg,
+            metadata: { anonymous: true },
+          },
+        }).catch(() => {}); // Don't fail if logging fails
       }
     }
 

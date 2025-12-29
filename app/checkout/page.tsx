@@ -255,45 +255,6 @@ function CheckoutContent() {
               </div>
             )}
 
-            {/* FREE Book CTA for Anonymous Users */}
-            {isAnonymous && !isSubscription && bookId && (
-              <div className="mb-6 bg-gradient-to-br from-lime-50 to-green-50 rounded-2xl border-2 border-lime-300 p-6">
-                <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 bg-lime-400 rounded-xl flex items-center justify-center flex-shrink-0">
-                    <Gift className="h-6 w-6 text-neutral-900" />
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="font-bold text-lg text-neutral-900 mb-1" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>
-                      First Book FREE!
-                    </h3>
-                    <p className="text-sm text-neutral-600 mb-4">
-                      Sign up now and get this book completely free. No credit card required.
-                    </p>
-                    <Link
-                      href={`/signup?bookId=${bookId}&free=true`}
-                      className="inline-flex items-center gap-2 px-5 py-3 bg-neutral-900 text-white rounded-full font-medium hover:bg-neutral-800 transition-colors"
-                    >
-                      <User className="h-4 w-4" />
-                      Sign Up & Get Free Book
-                      <ArrowRight className="h-4 w-4" />
-                    </Link>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Divider between free option and paid */}
-            {isAnonymous && !isSubscription && bookId && (
-              <div className="relative mb-6">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-neutral-200"></div>
-                </div>
-                <div className="relative flex justify-center text-sm">
-                  <span className="px-4 bg-white text-neutral-500">or pay with card</span>
-                </div>
-              </div>
-            )}
-
             {/* Order Summary */}
             <div className="bg-neutral-50 rounded-xl p-5 mb-6">
               <h3 className="font-medium mb-4" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>Order Summary</h3>
@@ -392,6 +353,43 @@ function CheckoutContent() {
                 <p className="text-xs text-red-600 mt-1">{promoError}</p>
               )}
             </div>
+
+            {/* FREE Book CTA for Anonymous Users */}
+            {isAnonymous && !isSubscription && bookId && (
+              <>
+                <div className="relative mb-6">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-neutral-200"></div>
+                  </div>
+                  <div className="relative flex justify-center text-sm">
+                    <span className="px-4 bg-white text-neutral-500">or sign up for free</span>
+                  </div>
+                </div>
+                <div className="mb-6 bg-gradient-to-br from-lime-50 to-green-50 rounded-2xl border-2 border-lime-300 p-6">
+                  <div className="flex items-start gap-4">
+                    <div className="w-12 h-12 bg-lime-400 rounded-xl flex items-center justify-center flex-shrink-0">
+                      <Gift className="h-6 w-6 text-neutral-900" />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="font-bold text-lg text-neutral-900 mb-1" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>
+                        First Book FREE!
+                      </h3>
+                      <p className="text-sm text-neutral-600 mb-4">
+                        Sign up now and get this book completely free. No credit card required.
+                      </p>
+                      <Link
+                        href={`/signup?bookId=${bookId}&free=true`}
+                        className="inline-flex items-center gap-2 px-5 py-3 bg-neutral-900 text-white rounded-full font-medium hover:bg-neutral-800 transition-colors"
+                      >
+                        <User className="h-4 w-4" />
+                        Sign Up & Get Free Book
+                        <ArrowRight className="h-4 w-4" />
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
 
             {/* Email Input */}
             <div className="mb-6">

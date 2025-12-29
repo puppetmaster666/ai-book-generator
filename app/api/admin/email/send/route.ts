@@ -63,10 +63,21 @@ export async function POST(request: NextRequest) {
     let failCount = 0;
     const errors: string[] = [];
 
-    // Send emails
-    for (const targetUser of users) {
+    // Helper to delay between emails (avoid rate limiting - Resend allows 2/sec)
+    const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+    // Send emails with rate limiting
+    for (let i = 0; i < users.length; i++) {
+      const targetUser = users[i];
+
+      // Add delay between emails (500ms = max 2 per second)
+      if (i > 0) {
+        await delay(500);
+      }
+
       try {
         let emailContent: { subject: string; html: string };
+        let creditsIncluded = 0;
 
         switch (template) {
           case 'welcome':
@@ -75,6 +86,7 @@ export async function POST(request: NextRequest) {
           case 'free_credit':
             // For free_credit template via this endpoint, default to 1 credit
             emailContent = getFreeCreditEmail(targetUser.name || 'there', 1);
+            creditsIncluded = 1;
             break;
           case 'announcement':
             if (!customMessage) {
@@ -105,6 +117,7 @@ export async function POST(request: NextRequest) {
                 creditAmount,
                 claimUrl
               );
+              creditsIncluded = creditAmount;
             } else {
               emailContent = getAnnouncementEmail(
                 targetUser.name || 'there',
@@ -129,26 +142,52 @@ export async function POST(request: NextRequest) {
 
             const bugClaimUrl = `${APP_URL}/claim-credit?token=${bugToken}`;
             emailContent = getBugApologyEmail(targetUser.name || 'there', bugClaimUrl);
+            creditsIncluded = 1;
             break;
           default:
             throw new Error(`Unknown template: ${template}`);
         }
 
-        const sent = await sendEmail({
+        const result = await sendEmail({
           to: targetUser.email,
           subject: emailContent.subject,
           html: emailContent.html,
         });
 
-        if (sent) {
+        // Log the email
+        await prisma.emailLog.create({
+          data: {
+            to: targetUser.email,
+            subject: emailContent.subject,
+            template,
+            status: result ? 'sent' : 'failed',
+            userId: targetUser.id,
+            metadata: creditsIncluded > 0 ? { creditsIncluded } : undefined,
+          },
+        });
+
+        if (result) {
           successCount++;
         } else {
           failCount++;
           errors.push(`Failed to send to ${targetUser.email}`);
         }
       } catch (err) {
+        const errorMsg = err instanceof Error ? err.message : 'Unknown error';
         failCount++;
-        errors.push(`Error for ${targetUser.email}: ${err instanceof Error ? err.message : 'Unknown error'}`);
+        errors.push(`Error for ${targetUser.email}: ${errorMsg}`);
+
+        // Log failed email
+        await prisma.emailLog.create({
+          data: {
+            to: targetUser.email,
+            subject: `[${template}]`,
+            template,
+            status: 'failed',
+            error: errorMsg,
+            userId: targetUser.id,
+          },
+        }).catch(() => {}); // Don't fail if logging fails
       }
     }
 

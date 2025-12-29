@@ -174,6 +174,23 @@ export default function AdminDashboard() {
   const [anonymousIncludeCredit, setAnonymousIncludeCredit] = useState(false);
   const [anonymousCreditAmount, setAnonymousCreditAmount] = useState(1);
 
+  // Email logs state
+  const [emailLogs, setEmailLogs] = useState<Array<{
+    id: string;
+    to: string;
+    subject: string;
+    template: string;
+    status: string;
+    error: string | null;
+    userId: string | null;
+    createdAt: string;
+  }>>([]);
+  const [emailLogsPage, setEmailLogsPage] = useState(1);
+  const [emailLogsTotalPages, setEmailLogsTotalPages] = useState(1);
+  const [emailLogsTotal, setEmailLogsTotal] = useState(0);
+  const [isLoadingEmailLogs, setIsLoadingEmailLogs] = useState(false);
+  const [emailLogsFilter, setEmailLogsFilter] = useState<'all' | 'sent' | 'failed'>('all');
+
   const fetchStats = async (showRefresh = false, booksPg = booksPage, usersPg = usersPage) => {
     if (showRefresh) setIsRefreshing(true);
     try {
@@ -504,6 +521,26 @@ export default function AdminDashboard() {
     }
   };
 
+  const fetchEmailLogs = async (page = 1, filter: 'all' | 'sent' | 'failed' = 'all') => {
+    setIsLoadingEmailLogs(true);
+    try {
+      const statusParam = filter === 'all' ? '' : `&status=${filter}`;
+      const response = await fetch(`/api/admin/email-logs?page=${page}&limit=20${statusParam}`);
+      const data = await response.json();
+
+      if (response.ok) {
+        setEmailLogs(data.logs);
+        setEmailLogsPage(data.pagination.page);
+        setEmailLogsTotalPages(data.pagination.totalPages);
+        setEmailLogsTotal(data.pagination.total);
+      }
+    } catch (err) {
+      console.error('Failed to fetch email logs:', err);
+    } finally {
+      setIsLoadingEmailLogs(false);
+    }
+  };
+
   useEffect(() => {
     if (sessionStatus === 'loading') return;
     if (!session) {
@@ -511,6 +548,7 @@ export default function AdminDashboard() {
       return;
     }
     fetchStats();
+    fetchEmailLogs();
   }, [session, sessionStatus, router]);
 
   if (sessionStatus === 'loading' || isLoading) {
@@ -1407,6 +1445,126 @@ export default function AdminDashboard() {
             </div>
           ) : (
             <p className="text-neutral-400 text-sm">No anonymous purchasers yet</p>
+          )}
+        </div>
+
+        {/* Email Logs */}
+        <div className="bg-white rounded-xl border border-neutral-200 p-6 mt-8">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <h2 className="text-lg font-semibold flex items-center gap-2">
+                <Mail className="h-5 w-5 text-neutral-500" />
+                Email Logs
+              </h2>
+              <span className="text-sm text-neutral-500">
+                ({emailLogsTotal} total)
+              </span>
+              {isLoadingEmailLogs && <Loader2 className="h-4 w-4 animate-spin text-neutral-400" />}
+            </div>
+            <div className="flex items-center gap-2">
+              <select
+                value={emailLogsFilter}
+                onChange={(e) => {
+                  const newFilter = e.target.value as 'all' | 'sent' | 'failed';
+                  setEmailLogsFilter(newFilter);
+                  fetchEmailLogs(1, newFilter);
+                }}
+                className="px-3 py-1.5 text-sm border border-neutral-300 rounded-lg focus:ring-2 focus:ring-neutral-900 focus:border-transparent"
+              >
+                <option value="all">All</option>
+                <option value="sent">Sent</option>
+                <option value="failed">Failed</option>
+              </select>
+              <button
+                onClick={() => fetchEmailLogs(emailLogsPage, emailLogsFilter)}
+                className="p-2 text-neutral-500 hover:text-neutral-900 hover:bg-neutral-100 rounded-lg transition-colors"
+                title="Refresh"
+              >
+                <RefreshCw className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+
+          {emailLogs.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-neutral-200">
+                    <th className="text-left py-3 px-2 font-medium text-neutral-500">To</th>
+                    <th className="text-left py-3 px-2 font-medium text-neutral-500">Subject</th>
+                    <th className="text-left py-3 px-2 font-medium text-neutral-500">Template</th>
+                    <th className="text-left py-3 px-2 font-medium text-neutral-500">Status</th>
+                    <th className="text-left py-3 px-2 font-medium text-neutral-500">Error</th>
+                    <th className="text-left py-3 px-2 font-medium text-neutral-500">Sent</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {emailLogs.map((log) => (
+                    <tr
+                      key={log.id}
+                      className={`border-b border-neutral-100 hover:bg-neutral-50 ${log.status === 'failed' ? 'bg-red-50/50' : ''}`}
+                    >
+                      <td className="py-3 px-2 font-medium text-neutral-900 max-w-[200px] truncate">
+                        {log.to}
+                      </td>
+                      <td className="py-3 px-2 text-neutral-600 max-w-[250px] truncate">
+                        {log.subject}
+                      </td>
+                      <td className="py-3 px-2">
+                        <span className="px-2 py-1 rounded-full text-xs font-medium bg-neutral-100 text-neutral-700">
+                          {log.template}
+                        </span>
+                      </td>
+                      <td className="py-3 px-2">
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          log.status === 'sent'
+                            ? 'bg-green-100 text-green-800'
+                            : 'bg-red-100 text-red-800'
+                        }`}>
+                          {log.status}
+                        </span>
+                      </td>
+                      <td className="py-3 px-2 text-red-600 text-xs max-w-[200px] truncate" title={log.error || undefined}>
+                        {log.error || '-'}
+                      </td>
+                      <td className="py-3 px-2 text-neutral-500">
+                        <div>{new Date(log.createdAt).toLocaleDateString()}</div>
+                        <div className="text-xs text-neutral-400">{new Date(log.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p className="text-neutral-400 text-sm">No email logs yet</p>
+          )}
+
+          {/* Email Logs Pagination */}
+          {emailLogsTotalPages > 1 && (
+            <div className="flex items-center justify-between mt-4 pt-4 border-t border-neutral-200">
+              <p className="text-sm text-neutral-500">
+                Page {emailLogsPage} of {emailLogsTotalPages}
+              </p>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => fetchEmailLogs(emailLogsPage - 1, emailLogsFilter)}
+                  disabled={emailLogsPage <= 1 || isLoadingEmailLogs}
+                  className="flex items-center gap-1 px-3 py-1.5 text-sm text-neutral-600 hover:bg-neutral-100 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                  Previous
+                </button>
+                <button
+                  onClick={() => fetchEmailLogs(emailLogsPage + 1, emailLogsFilter)}
+                  disabled={emailLogsPage >= emailLogsTotalPages || isLoadingEmailLogs}
+                  className="flex items-center gap-1 px-3 py-1.5 text-sm text-neutral-600 hover:bg-neutral-100 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  Next
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
           )}
         </div>
       </main>

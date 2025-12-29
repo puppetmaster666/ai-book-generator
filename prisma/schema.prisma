@@ -268,3 +268,20 @@ model CreditClaim {
   @@index([token])
   @@index([email])
 }
+
+model EmailLog {
+  id          String   @id @default(cuid())
+  to          String   // Recipient email
+  subject     String
+  template    String   // Template type: welcome, announcement, bug_apology, etc.
+  status      String   // sent, failed, pending
+  error       String?  @db.Text // Error message if failed
+  messageId   String?  // Email provider message ID
+  userId      String?  // If sent to a registered user
+  metadata    Json?    // Additional context (credits included, etc.)
+  createdAt   DateTime @default(now())
+
+  @@index([to])
+  @@index([status])
+  @@index([createdAt])
+}
