@@ -22,34 +22,49 @@ function SignupContent() {
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [error, setError] = useState('');
+  const [isClaiming, setIsClaiming] = useState(false);
 
   // Claim book for user after authentication
-  const claimBook = async () => {
-    if (!bookId) return false;
+  const claimBook = async (): Promise<{ success: boolean; error?: string }> => {
+    if (!bookId) return { success: false, error: 'No book ID' };
     try {
       if (isFreeBook) {
         // Use the free book claim endpoint
         const res = await fetch(`/api/books/${bookId}/claim-free`, {
           method: 'POST',
         });
-        return res.ok;
+        const data = await res.json();
+        if (!res.ok) {
+          console.error('Claim free book error:', data);
+          return { success: false, error: data.error || 'Failed to claim book' };
+        }
+        return { success: true };
       }
-      return true;
+      return { success: true };
     } catch (err) {
       console.error('Failed to claim book:', err);
-      return false;
+      return { success: false, error: 'Network error while claiming book' };
     }
   };
 
   // Redirect logged-in users to checkout or dashboard
   useEffect(() => {
-    if (status === 'authenticated' && session) {
+    if (status === 'authenticated' && session && !isClaiming) {
       const handlePostAuth = async () => {
         // Claim the book if there's a bookId with free=true
         if (bookId && isFreeBook) {
-          const claimed = await claimBook();
-          if (claimed) {
+          setIsClaiming(true);
+          const result = await claimBook();
+          if (result.success) {
             // Redirect to book page to start generation
+            router.push(`/book/${bookId}`);
+            return;
+          } else {
+            // Show error but still redirect to book page - the user is authenticated
+            // They can see their book status there
+            console.error('Claim failed:', result.error);
+            setError(result.error || 'Failed to claim free book');
+            // Still redirect to book page - they're logged in and own the book now
             router.push(`/book/${bookId}`);
             return;
           }
@@ -69,13 +84,18 @@ function SignupContent() {
 
       handlePostAuth();
     }
-  }, [status, session, plan, bookId, isFreeBook, callbackUrl, router]);
+  }, [status, session, plan, bookId, isFreeBook, callbackUrl, router, isClaiming]);
 
-  // Show loading while checking session
-  if (status === 'loading' || (status === 'authenticated' && session)) {
+  // Show loading while checking session or claiming book
+  if (status === 'loading' || (status === 'authenticated' && session) || isClaiming) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-neutral-900" />
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin text-neutral-900 mx-auto mb-4" />
+          {isClaiming && (
+            <p className="text-neutral-600">Claiming your free book...</p>
+          )}
+        </div>
       </div>
     );
   }
