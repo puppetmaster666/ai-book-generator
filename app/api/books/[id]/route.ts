@@ -47,15 +47,24 @@ export async function GET(
       );
     }
 
-    // Check if user is eligible for free book
+    // Check if user is eligible for free book or has credits
     let freeBookEligible = false;
+    let hasCredits = false;
+    let userCredits = 0;
+    let userPlan = 'free';
     let isFirstCompletedBook = false;
     if (book.userId) {
       const user = await prisma.user.findUnique({
         where: { id: book.userId },
-        select: { freeBookUsed: true },
+        select: { freeBookUsed: true, freeCredits: true, credits: true, plan: true },
       });
-      freeBookEligible = user ? !user.freeBookUsed : false;
+      if (user) {
+        // User is eligible for free book if they haven't used their first free book OR have credits
+        freeBookEligible = !user.freeBookUsed || user.freeCredits > 0;
+        hasCredits = user.freeCredits > 0 || user.credits > 0;
+        userCredits = user.freeCredits + user.credits;
+        userPlan = user.plan;
+      }
 
       // Check if this is user's first completed book (for discount popup)
       if (book.status === 'completed') {
@@ -85,7 +94,14 @@ export async function GET(
       })),
     };
 
-    return NextResponse.json({ book: transformedBook, freeBookEligible, isFirstCompletedBook });
+    return NextResponse.json({
+      book: transformedBook,
+      freeBookEligible,
+      hasCredits,
+      userCredits,
+      userPlan,
+      isFirstCompletedBook
+    });
   } catch (error) {
     console.error('Error fetching book:', error);
     return NextResponse.json(

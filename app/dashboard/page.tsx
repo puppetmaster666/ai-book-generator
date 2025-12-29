@@ -6,7 +6,7 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
-import { BookOpen, Plus, Download, Clock, Check, AlertCircle } from 'lucide-react';
+import { BookOpen, Plus, Download, Clock, Check, AlertCircle, Coins, Gift, Sparkles } from 'lucide-react';
 
 interface Book {
   id: string;
@@ -21,8 +21,17 @@ interface Book {
   completedAt: string | null;
 }
 
+interface UserInfo {
+  plan: string;
+  credits: number;
+  freeCredits: number;
+  totalCredits: number;
+  hasFirstBookFree: boolean;
+}
+
 export default function Dashboard() {
   const [books, setBooks] = useState<Book[]>([]);
+  const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const { data: session, status: sessionStatus } = useSession();
   const router = useRouter();
@@ -34,9 +43,9 @@ export default function Dashboard() {
       return;
     }
 
-    // Fetch books when session is available
+    // Fetch books and user info when session is available
     if (sessionStatus === 'authenticated' && session?.user) {
-      const fetchBooks = async () => {
+      const fetchData = async () => {
         try {
           const userId = (session.user as { id?: string }).id;
           const email = session.user.email;
@@ -46,19 +55,29 @@ export default function Dashboard() {
           if (userId) params.set('userId', userId);
           if (email) params.set('email', email);
 
-          const response = await fetch(`/api/books?${params.toString()}`);
-          if (response.ok) {
-            const data = await response.json();
+          // Fetch books and user info in parallel
+          const [booksResponse, userResponse] = await Promise.all([
+            fetch(`/api/books?${params.toString()}`),
+            fetch('/api/user'),
+          ]);
+
+          if (booksResponse.ok) {
+            const data = await booksResponse.json();
             setBooks(data.books || []);
           }
+
+          if (userResponse.ok) {
+            const data = await userResponse.json();
+            setUserInfo(data.user);
+          }
         } catch (error) {
-          console.error('Failed to fetch books:', error);
+          console.error('Failed to fetch data:', error);
         } finally {
           setLoading(false);
         }
       };
 
-      fetchBooks();
+      fetchData();
     }
   }, [session, sessionStatus, router]);
 
@@ -93,6 +112,54 @@ export default function Dashboard() {
               <Plus className="h-5 w-5" /> New Book
             </Link>
           </div>
+
+          {/* Credits Section */}
+          {userInfo && (
+            <div className="mb-8 bg-gradient-to-r from-neutral-50 to-neutral-100 rounded-2xl border border-neutral-200 p-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-neutral-900 rounded-xl flex items-center justify-center">
+                    <Coins className="h-6 w-6 text-white" />
+                  </div>
+                  <div>
+                    <h2 className="font-semibold text-lg" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>
+                      Your Credits
+                    </h2>
+                    <p className="text-neutral-600 text-sm">
+                      {userInfo.plan === 'free' ? 'Free Plan' : userInfo.plan === 'monthly' ? 'Monthly Plan' : 'Yearly Plan'}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-6">
+                  {/* First Book Free Badge */}
+                  {userInfo.hasFirstBookFree && (
+                    <div className="flex items-center gap-2 px-4 py-2 bg-green-50 border border-green-200 rounded-xl">
+                      <Gift className="h-5 w-5 text-green-600" />
+                      <span className="text-green-700 font-medium">First Book FREE!</span>
+                    </div>
+                  )}
+
+                  {/* Credits Count */}
+                  {userInfo.totalCredits > 0 && (
+                    <div className="flex items-center gap-2 px-4 py-2 bg-amber-50 border border-amber-200 rounded-xl">
+                      <Sparkles className="h-5 w-5 text-amber-600" />
+                      <span className="text-amber-700 font-medium">
+                        {userInfo.totalCredits} Credit{userInfo.totalCredits !== 1 ? 's' : ''} Available
+                      </span>
+                    </div>
+                  )}
+
+                  {/* No Credits Message */}
+                  {!userInfo.hasFirstBookFree && userInfo.totalCredits === 0 && (
+                    <div className="text-neutral-500 text-sm">
+                      No credits available
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
 
           {loading || sessionStatus === 'loading' ? (
             <div className="text-center py-12">

@@ -35,6 +35,9 @@ interface BookData {
 interface ApiResponse {
   book: BookData;
   freeBookEligible: boolean;
+  hasCredits: boolean;
+  userCredits: number;
+  userPlan: string;
   error?: string;
 }
 
@@ -53,6 +56,8 @@ function ReviewContent() {
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [freeBookEligible, setFreeBookEligible] = useState(false);
+  const [hasCredits, setHasCredits] = useState(false);
+  const [userCredits, setUserCredits] = useState(0);
 
   // User details
   const [email, setEmail] = useState('');
@@ -93,6 +98,8 @@ function ReviewContent() {
           setBook(data.book);
           setAuthorName(data.book.authorName || '');
           setFreeBookEligible(data.freeBookEligible || false);
+          setHasCredits(data.hasCredits || false);
+          setUserCredits(data.userCredits || 0);
         }
         setIsLoading(false);
       })
@@ -281,12 +288,16 @@ function ReviewContent() {
   const originalPrice = getBasePrice() / 100;
   let finalPrice = originalPrice;
   let discountLabel = '';
-  // Book is free if user is eligible for free book OR has 100% promo discount
-  const isFree = freeBookEligible || promoDiscount === 1;
+  // Book is free if user is eligible for free book, has credits, OR has 100% promo discount
+  const isFree = freeBookEligible || hasCredits || promoDiscount === 1;
 
-  if (freeBookEligible) {
+  if (freeBookEligible || hasCredits) {
     finalPrice = 0;
-    discountLabel = 'First book FREE!';
+    if (hasCredits && !freeBookEligible) {
+      discountLabel = `Using 1 of ${userCredits} credit${userCredits !== 1 ? 's' : ''}`;
+    } else {
+      discountLabel = 'First book FREE!';
+    }
   } else if (promoDiscount) {
     finalPrice = originalPrice * (1 - promoDiscount);
     discountLabel = promoDiscount === 1 ? 'FREE' : `${Math.round(promoDiscount * 100)}% off`;
@@ -328,23 +339,19 @@ function ReviewContent() {
       // Continue even if update fails
     }
 
-    // If user is eligible for free book (first book free)
-    if (freeBookEligible) {
+    // If user is eligible for free book (first book free) or has credits
+    if (freeBookEligible || hasCredits) {
       try {
-        const response = await fetch('/api/claim-free-book', {
+        const response = await fetch(`/api/books/${bookId}/claim-free`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            bookId,
-            email: email.trim().toLowerCase(),
-          }),
         });
 
         const data = await response.json();
         if (data.success) {
           router.push(`/book/${bookId}?success=true`);
         } else {
-          setError(data.error || 'Failed to claim free book');
+          setError(data.error || 'Failed to claim book');
           setIsSubmitting(false);
         }
       } catch {
@@ -505,11 +512,11 @@ function ReviewContent() {
                 )}
               </div>
               <div className="text-left md:text-right">
-                {freeBookEligible ? (
+                {freeBookEligible || hasCredits ? (
                   <>
                     <span className="text-lg text-neutral-400 line-through mr-2">${originalPrice.toFixed(2)}</span>
                     <span className="text-2xl font-bold text-green-600">FREE</span>
-                    <p className="text-sm text-green-600 font-medium">First book free!</p>
+                    <p className="text-sm text-green-600 font-medium">{discountLabel}</p>
                   </>
                 ) : promoDiscount ? (
                   <>
@@ -985,10 +992,13 @@ function ReviewContent() {
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-neutral-900 text-white rounded-2xl p-6">
             <div>
               <p className="text-neutral-400 text-sm mb-1">Total</p>
-              {freeBookEligible ? (
-                <div className="flex items-center gap-2">
-                  <span className="text-lg text-neutral-400 line-through">${originalPrice.toFixed(2)}</span>
-                  <span className="text-3xl font-bold text-green-400">FREE</span>
+              {freeBookEligible || hasCredits ? (
+                <div className="flex flex-col">
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg text-neutral-400 line-through">${originalPrice.toFixed(2)}</span>
+                    <span className="text-3xl font-bold text-green-400">FREE</span>
+                  </div>
+                  <span className="text-sm text-green-400">{discountLabel}</span>
                 </div>
               ) : promoDiscount ? (
                 <div className="flex items-center gap-2">
