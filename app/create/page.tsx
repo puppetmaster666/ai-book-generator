@@ -63,13 +63,11 @@ export default function CreateBook() {
 
   // Load saved form state on mount
   useEffect(() => {
-    // First check for homepage idea
+    // First check for homepage idea (don't remove it - keep for back navigation)
     const savedIdea = sessionStorage.getItem('bookIdea') || sessionStorage.getItem('originalIdea');
     if (savedIdea) {
       setIdea(savedIdea);
       setHasIdeaFromHomepage(true);
-      sessionStorage.removeItem('bookIdea');
-      sessionStorage.removeItem('originalIdea');
       return;
     }
 
@@ -107,6 +105,8 @@ export default function CreateBook() {
   // Clear form state when navigating away after successful submission
   const clearFormState = () => {
     sessionStorage.removeItem(FORM_STATE_KEY);
+    sessionStorage.removeItem('bookIdea');
+    sessionStorage.removeItem('originalIdea');
   };
 
   const handleGenerateIdea = async () => {

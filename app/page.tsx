@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import Image from 'next/image';
@@ -39,6 +39,14 @@ export default function Home() {
   const [ideaCategory, setIdeaCategory] = useState<IdeaCategory>('random');
   const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
   const [selectedComicCard, setSelectedComicCard] = useState<number | null>(null);
+
+  // Restore idea from sessionStorage on mount (for back navigation)
+  useEffect(() => {
+    const savedIdea = sessionStorage.getItem('bookIdea');
+    if (savedIdea && !bookIdea) {
+      setBookIdea(savedIdea);
+    }
+  }, []);
 
   const handleFindIdea = async () => {
     setIsGeneratingIdea(true);
