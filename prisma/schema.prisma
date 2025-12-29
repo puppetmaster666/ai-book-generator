@@ -34,6 +34,7 @@ model User {
 
   books         Book[]
   notifications Notification[]
+  creditClaims  CreditClaim[]
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 }
@@ -250,4 +251,18 @@ model Notification {
   createdAt DateTime @default(now())
 
   @@index([userId])
+}
+
+model CreditClaim {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  credits   Int      @default(1)
+  claimed   Boolean  @default(false)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([token])
 }

@@ -131,6 +131,8 @@ export default function AdminDashboard() {
   const [customMessage, setCustomMessage] = useState('');
   const [customSubject, setCustomSubject] = useState('');
   const [creditsToGift, setCreditsToGift] = useState(1);
+  const [includeCredit, setIncludeCredit] = useState(false);
+  const [emailCreditAmount, setEmailCreditAmount] = useState(1);
   const [isSendingEmail, setIsSendingEmail] = useState(false);
   const [isGiftingCredits, setIsGiftingCredits] = useState(false);
   const [emailResult, setEmailResult] = useState<{ success: boolean; message: string } | null>(null);
@@ -224,6 +226,8 @@ export default function AdminDashboard() {
           template: emailTemplate,
           customMessage: emailTemplate === 'announcement' ? customMessage : undefined,
           customSubject: emailTemplate === 'announcement' ? customSubject : undefined,
+          includeCredit: emailTemplate === 'announcement' ? includeCredit : undefined,
+          creditAmount: emailTemplate === 'announcement' && includeCredit ? emailCreditAmount : undefined,
         }),
       });
 
@@ -875,6 +879,39 @@ export default function AdminDashboard() {
                       className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:ring-2 focus:ring-neutral-900 focus:border-transparent resize-none"
                     />
                   </div>
+
+                  {/* Include Credit Gift Option */}
+                  <div className="flex items-center gap-4 pt-2 border-t border-neutral-200">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={includeCredit}
+                        onChange={(e) => setIncludeCredit(e.target.checked)}
+                        className="w-4 h-4 rounded border-neutral-300 text-lime-500 focus:ring-lime-500"
+                      />
+                      <span className="text-sm font-medium text-neutral-700">
+                        Include claimable credit gift
+                      </span>
+                    </label>
+                    {includeCredit && (
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="number"
+                          min={1}
+                          max={100}
+                          value={emailCreditAmount}
+                          onChange={(e) => setEmailCreditAmount(parseInt(e.target.value) || 1)}
+                          className="w-16 px-2 py-1 border border-neutral-300 rounded-lg text-sm focus:ring-2 focus:ring-lime-500 focus:border-transparent"
+                        />
+                        <span className="text-sm text-neutral-500">credit{emailCreditAmount > 1 ? 's' : ''}</span>
+                      </div>
+                    )}
+                  </div>
+                  {includeCredit && (
+                    <p className="text-xs text-neutral-500">
+                      A unique claim link will be generated for each user. Credits are only added when they click the button.
+                    </p>
+                  )}
                 </div>
               )}
 

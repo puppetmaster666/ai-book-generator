@@ -12,6 +12,7 @@ function SignupContent() {
   const searchParams = useSearchParams();
   const plan = searchParams.get('plan');
   const bookId = searchParams.get('bookId');
+  const isFreeBook = searchParams.get('free') === 'true';
   const callbackUrl = searchParams.get('callbackUrl');
   const { data: session, status } = useSession();
 
@@ -23,37 +24,52 @@ function SignupContent() {
   const [error, setError] = useState('');
 
   // Claim book for user after authentication
-  const claimBook = async (userId: string) => {
-    if (!bookId) return;
+  const claimBook = async () => {
+    if (!bookId) return false;
     try {
-      await fetch(`/api/books/${bookId}/claim`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId }),
-      });
+      if (isFreeBook) {
+        // Use the free book claim endpoint
+        const res = await fetch(`/api/books/${bookId}/claim-free`, {
+          method: 'POST',
+        });
+        return res.ok;
+      }
+      return true;
     } catch (err) {
       console.error('Failed to claim book:', err);
+      return false;
     }
   };
 
   // Redirect logged-in users to checkout or dashboard
   useEffect(() => {
     if (status === 'authenticated' && session) {
-      // Claim the book if there's a bookId
-      const userId = (session.user as { id?: string })?.id;
-      if (bookId && userId) {
-        claimBook(userId);
-      }
+      const handlePostAuth = async () => {
+        // Claim the book if there's a bookId with free=true
+        if (bookId && isFreeBook) {
+          const claimed = await claimBook();
+          if (claimed) {
+            // Redirect to book page to start generation
+            router.push(`/book/${bookId}`);
+            return;
+          }
+        }
 
-      if (callbackUrl) {
-        router.push(callbackUrl);
-      } else if (plan) {
-        router.push(`/checkout?plan=${plan}`);
-      } else {
-        router.push('/dashboard');
-      }
+        if (callbackUrl) {
+          router.push(callbackUrl);
+        } else if (plan) {
+          router.push(`/checkout?plan=${plan}`);
+        } else if (bookId) {
+          // If there's a bookId but no free flag, go to checkout
+          router.push(`/checkout?bookId=${bookId}`);
+        } else {
+          router.push('/dashboard');
+        }
+      };
+
+      handlePostAuth();
     }
-  }, [status, session, plan, bookId, callbackUrl, router]);
+  }, [status, session, plan, bookId, isFreeBook, callbackUrl, router]);
 
   // Show loading while checking session
   if (status === 'loading' || (status === 'authenticated' && session)) {
@@ -108,16 +124,18 @@ function SignupContent() {
   const handleGoogleSignIn = async () => {
     setIsGoogleLoading(true);
     try {
-      // Build callback URL with bookId if present
+      // Build callback URL
       let redirectUrl = '/dashboard';
       if (callbackUrl) {
         redirectUrl = callbackUrl;
+      } else if (bookId && isFreeBook) {
+        // For free book claims, redirect back to this signup page
+        // The useEffect will handle the claim after auth
+        redirectUrl = `/signup?bookId=${bookId}&free=true`;
       } else if (plan) {
         redirectUrl = `/checkout?plan=${plan}`;
-      }
-      // Add claimBook param if we have a bookId
-      if (bookId) {
-        redirectUrl += (redirectUrl.includes('?') ? '&' : '?') + `claimBook=${bookId}`;
+      } else if (bookId) {
+        redirectUrl = `/checkout?bookId=${bookId}`;
       }
       await signIn('google', { callbackUrl: redirectUrl });
     } catch (err) {
@@ -134,14 +152,33 @@ function SignupContent() {
         <div className="max-w-md mx-auto">
           <div className="text-center mb-8">
             <h1 className="text-3xl font-bold tracking-tight mb-2" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>
-              Create Account
+              {isFreeBook ? 'Get Your Free Book' : 'Create Account'}
             </h1>
-            {plan && (
+            {isFreeBook ? (
+              <p className="text-neutral-600">
+                Sign up to claim your book - completely free, no credit card required
+              </p>
+            ) : plan ? (
               <p className="text-neutral-600">
                 Sign up for the {plan} plan
               </p>
-            )}
+            ) : null}
           </div>
+
+          {/* Free Book Banner */}
+          {isFreeBook && (
+            <div className="mb-6 bg-gradient-to-r from-lime-100 to-green-100 rounded-xl p-4 border border-lime-200">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-lime-400 rounded-lg flex items-center justify-center">
+                  <span className="text-xl">🎁</span>
+                </div>
+                <div>
+                  <p className="font-medium text-neutral-900">First book is on us!</p>
+                  <p className="text-sm text-neutral-600">Create your account and your book will start generating immediately.</p>
+                </div>
+              </div>
+            </div>
+          )}
 
           <div className="bg-white rounded-2xl border border-neutral-200 p-8">
             <form onSubmit={handleSubmit} className="space-y-5">
@@ -192,7 +229,13 @@ function SignupContent() {
                 disabled={isLoading || isGoogleLoading}
                 className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-neutral-900 text-white rounded-full hover:bg-neutral-800 disabled:opacity-50 font-medium transition-colors"
               >
-                {isLoading ? <><Loader2 className="h-5 w-5 animate-spin" /> Creating account...</> : 'Create Account'}
+                {isLoading ? (
+                  <><Loader2 className="h-5 w-5 animate-spin" /> Creating account...</>
+                ) : isFreeBook ? (
+                  'Create Account & Get Free Book'
+                ) : (
+                  'Create Account'
+                )}
               </button>
             </form>
 

@@ -204,3 +204,58 @@ export const EMAIL_TEMPLATES = {
 } as const;
 
 export type EmailTemplateId = keyof typeof EMAIL_TEMPLATES;
+
+// Credit gift button for claimable credits in emails
+export function getCreditGiftSection(credits: number, claimUrl: string): string {
+  const bookWord = credits === 1 ? 'book credit' : 'book credits';
+
+  return `
+    <div style="background-color: #171717; border-radius: 12px; padding: 32px; margin: 28px 0; text-align: center;">
+      <p style="color: #ffffff; font-size: 16px; margin: 0 0 8px 0; font-weight: 500;">You've been gifted</p>
+      <p style="color: #BFFF00; font-size: 56px; font-weight: 700; margin: 0; line-height: 1;">${credits}</p>
+      <p style="color: #a3a3a3; font-size: 14px; margin: 8px 0 24px 0;">free ${bookWord}</p>
+      <table cellpadding="0" cellspacing="0" style="margin: 0 auto;">
+        <tr>
+          <td style="background-color: #BFFF00; border-radius: 8px;">
+            <a href="${claimUrl}" style="display: inline-block; color: #171717; text-decoration: none; padding: 14px 32px; font-weight: 600; font-size: 15px;">
+              Claim Your Free Credit${credits > 1 ? 's' : ''}
+            </a>
+          </td>
+        </tr>
+      </table>
+    </div>
+  `;
+}
+
+// Announcement email with optional credit gift
+export function getAnnouncementEmailWithCredit(
+  userName: string,
+  title: string,
+  message: string,
+  credits: number,
+  claimUrl: string,
+  ctaText?: string,
+  ctaUrl?: string
+): { subject: string; html: string } {
+  const firstName = userName?.split(' ')[0] || 'there';
+  const ctaSection = ctaText && ctaUrl ? ctaButton(ctaText, ctaUrl) : '';
+
+  return {
+    subject: title,
+    html: emailWrapper(`
+      <p style="color: #525252; font-size: 15px; margin: 0 0 24px 0;">Hi ${firstName},</p>
+
+      <div style="color: #171717; font-size: 15px; line-height: 1.7;">
+        ${message.split('\n').map(p => `<p style="margin: 0 0 16px 0;">${p}</p>`).join('')}
+      </div>
+
+      ${getCreditGiftSection(credits, claimUrl)}
+
+      ${ctaSection}
+
+      <p style="color: #737373; font-size: 14px; margin-top: 32px;">
+        — DraftMyBook
+      </p>
+    `),
+  };
+}

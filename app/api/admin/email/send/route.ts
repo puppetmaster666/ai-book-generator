@@ -2,12 +2,16 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { sendEmail } from '@/lib/email';
+import { randomBytes } from 'crypto';
 import {
   getWelcomeEmail,
   getFreeCreditEmail,
   getAnnouncementEmail,
+  getAnnouncementEmailWithCredit,
   EmailTemplateId,
 } from '@/lib/email-templates';
+
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://www.draftmybook.com';
 
 export async function POST(request: NextRequest) {
   try {
@@ -27,11 +31,13 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { userIds, template, customMessage, customSubject } = body as {
+    const { userIds, template, customMessage, customSubject, includeCredit, creditAmount } = body as {
       userIds: string[];
       template: EmailTemplateId;
       customMessage?: string;
       customSubject?: string;
+      includeCredit?: boolean;
+      creditAmount?: number;
     };
 
     if (!userIds || !Array.isArray(userIds) || userIds.length === 0) {
@@ -73,11 +79,38 @@ export async function POST(request: NextRequest) {
             if (!customMessage) {
               throw new Error('Custom message required for announcement');
             }
-            emailContent = getAnnouncementEmail(
-              targetUser.name || 'there',
-              customSubject || 'News from DraftMyBook',
-              customMessage
-            );
+
+            // Check if we should include a claimable credit
+            if (includeCredit && creditAmount && creditAmount > 0) {
+              // Generate unique claim token
+              const token = randomBytes(32).toString('hex');
+
+              // Create CreditClaim record (expires in 30 days)
+              await prisma.creditClaim.create({
+                data: {
+                  token,
+                  userId: targetUser.id,
+                  credits: creditAmount,
+                  expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
+                },
+              });
+
+              const claimUrl = `${APP_URL}/claim-credit?token=${token}`;
+
+              emailContent = getAnnouncementEmailWithCredit(
+                targetUser.name || 'there',
+                customSubject || 'News from DraftMyBook',
+                customMessage,
+                creditAmount,
+                claimUrl
+              );
+            } else {
+              emailContent = getAnnouncementEmail(
+                targetUser.name || 'there',
+                customSubject || 'News from DraftMyBook',
+                customMessage
+              );
+            }
             break;
           default:
             throw new Error(`Unknown template: ${template}`);

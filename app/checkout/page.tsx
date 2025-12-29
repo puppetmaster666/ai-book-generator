@@ -2,8 +2,10 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import Header from '@/components/Header';
-import { Check, CreditCard, Loader2, Tag, X } from 'lucide-react';
+import Link from 'next/link';
+import { Check, CreditCard, Loader2, Tag, X, Gift, ArrowRight, User } from 'lucide-react';
 import { PRICING } from '@/lib/constants';
 
 interface BookDetails {
@@ -16,9 +18,13 @@ interface BookDetails {
 function CheckoutContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const { data: session, status: sessionStatus } = useSession();
   const bookId = searchParams.get('bookId');
   const urlPromoCode = searchParams.get('promo');
   const planType = searchParams.get('plan'); // 'monthly' or 'yearly'
+
+  // Check if user is anonymous (not logged in)
+  const isAnonymous = sessionStatus !== 'loading' && !session;
 
   const [email, setEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -246,6 +252,45 @@ function CheckoutContent() {
                     {bookDetails.artStyle} style
                   </span>
                 )}
+              </div>
+            )}
+
+            {/* FREE Book CTA for Anonymous Users */}
+            {isAnonymous && !isSubscription && bookId && (
+              <div className="mb-6 bg-gradient-to-br from-lime-50 to-green-50 rounded-2xl border-2 border-lime-300 p-6">
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 bg-lime-400 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <Gift className="h-6 w-6 text-neutral-900" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-bold text-lg text-neutral-900 mb-1" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>
+                      First Book FREE!
+                    </h3>
+                    <p className="text-sm text-neutral-600 mb-4">
+                      Sign up now and get this book completely free. No credit card required.
+                    </p>
+                    <Link
+                      href={`/signup?bookId=${bookId}&free=true`}
+                      className="inline-flex items-center gap-2 px-5 py-3 bg-neutral-900 text-white rounded-full font-medium hover:bg-neutral-800 transition-colors"
+                    >
+                      <User className="h-4 w-4" />
+                      Sign Up & Get Free Book
+                      <ArrowRight className="h-4 w-4" />
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Divider between free option and paid */}
+            {isAnonymous && !isSubscription && bookId && (
+              <div className="relative mb-6">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-neutral-200"></div>
+                </div>
+                <div className="relative flex justify-center text-sm">
+                  <span className="px-4 bg-white text-neutral-500">or pay with card</span>
+                </div>
               </div>
             )}
 
