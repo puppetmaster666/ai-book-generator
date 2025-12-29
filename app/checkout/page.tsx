@@ -13,6 +13,7 @@ interface BookDetails {
   bookFormat: string;
   premise: string;
   artStyle?: string;
+  email?: string;
 }
 
 function CheckoutContent() {
@@ -54,6 +55,10 @@ function CheckoutContent() {
         .then(res => res.json())
         .then(data => {
           setBookDetails(data.book);
+          // Pre-fill email from book if available
+          if (data.book?.email && !email) {
+            setEmail(data.book.email);
+          }
           setIsLoadingBook(false);
         })
         .catch(() => setIsLoadingBook(false));
@@ -61,6 +66,13 @@ function CheckoutContent() {
       setIsLoadingBook(false);
     }
   }, [bookId, isSubscription]);
+
+  // Auto-fill email from session if user is logged in
+  useEffect(() => {
+    if (session?.user?.email && !email) {
+      setEmail(session.user.email);
+    }
+  }, [session, email]);
 
   // Auto-validate promo code from URL
   useEffect(() => {

@@ -4,7 +4,7 @@ import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
-import { ArrowLeft, ArrowRight, Loader2, BookOpen, Palette, FileText, Check, Users, Tag, X, Mail, Pencil, Gift, User, Save, Plus, Trash2 } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Loader2, BookOpen, Palette, FileText, Check, Users, Tag, X, Mail, Pencil, Gift, User, Save, Plus, Trash2, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
 import { PRICING, BOOK_FORMATS, ART_STYLES } from '@/lib/constants';
@@ -57,6 +57,7 @@ function ReviewContent() {
   // User details
   const [email, setEmail] = useState('');
   const [authorName, setAuthorName] = useState('');
+  const [emailError, setEmailError] = useState('');
 
   // Promo code state
   const [promoCode, setPromoCode] = useState(urlPromoCode || '');
@@ -100,6 +101,13 @@ function ReviewContent() {
         setIsLoading(false);
       });
   }, [bookId, router]);
+
+  // Auto-fill email from session if user is logged in
+  useEffect(() => {
+    if (session?.user?.email && !email) {
+      setEmail(session.user.email);
+    }
+  }, [session, email]);
 
   // Auto-validate promo code from URL
   useEffect(() => {
@@ -285,14 +293,26 @@ function ReviewContent() {
   }
 
   const handleContinueToCheckout = async () => {
+    // Clear previous errors
+    setEmailError('');
+    setError('');
+
     // Validate email
-    if (!email.trim() || !email.includes('@')) {
-      setError('Please enter a valid email address');
+    if (!email.trim()) {
+      setEmailError('Email address is required');
+      // Scroll to email field
+      document.getElementById('email-input')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      document.getElementById('email-input')?.focus();
+      return;
+    }
+    if (!email.includes('@') || !email.includes('.')) {
+      setEmailError('Please enter a valid email address');
+      document.getElementById('email-input')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      document.getElementById('email-input')?.focus();
       return;
     }
 
     setIsSubmitting(true);
-    setError('');
 
     // First, update the book with email and author name
     try {
@@ -875,18 +895,35 @@ function ReviewContent() {
                   Email Address <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-400" />
+                  <Mail className={`absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 ${emailError ? 'text-red-400' : 'text-neutral-400'}`} />
                   <input
+                    id="email-input"
                     type="email"
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    onChange={(e) => {
+                      setEmail(e.target.value);
+                      if (emailError) setEmailError('');
+                    }}
                     placeholder="you@example.com"
-                    className="w-full pl-10 pr-4 py-3 border border-neutral-200 rounded-xl focus:border-neutral-900 focus:outline-none transition-colors"
+                    className={`w-full pl-10 pr-10 py-3 border rounded-xl focus:outline-none transition-colors ${
+                      emailError
+                        ? 'border-red-400 focus:border-red-500 bg-red-50'
+                        : 'border-neutral-200 focus:border-neutral-900'
+                    }`}
                   />
+                  {emailError && (
+                    <AlertCircle className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-red-500" />
+                  )}
                 </div>
-                <p className="text-xs text-neutral-500 mt-1">
-                  We&apos;ll send you a link when your book is ready
-                </p>
+                {emailError ? (
+                  <p className="text-xs text-red-500 mt-1 flex items-center gap-1">
+                    {emailError}
+                  </p>
+                ) : (
+                  <p className="text-xs text-neutral-500 mt-1">
+                    We&apos;ll send you a link when your book is ready
+                  </p>
+                )}
               </div>
 
               {/* Author Name */}
