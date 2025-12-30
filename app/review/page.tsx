@@ -383,11 +383,30 @@ function ReviewContent() {
         setIsSubmitting(false);
       }
     } else {
-      // Normal checkout flow
-      const checkoutUrl = promoDiscount
-        ? `/checkout?bookId=${bookId}&promo=${promoCode}`
-        : `/checkout?bookId=${bookId}`;
-      router.push(checkoutUrl);
+      // Normal checkout flow - go directly to Stripe
+      try {
+        const response = await fetch('/api/checkout', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            bookId,
+            email: email.trim().toLowerCase(),
+            productType: 'one-time',
+            promoCode: promoDiscount ? promoCode : undefined,
+          }),
+        });
+
+        const data = await response.json();
+        if (data.url) {
+          window.location.href = data.url;
+        } else {
+          setError(data.error || 'Failed to start checkout');
+          setIsSubmitting(false);
+        }
+      } catch {
+        setError('Something went wrong. Please try again.');
+        setIsSubmitting(false);
+      }
     }
   };
 
