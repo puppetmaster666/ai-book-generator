@@ -10,7 +10,7 @@ import { ArrowLeft, ArrowRight, Sparkles, Loader2, BookOpen, Palette, Layers, Ch
 import { BOOK_PRESETS, ART_STYLES, GENRES, type BookPresetKey, type ArtStyleKey } from '@/lib/constants';
 
 // Idea categories for the Surprise Me feature
-type IdeaCategory = 'random' | 'novel' | 'childrens' | 'comic' | 'adult_comic' | 'nonfiction';
+type IdeaCategory = 'random' | 'novel' | 'childrens' | 'comic' | 'nonfiction';
 
 const IDEA_CATEGORIES: { value: IdeaCategory; label: string; emoji: string }[] = [
   { value: 'random', label: 'Surprise Me', emoji: '🎲' },
@@ -18,7 +18,6 @@ const IDEA_CATEGORIES: { value: IdeaCategory; label: string; emoji: string }[] =
   { value: 'childrens', label: "Children's", emoji: '🧒' },
   { value: 'comic', label: 'Comic', emoji: '💥' },
   { value: 'nonfiction', label: 'Non-Fiction', emoji: '📚' },
-  { value: 'adult_comic', label: 'Adult Comic', emoji: '🔞' },
 ];
 
 // Icons for book types
@@ -319,27 +318,27 @@ export default function CreateBook() {
                     </p>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     {(Object.entries(BOOK_PRESETS) as [BookPresetKey, typeof BOOK_PRESETS[BookPresetKey]][]).map(([key, presetItem]) => {
                       const IconComponent = PRESET_ICONS[key as keyof typeof PRESET_ICONS] || BookOpen;
                       return (
                         <button
                           key={key}
                           onClick={() => handleSelectPreset(key)}
-                          className="group p-8 bg-white rounded-2xl border border-neutral-200 hover:border-neutral-400 hover:shadow-lg transition-all text-left"
+                          className="group p-5 bg-white rounded-2xl border border-neutral-200 hover:border-neutral-400 hover:shadow-lg transition-all text-left"
                         >
-                          <div className="w-14 h-14 bg-neutral-100 rounded-xl flex items-center justify-center mb-5 group-hover:bg-neutral-200 transition-colors">
-                            <IconComponent className="h-7 w-7 text-neutral-700" />
+                          <div className="w-10 h-10 bg-neutral-100 rounded-lg flex items-center justify-center mb-3 group-hover:bg-neutral-200 transition-colors">
+                            <IconComponent className="h-5 w-5 text-neutral-700" />
                           </div>
-                          <h3 className="text-xl font-semibold mb-2" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>
+                          <h3 className="text-base font-semibold mb-1" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>
                             {presetItem.label}
                           </h3>
-                          <p className="text-sm text-neutral-600 mb-5">
+                          <p className="text-xs text-neutral-600 mb-3 line-clamp-2">
                             {presetItem.description}
                           </p>
                           <div className="flex items-center justify-between">
-                            <span className="text-2xl font-bold">{presetItem.priceDisplay}</span>
-                            <span className="text-xs bg-neutral-100 text-neutral-600 px-3 py-1 rounded-full">
+                            <span className="text-lg font-bold">{presetItem.priceDisplay}</span>
+                            <span className="text-xs bg-neutral-100 text-neutral-600 px-2 py-0.5 rounded-full">
                               {presetItem.downloadFormat.toUpperCase()}
                             </span>
                           </div>
