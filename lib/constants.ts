@@ -162,6 +162,19 @@ export const BOOK_PRESETS = {
     priceDisplay: '$19.99',
     downloadFormat: 'pdf',
   },
+  nonfiction: {
+    label: 'Non-Fiction Book',
+    description: 'Self-help, how-to, history, business guides, EPUB download',
+    icon: 'GraduationCap',
+    format: 'text_only',
+    artStyle: null,
+    dialogueStyle: null,
+    defaultGenre: 'selfhelp',
+    targetWords: 50000,
+    chapters: 15,
+    priceDisplay: '$19.99',
+    downloadFormat: 'epub',
+  },
 } as const;
 
 export type BookPresetKey = keyof typeof BOOK_PRESETS;
@@ -188,6 +201,10 @@ export const GENRES = {
   memoir: { label: 'Memoir', type: 'non-fiction', targetWords: 70000, chapters: 18 },
   howto: { label: 'How-To Guide', type: 'non-fiction', targetWords: 40000, chapters: 12 },
   business: { label: 'Business', type: 'non-fiction', targetWords: 55000, chapters: 15 },
+  history: { label: 'History', type: 'non-fiction', targetWords: 60000, chapters: 18 },
+  biography: { label: 'Biography', type: 'non-fiction', targetWords: 70000, chapters: 20 },
+  educational: { label: 'Educational', type: 'non-fiction', targetWords: 45000, chapters: 14 },
+  documentary: { label: 'Documentary', type: 'non-fiction', targetWords: 55000, chapters: 16 },
 } as const;
 
 export type GenreKey = keyof typeof GENRES;

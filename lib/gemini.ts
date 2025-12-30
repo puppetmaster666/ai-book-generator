@@ -299,7 +299,7 @@ function isCompleteSentence(text: string): boolean {
 }
 
 // Category types for idea generation
-export type IdeaCategory = 'novel' | 'childrens' | 'comic' | 'adult_comic' | 'random';
+export type IdeaCategory = 'novel' | 'childrens' | 'comic' | 'adult_comic' | 'nonfiction' | 'random';
 
 // Example pools for different categories - randomly selected to avoid repetition
 // Each category has 8+ example pairs for maximum variety
@@ -453,6 +453,40 @@ const IDEA_EXAMPLES: Record<Exclude<IdeaCategory, 'random'>, string[][]> = {
       "Empress Isadora rules her nation with an iron fist by day while secretly leading the masked rebellion trying to overthrow her own corrupt government by night, playing both sides of the conflict with exhausting precision. Her spymaster Konstantin knows exactly who she is under the mask, and she knows he knows, creating an elaborate dance of secrets and lies between two people who might actually be on the same side. Their dangerous game of mutual blackmail is complicated by the attraction neither of them wants to acknowledge.",
     ],
   ],
+  nonfiction: [
+    [
+      "A comprehensive guide to breaking into the screenwriting industry, covering everything from crafting a compelling logline and structuring your first spec script to navigating Hollywood meetings and building lasting relationships with agents and producers. This book draws on interviews with over fifty working screenwriters and shares the real strategies that helped unknown writers land their first studio deals.",
+      "An exploration of the daily habits and mental frameworks used by the world's most successful entrepreneurs, examining how figures like Elon Musk, Sara Blakely, and Howard Schultz structure their days, make decisions under pressure, and maintain focus despite constant distractions. Each chapter breaks down one key habit with actionable exercises readers can implement immediately.",
+    ],
+    [
+      "The untold story of the women codebreakers of World War II, who worked in secret facilities across America and Britain to crack enemy communications and shorten the war by years. Drawing on recently declassified documents and interviews with surviving members, this book reveals how thousands of young women became unlikely heroes in one of history's greatest intelligence operations.",
+      "A practical guide to transforming your relationship with money, combining behavioral psychology research with step by step financial strategies to help readers overcome debt, build wealth, and achieve true financial independence regardless of their current income level.",
+    ],
+    [
+      "The definitive biography of Marie Curie, exploring not just her groundbreaking scientific discoveries but also her turbulent personal life, her struggles against institutional sexism, and the lasting impact of her work on modern medicine and physics. This book draws on newly translated letters and personal diaries to paint a complete portrait of the first woman to win a Nobel Prize.",
+      "A guide to mastering the art of public speaking, written by a former stutterer who became one of the most sought after keynote speakers in the business world. This book breaks down the techniques used by TED speakers and world leaders to captivate audiences, handle nerves, and deliver presentations that people remember for years.",
+    ],
+    [
+      "An investigative deep dive into the rise and fall of a billion dollar startup that promised to revolutionize healthcare but instead defrauded investors and endangered patients. Through interviews with former employees, investors, and regulators, this book exposes how charisma and hype can override due diligence in Silicon Valley.",
+      "A comprehensive history of coffee and how this humble bean shaped empires, sparked revolutions, and transformed global commerce over five centuries. From Ethiopian legends to modern specialty roasters, this book traces how coffee became the world's most traded commodity after oil.",
+    ],
+    [
+      "A memoir of growing up between two cultures as the child of immigrant parents, navigating the expectations of a traditional household while trying to find belonging in American schools and workplaces. This book explores identity, family loyalty, and the universal experience of feeling like an outsider.",
+      "The essential guide to building and scaling a successful online business, covering everything from finding your niche and building an audience to creating products, automating systems, and achieving the freedom to work from anywhere in the world.",
+    ],
+    [
+      "A fascinating exploration of how ancient civilizations solved problems that still challenge us today, from the Romans' revolutionary concrete that lasted millennia to the Incas' earthquake resistant construction techniques. Each chapter examines a different historical innovation and what modern engineers are learning from our ancestors.",
+      "A step by step guide to career transitions at any age, drawing on research into successful career changers and providing practical frameworks for identifying transferable skills, building new networks, and landing your dream job in a completely different field.",
+    ],
+    [
+      "The hidden history of how a small group of mathematicians and physicists created the algorithms that now control everything from what we see on social media to who gets approved for loans and jobs. This book explains in accessible terms how these systems work and what we can do to ensure they serve humanity rather than exploit it.",
+      "A guide to building unshakeable confidence through proven psychological techniques, drawing on cognitive behavioral therapy, sports psychology, and neuroscience research to help readers overcome self doubt, handle criticism, and show up as their best selves in any situation.",
+    ],
+    [
+      "An examination of the greatest military blunders in history and what they teach us about leadership, communication, and decision making under pressure. From the Charge of the Light Brigade to the Bay of Pigs, each chapter analyzes a catastrophic failure and extracts lessons applicable to business and personal life.",
+      "A practical guide to negotiation for people who hate negotiating, offering simple scripts and strategies for everything from salary negotiations and car purchases to difficult conversations with family members. This book proves that effective negotiation is a learnable skill, not an innate talent.",
+    ],
+  ],
 };
 
 // Genre variations for each category - expanded for more variety
@@ -481,11 +515,17 @@ const GENRE_HINTS: Record<Exclude<IdeaCategory, 'random'>, string[]> = {
     'reverse harem', 'slow burn', 'second chance romance', 'forced proximity', 'bodyguard romance',
     'arranged marriage', 'royal intrigue', 'demon romance', 'fated mates', 'dark romance'
   ],
+  nonfiction: [
+    'self-help', 'how-to guide', 'business strategy', 'history', 'biography', 'memoir',
+    'personal finance', 'career development', 'productivity', 'leadership', 'entrepreneurship',
+    'health and wellness', 'psychology', 'science explained', 'true crime', 'investigative',
+    'technology', 'philosophy', 'education', 'parenting', 'relationships', 'travel'
+  ],
 };
 
 // Generate a random book idea with category support
 export async function generateBookIdea(category: IdeaCategory = 'random'): Promise<string> {
-  // If random, pick a category
+  // If random, pick a category (excluding nonfiction from random to keep it distinct)
   const actualCategory: Exclude<IdeaCategory, 'random'> = category === 'random'
     ? (['novel', 'childrens', 'comic', 'adult_comic'] as const)[Math.floor(Math.random() * 4)]
     : category;
@@ -513,6 +553,9 @@ export async function generateBookIdea(category: IdeaCategory = 'random'): Promi
     case 'adult_comic':
       categoryInstruction = `Generate a ${randomGenre} adult graphic novel idea with mature themes, complex characters, simmering tension, and romantic or darker elements that push boundaries while remaining tasteful.`;
       break;
+    case 'nonfiction':
+      categoryInstruction = `Generate a compelling ${randomGenre} non-fiction book idea that promises to teach readers something valuable, share untold stories, or provide practical guidance they can apply to their lives. Focus on what makes this book unique and why readers would want to buy it.`;
+      break;
   }
 
   const prompt = `${categoryInstruction}
@@ -531,7 +574,7 @@ Example of the quality and length expected (but create something COMPLETELY DIFF
 Another example:
 "${randomExamples[1]}"
 
-Now write your unique ${actualCategory === 'childrens' ? "children's book" : actualCategory === 'adult_comic' ? 'adult graphic novel' : actualCategory} idea (3-4 detailed sentences, no dashes, end with period):`;
+Now write your unique ${actualCategory === 'childrens' ? "children's book" : actualCategory === 'adult_comic' ? 'adult graphic novel' : actualCategory === 'nonfiction' ? 'non-fiction book' : actualCategory} idea (3-4 detailed sentences, no dashes, end with period):`;
 
   const maxRetries = 2; // Reduced retries for faster response
 
@@ -568,7 +611,8 @@ Now write your unique ${actualCategory === 'childrens' ? "children's book" : act
 }
 
 // NEW: Expand a simple idea into a full book plan
-export async function expandIdea(idea: string): Promise<{
+// For non-fiction: beginning = introduction, middle = main topics, ending = conclusion
+export async function expandIdea(idea: string, hintBookType?: string): Promise<{
   title: string;
   genre: string;
   bookType: 'fiction' | 'non-fiction';
@@ -581,7 +625,9 @@ export async function expandIdea(idea: string): Promise<{
   targetWords: number;
   targetChapters: number;
 }> {
-  const prompt = `Create a book plan from this idea: "${idea}"
+  const isNonFiction = hintBookType === 'non-fiction';
+
+  const fictionPrompt = `Create a book plan from this idea: "${idea}"
 
 STRICT RULES:
 - Output ONLY valid JSON, no other text
@@ -593,6 +639,29 @@ STRICT RULES:
 JSON format:
 {"title":"Title","genre":"mystery","bookType":"fiction","premise":"Short premise","characters":[{"name":"Name","description":"Brief desc"}],"beginning":"Start","middle":"Middle","ending":"End","writingStyle":"commercial","targetWords":70000,"targetChapters":20}`;
 
+  const nonFictionPrompt = `Create a NON-FICTION book plan from this idea: "${idea}"
+
+This is for a non-fiction book (self-help, how-to, history, business, biography, educational, documentary, memoir).
+
+IMPORTANT - Determine the type and structure:
+- "beginning" = The introduction/hook - what problem does this book solve or what will readers learn?
+- "middle" = The main topics/sections of the book (list 4-6 key topics, comma-separated)
+- "ending" = The conclusion/call-to-action - how will readers' lives be different after reading?
+- "characters" = Empty array [] for non-fiction (no fictional characters)
+- "genre" = One of: selfhelp, howto, business, history, biography, educational, documentary, memoir
+
+STRICT RULES:
+- Output ONLY valid JSON, no other text
+- Keep ALL string values under 100 words each
+- Characters array MUST be empty []
+- No special characters that break JSON
+- Complete the entire JSON structure
+- bookType MUST be "non-fiction"
+
+JSON format:
+{"title":"Title","genre":"selfhelp","bookType":"non-fiction","premise":"What this book teaches","characters":[],"beginning":"Introduction hook","middle":"Topic 1, Topic 2, Topic 3, Topic 4","ending":"Conclusion and takeaways","writingStyle":"informative","targetWords":50000,"targetChapters":15}`;
+
+  const prompt = isNonFiction ? nonFictionPrompt : fictionPrompt;
   const result = await getGeminiFlash().generateContent(prompt);
   const response = result.response.text();
 
@@ -913,6 +982,88 @@ Output ONLY valid JSON in this exact format:
   };
 }
 
+// Generate outline for non-fiction books (topic-based structure)
+export async function generateNonFictionOutline(bookData: {
+  title: string;
+  genre: string;
+  bookType: string;
+  premise: string;
+  beginning: string;  // Introduction/hook
+  middle: string;     // Main topics (comma-separated)
+  ending: string;     // Conclusion/takeaways
+  writingStyle: string;
+  targetWords: number;
+  targetChapters: number;
+}): Promise<{
+  chapters: {
+    number: number;
+    title: string;
+    summary: string;
+    keyPoints: string[];
+    targetWords: number;
+  }[];
+}> {
+  // Detect language from title and premise
+  const languageInstruction = detectLanguageInstruction(bookData.title + ' ' + bookData.premise);
+
+  // Parse the main topics from the middle field
+  const mainTopics = bookData.middle.split(',').map(t => t.trim()).filter(t => t);
+
+  const prompt = `You are a professional non-fiction book outliner. Create a detailed chapter-by-chapter outline.
+${languageInstruction ? `\n${languageInstruction}\n` : ''}
+
+BOOK DETAILS:
+- Title: ${bookData.title}
+- Genre: ${bookData.genre} (non-fiction)
+- Premise: ${bookData.premise}
+- Introduction Hook: ${bookData.beginning}
+- Main Topics to Cover: ${mainTopics.join(', ')}
+- Conclusion/Takeaways: ${bookData.ending}
+- Writing Style: ${bookData.writingStyle}
+- Target Length: ${bookData.targetWords} words (${bookData.targetChapters} chapters)
+
+Create an outline with exactly ${bookData.targetChapters} chapters for this NON-FICTION book.
+
+STRUCTURE GUIDELINES:
+- Chapter 1 should be an Introduction that hooks the reader and previews what they'll learn
+- Middle chapters should cover the main topics logically, building on each other
+- Final chapter should be a Conclusion with actionable takeaways
+- Each chapter should have a clear learning objective
+
+For each chapter provide:
+1. Chapter number
+2. Chapter title (clear, descriptive, benefit-focused)
+3. 2-3 sentence summary of what this chapter teaches
+4. 3-5 key points or lessons covered in the chapter
+5. Approximate word count target (distribute ${bookData.targetWords} words across chapters)
+
+Output ONLY valid JSON in this exact format:
+{
+  "chapters": [
+    {
+      "number": 1,
+      "title": "Chapter Title Here",
+      "summary": "What readers will learn in this chapter",
+      "keyPoints": ["Key point 1", "Key point 2", "Key point 3"],
+      "targetWords": 3500
+    }
+  ]
+}`;
+
+  const result = await getGeminiPro().generateContent(prompt);
+  const response = result.response.text();
+
+  return parseJSONFromResponse(response) as {
+    chapters: {
+      number: number;
+      title: string;
+      summary: string;
+      keyPoints: string[];
+      targetWords: number;
+    }[];
+  };
+}
+
 export async function generateChapter(data: {
   title: string;
   genre: string;
@@ -927,6 +1078,7 @@ export async function generateChapter(data: {
   chapterPov?: string;
   targetWords: number;
   chapterFormat: string;
+  chapterKeyPoints?: string[]; // For non-fiction chapters
 }): Promise<string> {
   const formatInstruction = {
     numbers: `Start with "Chapter ${data.chapterNumber}"`,
@@ -938,7 +1090,60 @@ export async function generateChapter(data: {
   // Detect language from title to ensure content matches input language
   const languageInstruction = detectLanguageInstruction(data.title);
 
-  const prompt = `You are a novelist writing in ${data.writingStyle} style. Write a complete chapter.
+  // Check if this is a non-fiction book
+  const isNonFiction = data.bookType === 'non-fiction';
+
+  let prompt: string;
+
+  if (isNonFiction) {
+    // Non-fiction prompt - educational, informative style
+    const keyPointsSection = data.chapterKeyPoints && data.chapterKeyPoints.length > 0
+      ? `\nKEY POINTS TO COVER:\n${data.chapterKeyPoints.map((p, i) => `${i + 1}. ${p}`).join('\n')}`
+      : '';
+
+    prompt = `You are an expert author writing a ${data.genre} non-fiction book in a ${data.writingStyle} style. Write a complete chapter.
+${languageInstruction ? `\n${languageInstruction}\n` : ''}
+BOOK: "${data.title}" (${data.genre} non-fiction)
+
+FULL OUTLINE:
+${JSON.stringify(data.outline, null, 2)}
+
+CONTENT SO FAR:
+${data.storySoFar || 'This is the beginning of the book.'}
+
+NOW WRITE CHAPTER ${data.chapterNumber}: "${data.chapterTitle}"
+
+Chapter topic: ${data.chapterPlan}
+Target words: ${data.targetWords}
+${keyPointsSection}
+
+FORMATTING: ${formatInstruction}
+
+Write the complete chapter. As a NON-FICTION book, include:
+- Clear explanations of concepts and ideas
+- Real-world examples, case studies, or anecdotes to illustrate points
+- Practical tips, strategies, or actionable advice where appropriate
+- Smooth transitions between topics
+- A brief summary or key takeaways at natural points
+- Engaging prose that keeps readers interested while educating them
+
+VOICE AND TONE:
+- Write as an authoritative but approachable expert
+- Use "you" to address the reader directly when giving advice
+- Include rhetorical questions to engage readers
+- Balance information density with readability
+
+STRICT STYLE RULES:
+- NEVER use em dashes (—) or en dashes (–). Use commas, periods, or rewrite sentences instead.
+- NEVER add "[END OF BOOK]", "[THE END]", or any ending markers
+- NEVER add author notes, meta-commentary, or markdown formatting
+- Use simple, natural punctuation only
+- Do NOT make up statistics or cite fake research
+
+Write approximately ${data.targetWords} words. Output ONLY the chapter text.`;
+  } else {
+    // Fiction prompt - narrative style
+    prompt = `You are a novelist writing in ${data.writingStyle} style. Write a complete chapter.
 ${languageInstruction ? `\n${languageInstruction}\n` : ''}
 BOOK: "${data.title}" (${data.genre} ${data.bookType})
 
@@ -973,6 +1178,7 @@ STRICT STYLE RULES:
 - Use simple, natural punctuation only
 
 Write approximately ${data.targetWords} words. Output ONLY the chapter text.`;
+  }
 
   const result = await getGeminiPro().generateContent(prompt);
   let content = result.response.text();

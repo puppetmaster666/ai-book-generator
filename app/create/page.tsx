@@ -6,17 +6,18 @@ import { useSession } from 'next-auth/react';
 import Image from 'next/image';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
-import { ArrowLeft, ArrowRight, Sparkles, Loader2, BookOpen, Palette, Layers, ChevronDown } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Sparkles, Loader2, BookOpen, Palette, Layers, ChevronDown, GraduationCap } from 'lucide-react';
 import { BOOK_PRESETS, ART_STYLES, GENRES, type BookPresetKey, type ArtStyleKey } from '@/lib/constants';
 
 // Idea categories for the Surprise Me feature
-type IdeaCategory = 'random' | 'novel' | 'childrens' | 'comic' | 'adult_comic';
+type IdeaCategory = 'random' | 'novel' | 'childrens' | 'comic' | 'adult_comic' | 'nonfiction';
 
 const IDEA_CATEGORIES: { value: IdeaCategory; label: string; emoji: string }[] = [
   { value: 'random', label: 'Surprise Me', emoji: '🎲' },
   { value: 'novel', label: 'Novel', emoji: '📖' },
   { value: 'childrens', label: "Children's", emoji: '🧒' },
   { value: 'comic', label: 'Comic', emoji: '💥' },
+  { value: 'nonfiction', label: 'Non-Fiction', emoji: '📚' },
   { value: 'adult_comic', label: 'Adult Comic', emoji: '🔞' },
 ];
 
@@ -25,6 +26,7 @@ const PRESET_ICONS = {
   novel: BookOpen,
   childrens_picture: Palette,
   comic_story: Layers,
+  nonfiction: GraduationCap,
 };
 
 // Art style images
@@ -161,12 +163,20 @@ export default function CreateBook() {
       const preset = BOOK_PRESETS[presetKey];
       const genre = GENRES[preset.defaultGenre as keyof typeof GENRES];
 
+      // Determine book type based on preset
+      let bookType = genre?.type || 'fiction';
+      if (preset.format === 'picture_book') {
+        bookType = 'childrens';
+      } else if (presetKey === 'nonfiction') {
+        bookType = 'non-fiction';
+      }
+
       const expandResponse = await fetch('/api/expand-idea', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           idea,
-          bookType: preset.format === 'picture_book' ? 'childrens' : genre?.type || 'fiction',
+          bookType,
           isIllustrated: preset.format !== 'text_only',
         }),
       });
@@ -224,12 +234,20 @@ export default function CreateBook() {
       const preset = BOOK_PRESETS[selectedPreset];
       const genre = GENRES[preset.defaultGenre as keyof typeof GENRES];
 
+      // Determine book type based on preset
+      let bookType = genre?.type || 'fiction';
+      if (preset.format === 'picture_book') {
+        bookType = 'childrens';
+      } else if (selectedPreset === 'nonfiction') {
+        bookType = 'non-fiction';
+      }
+
       const expandResponse = await fetch('/api/expand-idea', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           idea,
-          bookType: preset.format === 'picture_book' ? 'childrens' : genre?.type || 'fiction',
+          bookType,
           isIllustrated: preset.format !== 'text_only',
         }),
       });
@@ -359,6 +377,8 @@ export default function CreateBook() {
                 <p className="text-lg text-neutral-600">
                   {selectedPreset === 'comic_story'
                     ? "Tell us about your comic story - the characters, action, and setting"
+                    : selectedPreset === 'nonfiction'
+                    ? "Tell us what you want to teach - the main topic, key lessons, and target audience"
                     : preset.format === 'picture_book'
                     ? "Tell us about your children's story - the characters, setting, and message"
                     : "Share your concept and we'll expand it into a full outline"}
@@ -372,6 +392,8 @@ export default function CreateBook() {
                   placeholder={
                     selectedPreset === 'comic_story'
                       ? "A noir detective story set in a rainy city where a private eye investigates a series of mysterious disappearances..."
+                      : selectedPreset === 'nonfiction'
+                      ? "A comprehensive guide to becoming a successful screenwriter, covering everything from story structure to pitching your scripts to studios..."
                       : preset.format === 'picture_book'
                       ? "A curious little fox named Pip who discovers that the stars in the sky are actually sleeping fireflies..."
                       : "A mystery novel about a detective who discovers her own name in a cold case file from 1985..."

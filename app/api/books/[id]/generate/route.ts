@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import {
   generateOutline,
+  generateNonFictionOutline,
   generateIllustratedOutline,
   buildIllustrationPromptFromScene,
   generateChapter,
@@ -667,8 +668,31 @@ export async function POST(
           characterVisualGuide: book.characterVisualGuide as CharacterVisualGuide | undefined,
         });
         outline = visualOutline;
+      } else if (book.bookType === 'non-fiction') {
+        // Use non-fiction outline for non-fiction books
+        console.log('Generating non-fiction outline with topic structure...');
+        const nfOutline = await generateNonFictionOutline({
+          title: book.title,
+          genre: book.genre,
+          bookType: book.bookType,
+          premise: book.premise,
+          beginning: book.beginning,
+          middle: book.middle,
+          ending: book.ending,
+          writingStyle: book.writingStyle,
+          targetWords: book.targetWords,
+          targetChapters: book.targetChapters,
+        });
+        // Map non-fiction outline to standard format (keyPoints → summary for compatibility)
+        outline = {
+          chapters: nfOutline.chapters.map(ch => ({
+            ...ch,
+            summary: ch.summary,
+            pov: undefined, // Non-fiction doesn't have POV
+          })),
+        };
       } else {
-        // Use standard outline for text-based books
+        // Use standard outline for fiction text-based books
         outline = await generateOutline({
           title: book.title,
           genre: book.genre,
@@ -888,7 +912,14 @@ export async function POST(
     } else {
       // STANDARD FLOW: Sequential generation for text-based books
       for (let i = startChapter; i <= outline.chapters.length; i++) {
-        const chapterPlan = outline.chapters[i - 1];
+        const chapterPlan = outline.chapters[i - 1] as {
+          number: number;
+          title: string;
+          summary: string;
+          pov?: string;
+          targetWords: number;
+          keyPoints?: string[]; // For non-fiction chapters
+        };
 
         // Generate chapter content
         const chapterContent = await generateChapter({
@@ -905,6 +936,7 @@ export async function POST(
           chapterPov: chapterPlan.pov,
           targetWords: chapterPlan.targetWords,
           chapterFormat: book.chapterFormat,
+          chapterKeyPoints: chapterPlan.keyPoints, // Pass key points for non-fiction
         });
 
         const wordCount = countWords(chapterContent);

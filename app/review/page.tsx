@@ -454,7 +454,14 @@ function ReviewContent() {
     memoir: 'Memoir',
     howto: 'How-To Guide',
     business: 'Business',
+    history: 'History',
+    biography: 'Biography',
+    educational: 'Educational',
+    documentary: 'Documentary',
   };
+
+  // Check if this is a non-fiction book
+  const isNonFiction = book.bookType === 'non-fiction';
 
   return (
     <div className="min-h-screen bg-white">
@@ -578,7 +585,7 @@ function ReviewContent() {
               <div className="flex items-center justify-between mb-2">
                 <h3 className="font-semibold text-lg flex items-center gap-2">
                   <BookOpen className="h-5 w-5 text-neutral-400" />
-                  Story Premise
+                  {isNonFiction ? 'Book Overview' : 'Story Premise'}
                 </h3>
                 {editingSection !== 'premise' && (
                   <button
@@ -622,12 +629,12 @@ function ReviewContent() {
               )}
             </div>
 
-            {/* Story Arc */}
+            {/* Story Arc / Book Structure */}
             <div className="mb-6">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="font-semibold text-lg flex items-center gap-2">
                   <FileText className="h-5 w-5 text-neutral-400" />
-                  Story Arc
+                  {isNonFiction ? 'Book Structure' : 'Story Arc'}
                 </h3>
                 {editingSection !== 'arcs' && (
                   <button
@@ -643,33 +650,39 @@ function ReviewContent() {
                 <div className="space-y-4">
                   <div className="grid md:grid-cols-3 gap-4">
                     <div>
-                      <label className="block font-medium text-sm text-neutral-500 mb-2">Beginning</label>
+                      <label className="block font-medium text-sm text-neutral-500 mb-2">
+                        {isNonFiction ? 'Introduction' : 'Beginning'}
+                      </label>
                       <textarea
                         value={editBeginning}
                         onChange={(e) => setEditBeginning(e.target.value)}
                         rows={4}
                         className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:border-neutral-900 focus:outline-none resize-none text-sm"
-                        placeholder="How does the story begin?"
+                        placeholder={isNonFiction ? 'What is the book about?' : 'How does the story begin?'}
                       />
                     </div>
                     <div>
-                      <label className="block font-medium text-sm text-neutral-500 mb-2">Middle</label>
+                      <label className="block font-medium text-sm text-neutral-500 mb-2">
+                        {isNonFiction ? 'Main Topics' : 'Middle'}
+                      </label>
                       <textarea
                         value={editMiddle}
                         onChange={(e) => setEditMiddle(e.target.value)}
                         rows={4}
                         className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:border-neutral-900 focus:outline-none resize-none text-sm"
-                        placeholder="What happens in the middle?"
+                        placeholder={isNonFiction ? 'Key topics covered' : 'What happens in the middle?'}
                       />
                     </div>
                     <div>
-                      <label className="block font-medium text-sm text-neutral-500 mb-2">Ending</label>
+                      <label className="block font-medium text-sm text-neutral-500 mb-2">
+                        {isNonFiction ? 'Conclusion' : 'Ending'}
+                      </label>
                       <textarea
                         value={editEnding}
                         onChange={(e) => setEditEnding(e.target.value)}
                         rows={4}
                         className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:border-neutral-900 focus:outline-none resize-none text-sm"
-                        placeholder="How does it end?"
+                        placeholder={isNonFiction ? 'Key takeaways and action steps' : 'How does it end?'}
                       />
                     </div>
                   </div>
@@ -694,15 +707,21 @@ function ReviewContent() {
               ) : (
                 <div className="grid md:grid-cols-3 gap-4">
                   <div className="bg-neutral-50 rounded-xl p-4">
-                    <h4 className="font-medium text-sm text-neutral-500 mb-2">Beginning</h4>
+                    <h4 className="font-medium text-sm text-neutral-500 mb-2">
+                      {isNonFiction ? 'Introduction' : 'Beginning'}
+                    </h4>
                     <p className="text-sm text-neutral-700">{book.beginning}</p>
                   </div>
                   <div className="bg-neutral-50 rounded-xl p-4">
-                    <h4 className="font-medium text-sm text-neutral-500 mb-2">Middle</h4>
+                    <h4 className="font-medium text-sm text-neutral-500 mb-2">
+                      {isNonFiction ? 'Main Topics' : 'Middle'}
+                    </h4>
                     <p className="text-sm text-neutral-700">{book.middle}</p>
                   </div>
                   <div className="bg-neutral-50 rounded-xl p-4">
-                    <h4 className="font-medium text-sm text-neutral-500 mb-2">Ending</h4>
+                    <h4 className="font-medium text-sm text-neutral-500 mb-2">
+                      {isNonFiction ? 'Conclusion' : 'Ending'}
+                    </h4>
                     <p className="text-sm text-neutral-700">{book.ending}</p>
                   </div>
                 </div>

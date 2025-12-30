@@ -3,7 +3,7 @@ import { expandIdea } from '@/lib/gemini';
 
 export async function POST(request: NextRequest) {
   try {
-    const { idea } = await request.json();
+    const { idea, bookType } = await request.json();
 
     if (!idea || idea.trim().length < 10) {
       return NextResponse.json(
@@ -12,7 +12,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const bookPlan = await expandIdea(idea);
+    // Pass bookType to expandIdea (defaults to auto-detect if not provided)
+    const bookPlan = await expandIdea(idea, bookType);
 
     return NextResponse.json(bookPlan);
   } catch (error) {
