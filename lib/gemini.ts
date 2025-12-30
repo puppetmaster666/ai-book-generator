@@ -525,9 +525,9 @@ const GENRE_HINTS: Record<Exclude<IdeaCategory, 'random'>, string[]> = {
 
 // Generate a random book idea with category support
 export async function generateBookIdea(category: IdeaCategory = 'random'): Promise<string> {
-  // If random, pick a category (excluding nonfiction from random to keep it distinct)
+  // If random, pick a category (excluding nonfiction and adult_comic from random)
   const actualCategory: Exclude<IdeaCategory, 'random'> = category === 'random'
-    ? (['novel', 'childrens', 'comic', 'adult_comic'] as const)[Math.floor(Math.random() * 4)]
+    ? (['novel', 'childrens', 'comic'] as const)[Math.floor(Math.random() * 3)]
     : category;
 
   // Pick random examples from the pool
