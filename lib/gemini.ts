@@ -548,10 +548,22 @@ export async function generateBookIdea(category: IdeaCategory = 'random'): Promi
       categoryInstruction = `Generate a delightful children's ${randomGenre} idea that is whimsical and age-appropriate for ages 4 to 8, featuring lovable characters, a sense of wonder, and a gentle lesson woven naturally into the adventure.`;
       break;
     case 'comic':
-      categoryInstruction = `Generate a ${randomGenre} comic or graphic novel idea that is visually dynamic, with memorable characters, sharp humor or thrilling action, and a premise that would look amazing illustrated panel by panel.`;
+      categoryInstruction = `Generate a ${randomGenre} comic or graphic novel idea that is visually dynamic, with memorable characters, sharp humor or thrilling action, and a premise that would look amazing illustrated panel by panel.
+
+VARIETY IS ESSENTIAL - Create something fresh and different:
+- Mix up the powers: gravity manipulation, sound waves, luck control, memory editing, plant growth, glass shaping, probability, magnetism, illusions, time echoes, emotion sensing, shadow puppetry, ink manipulation, dream walking, etc.
+- Vary character types: not always teenagers, not always reluctant heroes, try older protagonists, anti-heroes, retired villains, ordinary people, etc.
+- Different settings: underwater cities, space stations, 1920s noir, ancient empires, parallel dimensions, inside computers, etc.
+- Unique visual hooks that would look amazing in comic panels`;
       break;
     case 'adult_comic':
-      categoryInstruction = `Generate a ${randomGenre} adult graphic novel idea with mature themes, complex characters, simmering tension, and romantic or darker elements that push boundaries while remaining tasteful.`;
+      categoryInstruction = `Generate a ${randomGenre} adult graphic novel idea with mature themes, complex characters, simmering tension, and romantic or darker elements that push boundaries while remaining tasteful.
+
+VARIETY IS ESSENTIAL - Create something fresh and different:
+- Try different supernatural beings: fae courts, djinn, kitsune, selkies, revenants, cosmic entities, dream spirits, etc.
+- Mix up dynamics: power couples, reluctant allies, mentor/student, rivals, strangers thrown together, etc.
+- Different settings: Victorian occult societies, modern corporate supernatural, ancient courts, space colonies, post-apocalyptic, etc.
+- Fresh character concepts with unique visual designs`;
       break;
     case 'nonfiction':
       categoryInstruction = `Generate a compelling ${randomGenre} non-fiction book idea that promises to teach readers something valuable, share untold stories, or provide practical guidance they can apply to their lives. Focus on what makes this book unique and why readers would want to buy it.`;
@@ -568,10 +580,16 @@ IMPORTANT RULES:
 - Include specific character names, settings, and stakes
 - Make every sentence add new compelling information
 
+MAXIMIZE VARIETY - Each generation should feel fresh:
+- Use diverse character names from different cultures (Korean, Nigerian, Brazilian, Polish, Indian, etc.)
+- Vary protagonist ages, backgrounds, and personalities
+- For visual stories: create distinct character designs that would look unique when illustrated
+- The goal is that if someone generates 10 ideas, all 10 should feel completely different from each other
+
 Example of the quality and length expected (but create something COMPLETELY DIFFERENT):
 "${randomExamples[0]}"
 
-Another example:
+Another example (create something TOTALLY DIFFERENT from both examples):
 "${randomExamples[1]}"
 
 Now write your unique ${actualCategory === 'childrens' ? "children's book" : actualCategory === 'adult_comic' ? 'adult graphic novel' : actualCategory === 'nonfiction' ? 'non-fiction book' : actualCategory} idea (3-4 detailed sentences, no dashes, end with period):`;
@@ -636,8 +654,15 @@ STRICT RULES:
 - No special characters that break JSON
 - Complete the entire JSON structure
 
+CHARACTER VARIETY - Make each character unique and memorable:
+- Use diverse names from various cultures (not just Western names)
+- Each character should have a distinct visual appearance if this is a visual book
+- Vary body types, ages, ethnicities, fashion styles
+- For powers/abilities: be creative and specific, not generic "elemental" powers
+- Character descriptions should paint a clear visual picture
+
 JSON format:
-{"title":"Title","genre":"mystery","bookType":"fiction","premise":"Short premise","characters":[{"name":"Name","description":"Brief desc"}],"beginning":"Start","middle":"Middle","ending":"End","writingStyle":"commercial","targetWords":70000,"targetChapters":20}`;
+{"title":"Title","genre":"mystery","bookType":"fiction","premise":"Short premise","characters":[{"name":"Name","description":"Brief desc with visual details"}],"beginning":"Start","middle":"Middle","ending":"End","writingStyle":"commercial","targetWords":70000,"targetChapters":20}`;
 
   const nonFictionPrompt = `Create a NON-FICTION book plan from this idea: "${idea}"
 
@@ -1769,6 +1794,14 @@ The illustrations will be in ${data.artStyle} style.
 
 CHARACTERS TO DESIGN:
 ${data.characters.map(c => `- ${c.name}: ${c.description}`).join('\n')}
+
+DESIGN PRINCIPLES - Create distinctive, memorable characters:
+- Give each character a UNIQUE silhouette that's instantly recognizable
+- Vary body types, heights, and builds realistically
+- Use diverse ethnicities and features that match the character names/backgrounds
+- Avoid generic "anime protagonist" looks - make each character feel specific
+- Clothing should reflect personality, not just be generic outfits
+- If a character has powers, show it through subtle visual cues (not just glowing marks)
 
 Create EXTREMELY DETAILED visual descriptions for each character that an illustrator can follow consistently across ALL illustrations. These must be specific enough that the character is INSTANTLY recognizable in every single image.
 
