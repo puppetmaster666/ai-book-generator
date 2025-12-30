@@ -111,6 +111,9 @@ export async function GET(request: NextRequest) {
           middle: true,
           ending: true,
           errorMessage: true,
+          // Download tracking
+          downloadedAt: true,
+          downloadFormat: true,
           user: {
             select: { email: true, name: true },
           },

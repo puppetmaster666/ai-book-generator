@@ -77,6 +77,8 @@ interface AdminStats {
     middle: string | null;
     ending: string | null;
     errorMessage: string | null;
+    downloadedAt: string | null;
+    downloadFormat: string | null;
     user: { email: string; name: string | null } | null;
   }>;
   booksPagination: {
@@ -848,6 +850,7 @@ export default function AdminDashboard() {
                     <th className="text-left py-3 px-2 font-medium text-neutral-500">Words</th>
                     <th className="text-left py-3 px-2 font-medium text-neutral-500">Images</th>
                     <th className="text-left py-3 px-2 font-medium text-neutral-500">Created</th>
+                    <th className="text-left py-3 px-2 font-medium text-neutral-500">Downloaded</th>
                     <th className="text-left py-3 px-2 font-medium text-neutral-500">Actions</th>
                   </tr>
                 </thead>
@@ -912,6 +915,24 @@ export default function AdminDashboard() {
                         <div className="text-xs text-neutral-400">{new Date(book.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
                       </td>
                       <td className="py-3 px-2">
+                        {book.downloadedAt ? (
+                          <div>
+                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                              book.downloadFormat === 'pdf'
+                                ? 'bg-red-100 text-red-800'
+                                : 'bg-blue-100 text-blue-800'
+                            }`}>
+                              {book.downloadFormat?.toUpperCase() || 'YES'}
+                            </span>
+                            <div className="text-xs text-neutral-400 mt-1">
+                              {new Date(book.downloadedAt).toLocaleDateString()}
+                            </div>
+                          </div>
+                        ) : (
+                          <span className="text-neutral-400">-</span>
+                        )}
+                      </td>
+                      <td className="py-3 px-2">
                         <div className="flex items-center gap-1">
                           {/* Expand/Collapse */}
                           <button
@@ -964,7 +985,7 @@ export default function AdminDashboard() {
                     {/* Expanded Book Details */}
                     {expandedBooks.has(book.id) && (
                       <tr className="bg-purple-50/50 border-b border-purple-100">
-                        <td colSpan={11} className="py-4 px-4">
+                        <td colSpan={12} className="py-4 px-4">
                           <div className="grid gap-4 md:grid-cols-2">
                             {/* Premise */}
                             <div className="md:col-span-2">

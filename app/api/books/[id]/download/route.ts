@@ -65,8 +65,23 @@ export async function GET(
 
     const safeFilename = book.title.replace(/[^a-z0-9]/gi, '_');
 
+    // Determine download format
+    const isPdf = isVisualBook && !isTextOnly;
+    const downloadFormat = isPdf ? 'pdf' : 'epub';
+
+    // Track first download (only set if not already downloaded)
+    if (!book.downloadedAt) {
+      await prisma.book.update({
+        where: { id },
+        data: {
+          downloadedAt: new Date(),
+          downloadFormat,
+        },
+      });
+    }
+
     // Use PDF for visual books, EPUB for text-only novels
-    if (isVisualBook && !isTextOnly) {
+    if (isPdf) {
       console.log(`Generating PDF for visual book ${id}: format=${book.bookFormat}, dialogueStyle=${book.dialogueStyle}`);
 
       const pdfBuffer = await generatePdf(bookData);

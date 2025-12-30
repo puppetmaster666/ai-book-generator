@@ -136,6 +136,10 @@ model Book {
   // Featured books for public showcase
   featured        Boolean   @default(false)
 
+  // Download tracking
+  downloadedAt    DateTime?  // When book was first downloaded
+  downloadFormat  String?    // epub or pdf
+
   chapters        Chapter[]
   illustrations   Illustration[]
   createdAt       DateTime  @default(now())

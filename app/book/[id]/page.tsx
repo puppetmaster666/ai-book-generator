@@ -648,8 +648,12 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
   }, [id, book?.status, retrying, serverStartTime, deleted]);
 
   // Show first book discount popup
+  // Only show to the actual book owner, not admins viewing
   useEffect(() => {
-    if (book?.status === 'completed' && isFirstCompletedBook) {
+    // Check if current user is the actual owner (not an admin viewing someone else's book)
+    const isActualOwner = book?.userId && book?.userId === currentUserId;
+
+    if (book?.status === 'completed' && isFirstCompletedBook && isActualOwner) {
       // Check if user has already seen this popup
       const dismissedKey = `firstBookDiscount_${id}`;
       const dismissed = localStorage.getItem(dismissedKey);
@@ -661,7 +665,7 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
         return () => clearTimeout(timer);
       }
     }
-  }, [book?.status, isFirstCompletedBook, id]);
+  }, [book?.status, book?.userId, isFirstCompletedBook, id, currentUserId]);
 
   const handleDismissFirstBookDiscount = () => {
     setShowFirstBookDiscount(false);
