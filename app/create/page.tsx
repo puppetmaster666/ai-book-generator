@@ -235,9 +235,7 @@ export default function CreateBook() {
 
       // Determine book type based on preset
       let bookType = genre?.type || 'fiction';
-      if (preset.format === 'picture_book') {
-        bookType = 'childrens';
-      } else if (selectedPreset === 'nonfiction') {
+      if (selectedPreset === 'nonfiction') {
         bookType = 'non-fiction';
       }
 
