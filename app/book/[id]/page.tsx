@@ -1624,8 +1624,8 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
             </div>
           )}
 
-          {/* Illustration Gallery - Completed Illustrated Books */}
-          {book.status === 'completed' && isIllustrated && book.illustrations && book.illustrations.length > 0 && (
+          {/* Illustration Gallery - Illustrated Books (show even if not completed, for admin viewing) */}
+          {isIllustrated && book.illustrations && book.illustrations.length > 0 && (
             <div className="bg-white rounded-2xl border border-neutral-200 p-6 sm:p-8 mb-6">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg font-semibold text-neutral-900 flex items-center gap-2">
