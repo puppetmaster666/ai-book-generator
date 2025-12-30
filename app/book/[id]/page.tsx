@@ -1546,20 +1546,34 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
                 <p className="text-neutral-600">Download your masterpiece below</p>
               </div>
 
-              <div className="grid grid-cols-3 gap-4 mb-6">
-                <div className="bg-neutral-50 rounded-xl p-4 text-center border border-neutral-100">
-                  <p className="text-2xl font-bold text-neutral-900">{book.totalChapters}</p>
-                  <p className="text-sm text-neutral-600">Chapters</p>
+              {/* Stats - different for text vs illustrated books */}
+              {isIllustrated ? (
+                <div className="grid grid-cols-2 gap-4 mb-6">
+                  <div className="bg-neutral-50 rounded-xl p-4 text-center border border-neutral-100">
+                    <p className="text-2xl font-bold text-neutral-900">{book.illustrations?.length || book.totalChapters}</p>
+                    <p className="text-sm text-neutral-600">{isVisualBook ? 'Panels' : 'Pages'}</p>
+                  </div>
+                  <div className="bg-neutral-50 rounded-xl p-4 text-center border border-neutral-100">
+                    <p className="text-2xl font-bold text-neutral-900">{book.artStyle?.replace(/_/g, ' ') || 'Custom'}</p>
+                    <p className="text-sm text-neutral-600">Art Style</p>
+                  </div>
                 </div>
-                <div className="bg-neutral-50 rounded-xl p-4 text-center border border-neutral-100">
-                  <p className="text-2xl font-bold text-neutral-900">{book.totalWords.toLocaleString()}</p>
-                  <p className="text-sm text-neutral-600">Words</p>
+              ) : (
+                <div className="grid grid-cols-3 gap-4 mb-6">
+                  <div className="bg-neutral-50 rounded-xl p-4 text-center border border-neutral-100">
+                    <p className="text-2xl font-bold text-neutral-900">{book.totalChapters}</p>
+                    <p className="text-sm text-neutral-600">Chapters</p>
+                  </div>
+                  <div className="bg-neutral-50 rounded-xl p-4 text-center border border-neutral-100">
+                    <p className="text-2xl font-bold text-neutral-900">{book.totalWords.toLocaleString()}</p>
+                    <p className="text-sm text-neutral-600">Words</p>
+                  </div>
+                  <div className="bg-neutral-50 rounded-xl p-4 text-center border border-neutral-100">
+                    <p className="text-2xl font-bold text-neutral-900">~{Math.round(book.totalWords / 250)}</p>
+                    <p className="text-sm text-neutral-600">Pages</p>
+                  </div>
                 </div>
-                <div className="bg-neutral-50 rounded-xl p-4 text-center border border-neutral-100">
-                  <p className="text-2xl font-bold text-neutral-900">~{Math.round(book.totalWords / 250)}</p>
-                  <p className="text-sm text-neutral-600">Pages</p>
-                </div>
-              </div>
+              )}
 
               <div className="space-y-3">
                 <button
@@ -1581,8 +1595,8 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
             </div>
           )}
 
-          {/* Chapters List */}
-          {book.chapters.length > 0 && (
+          {/* Chapters List - only show for text books, not visual books */}
+          {!isIllustrated && book.chapters.length > 0 && (
             <div className="bg-white rounded-2xl border border-neutral-200 p-6 sm:p-8 mb-6">
               <h2 className="text-lg font-semibold text-neutral-900 mb-4">
                 Chapters {isGenerating && <span className="text-sm font-normal text-neutral-500">(updating live)</span>}
