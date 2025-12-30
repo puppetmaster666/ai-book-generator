@@ -174,6 +174,15 @@ function formatChapterContent(
   `;
 }
 
+// Create the "The End" page for text books only
+function createEndPage(fonts: { heading: string; body: string }): string {
+  return `
+    <div style="text-align: center; margin-top: 30%; font-family: '${fonts.heading}', Georgia, serif;">
+      <h1 style="font-size: 2.5em; font-weight: normal; font-style: italic; letter-spacing: 0.1em;">The End</h1>
+    </div>
+  `;
+}
+
 export async function generateEpub(bookData: BookData): Promise<Buffer> {
   const fonts = FONT_STYLES[bookData.fontStyle];
   const isComic = bookData.dialogueStyle === 'bubbles' || bookData.bookFormat === 'comic_book';
@@ -227,6 +236,38 @@ export async function generateEpub(bookData: BookData): Promise<Buffer> {
     effectiveFormat = 'comic_book';
   }
 
+  // Check if it's a picture book or visual book
+  const isPictureBook = bookData.bookFormat === 'picture_book';
+  const isVisualBook = isPictureBook || isComic;
+
+  // "The End" text for visual books (added to last panel)
+  const theEndText = `
+    <div style="text-align: center; margin-top: 2em; padding: 1em; font-family: '${fonts.heading}', Georgia, serif;">
+      <p style="font-size: 2em; font-style: italic; font-weight: bold;">The End</p>
+    </div>
+  `;
+
+  // Build chapters array
+  const chapterContents = bookData.chapters.map((chapter, index) => {
+    const isLastChapter = index === bookData.chapters.length - 1;
+    let content = formatChapterContent(
+      chapter.content,
+      bookData.fontStyle,
+      chapter.illustrations,
+      effectiveFormat
+    );
+
+    // For visual books, add "The End" to the last panel
+    if (isVisualBook && isLastChapter) {
+      content += theEndText;
+    }
+
+    return {
+      title: isComic ? `Panel ${chapter.number}` : chapter.title,
+      content,
+    };
+  });
+
   // Start with title page, then add chapters
   const chapters = [
     {
@@ -234,16 +275,17 @@ export async function generateEpub(bookData: BookData): Promise<Buffer> {
       content: titlePageHtml,
       excludeFromToc: true,
     },
-    ...bookData.chapters.map(chapter => ({
-      title: isComic ? `Panel ${chapter.number}` : chapter.title,
-      content: formatChapterContent(
-        chapter.content,
-        bookData.fontStyle,
-        chapter.illustrations,
-        effectiveFormat
-      ),
-    })),
+    ...chapterContents,
   ];
+
+  // For text books only, add a separate "The End" page
+  if (!isVisualBook) {
+    chapters.push({
+      title: 'The End',
+      content: createEndPage(fonts),
+      excludeFromToc: true,
+    });
+  }
 
   console.log(`Generating EPUB for ${bookData.title} (format: ${effectiveFormat}, chapters: ${chapters.length})`);
 

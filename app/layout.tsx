@@ -13,9 +13,14 @@ export const metadata: Metadata = {
     template: "%s | DraftMyBook - AI Book Generator",
   },
   icons: {
-    icon: '/images/favicon.png',
-    shortcut: '/images/favicon.png',
-    apple: '/images/favicon.png',
+    icon: [
+      { url: '/favicon.png', type: 'image/png' },
+      { url: '/images/favicon.png', type: 'image/png', sizes: '500x500' },
+    ],
+    shortcut: '/favicon.png',
+    apple: [
+      { url: '/images/favicon.png', sizes: '180x180', type: 'image/png' },
+    ],
   },
   description: "Free AI book generator that creates complete novels, children's books, comics, and picture books in minutes. Type one idea, get a full illustrated book with AI-generated cover. Download EPUB ready for Amazon KDP publishing. First book free!",
   keywords: [
