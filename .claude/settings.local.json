@@ -36,7 +36,8 @@
       "Bash(node check-book.js:*)",
       "Bash(node fix-book.js:*)",
       "Bash(npx tsc:*)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(grep:*)"
     ]
   }
 }

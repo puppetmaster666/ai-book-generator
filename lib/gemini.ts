@@ -1,12 +1,14 @@
 import { GoogleGenerativeAI, GenerativeModel } from '@google/generative-ai';
 
 // Retry utility with exponential backoff for rate limit handling
+// Automatically switches to backup API key if available
 async function withRetry<T>(
   fn: () => Promise<T>,
   maxRetries: number = 3,
   baseDelayMs: number = 5000
 ): Promise<T> {
   let lastError: Error | null = null;
+  let triedBackupKey = false;
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
@@ -23,13 +25,29 @@ async function withRetry<T>(
         errorMessage.includes('resource exhausted') ||
         errorMessage.includes('too many requests');
 
-      if (!isRateLimitError || attempt === maxRetries) {
+      if (!isRateLimitError) {
+        throw lastError;
+      }
+
+      // Try switching to backup key before giving up
+      if (!triedBackupKey && attempt >= 1) {
+        const switched = switchToBackupKey();
+        if (switched) {
+          triedBackupKey = true;
+          console.log('[Gemini] Retrying with backup API key...');
+          // Don't count this as an attempt, just retry immediately with new key
+          attempt--;
+          continue;
+        }
+      }
+
+      if (attempt === maxRetries) {
         throw lastError;
       }
 
       // Exponential backoff: 5s, 10s, 20s
       const delay = baseDelayMs * Math.pow(2, attempt);
-      console.log(`Rate limit hit, retrying in ${delay/1000}s (attempt ${attempt + 1}/${maxRetries})...`);
+      console.log(`[Gemini] Rate limit hit, retrying in ${delay/1000}s (attempt ${attempt + 1}/${maxRetries})...`);
       await new Promise(resolve => setTimeout(resolve, delay));
     }
   }
@@ -157,13 +175,57 @@ function parseJSONFromResponse(response: string): object {
 }
 
 // Lazy initialization to avoid errors during build
+// Support multiple API keys for rate limit failover
 let genAI: GoogleGenerativeAI | null = null;
+let genAIBackup: GoogleGenerativeAI | null = null;
 let _geminiPro: GenerativeModel | null = null;
 let _geminiFlash: GenerativeModel | null = null;
 let _geminiFlashLight: GenerativeModel | null = null; // Lightweight version for quick tasks
 let _geminiImage: GenerativeModel | null = null;
+let _useBackupKey = false; // Track if we should use backup key
+
+// Reset model instances when switching API keys
+function resetModelInstances() {
+  _geminiPro = null;
+  _geminiFlash = null;
+  _geminiFlashLight = null;
+  _geminiImage = null;
+}
+
+// Switch to backup API key
+export function switchToBackupKey() {
+  if (process.env.GEMINI_API_KEY_BACKUP1) {
+    console.log('[Gemini] Switching to backup API key due to rate limits');
+    _useBackupKey = true;
+    resetModelInstances();
+    return true;
+  }
+  return false;
+}
+
+// Switch back to primary key (can be called periodically to retry primary)
+export function switchToPrimaryKey() {
+  console.log('[Gemini] Switching back to primary API key');
+  _useBackupKey = false;
+  resetModelInstances();
+}
 
 function getGenAI(): GoogleGenerativeAI {
+  // Use backup key if flagged
+  if (_useBackupKey) {
+    if (!genAIBackup) {
+      const backupKey = process.env.GEMINI_API_KEY_BACKUP1;
+      if (!backupKey) {
+        console.warn('[Gemini] Backup key requested but not available, falling back to primary');
+        _useBackupKey = false;
+      } else {
+        genAIBackup = new GoogleGenerativeAI(backupKey);
+      }
+    }
+    if (genAIBackup) return genAIBackup;
+  }
+
+  // Use primary key
   if (!genAI) {
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {

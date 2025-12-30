@@ -2,15 +2,17 @@ import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { prisma } from '@/lib/db';
 import { ART_STYLES, ILLUSTRATION_DIMENSIONS, type ArtStyleKey } from '@/lib/constants';
-import { buildIllustrationPromptFromScene, SceneDescription, type PanelLayout } from '@/lib/gemini';
+import { buildIllustrationPromptFromScene, SceneDescription, type PanelLayout, switchToBackupKey } from '@/lib/gemini';
 
 // Retry utility with exponential backoff for rate limit handling
+// Automatically switches to backup API key if available
 async function withRetry<T>(
   fn: () => Promise<T>,
   maxRetries: number = 3,
   baseDelayMs: number = 5000
 ): Promise<T> {
   let lastError: Error | null = null;
+  let triedBackupKey = false;
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
@@ -27,13 +29,30 @@ async function withRetry<T>(
         errorMessage.includes('resource exhausted') ||
         errorMessage.includes('too many requests');
 
-      if (!isRateLimitError || attempt === maxRetries) {
+      if (!isRateLimitError) {
+        throw lastError;
+      }
+
+      // Try switching to backup key before giving up
+      if (!triedBackupKey && attempt >= 1) {
+        const switched = switchToBackupKey();
+        if (switched) {
+          triedBackupKey = true;
+          _useBackupKey = true; // Also switch local key
+          genAI = null; // Reset to pick up new key
+          console.log('[Panel Gen] Retrying with backup API key...');
+          attempt--;
+          continue;
+        }
+      }
+
+      if (attempt === maxRetries) {
         throw lastError;
       }
 
       // Exponential backoff: 5s, 10s, 20s
       const delay = baseDelayMs * Math.pow(2, attempt);
-      console.log(`Rate limit hit, retrying in ${delay/1000}s (attempt ${attempt + 1}/${maxRetries})...`);
+      console.log(`[Panel Gen] Rate limit hit, retrying in ${delay/1000}s (attempt ${attempt + 1}/${maxRetries})...`);
       await new Promise(resolve => setTimeout(resolve, delay));
     }
   }
@@ -41,11 +60,18 @@ async function withRetry<T>(
   throw lastError;
 }
 
-// Lazy initialization
+// Lazy initialization with backup key support
 let genAI: GoogleGenerativeAI | null = null;
+let _useBackupKey = false;
 
 function getGenAI(): GoogleGenerativeAI {
   if (!genAI) {
+    // Try backup key first if flagged
+    if (_useBackupKey && process.env.GEMINI_API_KEY_BACKUP1) {
+      genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY_BACKUP1);
+      return genAI;
+    }
+    // Use primary key
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
       throw new Error('GEMINI_API_KEY environment variable is not set');
