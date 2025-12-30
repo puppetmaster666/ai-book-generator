@@ -864,6 +864,27 @@ export async function POST(
           },
         });
       }
+
+      // CRITICAL: Check if all illustrations were generated
+      // Visual books MUST have all illustrations before being marked complete
+      const expectedPanels = outline.chapters.length;
+      const generatedPanels = illustrationResults.size;
+      if (generatedPanels < expectedPanels) {
+        console.error(`Visual book incomplete: ${generatedPanels}/${expectedPanels} illustrations generated`);
+        await prisma.book.update({
+          where: { id },
+          data: {
+            status: 'failed',
+            errorMessage: `Only ${generatedPanels} of ${expectedPanels} illustrations were generated. Please retry to complete the remaining panels.`,
+          },
+        });
+        return NextResponse.json({
+          error: `Incomplete: ${generatedPanels}/${expectedPanels} illustrations generated`,
+          generated: generatedPanels,
+          expected: expectedPanels,
+          message: 'Some illustrations failed to generate. Please retry.',
+        }, { status: 500 });
+      }
     } else {
       // STANDARD FLOW: Sequential generation for text-based books
       for (let i = startChapter; i <= outline.chapters.length; i++) {
