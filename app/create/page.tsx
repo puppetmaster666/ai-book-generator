@@ -164,10 +164,9 @@ export default function CreateBook() {
       const genre = GENRES[preset.defaultGenre as keyof typeof GENRES];
 
       // Determine book type based on preset
+      // Children's picture books are still fiction type
       let bookType = genre?.type || 'fiction';
-      if (preset.format === 'picture_book') {
-        bookType = 'childrens';
-      } else if (presetKey === 'nonfiction') {
+      if (presetKey === 'nonfiction') {
         bookType = 'non-fiction';
       }
 
