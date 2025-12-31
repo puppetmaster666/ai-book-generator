@@ -117,6 +117,11 @@ model Book {
   characterVisualGuide Json?  // Detailed character descriptions for consistent illustrations
   visualStyleGuide     Json?  // Style guide for maintaining illustration consistency
 
+  // Protagonist image (for illustrated books - user uploads their photo)
+  protagonistPhoto     String?   @db.Text  // Original uploaded photo (base64)
+  protagonistStyled    String?   @db.Text  // Stylized version in book's art style (base64)
+  protagonistDescription String? @db.Text  // Text description of protagonist for consistency
+
   // Cover
   coverImageUrl   String?
   coverPrompt     String?   @db.Text

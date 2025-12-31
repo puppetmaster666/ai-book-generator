@@ -4,7 +4,7 @@ import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
-import { ArrowLeft, ArrowRight, Loader2, BookOpen, Palette, FileText, Check, Users, Tag, X, Mail, Pencil, Gift, User, Save, Plus, Trash2, AlertCircle } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Loader2, BookOpen, Palette, FileText, Check, Users, Tag, X, Mail, Pencil, Gift, User, Save, Plus, Trash2, AlertCircle, Camera, ImageIcon, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
 import { PRICING, BOOK_FORMATS, ART_STYLES } from '@/lib/constants';
@@ -25,6 +25,9 @@ interface BookData {
   artStyle: string | null;
   targetWords: number;
   targetChapters: number;
+  protagonistPhoto?: string | null;
+  protagonistStyled?: string | null;
+  protagonistDescription?: string | null;
   outline?: Array<{
     chapterNum: number;
     title: string;
@@ -83,6 +86,12 @@ function ReviewContent() {
   const [editEnding, setEditEnding] = useState('');
   const [editCharacters, setEditCharacters] = useState<Array<{ name: string; description: string }>>([]);
 
+  // Protagonist image state
+  const [protagonistPhoto, setProtagonistPhoto] = useState<string | null>(null);
+  const [protagonistStyled, setProtagonistStyled] = useState<string | null>(null);
+  const [isStylizing, setIsStylizing] = useState(false);
+  const [stylizeError, setStylizeError] = useState('');
+
   useEffect(() => {
     if (!bookId) {
       router.push('/create');
@@ -100,6 +109,13 @@ function ReviewContent() {
           setFreeBookEligible(data.freeBookEligible || false);
           setHasCredits(data.hasCredits || false);
           setUserCredits(data.userCredits || 0);
+          // Load protagonist images if available
+          if (data.book.protagonistPhoto) {
+            setProtagonistPhoto(data.book.protagonistPhoto);
+          }
+          if (data.book.protagonistStyled) {
+            setProtagonistStyled(data.book.protagonistStyled);
+          }
         }
         setIsLoading(false);
       })
@@ -272,6 +288,96 @@ function ReviewContent() {
 
   const removeCharacter = (index: number) => {
     setEditCharacters(editCharacters.filter((_, i) => i !== index));
+  };
+
+  // Protagonist image upload handler
+  const handleProtagonistUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !bookId) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      setStylizeError('Please upload an image file');
+      return;
+    }
+
+    // Validate file size (max 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      setStylizeError('Image must be less than 10MB');
+      return;
+    }
+
+    setStylizeError('');
+    setIsStylizing(true);
+
+    try {
+      // Convert to base64
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        const dataUrl = e.target?.result as string;
+        setProtagonistPhoto(dataUrl);
+
+        // Extract base64 data (remove data:image/xxx;base64, prefix)
+        const base64Match = dataUrl.match(/^data:([^;]+);base64,(.+)$/);
+        if (!base64Match) {
+          setStylizeError('Failed to process image');
+          setIsStylizing(false);
+          return;
+        }
+
+        const [, mimeType, base64Data] = base64Match;
+
+        // Send to API for stylization
+        try {
+          const response = await fetch(`/api/books/${bookId}/stylize-protagonist`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              imageBase64: base64Data,
+              mimeType,
+            }),
+          });
+
+          const data = await response.json();
+
+          if (data.success) {
+            setProtagonistStyled(data.styledImage);
+          } else {
+            setStylizeError(data.error || 'Failed to stylize image');
+          }
+        } catch {
+          setStylizeError('Failed to connect to stylization service');
+        } finally {
+          setIsStylizing(false);
+        }
+      };
+
+      reader.onerror = () => {
+        setStylizeError('Failed to read image file');
+        setIsStylizing(false);
+      };
+
+      reader.readAsDataURL(file);
+    } catch {
+      setStylizeError('Failed to process image');
+      setIsStylizing(false);
+    }
+  };
+
+  // Remove protagonist image
+  const removeProtagonistImage = async () => {
+    if (!bookId) return;
+
+    try {
+      await fetch(`/api/books/${bookId}/stylize-protagonist`, {
+        method: 'DELETE',
+      });
+      setProtagonistPhoto(null);
+      setProtagonistStyled(null);
+      setStylizeError('');
+    } catch {
+      setStylizeError('Failed to remove image');
+    }
   };
 
   const getBasePrice = () => {
@@ -820,6 +926,108 @@ function ReviewContent() {
                 )}
               </div>
             ) : null}
+
+            {/* Protagonist Image - Only for illustrated books */}
+            {book.artStyle && (
+              <div className="mb-6 border-t border-neutral-200 pt-6">
+                <h3 className="font-semibold text-lg flex items-center gap-2 mb-3">
+                  <Camera className="h-5 w-5 text-neutral-400" />
+                  Main Character Likeness
+                  <span className="text-xs font-normal text-neutral-500 bg-neutral-100 px-2 py-0.5 rounded-full">Optional</span>
+                </h3>
+                <p className="text-sm text-neutral-600 mb-4">
+                  Upload a photo to use as reference for the main character. We&apos;ll transform it into your book&apos;s {ART_STYLES[book.artStyle as keyof typeof ART_STYLES]?.label || 'art'} style.
+                </p>
+
+                {protagonistStyled ? (
+                  // Show both original and stylized images
+                  <div className="flex flex-col sm:flex-row gap-4">
+                    <div className="flex-1">
+                      <p className="text-xs text-neutral-500 mb-2">Original Photo</p>
+                      <div className="relative aspect-square max-w-[160px] rounded-xl overflow-hidden border border-neutral-200 bg-neutral-50">
+                        {protagonistPhoto && (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={protagonistPhoto}
+                            alt="Original photo"
+                            className="w-full h-full object-cover"
+                          />
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-center px-2">
+                      <Sparkles className="h-5 w-5 text-amber-500" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-xs text-neutral-500 mb-2">
+                        {ART_STYLES[book.artStyle as keyof typeof ART_STYLES]?.label || 'Stylized'} Version
+                      </p>
+                      <div className="relative aspect-square max-w-[160px] rounded-xl overflow-hidden border-2 border-amber-200 bg-amber-50 shadow-sm">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={protagonistStyled}
+                          alt="Stylized character"
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    </div>
+                    <div className="flex items-end pb-2">
+                      <button
+                        onClick={removeProtagonistImage}
+                        className="flex items-center gap-1 px-3 py-1.5 text-neutral-500 hover:text-red-600 hover:bg-red-50 rounded-lg text-sm transition-colors"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                        Remove
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  // Upload area
+                  <div className="relative">
+                    <label
+                      className={`flex flex-col items-center justify-center w-full max-w-xs h-40 border-2 border-dashed rounded-xl cursor-pointer transition-colors ${
+                        isStylizing
+                          ? 'border-amber-300 bg-amber-50'
+                          : 'border-neutral-300 hover:border-neutral-400 bg-neutral-50 hover:bg-neutral-100'
+                      }`}
+                    >
+                      {isStylizing ? (
+                        <div className="flex flex-col items-center gap-2">
+                          <div className="relative">
+                            <Loader2 className="h-8 w-8 animate-spin text-amber-500" />
+                            <Sparkles className="h-4 w-4 text-amber-400 absolute -top-1 -right-1" />
+                          </div>
+                          <span className="text-sm text-amber-700 font-medium">Transforming photo...</span>
+                          <span className="text-xs text-amber-600">This may take a moment</span>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="flex items-center justify-center w-12 h-12 bg-neutral-200 rounded-full mb-2">
+                            <ImageIcon className="h-6 w-6 text-neutral-500" />
+                          </div>
+                          <span className="text-sm text-neutral-600 font-medium">Upload a photo</span>
+                          <span className="text-xs text-neutral-500">JPG, PNG up to 10MB</span>
+                        </>
+                      )}
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleProtagonistUpload}
+                        className="hidden"
+                        disabled={isStylizing}
+                      />
+                    </label>
+                  </div>
+                )}
+
+                {stylizeError && (
+                  <div className="mt-3 flex items-center gap-2 text-red-600 text-sm">
+                    <AlertCircle className="h-4 w-4" />
+                    {stylizeError}
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Book Details */}
             <div className="border-t border-neutral-200 pt-6">

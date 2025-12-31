@@ -172,6 +172,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if book is already completed or has reached max illustrations
+    // Also fetch protagonist data for character consistency
     const book = await prisma.book.findUnique({
       where: { id: bookId },
       select: {
@@ -179,6 +180,8 @@ export async function POST(request: NextRequest) {
         bookFormat: true,
         dialogueStyle: true,
         bookPreset: true,
+        protagonistDescription: true,
+        characters: true,
         _count: { select: { illustrations: true } },
       },
     });
@@ -220,6 +223,39 @@ export async function POST(request: NextRequest) {
     // Check if we have dialogue (comic mode with speech bubbles)
     const hasDialogue = dialogue && Array.isArray(dialogue) && dialogue.length > 0;
 
+    // Enhance characterVisualGuide with protagonist description if available
+    let enhancedCharacterGuide = characterVisualGuide;
+    if (book.protagonistDescription && characterVisualGuide?.characters?.length > 0) {
+      // Get the main character name (first character in the book)
+      const bookCharacters = book.characters as Array<{ name: string; description: string }> | null;
+      const mainCharacterName = bookCharacters?.[0]?.name;
+
+      if (mainCharacterName) {
+        // Find and enhance the main character's visual guide with protagonist description
+        enhancedCharacterGuide = {
+          ...characterVisualGuide,
+          characters: characterVisualGuide.characters.map((char: {
+            name: string;
+            physicalDescription: string;
+            clothing: string;
+            distinctiveFeatures: string;
+            colorPalette: string;
+          }) => {
+            if (char.name.toLowerCase() === mainCharacterName.toLowerCase()) {
+              // Merge protagonist description with existing guide
+              return {
+                ...char,
+                physicalDescription: `${book.protagonistDescription}. ${char.physicalDescription}`,
+                distinctiveFeatures: `BASED ON REAL PERSON REFERENCE: ${book.protagonistDescription}. ${char.distinctiveFeatures}`,
+              };
+            }
+            return char;
+          }),
+        };
+        console.log(`[Panel ${panelNumber}] Enhanced ${mainCharacterName} with protagonist reference`);
+      }
+    }
+
     // Build the illustration prompt using scene description
     let prompt = '';
     if (typeof scene === 'object' && scene.description) {
@@ -227,7 +263,7 @@ export async function POST(request: NextRequest) {
       prompt = buildIllustrationPromptFromScene(
         scene as SceneDescription,
         artStylePrompt,
-        characterVisualGuide,
+        enhancedCharacterGuide, // Use enhanced guide with protagonist description
         visualStyleGuide,
         panelLayout // Pass panel layout for multi-panel comics
       );
