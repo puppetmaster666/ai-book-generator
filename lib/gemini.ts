@@ -1072,109 +1072,152 @@ export async function generateChapter(data: {
   let prompt: string;
 
   if (isNonFiction) {
-    // Non-fiction prompt - educational, informative style
+    // Non-fiction prompt - educational, informative style with strict quality requirements
     const keyPointsSection = data.chapterKeyPoints && data.chapterKeyPoints.length > 0
       ? `\nKEY POINTS TO COVER:\n${data.chapterKeyPoints.map((p, i) => `${i + 1}. ${p}`).join('\n')}`
       : '';
 
-    prompt = `You are an expert author writing a ${data.genre} non-fiction book in a ${data.writingStyle} style. Write a complete chapter.
+    prompt = `You are an expert author writing a professional ${data.genre} non-fiction book in ${data.writingStyle} style.
 ${languageInstruction ? `\n${languageInstruction}\n` : ''}
-BOOK: "${data.title}" (${data.genre} non-fiction)
+BOOK: "${data.title}"
 
-FULL OUTLINE:
+BOOK OUTLINE:
 ${JSON.stringify(data.outline, null, 2)}
 
 CONTENT SO FAR:
-${data.storySoFar || 'This is the beginning of the book.'}
+${data.storySoFar || 'This is chapter 1, the beginning of the book.'}
 
-NOW WRITE CHAPTER ${data.chapterNumber}: "${data.chapterTitle}"
-
-Chapter topic: ${data.chapterPlan}
-Target words: ${data.targetWords}
+WRITE CHAPTER ${data.chapterNumber}: "${data.chapterTitle}"
+Topic: ${data.chapterPlan}
 ${keyPointsSection}
 
-FORMATTING: ${formatInstruction}
+${formatInstruction}
 
-Write the complete chapter. As a NON-FICTION book, include:
-- Clear explanations of concepts and ideas
-- Real-world examples, case studies, or anecdotes to illustrate points
-- Practical tips, strategies, or actionable advice where appropriate
-- Smooth transitions between topics
-- A brief summary or key takeaways at natural points
-- Engaging prose that keeps readers interested while educating them
+=== MANDATORY WRITING STANDARDS ===
 
-VOICE AND TONE:
-- Write as an authoritative but approachable expert
-- Use "you" to address the reader directly when giving advice
-- Include rhetorical questions to engage readers
-- Balance information density with readability
+CONTENT REQUIREMENTS:
+- Start with a hook that draws readers in (question, story, surprising fact)
+- Explain concepts clearly before using technical terms
+- Include 1-2 real-world examples or case studies per major point
+- Provide actionable takeaways readers can apply immediately
+- End with a transition to the next chapter's topic
 
-STRICT STYLE RULES:
-- NEVER use em dashes (—) or en dashes (–). Use commas, periods, or rewrite sentences instead.
-- NEVER add "[END OF BOOK]", "[THE END]", or any ending markers
-- NEVER add author notes, meta-commentary, or markdown formatting
-- Use simple, natural punctuation only
-- Do NOT make up statistics or cite fake research
+PROSE QUALITY:
+- Write in clear, accessible language. Avoid jargon unless explained
+- Use "you" to address readers directly: "You might wonder..." not "One might wonder..."
+- Vary paragraph length. Mix short punchy paragraphs with longer explanatory ones
+- Use subheadings sparingly (only if chapter is very long)
+- Complete all sentences properly. No fragments or garbled text
 
-WORD COUNT: Write ${data.targetWords} words (STRICT LIMIT - do not exceed by more than 10%). This is chapter ${data.chapterNumber} of a larger book, so keep it focused and within the target length.
+AVOID THESE ERRORS:
+- Making up statistics, studies, or fake research
+- Vague claims without examples: "Research shows..." (which research?)
+- Repeating the same point multiple ways without adding value
+- Excessive bullet points. Integrate information into flowing prose
+- Starting multiple paragraphs with the same word
 
-Output ONLY the chapter text.`;
+STRUCTURE:
+- This is chapter ${data.chapterNumber} of ${(data.outline as { chapters?: unknown[] })?.chapters?.length || 15}
+- Cover the key points thoroughly but don't repeat information from earlier chapters
+- Each paragraph should add new information or a new perspective
+
+FORBIDDEN:
+- Em dashes (—) or en dashes (–). Use commas or periods instead
+- "[END]", "[THE END]", "END OF CHAPTER" markers
+- Author notes, meta-commentary, or markdown formatting
+- Incomplete words or typos
+- Citing specific authors/books unless you're certain they exist
+
+WORD LIMIT: ${data.targetWords} words MAXIMUM. This is a hard limit. Cover the topic thoroughly within this limit.
+
+OUTPUT: The chapter text only, starting with the chapter heading.`;
   } else {
-    // Fiction prompt - narrative style
-    prompt = `You are a novelist writing in ${data.writingStyle} style. Write a complete chapter.
+    // Fiction prompt - narrative style with strict quality requirements
+    prompt = `You are a professional novelist writing publishable ${data.genre} fiction in ${data.writingStyle} style.
 ${languageInstruction ? `\n${languageInstruction}\n` : ''}
-BOOK: "${data.title}" (${data.genre} ${data.bookType})
+BOOK: "${data.title}"
 
-FULL OUTLINE:
+STORY OUTLINE:
 ${JSON.stringify(data.outline, null, 2)}
 
 STORY SO FAR:
-${data.storySoFar || 'This is the beginning of the story.'}
+${data.storySoFar || 'This is chapter 1, the beginning of the story.'}
 
 CHARACTER STATES:
 ${JSON.stringify(data.characterStates || {}, null, 2)}
 
-NOW WRITE CHAPTER ${data.chapterNumber}: "${data.chapterTitle}"
+WRITE CHAPTER ${data.chapterNumber}: "${data.chapterTitle}"
+Plan: ${data.chapterPlan}
+${data.chapterPov ? `POV: ${data.chapterPov}` : ''}
 
-Chapter plan: ${data.chapterPlan}
-Target words: ${data.targetWords}
-${data.chapterPov ? `Point of view: ${data.chapterPov}` : ''}
+${formatInstruction}
 
-FORMATTING: ${formatInstruction}
+=== MANDATORY WRITING STANDARDS ===
 
-Write the complete chapter. Include:
-- Vivid descriptions and sensory details
-- Natural dialogue with character voice
-- Internal thoughts and emotions
-- Scene transitions
-- End at a natural breaking point
+DIALOGUE FORMAT (REQUIRED):
+- Every line of spoken dialogue MUST be enclosed in quotation marks
+- CORRECT: "I don't understand," Maria said, shaking her head.
+- WRONG: I don't understand, Maria said.
+- New speaker = new paragraph
+- Use "said" and "asked" primarily. Avoid fancy tags like "exclaimed" or "declared"
+- Include brief action beats: She crossed her arms. "That's not what I meant."
 
-STRICT STYLE RULES:
-- NEVER use em dashes (—) or en dashes (–). Use commas, periods, or rewrite sentences instead.
-- NEVER add "[END OF BOOK]", "[THE END]", or any ending markers
-- NEVER add author notes, meta-commentary, or markdown formatting
-- Use simple, natural punctuation only
+PROSE QUALITY:
+- Write clean, professional prose. No purple prose or overwrought descriptions
+- SHOW emotions through actions: "Her hands trembled" not "She was terrified"
+- Vary sentence length. Mix short punchy sentences with longer flowing ones
+- Be specific: "oak door" not "the door", "1967 Mustang" not "old car"
+- Avoid repeating distinctive words within 2-3 sentences
 
-WORD COUNT: Write ${data.targetWords} words (STRICT LIMIT - do not exceed by more than 10%). This is chapter ${data.chapterNumber} of a larger book, so keep it focused and within the target length.
+AVOID THESE COMMON ERRORS:
+- Clichés: "heart pounded", "blood ran cold", "time stood still"
+- Overusing character names when "he/she" works fine
+- Starting consecutive sentences with the same word
+- Excessive metaphors. One per paragraph maximum
+- Adjective stacking: "the dark, gloomy, ominous shadows"
 
-Output ONLY the chapter text.`;
+STRUCTURE:
+- This is chapter ${data.chapterNumber} of ${(data.outline as { chapters?: unknown[] })?.chapters?.length || 20}. Do NOT resolve major plot threads
+- End at a natural scene break, not a forced cliffhanger
+- Characters must act logically based on their established traits
+- Complete all sentences. No fragments or garbled text
+
+FORBIDDEN:
+- Em dashes (—) or en dashes (–). Use commas or periods instead
+- "[END]", "[THE END]", "END OF CHAPTER" markers
+- Author notes, commentary, or markdown
+- Inventing major characters not in the outline
+- Incomplete words or typos like "susped" instead of "suspended"
+
+WORD LIMIT: ${data.targetWords} words MAXIMUM. This is a hard limit. Write a complete, satisfying chapter within this limit. Do not pad with unnecessary description.
+
+OUTPUT: The chapter text only, starting with the chapter heading.`;
   }
 
+  // PASS 1: Generate the chapter
   const result = await getGeminiPro().generateContent(prompt);
   let content = result.response.text();
 
-  // Post-process: remove AI artifacts
+  // Quick cleanup of obvious AI artifacts
   content = content
-    // Remove end markers
-    .replace(/\*?\*?\[?(THE )?END( OF BOOK)?\]?\*?\*?/gi, '')
+    .replace(/\*?\*?\[?(THE )?END( OF BOOK| OF CHAPTER)?\]?\*?\*?/gi, '')
     .replace(/\*\*\[END OF BOOK\]\*\*/gi, '')
-    // Replace em dashes and en dashes with commas or nothing
     .replace(/—/g, ', ')
     .replace(/–/g, ', ')
     .replace(/ , /g, ', ')
     .replace(/,\s*,/g, ',')
-    // Clean up any trailing whitespace
     .trim();
+
+  // PASS 2: Review and polish the chapter
+  // This catches typos, formatting issues, and quality problems
+  console.log(`[Chapter ${data.chapterNumber}] Starting review pass...`);
+  try {
+    content = await reviewAndPolishChapter(content, data.targetWords, data.bookType);
+    console.log(`[Chapter ${data.chapterNumber}] Review pass completed.`);
+  } catch (reviewError) {
+    console.error(`[Chapter ${data.chapterNumber}] Review pass failed, using original:`, reviewError);
+    // Continue with the original content if review fails
+  }
 
   return content;
 }
@@ -1193,6 +1236,100 @@ ${chapterContent}`;
 
   const result = await getGeminiFlash().generateContent(prompt);
   return result.response.text();
+}
+
+// ============================================================
+// CHAPTER REVIEW AND POLISH SYSTEM (Second Pass)
+// ============================================================
+// This function reviews generated chapters for quality issues
+// and returns a polished, publishable version.
+
+export async function reviewAndPolishChapter(
+  chapterContent: string,
+  targetWords: number,
+  bookType: string
+): Promise<string> {
+  const currentWordCount = chapterContent.split(/\s+/).filter(w => w.length > 0).length;
+  const isOverLength = currentWordCount > targetWords * 1.15; // More than 15% over
+
+  const prompt = `You are a professional editor reviewing a chapter for publication. Your job is to FIX ERRORS while preserving the author's voice and story.
+
+CHAPTER TO REVIEW:
+---
+${chapterContent}
+---
+
+TARGET WORD COUNT: ${targetWords} words
+CURRENT WORD COUNT: ~${currentWordCount} words
+BOOK TYPE: ${bookType}
+
+YOUR EDITING TASKS:
+
+1. FIX SPELLING AND TYPOS:
+   - Correct any misspelled words (e.g., "susped" → "suspended", "desced" → "descended")
+   - Fix incomplete or garbled words
+   - Ensure proper capitalization
+
+2. FIX DIALOGUE FORMATTING:
+   - ALL spoken dialogue MUST be in quotation marks
+   - Correct: "Hello," she said.
+   - Incorrect: Hello, she said.
+   - Each new speaker should start a new paragraph
+
+3. FIX INCOMPLETE SENTENCES:
+   - If a sentence is cut off or missing words, complete it logically
+   - Remove any sentences that are clearly garbled and cannot be salvaged
+
+4. REMOVE REPETITION:
+   - If the same unusual word appears more than twice in a paragraph, replace some instances with synonyms
+   - Remove redundant phrases that say the same thing twice
+
+5. FIX PUNCTUATION:
+   - Replace any em dashes (—) or en dashes (–) with commas or periods
+   - Ensure sentences end with proper punctuation
+
+${isOverLength ? `6. TRIM LENGTH:
+   - The chapter is ${currentWordCount - targetWords} words over target
+   - Remove unnecessary adjectives and adverbs
+   - Tighten wordy phrases
+   - Cut redundant descriptions
+   - Target: ${targetWords} words (+/- 10%)` : ''}
+
+CRITICAL RULES:
+- DO NOT change the plot, characters, or story events
+- DO NOT rewrite sections that are already well-written
+- DO NOT add new content or expand scenes
+- DO NOT change the author's writing style
+- ONLY fix actual errors and issues listed above
+
+OUTPUT:
+Return ONLY the corrected chapter text. No explanations, no comments, no markdown.`;
+
+  try {
+    const result = await getGeminiFlash().generateContent(prompt);
+    let polished = result.response.text().trim();
+
+    // Final cleanup pass
+    polished = polished
+      // Remove any AI artifacts
+      .replace(/\*?\*?\[?(THE )?END( OF BOOK| OF CHAPTER)?\]?\*?\*?/gi, '')
+      .replace(/^\s*---+\s*$/gm, '')
+      // Fix double punctuation
+      .replace(/([.!?])\1+/g, '$1')
+      // Fix double spaces
+      .replace(/  +/g, ' ')
+      // Fix em/en dashes that might have been missed
+      .replace(/—/g, ', ')
+      .replace(/–/g, ', ')
+      .replace(/ , /g, ', ')
+      .replace(/,\s*,/g, ',')
+      .trim();
+
+    return polished;
+  } catch (error) {
+    console.error('Review pass failed, returning original:', error);
+    return chapterContent; // Return original if review fails
+  }
 }
 
 export async function updateCharacterStates(
