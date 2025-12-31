@@ -695,69 +695,88 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
     startTimeRef.current = Date.now();
     setElapsedTime(0);
     orchestrationRef.current = false; // Reset orchestration state
+    setError(null);
 
     try {
       // Check if this is a text book with an existing outline that can be resumed
-      const hasOutline = book.outline && typeof book.outline === 'object';
-      const hasProgress = book.currentChapter > 0 || (book.chapters && book.chapters.length > 0);
+      const hasOutline = book.outline && typeof book.outline === 'object' && Object.keys(book.outline).length > 0;
       const isTextBook = !isVisualBook;
+
+      console.log('handleRetry:', { isTextBook, hasOutline, outline: book.outline, status: book.status });
 
       if (isTextBook && hasOutline) {
         // Resume text book: Just update status and let orchestration continue
-        // Don't call /generate which would delete existing chapters
-        // Use /resume for ANY text book with an outline - even if chapters were lost
-        console.log('Resuming text book from chapter', book.currentChapter, 'hasProgress:', hasProgress);
+        console.log('Resuming text book from chapter', book.currentChapter);
         const res = await fetch(`/api/books/${id}/resume`, {
           method: 'POST',
         });
         if (!res.ok) {
           const data = await res.json();
           console.error('Resume failed:', data.error);
-          // Show error to user if concurrent generation limit hit
           if (res.status === 409 && data.existingBookTitle) {
             setError(`You already have "${data.existingBookTitle}" generating. Please wait for it to complete or cancel it first.`);
           } else {
             setError(data.error || 'Failed to resume generation');
           }
-        } else {
-          setError(null);
-          // Refresh book data to update local state - this triggers orchestration
-          const bookRes = await fetch(`/api/books/${id}`);
-          if (bookRes.ok) {
-            const bookData = await bookRes.json();
-            setBook(bookData.book);
-            lastKnownChapterCountRef.current = bookData.book?.chapters?.length || 0;
-          }
+          setRetrying(false);
+          return;
+        }
+        setError(null);
+        // Refresh book data to update local state - this triggers orchestration
+        const bookRes = await fetch(`/api/books/${id}`);
+        if (bookRes.ok) {
+          const bookData = await bookRes.json();
+          setBook(bookData.book);
+          lastKnownChapterCountRef.current = bookData.book?.chapters?.length || 0;
         }
       } else {
         // For visual books or books without outline, call generate
+        // This generates the outline which can take 30-60 seconds
+        console.log('Starting fresh generation (no outline found)...');
+
         const res = await fetch(`/api/books/${id}/generate`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ outlineOnly: isTextBook }),
         });
+
+        const responseText = await res.text();
+        let data;
+        try {
+          data = JSON.parse(responseText);
+        } catch {
+          console.error('Failed to parse response:', responseText);
+          setError('Server error - please try again');
+          setRetrying(false);
+          return;
+        }
+
         if (!res.ok) {
-          const data = await res.json();
-          console.error('Retry failed:', data.error);
-          // Show error to user if concurrent generation limit hit
+          console.error('Generate failed:', data.error, data);
           if (res.status === 409 && data.existingBookTitle) {
             setError(`You already have "${data.existingBookTitle}" generating. Please wait for it to complete or cancel it first.`);
           } else {
             setError(data.error || 'Failed to start generation');
           }
-        } else {
-          setError(null);
-          // Refresh book data to update local state - this triggers orchestration
-          const bookRes = await fetch(`/api/books/${id}`);
-          if (bookRes.ok) {
-            const bookData = await bookRes.json();
-            setBook(bookData.book);
-            lastKnownChapterCountRef.current = bookData.book?.chapters?.length || 0;
-          }
+          setRetrying(false);
+          return;
+        }
+
+        console.log('Generate succeeded:', data);
+        setError(null);
+
+        // Refresh book data to update local state - this triggers orchestration
+        const bookRes = await fetch(`/api/books/${id}`);
+        if (bookRes.ok) {
+          const bookData = await bookRes.json();
+          console.log('Book data after generate:', bookData.book?.status, bookData.book?.outline ? 'has outline' : 'no outline');
+          setBook(bookData.book);
+          lastKnownChapterCountRef.current = bookData.book?.chapters?.length || 0;
         }
       }
     } catch (err) {
       console.error('Retry error:', err);
+      setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
       setRetrying(false);
     }
