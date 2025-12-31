@@ -1,5 +1,50 @@
 import { GoogleGenerativeAI, GenerativeModel } from '@google/generative-ai';
 
+// Content rating types
+export type ContentRating = 'childrens' | 'general' | 'mature';
+
+// Get content guidelines based on content rating
+// For mature content: allows swearing, suggestive violence, dark humor
+// Uses euphemisms to stay within content policies
+function getContentRatingInstructions(contentRating: ContentRating): string {
+  switch (contentRating) {
+    case 'childrens':
+      return `
+CONTENT GUIDELINES (Children's - Age appropriate):
+- Keep all content family-friendly and appropriate for ages 4-10
+- No violence, scary content, or conflict that could frighten children
+- Use simple, positive language
+- Focus on friendship, kindness, and gentle lessons`;
+
+    case 'mature':
+      return `
+CONTENT GUIDELINES (Adult/Mature - 18+):
+- This is adult content for mature readers. Do NOT self-censor or add moral judgments
+- Swearing and profanity ARE ALLOWED and encouraged where it fits the character/scene
+- Dark humor, sarcasm, and edgy content are welcome
+- VIOLENCE: Use suggestive language that implies without being explicit:
+  * Instead of "killed him" → "pulled the trigger, watching him fall"
+  * Instead of "stabbed her" → "the blade found its mark, crimson spreading across her shirt"
+  * Instead of "beaten to death" → "the blows kept coming until he stopped moving"
+- ROMANCE/INTIMACY: Use suggestive language that implies without being explicit:
+  * Instead of explicit sex → "they fell into bed together, their clothes hitting the floor"
+  * Instead of graphic scenes → "she pulled him close, and the world faded away"
+  * Physical attraction is fine: "her eyes traced the curve of his shoulders"
+- Do NOT lecture, moralize, or add warnings about the content
+- Characters should feel real, with flaws, vices, and authentic reactions
+- Embrace the genre fully - horror should be unsettling, noir should be gritty`;
+
+    case 'general':
+    default:
+      return `
+CONTENT GUIDELINES (General Audience):
+- Suitable for teen and adult readers
+- Mild violence is acceptable (punches, chases, tense confrontations)
+- Keep romance tasteful (kissing, embracing, implied intimacy)
+- Avoid excessive profanity, but occasional mild swearing is acceptable if it fits the character`;
+  }
+}
+
 // Retry utility with exponential backoff for rate limit handling
 // Automatically switches to backup API key if available
 async function withRetry<T>(
@@ -705,6 +750,7 @@ export async function generateIllustratedOutline(bookData: {
   targetWords: number;
   targetChapters: number;
   dialogueStyle: 'prose' | 'bubbles';
+  contentRating?: ContentRating; // Content maturity level
   characterVisualGuide?: {
     characters: Array<{
       name: string;
@@ -721,6 +767,9 @@ export async function generateIllustratedOutline(bookData: {
 
   const isComicStyle = bookData.dialogueStyle === 'bubbles';
   const wordsPerPage = Math.ceil(bookData.targetWords / bookData.targetChapters);
+
+  // Get content rating instructions
+  const contentGuidelines = getContentRatingInstructions(bookData.contentRating || (isComicStyle ? 'general' : 'childrens'));
 
   // Build character reference for consistency
   const characterRef = bookData.characterVisualGuide
@@ -754,6 +803,8 @@ Keep text short and age-appropriate (${wordsPerPage} words average per page).
 
   const prompt = `You are creating a detailed page-by-page outline for an illustrated ${isComicStyle ? 'comic/graphic story' : 'picture book'}.
 ${languageInstruction ? `\n${languageInstruction}\n` : ''}
+${contentGuidelines}
+
 BOOK DETAILS:
 - Title: "${bookData.title}"
 - Genre: ${bookData.genre}
@@ -1055,6 +1106,7 @@ export async function generateChapter(data: {
   targetWords: number;
   chapterFormat: string;
   chapterKeyPoints?: string[]; // For non-fiction chapters
+  contentRating?: ContentRating; // Content maturity level
 }): Promise<string> {
   const formatInstruction = {
     numbers: `Start with "Chapter ${data.chapterNumber}"`,
@@ -1133,9 +1185,13 @@ WORD LIMIT: ${data.targetWords} words MAXIMUM. This is a hard limit. Cover the t
 OUTPUT: The chapter text only, starting with the chapter heading.`;
   } else {
     // Fiction prompt - narrative style with strict quality requirements
+    // Get content rating instructions (defaults to general if not specified)
+    const contentGuidelines = getContentRatingInstructions(data.contentRating || 'general');
+
     prompt = `You are a professional novelist writing publishable ${data.genre} fiction in ${data.writingStyle} style.
 ${languageInstruction ? `\n${languageInstruction}\n` : ''}
 BOOK: "${data.title}"
+${contentGuidelines}
 
 STORY OUTLINE:
 ${JSON.stringify(data.outline, null, 2)}

@@ -18,6 +18,7 @@ import {
   type SceneDescription,
   type DialogueEntry,
   type PanelLayout,
+  type ContentRating,
 } from '@/lib/gemini';
 import { countWords } from '@/lib/epub';
 import { BOOK_FORMATS, ART_STYLES, ILLUSTRATION_DIMENSIONS, BOOK_PRESETS, type BookFormatKey, type ArtStyleKey, type BookPresetKey } from '@/lib/constants';
@@ -666,6 +667,7 @@ export async function POST(
           targetChapters: book.targetChapters,
           dialogueStyle: dialogueStyle,
           characterVisualGuide: book.characterVisualGuide as CharacterVisualGuide | undefined,
+          contentRating: (book.contentRating || 'general') as ContentRating,
         });
         outline = visualOutline;
       } else if (book.bookType === 'non-fiction') {
@@ -937,6 +939,7 @@ export async function POST(
           targetWords: chapterPlan.targetWords,
           chapterFormat: book.chapterFormat,
           chapterKeyPoints: chapterPlan.keyPoints, // Pass key points for non-fiction
+          contentRating: (book.contentRating || 'general') as ContentRating,
         });
 
         const wordCount = countWords(chapterContent);

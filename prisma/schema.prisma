@@ -103,6 +103,7 @@ model Book {
   artStyle        String?   // watercolor, cartoon, storybook, etc.
   dialogueStyle   String?   // prose (text under images), bubbles (speech bubbles on images)
   bookPreset      String?   // novel, childrens_picture, etc.
+  contentRating   String    @default("general") // childrens, general, mature
 
   // Target settings
   targetWords     Int

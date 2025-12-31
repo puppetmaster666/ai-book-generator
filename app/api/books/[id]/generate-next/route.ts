@@ -6,6 +6,7 @@ import {
   updateCharacterStates,
   generateCoverPrompt,
   generateCoverImage,
+  type ContentRating,
 } from '@/lib/gemini';
 import { countWords } from '@/lib/epub';
 import { sendEmail, getBookReadyEmail } from '@/lib/email';
@@ -167,6 +168,7 @@ export async function POST(
       targetWords: chapterPlan.targetWords,
       chapterFormat: book.chapterFormat,
       chapterKeyPoints: chapterPlan.keyPoints, // Pass key points for non-fiction
+      contentRating: (book.contentRating || 'general') as ContentRating,
     });
 
     const wordCount = countWords(chapterContent);

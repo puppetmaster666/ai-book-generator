@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { GENRES, GenreKey } from '@/lib/constants';
+import { GENRES, GenreKey, BOOK_PRESETS, BookPresetKey } from '@/lib/constants';
 import { v4 as uuidv4 } from 'uuid';
 
 export async function POST(request: NextRequest) {
@@ -38,7 +38,17 @@ export async function POST(request: NextRequest) {
       artStyle,
       bookPreset,
       dialogueStyle,
+      contentRating: providedContentRating,
     } = body;
+
+    // Determine content rating: use provided value, or look up from preset, or default to 'general'
+    let contentRating = providedContentRating || 'general';
+    if (!providedContentRating && bookPreset && BOOK_PRESETS[bookPreset as BookPresetKey]) {
+      const preset = BOOK_PRESETS[bookPreset as BookPresetKey];
+      if ('contentRating' in preset) {
+        contentRating = preset.contentRating;
+      }
+    }
 
     // Validate required fields
     if (!title || !genre || !premise || !beginning || !middle || !ending) {
@@ -77,6 +87,8 @@ export async function POST(request: NextRequest) {
         artStyle: artStyle || null,
         bookPreset: bookPreset || null,
         dialogueStyle: dialogueStyle || null,
+        // Content maturity settings
+        contentRating,
       },
     });
 

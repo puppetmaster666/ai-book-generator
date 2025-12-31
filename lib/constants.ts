@@ -121,7 +121,7 @@ export const DIALOGUE_STYLES = {
 
 export type DialogueStyleKey = keyof typeof DIALOGUE_STYLES;
 
-// Simplified Book Presets - Only 3 types
+// Book Presets
 export const BOOK_PRESETS = {
   novel: {
     label: 'Novel',
@@ -135,6 +135,7 @@ export const BOOK_PRESETS = {
     chapters: 20,
     priceDisplay: '$19.99',
     downloadFormat: 'epub',
+    contentRating: 'general',
   },
   childrens_picture: {
     label: "Children's Picture Book",
@@ -148,6 +149,7 @@ export const BOOK_PRESETS = {
     chapters: 20, // Standard picture books have 24-32 pages
     priceDisplay: '$19.99',
     downloadFormat: 'pdf',
+    contentRating: 'childrens',
   },
   comic_story: {
     label: 'Comic Book',
@@ -161,6 +163,21 @@ export const BOOK_PRESETS = {
     chapters: 24, // Standard comic issues have 22-24 pages
     priceDisplay: '$19.99',
     downloadFormat: 'pdf',
+    contentRating: 'general',
+  },
+  adult_comic: {
+    label: 'Adult Comic',
+    description: 'Mature themes, dark humor, edgy content, PDF download',
+    icon: 'Skull',
+    format: 'picture_book',
+    artStyle: 'noir',
+    dialogueStyle: 'bubbles',
+    defaultGenre: 'horror',
+    targetWords: 1200,
+    chapters: 24,
+    priceDisplay: '$19.99',
+    downloadFormat: 'pdf',
+    contentRating: 'mature',
   },
   nonfiction: {
     label: 'Non-Fiction Book',
@@ -174,10 +191,38 @@ export const BOOK_PRESETS = {
     chapters: 15,
     priceDisplay: '$19.99',
     downloadFormat: 'epub',
+    contentRating: 'general',
   },
 } as const;
 
 export type BookPresetKey = keyof typeof BOOK_PRESETS;
+
+// Content rating definitions - affects generation prompts
+export const CONTENT_RATINGS = {
+  childrens: {
+    label: 'Children',
+    description: 'Age-appropriate for young readers',
+    allowSwearing: false,
+    allowViolence: false,
+    allowRomance: false,
+  },
+  general: {
+    label: 'General',
+    description: 'Suitable for most audiences',
+    allowSwearing: false,
+    allowViolence: 'mild', // "pushed him back"
+    allowRomance: 'mild', // "they kissed"
+  },
+  mature: {
+    label: 'Mature (18+)',
+    description: 'Adult themes, dark humor, edgy content',
+    allowSwearing: true,
+    allowViolence: 'suggested', // "the gun fired, blood dripped from his chest"
+    allowRomance: 'suggested', // "they fell into bed together, kissing passionately"
+  },
+} as const;
+
+export type ContentRatingKey = keyof typeof CONTENT_RATINGS;
 
 // Book Types & Genres
 export const BOOK_TYPES = {
