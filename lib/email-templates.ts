@@ -227,6 +227,11 @@ export const EMAIL_TEMPLATES = {
     label: 'Bug Apology',
     description: 'Apologize for generation bug + 1 book',
   },
+  beta_feedback: {
+    id: 'beta_feedback',
+    label: 'Beta Feedback Request',
+    description: 'Ask early users for feedback',
+  },
 } as const;
 
 export type EmailTemplateId = keyof typeof EMAIL_TEMPLATES;
@@ -283,6 +288,53 @@ export function getAnnouncementEmailWithCredit(
         — DraftMyBook
       </p>
     `, message.split('\n')[0].slice(0, 100)),
+  };
+}
+
+// Beta feedback request email - ask early users for feedback
+export function getBetaFeedbackEmail(
+  userName: string
+): { subject: string; html: string } {
+  const firstName = userName?.split(' ')[0] || 'there';
+
+  return {
+    subject: 'Quick question about your book',
+    html: emailWrapper(`
+      <p style="color: #525252; font-size: 15px; margin: 0 0 24px 0;">Hi ${firstName},</p>
+
+      <p style="color: #171717; font-size: 15px; line-height: 1.7; margin: 0 0 16px 0;">
+        Thanks for being one of our first users. We launched just a few days ago and we're still in beta — which means we're actively improving things and some bugs are expected.
+      </p>
+
+      <p style="color: #171717; font-size: 15px; line-height: 1.7; margin: 0 0 24px 0;">
+        I'd love to hear your honest feedback. Just hit reply and let me know:
+      </p>
+
+      <div style="background-color: #fafafa; border-radius: 8px; padding: 24px; margin: 24px 0;">
+        <p style="color: #171717; font-size: 15px; line-height: 1.8; margin: 0;">
+          <strong>1.</strong> How was your free book? Did it meet your expectations?<br><br>
+          <strong>2.</strong> What would you create next if you had another book?<br><br>
+          <strong>3.</strong> What would make you pay $19.99 for your next one?<br><br>
+          <strong>4.</strong> Did you run into any bugs or confusing parts?
+        </p>
+      </div>
+
+      <p style="color: #171717; font-size: 15px; line-height: 1.7; margin: 0 0 16px 0;">
+        Your feedback directly shapes what we build next. Every reply gets read personally.
+      </p>
+
+      <div style="background-color: #171717; border-radius: 8px; padding: 20px; margin: 24px 0;">
+        <p style="color: #a3a3a3; font-size: 13px; margin: 0 0 8px 0;">🚧 BETA NOTE</p>
+        <p style="color: #ffffff; font-size: 14px; line-height: 1.6; margin: 0;">
+          We're polishing the product daily. If something didn't work right, let us know and we'll make it right.
+        </p>
+      </div>
+
+      <p style="color: #737373; font-size: 14px; margin-top: 32px;">
+        Thanks for being an early supporter,<br>
+        — Jonathan, DraftMyBook
+      </p>
+    `, 'Quick question about your free book — we\'d love your feedback.'),
   };
 }
 

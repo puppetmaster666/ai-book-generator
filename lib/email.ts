@@ -8,9 +8,10 @@ interface EmailOptions {
   to: string;
   subject: string;
   html: string;
+  replyTo?: string;
 }
 
-export async function sendEmail({ to, subject, html }: EmailOptions): Promise<boolean> {
+export async function sendEmail({ to, subject, html, replyTo }: EmailOptions): Promise<boolean> {
   const apiKey = process.env.RESEND_API_KEY;
 
   if (!apiKey) {
@@ -19,18 +20,25 @@ export async function sendEmail({ to, subject, html }: EmailOptions): Promise<bo
   }
 
   try {
+    const emailPayload: Record<string, string> = {
+      from: process.env.EMAIL_FROM || 'DraftMyBook <noreply@draftmybook.com>',
+      to,
+      subject,
+      html,
+    };
+
+    // Add reply-to if provided (allows users to respond)
+    if (replyTo) {
+      emailPayload.reply_to = replyTo;
+    }
+
     const response = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        from: process.env.EMAIL_FROM || 'DraftMyBook <noreply@draftmybook.com>',
-        to,
-        subject,
-        html,
-      }),
+      body: JSON.stringify(emailPayload),
     });
 
     if (!response.ok) {

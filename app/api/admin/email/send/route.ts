@@ -9,8 +9,12 @@ import {
   getAnnouncementEmail,
   getAnnouncementEmailWithCredit,
   getBugApologyEmail,
+  getBetaFeedbackEmail,
   EmailTemplateId,
 } from '@/lib/email-templates';
+
+// Reply-to address for user responses
+const REPLY_TO_EMAIL = 'lhllparis@gmail.com';
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://www.draftmybook.com';
 
@@ -144,6 +148,10 @@ export async function POST(request: NextRequest) {
             emailContent = getBugApologyEmail(targetUser.name || 'there', bugClaimUrl);
             creditsIncluded = 1;
             break;
+          case 'beta_feedback':
+            // Beta feedback request - asks users for their thoughts
+            emailContent = getBetaFeedbackEmail(targetUser.name || 'there');
+            break;
           default:
             throw new Error(`Unknown template: ${template}`);
         }
@@ -152,6 +160,7 @@ export async function POST(request: NextRequest) {
           to: targetUser.email,
           subject: emailContent.subject,
           html: emailContent.html,
+          replyTo: REPLY_TO_EMAIL, // Replies go to your Gmail
         });
 
         // Log the email
