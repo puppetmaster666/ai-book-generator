@@ -931,7 +931,7 @@ Create an outline with exactly ${bookData.targetChapters} chapters. For each cha
 4. Which characters appear (for POV tracking)
 5. Approximate word count target (distribute ${bookData.targetWords} words across chapters)
 
-Output ONLY valid JSON in this exact format:
+Output ONLY valid JSON in this exact format (targetWords should be approximately ${Math.round(bookData.targetWords / bookData.targetChapters)} per chapter):
 {
   "chapters": [
     {
@@ -939,7 +939,7 @@ Output ONLY valid JSON in this exact format:
       "title": "Chapter Title Here",
       "summary": "2-3 sentence summary of events",
       "pov": "Main character name for this chapter",
-      "targetWords": 3500
+      "targetWords": ${Math.round(bookData.targetWords / bookData.targetChapters)}
     }
   ]
 }`;
@@ -1013,7 +1013,7 @@ For each chapter provide:
 4. 3-5 key points or lessons covered in the chapter
 5. Approximate word count target (distribute ${bookData.targetWords} words across chapters)
 
-Output ONLY valid JSON in this exact format:
+Output ONLY valid JSON in this exact format (targetWords should be approximately ${Math.round(bookData.targetWords / bookData.targetChapters)} per chapter):
 {
   "chapters": [
     {
@@ -1021,7 +1021,7 @@ Output ONLY valid JSON in this exact format:
       "title": "Chapter Title Here",
       "summary": "What readers will learn in this chapter",
       "keyPoints": ["Key point 1", "Key point 2", "Key point 3"],
-      "targetWords": 3500
+      "targetWords": ${Math.round(bookData.targetWords / bookData.targetChapters)}
     }
   ]
 }`;
@@ -1116,7 +1116,9 @@ STRICT STYLE RULES:
 - Use simple, natural punctuation only
 - Do NOT make up statistics or cite fake research
 
-Write approximately ${data.targetWords} words. Output ONLY the chapter text.`;
+WORD COUNT: Write ${data.targetWords} words (STRICT LIMIT - do not exceed by more than 10%). This is chapter ${data.chapterNumber} of a larger book, so keep it focused and within the target length.
+
+Output ONLY the chapter text.`;
   } else {
     // Fiction prompt - narrative style
     prompt = `You are a novelist writing in ${data.writingStyle} style. Write a complete chapter.
@@ -1153,7 +1155,9 @@ STRICT STYLE RULES:
 - NEVER add author notes, meta-commentary, or markdown formatting
 - Use simple, natural punctuation only
 
-Write approximately ${data.targetWords} words. Output ONLY the chapter text.`;
+WORD COUNT: Write ${data.targetWords} words (STRICT LIMIT - do not exceed by more than 10%). This is chapter ${data.chapterNumber} of a larger book, so keep it focused and within the target length.
+
+Output ONLY the chapter text.`;
   }
 
   const result = await getGeminiPro().generateContent(prompt);
