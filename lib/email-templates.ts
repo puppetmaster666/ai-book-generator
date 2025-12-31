@@ -303,7 +303,7 @@ export function getBetaFeedbackEmail(
       <p style="color: #525252; font-size: 15px; margin: 0 0 24px 0;">Hi ${firstName},</p>
 
       <p style="color: #171717; font-size: 15px; line-height: 1.7; margin: 0 0 16px 0;">
-        Thanks for being one of our first users. We launched just a few days ago and we're still in beta — which means we're actively improving things and some bugs are expected.
+        Thanks for being one of our first users. We launched just a few days ago and we're still in beta, which means we're actively improving things and some bugs are expected.
       </p>
 
       <p style="color: #171717; font-size: 15px; line-height: 1.7; margin: 0 0 24px 0;">
@@ -332,9 +332,9 @@ export function getBetaFeedbackEmail(
 
       <p style="color: #737373; font-size: 14px; margin-top: 32px;">
         Thanks for being an early supporter,<br>
-        — Jonathan, DraftMyBook
+        Jonathan, DraftMyBook
       </p>
-    `, 'How was your first book? Just 4 quick questions - reply directly to this email.'),
+    `, 'How was your first book? Just 4 quick questions, reply directly to this email.'),
   };
 }
 
