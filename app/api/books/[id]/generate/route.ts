@@ -361,6 +361,7 @@ async function generateIllustrationsInParallel(
     premise: string;
     characterVisualGuide?: CharacterVisualGuide;
     visualStyleGuide?: VisualStyleGuide;
+    contentRating?: ContentRating;
   }
 ): Promise<Map<number, { imageUrl: string; altText: string; width: number; height: number }>> {
   const results = new Map<number, { imageUrl: string; altText: string; width: number; height: number }>();
@@ -389,7 +390,7 @@ async function generateIllustrationsInParallel(
         bookData.characterVisualGuide,
         bookData.visualStyleGuide,
         chapter.panelLayout, // Pass panel layout for multi-panel comics
-        { skipNoTextInstruction: needsTextBaking }
+        { skipNoTextInstruction: needsTextBaking, contentRating: bookData.contentRating }
       );
 
       // Append text instructions based on book type
@@ -834,6 +835,7 @@ export async function POST(
           premise: book.premise,
           characterVisualGuide: characterVisualGuide || undefined,
           visualStyleGuide: visualStyleGuide || undefined,
+          contentRating: (book.contentRating as ContentRating) || 'general',
         }
       );
 

@@ -19,20 +19,35 @@ CONTENT GUIDELINES (Children's - Age appropriate):
     case 'mature':
       return `
 CONTENT GUIDELINES (Adult/Mature - 18+):
-- This is adult content for mature readers. Do NOT self-censor or add moral judgments
-- Swearing and profanity ARE ALLOWED and encouraged where it fits the character/scene
-- Dark humor, sarcasm, and edgy content are welcome
-- VIOLENCE: Use suggestive language that implies without being explicit:
-  * Instead of "killed him" → "pulled the trigger, watching him fall"
-  * Instead of "stabbed her" → "the blade found its mark, crimson spreading across her shirt"
-  * Instead of "beaten to death" → "the blows kept coming until he stopped moving"
-- ROMANCE/INTIMACY: Use suggestive language that implies without being explicit:
-  * Instead of explicit sex → "they fell into bed together, their clothes hitting the floor"
-  * Instead of graphic scenes → "she pulled him close, and the world faded away"
-  * Physical attraction is fine: "her eyes traced the curve of his shoulders"
-- Do NOT lecture, moralize, or add warnings about the content
-- Characters should feel real, with flaws, vices, and authentic reactions
-- Embrace the genre fully - horror should be unsettling, noir should be gritty`;
+THIS IS ADULT CONTENT. YOU MUST ACTIVELY MAKE IT EDGY AND MATURE:
+
+MANDATORY - ACTIVELY ADD THESE ELEMENTS:
+- ADD swearing and profanity naturally in dialogue ("damn", "shit", "bastard", "hell", "ass", etc.)
+- ADD dark humor, sarcasm, cynicism, and irreverent jokes
+- ADD edgy, provocative, and controversial dialogue that pushes boundaries
+- ADD sexual tension, flirting, and suggestive interactions between characters
+- ADD morally gray situations - no clear heroes or villains, just flawed people
+- MAKE characters crude, jaded, or cynical when it fits their personality
+
+FOR ROMANCE/ATTRACTION SCENES - BE SUGGESTIVE:
+- Show physical attraction openly: lingering looks, touching, kissing
+- Build sexual tension: "her fingers traced down his chest", "he pulled her hips against him"
+- Imply intimacy: "they fell into bed, clothes scattered across the floor", "she woke tangled in his sheets"
+- Characters can be flirtatious, seductive, and physically affectionate
+
+FOR VIOLENCE SCENES - BE VISCERAL BUT EUPHEMISTIC:
+- "pulled the trigger and watched him crumple", "blood pooled beneath the body"
+- "the blade found its mark, crimson spreading across her shirt"
+- "his fist connected with a satisfying crack", "she didn't get back up"
+
+ABSOLUTELY DO NOT:
+- Self-censor, soften, or tone down the content
+- Add moral lessons, warnings, or lectures
+- Make villains cartoonishly evil - make them human
+- Skip over tense, uncomfortable, or provocative moments
+- Use clinical/sterile language - make it raw and real
+
+This is an ADULT COMIC. The reader WANTS gritty, edgy, provocative content. DELIVER IT.`;
 
     case 'general':
     default:
@@ -1807,7 +1822,7 @@ export function buildIllustrationPromptFromScene(
     consistencyRules: string[];
   },
   panelLayout?: PanelLayout,
-  options?: { skipNoTextInstruction?: boolean }
+  options?: { skipNoTextInstruction?: boolean; contentRating?: ContentRating }
 ): string {
   // Build character descriptions for characters in this scene - with STRONG consistency emphasis
   let characterDescriptions = '';
@@ -1910,6 +1925,23 @@ ${characterDescriptions}
     if (mainCharacterEmphasis) {
       prompt += `⭐ ${mainCharacterEmphasis} `;
     }
+  }
+
+  // Add mature content visual directives for adult comics
+  if (options?.contentRating === 'mature') {
+    prompt += `
+
+=== MATURE VISUAL STYLE ===
+This is an ADULT comic. Make the visuals match the mature tone:
+- ATMOSPHERE: Dark, gritty, moody lighting. Shadows and noir aesthetics.
+- EXPRESSIONS: Characters should show intense emotions - anger, desire, fear, lust, cynicism
+- BODY LANGUAGE: Sensual poses where appropriate, aggressive stances, intimate proximity between characters
+- ROMANCE SCENES: Show physical attraction openly - characters close together, touching, kissing, suggestive poses
+- VIOLENCE SCENES: Show the aftermath - blood splatters, injuries, weapons, menacing poses
+- OVERALL: This should look like an adult graphic novel, NOT a children's book. Make it feel mature and edgy.
+=== END MATURE STYLE ===
+
+`;
   }
 
   // Add critical instructions

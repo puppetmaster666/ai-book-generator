@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { prisma } from '@/lib/db';
 import { ART_STYLES, ILLUSTRATION_DIMENSIONS, type ArtStyleKey } from '@/lib/constants';
-import { buildIllustrationPromptFromScene, SceneDescription, type PanelLayout, switchToBackupKey } from '@/lib/gemini';
+import { buildIllustrationPromptFromScene, SceneDescription, type PanelLayout, switchToBackupKey, type ContentRating } from '@/lib/gemini';
 
 // Retry utility with exponential backoff for rate limit handling
 // Automatically switches to backup API key if available
@@ -182,6 +182,7 @@ export async function POST(request: NextRequest) {
         bookPreset: true,
         protagonistDescription: true,
         characters: true,
+        contentRating: true,
         _count: { select: { illustrations: true } },
       },
     });
@@ -265,7 +266,8 @@ export async function POST(request: NextRequest) {
         artStylePrompt,
         enhancedCharacterGuide, // Use enhanced guide with protagonist description
         visualStyleGuide,
-        panelLayout // Pass panel layout for multi-panel comics
+        panelLayout, // Pass panel layout for multi-panel comics
+        { contentRating: (book.contentRating as 'childrens' | 'general' | 'mature') || 'general' }
       );
     } else {
       // Scene is a string - add panel layout instructions if provided
@@ -277,6 +279,10 @@ export async function POST(request: NextRequest) {
           'four-panel': 'Draw this as a COMIC PAGE with 4 PANELS in a 2x2 grid layout.',
         };
         prompt += ` ${layoutInstructions[panelLayout] || ''} `;
+      }
+      // Add mature content visual directives for string scene
+      if (book.contentRating === 'mature') {
+        prompt += ` MATURE VISUAL STYLE: Dark, gritty, moody lighting. Show intense emotions - anger, desire, fear, cynicism. Sensual poses where appropriate, aggressive stances. This should look like an adult graphic novel. `;
       }
     }
 
