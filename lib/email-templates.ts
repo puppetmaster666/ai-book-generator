@@ -334,7 +334,7 @@ export function getBetaFeedbackEmail(
         Thanks for being an early supporter,<br>
         — Jonathan, DraftMyBook
       </p>
-    `, 'Quick question about your free book — we\'d love your feedback.'),
+    `, 'How was your first book? Just 4 quick questions - reply directly to this email.'),
   };
 }
 
