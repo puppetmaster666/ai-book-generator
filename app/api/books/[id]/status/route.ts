@@ -64,9 +64,9 @@ export async function GET(
     }
 
     // Check for stale generation
-    // If book is "generating" but hasn't had any activity in 10+ minutes, mark as failed
+    // If book is "generating" or "outlining" but hasn't had any activity in 15+ minutes, mark as failed
     let currentStatus = book.status;
-    if (book.status === 'generating') {
+    if (book.status === 'generating' || book.status === 'outlining') {
       const now = Date.now();
 
       // Get the most recent activity timestamp
@@ -78,14 +78,18 @@ export async function GET(
       const lastActivity = Math.max(lastChapterTime, bookUpdatedTime, generationStartTime);
 
       if (lastActivity > 0 && (now - lastActivity) > STALE_GENERATION_MS) {
-        console.log(`Stale generation detected for book ${id}. Last activity: ${new Date(lastActivity).toISOString()}, now: ${new Date(now).toISOString()}`);
+        console.log(`Stale ${book.status} detected for book ${id}. Last activity: ${new Date(lastActivity).toISOString()}, now: ${new Date(now).toISOString()}`);
 
-        // Mark book as failed
+        // Mark book as failed with appropriate message
+        const errorMessage = book.status === 'outlining'
+          ? 'Outline generation timed out. Please click "Retry Generation" to start over.'
+          : 'Generation timed out. Please try resuming generation.';
+
         await prisma.book.update({
           where: { id },
           data: {
             status: 'failed',
-            errorMessage: 'Generation timed out. Please try resuming generation.',
+            errorMessage,
           },
         });
 
