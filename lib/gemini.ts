@@ -299,7 +299,7 @@ function isCompleteSentence(text: string): boolean {
 }
 
 // Category types for idea generation
-export type IdeaCategory = 'novel' | 'childrens' | 'comic' | 'adult_comic' | 'nonfiction' | 'random';
+export type IdeaCategory = 'novel' | 'childrens' | 'comic' | 'nonfiction' | 'random';
 
 // Example pools for different categories - randomly selected to avoid repetition
 // Each category has 8+ example pairs for maximum variety
@@ -419,40 +419,6 @@ const IDEA_EXAMPLES: Record<Exclude<IdeaCategory, 'random'>, string[][]> = {
       "In this vibrant anime style adventure, transfer student Hiro Nakamura discovers that his new school is secretly a training academy for teenagers who can transform into powerful elemental warriors, and he is the only student in a hundred years born with all five elemental affinities. His classmates are suspicious of his overwhelming power, his teachers push him to his limits, and a mysterious organization is already hunting him before he even learns to control his abilities. The fate of two worlds rests on whether he can master his powers before graduation.",
     ],
   ],
-  adult_comic: [
-    [
-      "After centuries of seducing mortals and collecting souls, a succubus named Lilith shocks the entire demon community by taking a vow of celibacy and swearing off relationships entirely because she wants to find true love instead of just physical connection. Her coworkers in the temptation department think she has lost her mind, and the humans she meets keep making her vow incredibly difficult to maintain. She never expected that finding genuine romance would be harder than anything she did as a demon.",
-      "Assassins Scarlet and Shade have been rivals for years, consistently competing for the same high value contracts and driving each other crazy with their opposing methods and personalities. They keep running into each other on jobs, and their competitive banter has slowly transformed into undeniable flirtation that is seriously interfering with their professional kill counts. Both refuse to admit they might be falling for their worst enemy, even as the tension between them becomes impossible to ignore.",
-    ],
-    [
-      "Romance novelist Victoria has spent her entire career writing bestselling supernatural romances featuring impossibly handsome vampires, werewolves, and demons in extremely steamy situations. When her characters start materializing in her apartment exactly as she described them, complete with their intense attractions and supernatural abilities, her quiet writing life becomes very complicated. She created these perfect fantasy men, and now they all seem to think they belong with her.",
-      "In a world where soulmates share their dreams every night from the moment they are born, twenty eight year old Ava has been dreaming about the same mysterious stranger for her entire life without ever meeting him in person. As they have grown older together in the dreamscape, their connection has become increasingly intimate and intense, and Ava is desperate to find him in the waking world. When they finally meet, the chemistry is even more overwhelming than their dreams.",
-    ],
-    [
-      "Witch entrepreneur Morgana has built an extremely successful love potion business, helping lonely hearts find their perfect matches through her carefully crafted magical elixirs. The irony is that she is completely immune to her own magic, which means she has never experienced the kind of love she sells to others. When a mysterious customer walks into her shop and makes her heart race without any potion involved, she suspects someone might be using her own tricks against her.",
-      "Reformed supervillain Marcus spent years terrorizing heroes before a near death experience changed his perspective on life and he decided to use his powers for good. He opens a dating service specifically for superhumans, using his genius level intellect to match compatible powers and personalities. Helping others find love turns out to be much harder than taking over the world, especially when he starts falling for one of his most difficult clients.",
-    ],
-    [
-      "The vampire clans and werewolf packs have been locked in a bloody war for over five hundred years, with countless deaths on both sides and no end in sight. When the vampire prince and the werewolf alpha's daughter meet by chance and feel an immediate, undeniable connection, their forbidden romance could finally end the conflict. But their families would rather destroy each other than accept such a union, and the lovers must choose between duty and desire.",
-      "Demon prince Azariel was sent to the mortal realm with one simple mission: corrupt the souls of the righteous and drag them to hell. Instead, he falls desperately in love with the angel Serephina, who was sent on the opposite mission to protect those same souls. Their relationship is absolutely forbidden by both heaven and hell, and their superiors are definitely not going to approve of this particular merger between good and evil.",
-    ],
-    [
-      "Monster hunter Cassandra has spent her entire adult life tracking and killing supernatural creatures that threaten humanity, never hesitating to destroy anything inhuman. When she finally corners the ancient beast she has been hunting for months, she discovers that the creature is not only sentient but fascinating, gentle, and utterly captivating. She cannot bring herself to kill something she has begun to love, but her guild will not understand her change of heart.",
-      "Incubus Damien has always relied on his supernatural charm and seductive powers to get everything he wants from mortal women without ever truly connecting with any of them. When he falls genuinely in love for the first time in his immortal existence, his powers vanish completely, leaving him to win someone over using only his personality. He has no idea how to be charming without magic, and his attempts at normal dating are both hilarious and surprisingly touching.",
-    ],
-    [
-      "Master thief Valentina and Detective Sofia have been playing cat and mouse for seven years, with Valentina always leaving flirtatious clues at her crime scenes and Sofia responding with increasingly personal messages in the police files she knows Valentina hacks. Their game has become the most important relationship in both their lives, even though they have never met face to face. When they finally encounter each other in person, the tension that has been building for years threatens to consume them both.",
-      "A powerful curse makes anyone who looks at Elena fall instantly and obsessively in love with her, which sounds like a blessing until she realizes it means no one will ever love her for who she really is. The only person immune to her curse is Marcus, a grumpy wizard who finds her annoying, and breaking the spell requires them to work together closely. The more time they spend together, the more she hopes his immunity might turn into something real.",
-    ],
-    [
-      "When the heads of two rival crime families agree to end their bloody gang war through an arranged marriage between their heirs, neither Lorenzo nor Natasha are happy about being sold off like property to their enemies. They despise everything the other represents and spend their engagement plotting ways to escape or destroy each other. But forced proximity has a way of revealing hidden depths, and their hatred keeps transforming into something much more complicated and consuming.",
-      "Bodyguard Alexis was hired to protect wealthy heiress Diana from assassination attempts, a job she takes very seriously and professionally. The problem is that she is becoming increasingly attracted to the assassin who keeps trying to kill her client, a mysterious woman who leaves roses at her crime scenes and seems to be targeting Diana for deeply personal reasons. Alexis is falling for the very person she is supposed to protect Diana from, and the situation is getting impossible to navigate.",
-    ],
-    [
-      "Phoenix empress Solara and ice dragon lord Kythis come from species that should destroy each other on contact, with her flames and his frost being fundamentally incompatible forces of nature. Their kingdoms have been at war for millennia, but a chance encounter in neutral territory sparks an attraction neither of them can resist. Their forbidden affair risks melting her ancestral lands and freezing his, and their people would never accept a union between such opposite beings.",
-      "Empress Isadora rules her nation with an iron fist by day while secretly leading the masked rebellion trying to overthrow her own corrupt government by night, playing both sides of the conflict with exhausting precision. Her spymaster Konstantin knows exactly who she is under the mask, and she knows he knows, creating an elaborate dance of secrets and lies between two people who might actually be on the same side. Their dangerous game of mutual blackmail is complicated by the attraction neither of them wants to acknowledge.",
-    ],
-  ],
   nonfiction: [
     [
       "A comprehensive guide to breaking into the screenwriting industry, covering everything from crafting a compelling logline and structuring your first spec script to navigating Hollywood meetings and building lasting relationships with agents and producers. This book draws on interviews with over fifty working screenwriters and shares the real strategies that helped unknown writers land their first studio deals.",
@@ -509,12 +475,6 @@ const GENRE_HINTS: Record<Exclude<IdeaCategory, 'random'>, string[]> = {
     'monster hunting', 'heist comedy', 'buddy cop', 'workplace comedy', 'found family',
     'antihero story', 'parody', 'isekai comedy', 'supernatural mystery', 'time loop'
   ],
-  adult_comic: [
-    'supernatural romance', 'dark fantasy', 'paranormal', 'action romance', 'forbidden love',
-    'enemies-to-lovers', 'fantasy adventure', 'vampire romance', 'shifter romance', 'mafia romance',
-    'reverse harem', 'slow burn', 'second chance romance', 'forced proximity', 'bodyguard romance',
-    'arranged marriage', 'royal intrigue', 'demon romance', 'fated mates', 'dark romance'
-  ],
   nonfiction: [
     'self-help', 'how-to guide', 'business strategy', 'history', 'biography', 'memoir',
     'personal finance', 'career development', 'productivity', 'leadership', 'entrepreneurship',
@@ -525,7 +485,7 @@ const GENRE_HINTS: Record<Exclude<IdeaCategory, 'random'>, string[]> = {
 
 // Generate a random book idea with category support
 export async function generateBookIdea(category: IdeaCategory = 'random'): Promise<string> {
-  // If random, pick a category (excluding nonfiction and adult_comic from random)
+  // If random, pick a category (excluding nonfiction from random)
   const actualCategory: Exclude<IdeaCategory, 'random'> = category === 'random'
     ? (['novel', 'childrens', 'comic'] as const)[Math.floor(Math.random() * 3)]
     : category;
@@ -556,15 +516,6 @@ VARIETY IS ESSENTIAL - Create something fresh and different:
 - Different settings: underwater cities, space stations, 1920s noir, ancient empires, parallel dimensions, inside computers, etc.
 - Unique visual hooks that would look amazing in comic panels`;
       break;
-    case 'adult_comic':
-      categoryInstruction = `Generate a ${randomGenre} adult graphic novel idea with mature themes, complex characters, simmering tension, and romantic or darker elements that push boundaries while remaining tasteful.
-
-VARIETY IS ESSENTIAL - Create something fresh and different:
-- Try different supernatural beings: fae courts, djinn, kitsune, selkies, revenants, cosmic entities, dream spirits, etc.
-- Mix up dynamics: power couples, reluctant allies, mentor/student, rivals, strangers thrown together, etc.
-- Different settings: Victorian occult societies, modern corporate supernatural, ancient courts, space colonies, post-apocalyptic, etc.
-- Fresh character concepts with unique visual designs`;
-      break;
     case 'nonfiction':
       categoryInstruction = `Generate a compelling ${randomGenre} non-fiction book idea that promises to teach readers something valuable, share untold stories, or provide practical guidance they can apply to their lives. Focus on what makes this book unique and why readers would want to buy it.`;
       break;
@@ -592,7 +543,7 @@ Example of the quality and length expected (but create something COMPLETELY DIFF
 Another example (create something TOTALLY DIFFERENT from both examples):
 "${randomExamples[1]}"
 
-Now write your unique ${actualCategory === 'childrens' ? "children's book" : actualCategory === 'adult_comic' ? 'adult graphic novel' : actualCategory === 'nonfiction' ? 'non-fiction book' : actualCategory} idea (3-4 detailed sentences, no dashes, end with period):`;
+Now write your unique ${actualCategory === 'childrens' ? "children's book" : actualCategory === 'nonfiction' ? 'non-fiction book' : actualCategory} idea (3-4 detailed sentences, no dashes, end with period):`;
 
   const maxRetries = 2; // Reduced retries for faster response
 

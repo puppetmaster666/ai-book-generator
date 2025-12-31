@@ -134,7 +134,14 @@ export async function POST(
       },
     });
 
-    const chapterPlan = outline.chapters[nextChapterNum - 1];
+    const chapterPlan = outline.chapters[nextChapterNum - 1] as {
+      number: number;
+      title: string;
+      summary: string;
+      pov?: string;
+      targetWords: number;
+      keyPoints?: string[]; // For non-fiction chapters
+    };
     const characters = (book.characters as Array<{ name: string; description: string }>) || [];
 
     // Get current story state
@@ -159,6 +166,7 @@ export async function POST(
       chapterPov: chapterPlan.pov,
       targetWords: chapterPlan.targetWords,
       chapterFormat: book.chapterFormat,
+      chapterKeyPoints: chapterPlan.keyPoints, // Pass key points for non-fiction
     });
 
     const wordCount = countWords(chapterContent);
