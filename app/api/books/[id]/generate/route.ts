@@ -460,8 +460,8 @@ function isVisualBook(bookFormat: string, bookPreset: string | null): boolean {
   // Picture books and comics use the visual book flow
   if (bookFormat === 'picture_book') return true;
 
-  // Check preset
-  if (bookPreset === 'childrens_picture' || bookPreset === 'comic_story') return true;
+  // Check preset (includes adult_comic for mature content comics)
+  if (bookPreset === 'childrens_picture' || bookPreset === 'comic_story' || bookPreset === 'adult_comic') return true;
 
   return false;
 }

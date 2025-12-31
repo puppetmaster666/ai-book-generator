@@ -1812,6 +1812,7 @@ export function buildIllustrationPromptFromScene(
   // Build character descriptions for characters in this scene - with STRONG consistency emphasis
   let characterDescriptions = '';
   let characterConsistencyReminder = '';
+  let mainCharacterEmphasis = '';
   if (characterVisualGuide) {
     const sceneCharacters = scene.characters;
     const relevantChars = characterVisualGuide.characters.filter(c =>
@@ -1819,10 +1820,26 @@ export function buildIllustrationPromptFromScene(
     );
     if (relevantChars.length > 0) {
       // Build detailed character descriptions with emphasis on recognizable features
-      characterDescriptions = relevantChars.map(c => {
+      // Mark the first character as MAIN CHARACTER for extra emphasis
+      characterDescriptions = relevantChars.map((c, index) => {
         const action = scene.characterActions[c.name] || '';
+        const isMainChar = index === 0;
+        const prefix = isMainChar ? '⭐ MAIN CHARACTER - ' : '';
+
+        // Extract hair description for triple emphasis
+        const hairMatch = c.physicalDescription.match(/([\w\s-]+hair[\w\s,.-]*)/i);
+        const hairDesc = hairMatch ? hairMatch[0] : '';
+
         // Include ALL visual details for maximum consistency
-        return `${c.name}: ${c.physicalDescription}. CLOTHING: ${c.clothing}. DISTINCTIVE FEATURES: ${c.distinctiveFeatures}. COLOR PALETTE: ${c.colorPalette}${action ? `. CURRENT ACTION: ${action}` : ''}`;
+        let desc = `${prefix}${c.name}: ${c.physicalDescription}. CLOTHING: ${c.clothing}. DISTINCTIVE FEATURES: ${c.distinctiveFeatures}. COLOR PALETTE: ${c.colorPalette}${action ? `. CURRENT ACTION: ${action}` : ''}`;
+
+        // For main character, add extra emphasis
+        if (isMainChar && hairDesc) {
+          desc += ` [REMEMBER: ${c.name} has ${hairDesc} - this MUST be consistent!]`;
+          mainCharacterEmphasis = `The MAIN CHARACTER ${c.name} has: ${hairDesc}. ${c.distinctiveFeatures}. Draw them EXACTLY like this.`;
+        }
+
+        return desc;
       }).join('\n\n');
 
       // Build a specific consistency reminder for hair and face
@@ -1889,6 +1906,10 @@ ${characterDescriptions}
   // Add STRONG consistency reminder for character appearances at the end
   if (characterDescriptions && characterConsistencyReminder) {
     prompt += `FINAL REMINDER - CHARACTER CONSISTENCY IS CRITICAL: ${characterConsistencyReminder}. DO NOT deviate from the described hair color, hair style, face shape, skin tone, or clothing. The characters must look IDENTICAL across all illustrations. `;
+    // Add extra emphasis for main character if available
+    if (mainCharacterEmphasis) {
+      prompt += `⭐ ${mainCharacterEmphasis} `;
+    }
   }
 
   // Add critical instructions

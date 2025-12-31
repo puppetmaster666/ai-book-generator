@@ -67,7 +67,8 @@ export async function POST(request: NextRequest) {
           const isVisualBook = book?.bookFormat === 'picture_book' ||
                                book?.dialogueStyle === 'bubbles' ||
                                book?.bookPreset === 'comic_story' ||
-                               book?.bookPreset === 'childrens_picture';
+                               book?.bookPreset === 'childrens_picture' ||
+                               book?.bookPreset === 'adult_comic';
 
           if (!isVisualBook) {
             // Trigger book generation for text-only books (fire and forget)
