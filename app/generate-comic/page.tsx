@@ -72,10 +72,13 @@ function GenerateComicContent() {
   const [error, setError] = useState('');
   const [allComplete, setAllComplete] = useState(false);
   const [elapsedTime, setElapsedTime] = useState(0);
+  const [isWaitingForOutline, setIsWaitingForOutline] = useState(false);
 
   // AbortController for cancelling requests
   const abortControllerRef = useRef<AbortController | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const outlinePollRef = useRef<NodeJS.Timeout | null>(null);
+  const outlineTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Timer effect
   useEffect(() => {
@@ -139,7 +142,7 @@ function GenerateComicContent() {
         }
 
         // Initialize panels from outline, checking for existing illustrations
-        if (data.book.outline?.chapters) {
+        if (data.book.outline?.chapters && data.book.outline.chapters.length > 0) {
           // Get existing illustrations by chapter/page number
           const existingIllustrations = new Map<number, string>();
           if (data.book.illustrations) {
@@ -160,6 +163,76 @@ function GenerateComicContent() {
             };
           });
           setPanels(initialPanels);
+          setIsWaitingForOutline(false);
+        } else if (data.book.status === 'outlining' || data.book.status === 'pending' || data.book.status === 'generating') {
+          // Outline not ready yet - start polling
+          console.log(`Outline not ready, book status: ${data.book.status}. Starting to poll...`);
+          setIsWaitingForOutline(true);
+
+          // If book is pending, trigger outline generation
+          if (data.book.status === 'pending') {
+            console.log('Book is pending, triggering outline generation...');
+            fetch(`/api/books/${bookId}/generate`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ outlineOnly: true }),
+            }).catch(console.error);
+          }
+
+          // Poll for outline every 3 seconds
+          outlinePollRef.current = setInterval(async () => {
+            try {
+              const pollRes = await fetch(`/api/books/${bookId}`);
+              if (pollRes.ok) {
+                const pollData = await pollRes.json();
+                if (pollData.book.outline?.chapters && pollData.book.outline.chapters.length > 0) {
+                  if (outlinePollRef.current) clearInterval(outlinePollRef.current);
+                  if (outlineTimeoutRef.current) clearTimeout(outlineTimeoutRef.current);
+                  setBookData(pollData.book);
+                  setIsWaitingForOutline(false);
+
+                  const existingIllustrations = new Map<number, string>();
+                  if (pollData.book.illustrations) {
+                    pollData.book.illustrations.forEach((ill: { pageNumber?: number; chapterNumber?: number; imageUrl?: string }) => {
+                      const num = ill.pageNumber || ill.chapterNumber;
+                      if (num && ill.imageUrl) {
+                        existingIllustrations.set(num, ill.imageUrl);
+                      }
+                    });
+                  }
+
+                  const initialPanels: Panel[] = pollData.book.outline.chapters.map((ch: Panel) => {
+                    const existingImage = existingIllustrations.get(ch.number);
+                    return {
+                      ...ch,
+                      status: existingImage ? 'done' as const : 'pending' as const,
+                      imageUrl: existingImage,
+                    };
+                  });
+                  setPanels(initialPanels);
+                } else if (pollData.book.status === 'failed') {
+                  if (outlinePollRef.current) clearInterval(outlinePollRef.current);
+                  if (outlineTimeoutRef.current) clearTimeout(outlineTimeoutRef.current);
+                  setIsWaitingForOutline(false);
+                  setError(pollData.book.errorMessage || 'Failed to generate book outline');
+                }
+              }
+            } catch (pollErr) {
+              console.error('Error polling for outline:', pollErr);
+            }
+          }, 3000);
+
+          // Cleanup interval after 5 minutes (timeout)
+          outlineTimeoutRef.current = setTimeout(() => {
+            if (outlinePollRef.current) clearInterval(outlinePollRef.current);
+            // Use functional update to check current state
+            setIsWaitingForOutline(current => {
+              if (current) {
+                setError('Timed out waiting for outline generation. Please refresh the page to try again.');
+              }
+              return false;
+            });
+          }, 5 * 60 * 1000);
         }
       } catch (err) {
         console.error('Error loading book:', err);
@@ -170,6 +243,18 @@ function GenerateComicContent() {
     };
 
     loadBook();
+
+    // Cleanup function for polling intervals
+    return () => {
+      if (outlinePollRef.current) {
+        clearInterval(outlinePollRef.current);
+        outlinePollRef.current = null;
+      }
+      if (outlineTimeoutRef.current) {
+        clearTimeout(outlineTimeoutRef.current);
+        outlineTimeoutRef.current = null;
+      }
+    };
   }, [bookId, router]);
 
   // Check if all panels are complete
@@ -397,6 +482,26 @@ function GenerateComicContent() {
           <div className="max-w-6xl mx-auto text-center">
             <Loader2 className="h-12 w-12 animate-spin mx-auto mb-4 text-neutral-900" />
             <p className="text-neutral-600">Loading your illustrated book...</p>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  if (isWaitingForOutline) {
+    return (
+      <div className="min-h-screen bg-white">
+        <Header />
+        <main className="py-20 px-6">
+          <div className="max-w-6xl mx-auto text-center">
+            <Loader2 className="h-12 w-12 animate-spin mx-auto mb-4 text-neutral-900" />
+            <h2 className="text-2xl font-bold text-neutral-900 mb-2">Preparing Your Comic</h2>
+            <p className="text-neutral-600 mb-4">
+              Creating your story outline and planning each panel...
+            </p>
+            <p className="text-sm text-neutral-500">
+              This usually takes 15-30 seconds. Please don&apos;t close this page.
+            </p>
           </div>
         </main>
       </div>

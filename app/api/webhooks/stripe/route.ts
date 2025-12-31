@@ -46,6 +46,12 @@ export async function POST(request: NextRequest) {
           // Save the customer email to the book for completion notifications
           const customerEmail = session.customer_email;
 
+          // Get book to check if it's a visual book
+          const book = await prisma.book.findUnique({
+            where: { id: bookId },
+            select: { bookFormat: true, dialogueStyle: true, bookPreset: true },
+          });
+
           await prisma.book.update({
             where: { id: bookId },
             data: {
@@ -56,10 +62,21 @@ export async function POST(request: NextRequest) {
             },
           });
 
-          // Trigger book generation (fire and forget)
-          fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/books/${bookId}/generate`, {
-            method: 'POST',
-          }).catch(console.error);
+          // Visual books use client-side parallel generation from the book page
+          // Only trigger server-side generation for text-only books
+          const isVisualBook = book?.bookFormat === 'picture_book' ||
+                               book?.dialogueStyle === 'bubbles' ||
+                               book?.bookPreset === 'comic_story' ||
+                               book?.bookPreset === 'childrens_picture';
+
+          if (!isVisualBook) {
+            // Trigger book generation for text-only books (fire and forget)
+            fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/books/${bookId}/generate`, {
+              method: 'POST',
+            }).catch(console.error);
+          } else {
+            console.log(`Skipping webhook generation for visual book ${bookId} - client-side generation will handle it`);
+          }
         }
 
         // Handle subscription
