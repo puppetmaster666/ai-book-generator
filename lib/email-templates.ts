@@ -332,7 +332,7 @@ export function getBetaFeedbackEmail(
 
       <p style="color: #737373; font-size: 14px; margin-top: 32px;">
         Thanks for being an early supporter,<br>
-        Jonathan, DraftMyBook
+        Marie, DraftMyBook
       </p>
     `, 'How was your first book? Just 4 quick questions, reply directly to this email.'),
   };
