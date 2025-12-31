@@ -32,6 +32,7 @@ interface Book {
   title: string;
   authorName: string;
   genre: string;
+  bookType: string;
   status: string;
   paymentStatus: string;
   currentChapter: number;
@@ -66,6 +67,8 @@ interface BookStatus {
   totalChapters: number;
   totalWords: number;
   bookFormat: string;
+  bookType: string;
+  genre: string;
   dialogueStyle: string | null;
   bookPreset: string | null;
   artStyle: string | null;
@@ -1112,7 +1115,30 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
                 <h1 className="text-2xl font-bold text-neutral-900 mb-1" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>
                   {book.title}
                 </h1>
-                <p className="text-neutral-600 mb-3">by {book.authorName}</p>
+                <p className="text-neutral-600 mb-2">by {book.authorName}</p>
+
+                {/* Book Type and Genre Tags */}
+                <div className="flex flex-wrap gap-2 mb-3">
+                  {book.bookType && (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-neutral-100 text-neutral-700 rounded-full text-xs font-medium border border-neutral-200">
+                      <BookOpen className="h-3 w-3" />
+                      {book.bookType === 'non-fiction' ? 'Non-Fiction' :
+                       book.bookType === 'childrens' ? "Children's" :
+                       book.bookType.charAt(0).toUpperCase() + book.bookType.slice(1)}
+                    </span>
+                  )}
+                  {book.genre && (
+                    <span className="inline-flex items-center px-2.5 py-1 bg-neutral-100 text-neutral-600 rounded-full text-xs font-medium border border-neutral-200">
+                      {book.genre.charAt(0).toUpperCase() + book.genre.slice(1).replace(/_/g, ' ')}
+                    </span>
+                  )}
+                  {isIllustrated && book.artStyle && (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-neutral-100 text-neutral-600 rounded-full text-xs font-medium border border-neutral-200">
+                      <Palette className="h-3 w-3" />
+                      {book.artStyle.charAt(0).toUpperCase() + book.artStyle.slice(1).replace(/_/g, ' ')}
+                    </span>
+                  )}
+                </div>
 
                 {/* Original Prompt / Premise */}
                 {book.premise && (
@@ -1141,15 +1167,6 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
                     {isPending ? 'Queued' : book.status}
                   </span>
                 </div>
-
-                {isIllustrated && book.artStyle && (
-                  <div className="mt-3">
-                    <span className="inline-flex items-center gap-1 px-3 py-1 bg-neutral-100 text-neutral-600 rounded-full text-xs font-medium border border-neutral-200">
-                      <Palette className="h-3 w-3" />
-                      {book.artStyle.charAt(0).toUpperCase() + book.artStyle.slice(1)} Style
-                    </span>
-                  </div>
-                )}
 
                 {/* Admin Restart Button */}
                 {isAdminUser && (
