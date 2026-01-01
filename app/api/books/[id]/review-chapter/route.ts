@@ -4,7 +4,7 @@ import { reviewAndPolishChapter } from '@/lib/gemini';
 
 // This endpoint reviews a chapter in the background
 // It's fire-and-forget from the main generation loop
-export const maxDuration = 120; // 2 minutes max for review
+export const maxDuration = 60; // 60 seconds - review timeout is 45s
 
 export async function POST(
     request: NextRequest,

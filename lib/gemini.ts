@@ -103,12 +103,12 @@ async function withTimeout<T>(
 }
 
 // API timeout constants (in milliseconds)
-// With maxDuration=300s configured in route, we have more leeway
-// But still use timeouts to prevent infinite hangs from API issues
-// Flow: generate(120s) + review(60s) + summary(30s) + charStates(30s) = 240s max
-const CHAPTER_GENERATION_TIMEOUT = 120000; // 2 minutes for main chapter (long chapters need time)
-const REVIEW_PASS_TIMEOUT = 90000; // 90 seconds for review (important for quality)
-const FAST_TASK_TIMEOUT = 60000; // 60 seconds for summaries, char states (API can be slow under load)
+// With maxDuration=300s configured in route, we need tight timeouts
+// New budget: generate(90s) + summary(30s) + charStates(30s) = 150s per chapter
+// This allows ~2 chapters per 300s before hitting limit
+const CHAPTER_GENERATION_TIMEOUT = 90000; // 90 seconds for main chapter
+const REVIEW_PASS_TIMEOUT = 45000; // 45 seconds for review (background only)
+const FAST_TASK_TIMEOUT = 30000; // 30 seconds for summaries, char states
 
 // Truncate text to a maximum word count (for originalIdea preservation)
 const MAX_ORIGINAL_IDEA_WORDS = 1000;
