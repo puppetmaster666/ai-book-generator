@@ -47,6 +47,8 @@ export async function GET(request: NextRequest) {
       generatingBooks,
       failedBooks,
       totalPayments,
+      paymentsByType,
+      allPayments,
       recentUsers,
       recentBooks,
       booksByFormat,
@@ -68,6 +70,26 @@ export async function GET(request: NextRequest) {
         where: { status: 'completed' },
         _sum: { amount: true },
         _count: true,
+      }),
+      // Payments grouped by type
+      prisma.payment.groupBy({
+        by: ['productType'],
+        where: { status: 'completed' },
+        _sum: { amount: true },
+        _count: true,
+      }),
+      // All payments for debugging
+      prisma.payment.findMany({
+        orderBy: { createdAt: 'desc' },
+        take: 10,
+        select: {
+          id: true,
+          email: true,
+          amount: true,
+          status: true,
+          productType: true,
+          createdAt: true,
+        },
       }),
       // Paginated users
       prisma.user.findMany({
@@ -99,6 +121,7 @@ export async function GET(request: NextRequest) {
           bookFormat: true,
           status: true,
           paymentStatus: true,
+          paymentMethod: true,
           totalWords: true,
           totalChapters: true,
           currentChapter: true,
@@ -115,7 +138,7 @@ export async function GET(request: NextRequest) {
           downloadedAt: true,
           downloadFormat: true,
           user: {
-            select: { email: true, name: true },
+            select: { email: true, name: true, plan: true, freeBookUsed: true },
           },
           // Count illustrations for visual books
           _count: {
@@ -169,6 +192,13 @@ export async function GET(request: NextRequest) {
     const totalRevenue = (totalPayments._sum.amount || 0) / 100;
     const totalTransactions = totalPayments._count;
 
+    // Calculate payment breakdown by type
+    const revenueBreakdown = paymentsByType.map(p => ({
+      type: p.productType,
+      amount: (p._sum.amount || 0) / 100,
+      count: p._count,
+    }));
+
     return NextResponse.json({
       overview: {
         totalUsers,
@@ -179,7 +209,13 @@ export async function GET(request: NextRequest) {
         failedBooks,
         totalRevenue,
         totalTransactions,
+        revenueBreakdown,
       },
+      // Recent payments for debugging
+      recentPayments: allPayments.map(p => ({
+        ...p,
+        amount: p.amount / 100,
+      })),
       users: recentUsers.map(u => ({
         id: u.id,
         email: u.email,

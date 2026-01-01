@@ -886,8 +886,8 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
         setDeleted(true);
         // Clear generating book ID from context
         setGeneratingBookId(null);
-        // Redirect to profile if logged in, otherwise home
-        router.push(session ? '/profile' : '/');
+        // Redirect to dashboard if logged in, otherwise home
+        router.push(session ? '/dashboard' : '/');
       } else {
         const data = await res.json();
         console.error('Delete failed:', data.error);

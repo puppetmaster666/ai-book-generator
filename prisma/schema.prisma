@@ -139,6 +139,7 @@ model Book {
   // Payment
   paymentId       String?
   paymentStatus   String    @default("pending") // pending, completed, failed
+  paymentMethod   String?   // stripe_single, stripe_subscription, free_book, free_credit, promo
 
   // Featured books for public showcase
   featured        Boolean   @default(false)

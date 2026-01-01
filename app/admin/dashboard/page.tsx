@@ -38,7 +38,16 @@ interface AdminStats {
     failedBooks: number;
     totalRevenue: number;
     totalTransactions: number;
+    revenueBreakdown?: Array<{ type: string; amount: number; count: number }>;
   };
+  recentPayments?: Array<{
+    id: string;
+    email: string;
+    amount: number;
+    status: string;
+    productType: string;
+    createdAt: string;
+  }>;
   users: Array<{
     id: string;
     email: string;
@@ -64,6 +73,7 @@ interface AdminStats {
     bookFormat: string;
     status: string;
     paymentStatus: string;
+    paymentMethod: string | null;
     totalWords: number;
     totalChapters: number;
     currentChapter: number;
@@ -79,7 +89,7 @@ interface AdminStats {
     errorMessage: string | null;
     downloadedAt: string | null;
     downloadFormat: string | null;
-    user: { email: string; name: string | null } | null;
+    user: { email: string; name: string | null; plan: string; freeBookUsed: boolean } | null;
   }>;
   booksPagination: {
     page: number;
@@ -134,18 +144,29 @@ const genreLabels: Record<string, string> = {
   adult: 'Adult',
 };
 
+// Simplified neutral color palette
 const statusColors: Record<string, string> = {
-  completed: 'bg-green-100 text-green-800',
-  pending: 'bg-yellow-100 text-yellow-800',
-  generating: 'bg-blue-100 text-blue-800',
-  outlining: 'bg-purple-100 text-purple-800',
-  failed: 'bg-red-100 text-red-800',
+  completed: 'bg-neutral-900 text-white',
+  pending: 'bg-neutral-200 text-neutral-700',
+  generating: 'bg-neutral-600 text-white',
+  outlining: 'bg-neutral-500 text-white',
+  failed: 'bg-red-600 text-white',
 };
 
-const paymentStatusColors: Record<string, string> = {
-  completed: 'bg-green-100 text-green-800',
-  pending: 'bg-yellow-100 text-yellow-800',
-  failed: 'bg-red-100 text-red-800',
+const paymentMethodLabels: Record<string, string> = {
+  stripe_single: 'Stripe',
+  stripe_subscription: 'Subscription',
+  free_book: 'Free Book',
+  free_credit: 'Credit',
+  promo: 'Promo',
+};
+
+const paymentMethodStyles: Record<string, string> = {
+  stripe_single: 'bg-neutral-900 text-white',
+  stripe_subscription: 'bg-neutral-700 text-white',
+  free_book: 'bg-neutral-300 text-neutral-800',
+  free_credit: 'bg-neutral-400 text-neutral-900',
+  promo: 'bg-neutral-200 text-neutral-700',
 };
 
 export default function AdminDashboard() {
@@ -655,12 +676,12 @@ export default function AdminDashboard() {
       </header>
 
       <main className="max-w-7xl mx-auto px-6 py-8">
-        {/* Overview Cards */}
+        {/* Overview Cards - Clean monochrome design */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           <div className="bg-white rounded-xl border border-neutral-200 p-6">
             <div className="flex items-center gap-3 mb-3">
-              <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                <Users className="h-5 w-5 text-blue-600" />
+              <div className="w-10 h-10 bg-neutral-100 rounded-lg flex items-center justify-center">
+                <Users className="h-5 w-5 text-neutral-600" />
               </div>
             </div>
             <p className="text-3xl font-bold">{stats.overview.totalUsers.toLocaleString()}</p>
@@ -669,8 +690,8 @@ export default function AdminDashboard() {
 
           <div className="bg-white rounded-xl border border-neutral-200 p-6">
             <div className="flex items-center gap-3 mb-3">
-              <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
-                <BookOpen className="h-5 w-5 text-purple-600" />
+              <div className="w-10 h-10 bg-neutral-100 rounded-lg flex items-center justify-center">
+                <BookOpen className="h-5 w-5 text-neutral-600" />
               </div>
             </div>
             <p className="text-3xl font-bold">{stats.overview.totalBooks.toLocaleString()}</p>
@@ -679,24 +700,52 @@ export default function AdminDashboard() {
 
           <div className="bg-white rounded-xl border border-neutral-200 p-6">
             <div className="flex items-center gap-3 mb-3">
-              <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-                <CheckCircle className="h-5 w-5 text-green-600" />
+              <div className="w-10 h-10 bg-neutral-900 rounded-lg flex items-center justify-center">
+                <CheckCircle className="h-5 w-5 text-white" />
               </div>
             </div>
             <p className="text-3xl font-bold">{stats.overview.completedBooks.toLocaleString()}</p>
             <p className="text-sm text-neutral-500">Completed</p>
           </div>
 
-          <div className="bg-white rounded-xl border border-neutral-200 p-6">
+          <div className="bg-neutral-900 rounded-xl p-6 text-white">
             <div className="flex items-center gap-3 mb-3">
-              <div className="w-10 h-10 bg-lime-100 rounded-lg flex items-center justify-center">
-                <DollarSign className="h-5 w-5 text-lime-600" />
+              <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
+                <DollarSign className="h-5 w-5 text-white" />
               </div>
             </div>
             <p className="text-3xl font-bold">${stats.overview.totalRevenue.toLocaleString()}</p>
-            <p className="text-sm text-neutral-500">Revenue ({stats.overview.totalTransactions} orders)</p>
+            <p className="text-sm text-neutral-300">{stats.overview.totalTransactions} paid orders</p>
+            {stats.overview.revenueBreakdown && stats.overview.revenueBreakdown.length > 0 && (
+              <div className="mt-3 pt-3 border-t border-white/20 space-y-1">
+                {stats.overview.revenueBreakdown.map((item) => (
+                  <div key={item.type} className="flex justify-between text-xs">
+                    <span className="text-neutral-400">{item.type}</span>
+                    <span>${item.amount} ({item.count})</span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
+
+        {/* Recent Payments Debug (temporary - remove when revenue issue is fixed) */}
+        {stats.recentPayments && stats.recentPayments.length > 0 && (
+          <div className="bg-white rounded-xl border border-neutral-200 p-4 mb-8">
+            <h3 className="text-sm font-semibold mb-2">Recent Payments (Debug)</h3>
+            <div className="text-xs space-y-1 text-neutral-600">
+              {stats.recentPayments.map((p) => (
+                <div key={p.id} className="flex gap-4">
+                  <span className={p.status === 'completed' ? 'text-neutral-900 font-medium' : 'text-neutral-400'}>{p.status}</span>
+                  <span>${p.amount}</span>
+                  <span>{p.productType}</span>
+                  <span>{p.email}</span>
+                  <span className="text-neutral-400">{new Date(p.createdAt).toLocaleDateString()}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Book Status Breakdown */}
         <div className="grid md:grid-cols-2 gap-6 mb-8">
@@ -708,21 +757,21 @@ export default function AdminDashboard() {
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <CheckCircle className="h-4 w-4 text-green-500" />
+                  <CheckCircle className="h-4 w-4 text-neutral-900" />
                   <span>Completed</span>
                 </div>
                 <span className="font-semibold">{stats.overview.completedBooks}</span>
               </div>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <Loader2 className="h-4 w-4 text-blue-500" />
+                  <Loader2 className="h-4 w-4 text-neutral-500" />
                   <span>Generating</span>
                 </div>
                 <span className="font-semibold">{stats.overview.generatingBooks}</span>
               </div>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <Clock className="h-4 w-4 text-yellow-500" />
+                  <Clock className="h-4 w-4 text-neutral-400" />
                   <span>Pending</span>
                 </div>
                 <span className="font-semibold">{stats.overview.pendingBooks}</span>
@@ -844,11 +893,9 @@ export default function AdminDashboard() {
                     <th className="text-left py-3 px-2 font-medium text-neutral-500">Title</th>
                     <th className="text-left py-3 px-2 font-medium text-neutral-500">User</th>
                     <th className="text-left py-3 px-2 font-medium text-neutral-500">Format</th>
-                    <th className="text-left py-3 px-2 font-medium text-neutral-500">Genre</th>
                     <th className="text-left py-3 px-2 font-medium text-neutral-500">Status</th>
-                    <th className="text-left py-3 px-2 font-medium text-neutral-500">Payment</th>
+                    <th className="text-left py-3 px-2 font-medium text-neutral-500">Paid Via</th>
                     <th className="text-left py-3 px-2 font-medium text-neutral-500">Words</th>
-                    <th className="text-left py-3 px-2 font-medium text-neutral-500">Images</th>
                     <th className="text-left py-3 px-2 font-medium text-neutral-500">Created</th>
                     <th className="text-left py-3 px-2 font-medium text-neutral-500">Downloaded</th>
                     <th className="text-left py-3 px-2 font-medium text-neutral-500">Actions</th>
@@ -879,14 +926,11 @@ export default function AdminDashboard() {
                         </a>
                         <p className="text-xs text-neutral-500">{book.authorName}</p>
                       </td>
-                      <td className="py-3 px-2 text-neutral-600">
+                      <td className="py-3 px-2 text-neutral-600 text-xs">
                         {book.user?.email || book.email || 'Anonymous'}
                       </td>
-                      <td className="py-3 px-2">
+                      <td className="py-3 px-2 text-xs text-neutral-600">
                         {formatLabels[book.bookFormat] || book.bookFormat}
-                      </td>
-                      <td className="py-3 px-2">
-                        {genreLabels[book.genre] || book.genre}
                       </td>
                       <td className="py-3 px-2">
                         <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusColors[book.status] || 'bg-neutral-100 text-neutral-800'}`}>
@@ -894,21 +938,33 @@ export default function AdminDashboard() {
                         </span>
                       </td>
                       <td className="py-3 px-2">
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${paymentStatusColors[book.paymentStatus] || 'bg-neutral-100 text-neutral-800'}`}>
-                          {book.paymentStatus}
-                        </span>
+                        {/* Determine payment method from book data */}
+                        {(() => {
+                          // If paymentMethod is set, use it
+                          if (book.paymentMethod) {
+                            return (
+                              <span className={`px-2 py-1 rounded-full text-xs font-medium ${paymentMethodStyles[book.paymentMethod] || 'bg-neutral-100 text-neutral-800'}`}>
+                                {paymentMethodLabels[book.paymentMethod] || book.paymentMethod}
+                              </span>
+                            );
+                          }
+                          // Infer from other data
+                          if (book.paymentStatus === 'completed') {
+                            // Check if user has subscription
+                            if (book.user?.plan === 'monthly' || book.user?.plan === 'yearly') {
+                              return <span className="px-2 py-1 rounded-full text-xs font-medium bg-neutral-700 text-white">Sub</span>;
+                            }
+                            // Has a registered user - could be free or paid
+                            if (book.user?.freeBookUsed === false) {
+                              return <span className="px-2 py-1 rounded-full text-xs font-medium bg-neutral-300 text-neutral-800">Free</span>;
+                            }
+                            return <span className="px-2 py-1 rounded-full text-xs font-medium bg-neutral-900 text-white">Stripe</span>;
+                          }
+                          return <span className="text-neutral-400 text-xs">-</span>;
+                        })()}
                       </td>
-                      <td className="py-3 px-2 text-neutral-600">
+                      <td className="py-3 px-2 text-neutral-600 text-xs">
                         {book.totalWords.toLocaleString()}
-                      </td>
-                      <td className="py-3 px-2 text-neutral-600">
-                        {book.illustrationCount > 0 ? (
-                          <span className="px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
-                            {book.illustrationCount}
-                          </span>
-                        ) : (
-                          <span className="text-neutral-400">-</span>
-                        )}
                       </td>
                       <td className="py-3 px-2 text-neutral-500">
                         <div>{new Date(book.createdAt).toLocaleDateString()}</div>
@@ -917,11 +973,7 @@ export default function AdminDashboard() {
                       <td className="py-3 px-2">
                         {book.downloadedAt ? (
                           <div>
-                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                              book.downloadFormat === 'pdf'
-                                ? 'bg-red-100 text-red-800'
-                                : 'bg-blue-100 text-blue-800'
-                            }`}>
+                            <span className="px-2 py-1 rounded-full text-xs font-medium bg-neutral-900 text-white">
                               {book.downloadFormat?.toUpperCase() || 'YES'}
                             </span>
                             <div className="text-xs text-neutral-400 mt-1">
@@ -929,7 +981,7 @@ export default function AdminDashboard() {
                             </div>
                           </div>
                         ) : (
-                          <span className="text-neutral-400">-</span>
+                          <span className="text-neutral-400 text-xs">-</span>
                         )}
                       </td>
                       <td className="py-3 px-2">
@@ -938,7 +990,7 @@ export default function AdminDashboard() {
                           <button
                             onClick={() => toggleBookExpanded(book.id)}
                             title={expandedBooks.has(book.id) ? "Hide details" : "Show original idea"}
-                            className="p-2 text-neutral-500 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
+                            className="p-2 text-neutral-500 hover:text-neutral-900 hover:bg-neutral-100 rounded-lg transition-colors"
                           >
                             {expandedBooks.has(book.id) ? (
                               <ChevronUp className="h-4 w-4" />
@@ -984,49 +1036,49 @@ export default function AdminDashboard() {
                     </tr>
                     {/* Expanded Book Details */}
                     {expandedBooks.has(book.id) && (
-                      <tr className="bg-purple-50/50 border-b border-purple-100">
-                        <td colSpan={12} className="py-4 px-4">
+                      <tr className="bg-neutral-50 border-b border-neutral-200">
+                        <td colSpan={10} className="py-4 px-4">
                           <div className="grid gap-4 md:grid-cols-2">
                             {/* Premise */}
                             <div className="md:col-span-2">
-                              <label className="block text-xs font-semibold text-purple-700 uppercase tracking-wide mb-1">
+                              <label className="block text-xs font-semibold text-neutral-500 uppercase tracking-wide mb-1">
                                 Premise / Idea
                               </label>
-                              <p className="text-sm text-neutral-700 bg-white rounded-lg p-3 border border-purple-100">
+                              <p className="text-sm text-neutral-700 bg-white rounded-lg p-3 border border-neutral-200">
                                 {book.premise || <span className="text-neutral-400 italic">No premise provided</span>}
                               </p>
                             </div>
                             {/* Beginning */}
                             <div>
-                              <label className="block text-xs font-semibold text-purple-700 uppercase tracking-wide mb-1">
+                              <label className="block text-xs font-semibold text-neutral-500 uppercase tracking-wide mb-1">
                                 Beginning
                               </label>
-                              <p className="text-sm text-neutral-700 bg-white rounded-lg p-3 border border-purple-100 min-h-[60px]">
+                              <p className="text-sm text-neutral-700 bg-white rounded-lg p-3 border border-neutral-200 min-h-[60px]">
                                 {book.beginning || <span className="text-neutral-400 italic">No beginning specified</span>}
                               </p>
                             </div>
                             {/* Middle */}
                             <div>
-                              <label className="block text-xs font-semibold text-purple-700 uppercase tracking-wide mb-1">
+                              <label className="block text-xs font-semibold text-neutral-500 uppercase tracking-wide mb-1">
                                 Middle
                               </label>
-                              <p className="text-sm text-neutral-700 bg-white rounded-lg p-3 border border-purple-100 min-h-[60px]">
+                              <p className="text-sm text-neutral-700 bg-white rounded-lg p-3 border border-neutral-200 min-h-[60px]">
                                 {book.middle || <span className="text-neutral-400 italic">No middle specified</span>}
                               </p>
                             </div>
                             {/* Ending */}
                             <div className="md:col-span-2">
-                              <label className="block text-xs font-semibold text-purple-700 uppercase tracking-wide mb-1">
+                              <label className="block text-xs font-semibold text-neutral-500 uppercase tracking-wide mb-1">
                                 Ending
                               </label>
-                              <p className="text-sm text-neutral-700 bg-white rounded-lg p-3 border border-purple-100">
+                              <p className="text-sm text-neutral-700 bg-white rounded-lg p-3 border border-neutral-200">
                                 {book.ending || <span className="text-neutral-400 italic">No ending specified</span>}
                               </p>
                             </div>
                             {/* Error Message (if failed) */}
                             {book.errorMessage && (
                               <div className="md:col-span-2">
-                                <label className="block text-xs font-semibold text-red-700 uppercase tracking-wide mb-1">
+                                <label className="block text-xs font-semibold text-red-600 uppercase tracking-wide mb-1">
                                   Error Message
                                 </label>
                                 <p className="text-sm text-red-700 bg-red-50 rounded-lg p-3 border border-red-200">
@@ -1148,7 +1200,7 @@ export default function AdminDashboard() {
                   <button
                     onClick={handleGiftCredits}
                     disabled={isGiftingCredits}
-                    className="flex items-center gap-2 px-4 py-2 bg-lime-400 text-neutral-900 rounded-lg text-sm font-medium hover:bg-lime-500 disabled:opacity-50 transition-colors"
+                    className="flex items-center gap-2 px-4 py-2 bg-neutral-200 text-neutral-900 rounded-lg text-sm font-medium hover:bg-neutral-300 disabled:opacity-50 transition-colors"
                   >
                     {isGiftingCredits ? (
                       <Loader2 className="h-4 w-4 animate-spin" />
@@ -1195,7 +1247,7 @@ export default function AdminDashboard() {
                         type="checkbox"
                         checked={includeCredit}
                         onChange={(e) => setIncludeCredit(e.target.checked)}
-                        className="w-4 h-4 rounded border-neutral-300 text-lime-500 focus:ring-lime-500"
+                        className="w-4 h-4 rounded border-neutral-300 text-neutral-900 focus:ring-neutral-500"
                       />
                       <span className="text-sm font-medium text-neutral-700">
                         Include claimable credit gift
@@ -1209,7 +1261,7 @@ export default function AdminDashboard() {
                           max={100}
                           value={emailCreditAmount}
                           onChange={(e) => setEmailCreditAmount(parseInt(e.target.value) || 1)}
-                          className="w-16 px-2 py-1 border border-neutral-300 rounded-lg text-sm focus:ring-2 focus:ring-lime-500 focus:border-transparent"
+                          className="w-16 px-2 py-1 border border-neutral-300 rounded-lg text-sm focus:ring-2 focus:ring-neutral-500 focus:border-transparent"
                         />
                         <span className="text-sm text-neutral-500">credit{emailCreditAmount > 1 ? 's' : ''}</span>
                       </div>
@@ -1263,7 +1315,7 @@ export default function AdminDashboard() {
                   {stats.users.map((user) => (
                     <tr
                       key={user.id}
-                      className={`border-b border-neutral-100 hover:bg-neutral-50 ${selectedUsers.has(user.id) ? 'bg-lime-50' : ''}`}
+                      className={`border-b border-neutral-100 hover:bg-neutral-50 ${selectedUsers.has(user.id) ? 'bg-neutral-100' : ''}`}
                     >
                       <td className="py-3 px-2">
                         <input
@@ -1282,7 +1334,7 @@ export default function AdminDashboard() {
                       <td className="py-3 px-2">
                         <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                           user.authMethod === 'google'
-                            ? 'bg-blue-100 text-blue-800'
+                            ? 'bg-neutral-800 text-white'
                             : 'bg-neutral-100 text-neutral-700'
                         }`}>
                           {user.authMethod === 'google' ? (
@@ -1304,7 +1356,7 @@ export default function AdminDashboard() {
                       <td className="py-3 px-2">
                         <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                           user.plan === 'monthly' || user.plan === 'yearly'
-                            ? 'bg-purple-100 text-purple-800'
+                            ? 'bg-neutral-900 text-white'
                             : 'bg-neutral-100 text-neutral-800'
                         }`}>
                           {user.plan}
@@ -1319,7 +1371,7 @@ export default function AdminDashboard() {
                       </td>
                       <td className="py-3 px-2 text-neutral-600">
                         {user.freeCredits > 0 ? (
-                          <span className="px-2 py-1 rounded-full text-xs font-medium bg-lime-100 text-lime-800">
+                          <span className="px-2 py-1 rounded-full text-xs font-medium bg-neutral-700 text-white">
                             {user.freeCredits}
                           </span>
                         ) : (
@@ -1378,7 +1430,7 @@ export default function AdminDashboard() {
               <span className="text-sm text-neutral-500">
                 ({stats.anonymousContacts?.length || 0} contacts)
               </span>
-              <span className="px-2 py-0.5 text-xs font-medium bg-orange-100 text-orange-700 rounded-full">
+              <span className="px-2 py-0.5 text-xs font-medium bg-neutral-200 text-neutral-700 rounded-full">
                 Not Registered
               </span>
             </div>
@@ -1391,7 +1443,7 @@ export default function AdminDashboard() {
 
           {/* Email Action Panel for Anonymous */}
           {selectedAnonymous.size > 0 && (
-            <div className="mb-6 p-4 bg-orange-50 rounded-xl border border-orange-200">
+            <div className="mb-6 p-4 bg-neutral-50 rounded-xl border border-neutral-200">
               <div className="flex flex-wrap items-end gap-4">
                 {/* Template Select */}
                 <div className="flex-1 min-w-[200px]">
@@ -1401,7 +1453,7 @@ export default function AdminDashboard() {
                   <select
                     value={anonymousEmailTemplate}
                     onChange={(e) => setAnonymousEmailTemplate(e.target.value as typeof anonymousEmailTemplate)}
-                    className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:ring-2 focus:ring-neutral-900 focus:border-transparent"
                   >
                     <option value="announcement">Custom Announcement</option>
                     <option value="bug_apology">Bug Apology (+ 1 free credit)</option>
@@ -1412,7 +1464,7 @@ export default function AdminDashboard() {
                 <button
                   onClick={handleSendAnonymousEmail}
                   disabled={isSendingAnonymousEmail || (anonymousEmailTemplate === 'announcement' && !anonymousCustomMessage)}
-                  className="flex items-center gap-2 px-4 py-2 bg-orange-600 text-white rounded-lg text-sm font-medium hover:bg-orange-700 disabled:opacity-50 transition-colors"
+                  className="flex items-center gap-2 px-4 py-2 bg-neutral-900 text-white rounded-lg text-sm font-medium hover:bg-neutral-800 disabled:opacity-50 transition-colors"
                 >
                   {isSendingAnonymousEmail ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
@@ -1435,7 +1487,7 @@ export default function AdminDashboard() {
                       value={anonymousCustomSubject}
                       onChange={(e) => setAnonymousCustomSubject(e.target.value)}
                       placeholder="Email subject..."
-                      className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                      className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:ring-2 focus:ring-neutral-900 focus:border-transparent"
                     />
                   </div>
                   <div>
@@ -1447,18 +1499,18 @@ export default function AdminDashboard() {
                       onChange={(e) => setAnonymousCustomMessage(e.target.value)}
                       placeholder="Your message..."
                       rows={3}
-                      className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent resize-none"
+                      className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:ring-2 focus:ring-neutral-900 focus:border-transparent resize-none"
                     />
                   </div>
 
                   {/* Include Credit Gift Option */}
-                  <div className="flex items-center gap-4 pt-2 border-t border-orange-200">
+                  <div className="flex items-center gap-4 pt-2 border-t border-neutral-200">
                     <label className="flex items-center gap-2 cursor-pointer">
                       <input
                         type="checkbox"
                         checked={anonymousIncludeCredit}
                         onChange={(e) => setAnonymousIncludeCredit(e.target.checked)}
-                        className="w-4 h-4 rounded border-neutral-300 text-orange-500 focus:ring-orange-500"
+                        className="w-4 h-4 rounded border-neutral-300 text-neutral-900 focus:ring-neutral-500"
                       />
                       <span className="text-sm font-medium text-neutral-700">
                         Include claimable credit gift
@@ -1472,7 +1524,7 @@ export default function AdminDashboard() {
                           max={100}
                           value={anonymousCreditAmount}
                           onChange={(e) => setAnonymousCreditAmount(parseInt(e.target.value) || 1)}
-                          className="w-16 px-2 py-1 border border-neutral-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                          className="w-16 px-2 py-1 border border-neutral-300 rounded-lg text-sm focus:ring-2 focus:ring-neutral-500 focus:border-transparent"
                         />
                         <span className="text-sm text-neutral-500">credit{anonymousCreditAmount > 1 ? 's' : ''}</span>
                       </div>
@@ -1504,7 +1556,7 @@ export default function AdminDashboard() {
                         type="checkbox"
                         checked={selectedAnonymous.size === stats.anonymousContacts.length && stats.anonymousContacts.length > 0}
                         onChange={toggleAllAnonymous}
-                        className="w-4 h-4 rounded border-neutral-300 text-orange-500 focus:ring-orange-500 cursor-pointer"
+                        className="w-4 h-4 rounded border-neutral-300 text-neutral-900 focus:ring-neutral-500 cursor-pointer"
                       />
                     </th>
                     <th className="text-left py-3 px-2 font-medium text-neutral-500">Email</th>
@@ -1519,14 +1571,14 @@ export default function AdminDashboard() {
                   {stats.anonymousContacts.map((contact) => (
                     <tr
                       key={contact.email}
-                      className={`border-b border-neutral-100 hover:bg-neutral-50 ${selectedAnonymous.has(contact.email) ? 'bg-orange-50' : ''}`}
+                      className={`border-b border-neutral-100 hover:bg-neutral-50 ${selectedAnonymous.has(contact.email) ? 'bg-neutral-100' : ''}`}
                     >
                       <td className="py-3 px-2">
                         <input
                           type="checkbox"
                           checked={selectedAnonymous.has(contact.email)}
                           onChange={() => toggleAnonymousSelection(contact.email)}
-                          className="w-4 h-4 rounded border-neutral-300 text-orange-500 focus:ring-orange-500 cursor-pointer"
+                          className="w-4 h-4 rounded border-neutral-300 text-neutral-900 focus:ring-neutral-500 cursor-pointer"
                         />
                       </td>
                       <td className="py-3 px-2 font-medium text-neutral-900">
