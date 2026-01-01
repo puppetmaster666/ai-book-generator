@@ -52,7 +52,6 @@ export async function GET(request: NextRequest) {
       recentUsers,
       recentBooks,
       booksByFormat,
-      booksByGenre,
       dailyStats,
       anonymousContacts,
     ] = await Promise.all([
@@ -151,11 +150,6 @@ export async function GET(request: NextRequest) {
         by: ['bookFormat'],
         _count: true,
       }),
-      // Books by genre
-      prisma.book.groupBy({
-        by: ['genre'],
-        _count: true,
-      }),
       // Daily stats for last 30 days
       prisma.$queryRaw`
         SELECT
@@ -246,10 +240,6 @@ export async function GET(request: NextRequest) {
       },
       booksByFormat: booksByFormat.map(b => ({
         format: b.bookFormat,
-        count: b._count,
-      })),
-      booksByGenre: booksByGenre.map(b => ({
-        genre: b.genre,
         count: b._count,
       })),
       dailyStats: dailyStats.map(d => ({

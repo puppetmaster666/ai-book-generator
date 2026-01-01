@@ -98,7 +98,6 @@ interface AdminStats {
     totalPages: number;
   };
   booksByFormat: Array<{ format: string; count: number }>;
-  booksByGenre: Array<{ genre: string; count: number }>;
   dailyStats: Array<{ date: string; booksCreated: number }>;
   anonymousContacts: Array<{
     email: string;
@@ -122,26 +121,6 @@ const formatLabels: Record<string, string> = {
   illustrated: 'Illustrated',
   picture_book: 'Picture Book',
   comic: 'Comic',
-};
-
-const genreLabels: Record<string, string> = {
-  fantasy: 'Fantasy',
-  scifi: 'Sci-Fi',
-  romance: 'Romance',
-  mystery: 'Mystery',
-  thriller: 'Thriller',
-  horror: 'Horror',
-  literary: 'Literary Fiction',
-  historical: 'Historical',
-  adventure: 'Adventure',
-  comedy: 'Comedy',
-  drama: 'Drama',
-  childrens: "Children's",
-  ya: 'Young Adult',
-  nonfiction: 'Non-Fiction',
-  selfhelp: 'Self-Help',
-  business: 'Business',
-  adult: 'Adult',
 };
 
 // Simplified neutral color palette
@@ -804,26 +783,6 @@ export default function AdminDashboard() {
               )}
             </div>
           </div>
-        </div>
-
-        {/* Books by Genre */}
-        <div className="bg-white rounded-xl border border-neutral-200 p-6 mb-8">
-          <h2 className="text-lg font-semibold mb-4">Books by Genre</h2>
-          {stats.booksByGenre.length > 0 ? (
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
-              {stats.booksByGenre.map((item) => (
-                <div
-                  key={item.genre}
-                  className="bg-neutral-50 rounded-lg p-3 text-center"
-                >
-                  <p className="font-semibold text-lg">{item.count}</p>
-                  <p className="text-xs text-neutral-500">{genreLabels[item.genre] || item.genre}</p>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-neutral-400 text-sm">No books yet</p>
-          )}
         </div>
 
         {/* All Books */}
