@@ -1403,254 +1403,251 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
                     </p>
                   </div>
                 </div>
-              ) : null}
+              </div>
 
-                {/* Progress Bar */}
-                <div className="mb-6">
-                  <div className="flex justify-between text-sm mb-2">
-                    <span className="text-neutral-600">
-                      {book.status === 'outlining'
-                        ? 'Preparing content...'
-                        : isIllustrated
-                          ? (() => {
-                            const totalPanels = (book.bookFormat === 'comic_book' || book.bookFormat === 'comic' || book.dialogueStyle === 'bubbles' || book.bookPreset === 'comic_story') ? 24 : 20;
-                            const generatedCount = book.illustrations?.length || 0;
-                            return `${generatedCount} of ${totalPanels} panels`;
-                          })()
-                          : chapterStatuses.length > 0
-                            ? `${chapterStatuses.filter(c => c.status === 'done').length} of ${chapterStatuses.length} chapters`
-                            : `Chapter ${book.currentChapter} of ${book.totalChapters}`
-                      }
-                    </span>
-                    <span className="font-medium text-neutral-900">
-                      {isIllustrated
+              {/* Progress Bar */}
+              <div className="mb-6">
+                <div className="flex justify-between text-sm mb-2">
+                  <span className="text-neutral-600">
+                    {book.status === 'outlining'
+                      ? 'Preparing content...'
+                      : isIllustrated
                         ? (() => {
                           const totalPanels = (book.bookFormat === 'comic_book' || book.bookFormat === 'comic' || book.dialogueStyle === 'bubbles' || book.bookPreset === 'comic_story') ? 24 : 20;
                           const generatedCount = book.illustrations?.length || 0;
-                          return `${Math.round((generatedCount / totalPanels) * 100)}%`;
+                          return `${generatedCount} of ${totalPanels} panels`;
                         })()
-                        : (chapterStatuses.length > 0
-                          ? `${Math.round((chapterStatuses.filter(c => c.status === 'done').length / chapterStatuses.length) * 100)}%`
-                          : `${progress}%`)
-                      }
-                    </span>
-                  </div>
-                  <div className="h-2 bg-neutral-100 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-neutral-900 transition-all duration-700 ease-out rounded-full"
-                      style={{
-                        width: `${Math.max(
-                          isIllustrated
-                            ? (() => {
-                              const totalPanels = (book.bookFormat === 'comic_book' || book.bookFormat === 'comic' || book.dialogueStyle === 'bubbles' || book.bookPreset === 'comic_story') ? 24 : 20;
-                              const generatedCount = book.illustrations?.length || 0;
-                              return (generatedCount / totalPanels) * 100;
-                            })()
-                            : (chapterStatuses.length > 0
-                              ? (chapterStatuses.filter(c => c.status === 'done').length / chapterStatuses.length) * 100
-                              : progress),
-                          2
-                        )}%`
-                      }}
-                    />
-                  </div>
-                </div>
-
-                {/* Panel Grid - Illustrated Books */}
-                {isIllustrated && (
-                  <div className="mb-6">
-                    <p className="text-xs uppercase tracking-wide text-neutral-400 mb-3">Panels</p>
-                    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
-                      {(() => {
+                        : chapterStatuses.length > 0
+                          ? `${chapterStatuses.filter(c => c.status === 'done').length} of ${chapterStatuses.length} chapters`
+                          : `Chapter ${book.currentChapter} of ${book.totalChapters}`
+                    }
+                  </span>
+                  <span className="font-medium text-neutral-900">
+                    {isIllustrated
+                      ? (() => {
                         const totalPanels = (book.bookFormat === 'comic_book' || book.bookFormat === 'comic' || book.dialogueStyle === 'bubbles' || book.bookPreset === 'comic_story') ? 24 : 20;
-                        const panels = Array.from({ length: totalPanels }, (_, k) => k + 1);
-                        // Map of existing illustrations by position (or chapterId? standardizing on position)
-                        const illMap = new Map();
-                        // Sort illustrations to be safe? 
-                        book.illustrations?.forEach((ill: any) => {
-                          // Try position first, then match chapter order if possible. 
-                          // The backend sets position = chapter.number now.
-                          illMap.set(ill.position || 0, ill);
-                        });
+                        const generatedCount = book.illustrations?.length || 0;
+                        return `${Math.round((generatedCount / totalPanels) * 100)}%`;
+                      })()
+                      : (chapterStatuses.length > 0
+                        ? `${Math.round((chapterStatuses.filter(c => c.status === 'done').length / chapterStatuses.length) * 100)}%`
+                        : `${progress}%`)
+                    }
+                  </span>
+                </div>
+                <div className="h-2 bg-neutral-100 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-neutral-900 transition-all duration-700 ease-out rounded-full"
+                    style={{
+                      width: `${Math.max(
+                        isIllustrated
+                          ? (() => {
+                            const totalPanels = (book.bookFormat === 'comic_book' || book.bookFormat === 'comic' || book.dialogueStyle === 'bubbles' || book.bookPreset === 'comic_story') ? 24 : 20;
+                            const generatedCount = book.illustrations?.length || 0;
+                            return (generatedCount / totalPanels) * 100;
+                          })()
+                          : (chapterStatuses.length > 0
+                            ? (chapterStatuses.filter(c => c.status === 'done').length / chapterStatuses.length) * 100
+                            : progress),
+                        2
+                      )}%`
+                    }}
+                  />
+                </div>
+              </div>
 
-                        return panels.map(num => {
-                          const ill = illMap.get(num);
-                          // Assuming sequential generation for status
-                          const isDone = !!ill;
-                          const isNext = !isDone && !illMap.get(num - 1) && num === 1 || (!isDone && illMap.get(num - 1));
-                          // Actually if it's background gen, we can just say if not done and it's <= current count + 1?
-                          // Simple logic: if done -> image. if not done -> check if it's the *next* one.
-                          // Better: just fill grid.
+              {/* Panel Grid - Illustrated Books */}
+              {isIllustrated && (
+                <div className="mb-6">
+                  <p className="text-xs uppercase tracking-wide text-neutral-400 mb-3">Panels</p>
+                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
+                    {(() => {
+                      const totalPanels = (book.bookFormat === 'comic_book' || book.bookFormat === 'comic' || book.dialogueStyle === 'bubbles' || book.bookPreset === 'comic_story') ? 24 : 20;
+                      const panels = Array.from({ length: totalPanels }, (_, k) => k + 1);
+                      // Map of existing illustrations by position (or chapterId? standardizing on position)
+                      const illMap = new Map();
+                      // Sort illustrations to be safe? 
+                      book.illustrations?.forEach((ill: any) => {
+                        // Try position first, then match chapter order if possible. 
+                        // The backend sets position = chapter.number now.
+                        illMap.set(ill.position || 0, ill);
+                      });
 
-                          return (
-                            <div key={num} className={`relative aspect-square rounded-xl overflow-hidden bg-neutral-100 border ${isDone ? 'border-neutral-900' : 'border-neutral-200'}`}>
-                              {isDone ? (
-                                <img src={ill.imageUrl} alt={`Panel ${num}`} className="w-full h-full object-cover" />
-                              ) : (
-                                <div className="w-full h-full flex flex-col items-center justify-center p-2 text-center">
-                                  {/* We can't easily know exactly which one is "generating" without precise state, 
+                      return panels.map(num => {
+                        const ill = illMap.get(num);
+                        // Assuming sequential generation for status
+                        const isDone = !!ill;
+                        const isNext = !isDone && !illMap.get(num - 1) && num === 1 || (!isDone && illMap.get(num - 1));
+                        // Actually if it's background gen, we can just say if not done and it's <= current count + 1?
+                        // Simple logic: if done -> image. if not done -> check if it's the *next* one.
+                        // Better: just fill grid.
+
+                        return (
+                          <div key={num} className={`relative aspect-square rounded-xl overflow-hidden bg-neutral-100 border ${isDone ? 'border-neutral-900' : 'border-neutral-200'}`}>
+                            {isDone ? (
+                              <img src={ill.imageUrl} alt={`Panel ${num}`} className="w-full h-full object-cover" />
+                            ) : (
+                              <div className="w-full h-full flex flex-col items-center justify-center p-2 text-center">
+                                {/* We can't easily know exactly which one is "generating" without precise state, 
                                                 but we know the first non-done is likely the one.
                                             */}
-                                  {!illMap.get(num) && illMap.get(num - 1) || (num === 1 && !illMap.get(1) && isGenerating) ? (
-                                    <>
-                                      <Loader2 className="h-6 w-6 text-neutral-900 animate-spin mb-2" />
-                                      <span className="text-xs font-medium text-neutral-600">Generating...</span>
-                                    </>
-                                  ) : (
-                                    <span className="text-xs font-medium text-neutral-400">Panel {num}</span>
-                                  )}
-                                </div>
-                              )}
-                              {isDone && (
-                                <div className="absolute bottom-1 right-1 bg-black/60 text-white text-[10px] px-1.5 py-0.5 rounded-full backdrop-blur-sm">
-                                  #{num}
-                                </div>
-                              )}
-                            </div>
-                          );
-                        });
-                      })()}
-                    </div>
-                  </div>
-                )}
-
-                {/* Chapter Card Grid - Text Books Only */}
-                {!isIllustrated && chapterStatuses.length > 0 && (
-                  <div className="mb-6">
-                    <p className="text-xs uppercase tracking-wide text-neutral-400 mb-3">Chapter Progress</p>
-                    <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 gap-2">
-                      {chapterStatuses.map((chapter) => (
-                        <div
-                          key={chapter.number}
-                          className={`relative rounded-xl p-3 text-center transition-all ${chapter.status === 'done'
-                            ? 'bg-neutral-900 text-white'
-                            : chapter.status === 'generating'
-                              ? 'bg-neutral-100 border-2 border-neutral-900'
-                              : chapter.status === 'error'
-                                ? 'bg-red-50 border border-red-200'
-                                : 'bg-neutral-50 border border-neutral-200'
-                            }`}
-                        >
-                          {/* Status Icon */}
-                          <div className="flex justify-center mb-1">
-                            {chapter.status === 'done' && (
-                              <Check className="h-5 w-5" />
+                                {!illMap.get(num) && illMap.get(num - 1) || (num === 1 && !illMap.get(1) && isGenerating) ? (
+                                  <>
+                                    <Loader2 className="h-6 w-6 text-neutral-900 animate-spin mb-2" />
+                                    <span className="text-xs font-medium text-neutral-600">Generating...</span>
+                                  </>
+                                ) : (
+                                  <span className="text-xs font-medium text-neutral-400">Panel {num}</span>
+                                )}
+                              </div>
                             )}
-                            {chapter.status === 'generating' && (
-                              <Loader2 className="h-5 w-5 text-neutral-900 animate-spin" />
-                            )}
-                            {chapter.status === 'error' && (
-                              <X className="h-5 w-5 text-red-600" />
-                            )}
-                            {chapter.status === 'pending' && (
-                              <span className="text-lg font-bold text-neutral-400">{chapter.number}</span>
+                            {isDone && (
+                              <div className="absolute bottom-1 right-1 bg-black/60 text-white text-[10px] px-1.5 py-0.5 rounded-full backdrop-blur-sm">
+                                #{num}
+                              </div>
                             )}
                           </div>
+                        );
+                      });
+                    })()}
+                  </div>
+                </div>
+              )}
 
-                          {/* Chapter Label */}
-                          <p className={`text-xs font-medium truncate ${chapter.status === 'done'
-                            ? 'text-white'
-                            : chapter.status === 'generating'
-                              ? 'text-neutral-900'
-                              : chapter.status === 'error'
-                                ? 'text-red-700'
-                                : 'text-neutral-500'
-                            }`}>
-                            {chapter.status === 'generating'
-                              ? 'Writing...'
-                              : chapter.status === 'pending'
-                                ? 'Waiting'
-                                : chapter.status === 'error'
-                                  ? 'Failed'
-                                  : `Ch. ${chapter.number}`
-                            }
-                          </p>
-
-                          {/* Word Count for Done */}
-                          {chapter.status === 'done' && chapter.wordCount && (
-                            <p className="text-[10px] text-neutral-400 mt-0.5">
-                              {chapter.wordCount.toLocaleString()}w
-                            </p>
+              {/* Chapter Card Grid - Text Books Only */}
+              {!isIllustrated && chapterStatuses.length > 0 && (
+                <div className="mb-6">
+                  <p className="text-xs uppercase tracking-wide text-neutral-400 mb-3">Chapter Progress</p>
+                  <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 gap-2">
+                    {chapterStatuses.map((chapter) => (
+                      <div
+                        key={chapter.number}
+                        className={`relative rounded-xl p-3 text-center transition-all ${chapter.status === 'done'
+                          ? 'bg-neutral-900 text-white'
+                          : chapter.status === 'generating'
+                            ? 'bg-neutral-100 border-2 border-neutral-900'
+                            : chapter.status === 'error'
+                              ? 'bg-red-50 border border-red-200'
+                              : 'bg-neutral-50 border border-neutral-200'
+                          }`}
+                      >
+                        {/* Status Icon */}
+                        <div className="flex justify-center mb-1">
+                          {chapter.status === 'done' && (
+                            <Check className="h-5 w-5" />
                           )}
-
-                          {/* Retry Button for Error */}
+                          {chapter.status === 'generating' && (
+                            <Loader2 className="h-5 w-5 text-neutral-900 animate-spin" />
+                          )}
                           {chapter.status === 'error' && (
-                            <button
-                              onClick={() => handleRetryChapter(chapter.number)}
-                              className="mt-1 text-[10px] text-red-600 hover:text-red-700 font-medium flex items-center justify-center gap-0.5"
-                            >
-                              <RefreshCw className="h-3 w-3" />
-                              Retry
-                            </button>
+                            <X className="h-5 w-5 text-red-600" />
+                          )}
+                          {chapter.status === 'pending' && (
+                            <span className="text-lg font-bold text-neutral-400">{chapter.number}</span>
                           )}
                         </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
 
-                {/* Stats */}
-                <div className="grid grid-cols-3 gap-3">
-                  <div className="bg-neutral-50 rounded-xl p-4 text-center">
-                    <p className="text-2xl font-bold text-neutral-900">{book.totalWords.toLocaleString()}</p>
-                    <p className="text-xs text-neutral-500">Words</p>
-                  </div>
-                  <div className="bg-neutral-50 rounded-xl p-4 text-center">
-                    <p className="text-2xl font-bold text-neutral-900">
-                      {isIllustrated
-                        ? (book.illustrations?.length || 0)
-                        : (chapterStatuses.length > 0
-                          ? `${chapterStatuses.filter(c => c.status === 'done').length}/${chapterStatuses.length}`
-                          : book.chapters.length)
-                      }
-                    </p>
-                    <p className="text-xs text-neutral-500">{isIllustrated ? 'Generated Panels' : 'Chapters'}</p>
-                  </div>
-                  <div className="bg-neutral-50 rounded-xl p-4 text-center">
-                    <p className="text-2xl font-bold text-neutral-900">~{Math.round(book.totalWords / 250)}</p>
-                    <p className="text-xs text-neutral-500">Pages</p>
+                        {/* Chapter Label */}
+                        <p className={`text-xs font-medium truncate ${chapter.status === 'done'
+                          ? 'text-white'
+                          : chapter.status === 'generating'
+                            ? 'text-neutral-900'
+                            : chapter.status === 'error'
+                              ? 'text-red-700'
+                              : 'text-neutral-500'
+                          }`}>
+                          {chapter.status === 'generating'
+                            ? 'Writing...'
+                            : chapter.status === 'pending'
+                              ? 'Waiting'
+                              : chapter.status === 'error'
+                                ? 'Failed'
+                                : `Ch. ${chapter.number}`
+                          }
+                        </p>
+
+                        {/* Word Count for Done */}
+                        {chapter.status === 'done' && chapter.wordCount && (
+                          <p className="text-[10px] text-neutral-400 mt-0.5">
+                            {chapter.wordCount.toLocaleString()}w
+                          </p>
+                        )}
+
+                        {/* Retry Button for Error */}
+                        {chapter.status === 'error' && (
+                          <button
+                            onClick={() => handleRetryChapter(chapter.number)}
+                            className="mt-1 text-[10px] text-red-600 hover:text-red-700 font-medium flex items-center justify-center gap-0.5"
+                          >
+                            <RefreshCw className="h-3 w-3" />
+                            Retry
+                          </button>
+                        )}
+                      </div>
+                    ))}
                   </div>
                 </div>
-
-                {/* Cancel Generation Button */}
-                <div className="mt-6 pt-6 border-t border-neutral-100">
-                  <button
-                    onClick={handleCancelGeneration}
-                    disabled={cancelling}
-                    className="w-full flex items-center justify-center gap-2 px-4 py-3 text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100 border border-neutral-200 rounded-xl font-medium transition-colors disabled:opacity-50"
-                  >
-                    {cancelling ? (
-                      <>
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        Cancelling...
-                      </>
-                    ) : (
-                      'Cancel Generation'
-                    )}
-                  </button>
-                  <p className="text-xs text-neutral-400 text-center mt-2">
-                    Progress will be saved. You can retry later.
-                  </p>
-                </div>
-
-                {/* Live Content Preview - Text Only Books */}
-                {!isIllustrated && book.chapters.length > 0 && (
-                  <div className="mt-6 border-t border-neutral-100 pt-6">
-                    <div className="flex items-center justify-between mb-3">
-                      <p className="text-xs uppercase tracking-wide text-neutral-400">Live Preview</p>
-                      <span className="text-xs text-neutral-400">Chapter {book.chapters[book.chapters.length - 1].number}</span>
-                    </div>
-                    <div className="bg-neutral-50 rounded-xl p-4 border border-neutral-100 max-h-48 overflow-y-auto">
-                      <p className="text-sm text-neutral-700 leading-relaxed whitespace-pre-wrap">
-                        {book.chapters[book.chapters.length - 1].content.substring(0, 800)}
-                        {book.chapters[book.chapters.length - 1].content.length > 800 && '...'}
-                      </p>
-                    </div>
-                  </div>
-                )}
               )}
+
+              {/* Stats */}
+              <div className="grid grid-cols-3 gap-3">
+                <div className="bg-neutral-50 rounded-xl p-4 text-center">
+                  <p className="text-2xl font-bold text-neutral-900">{book.totalWords.toLocaleString()}</p>
+                  <p className="text-xs text-neutral-500">Words</p>
+                </div>
+                <div className="bg-neutral-50 rounded-xl p-4 text-center">
+                  <p className="text-2xl font-bold text-neutral-900">
+                    {isIllustrated
+                      ? (book.illustrations?.length || 0)
+                      : (chapterStatuses.length > 0
+                        ? `${chapterStatuses.filter(c => c.status === 'done').length}/${chapterStatuses.length}`
+                        : book.chapters.length)
+                    }
+                  </p>
+                  <p className="text-xs text-neutral-500">{isIllustrated ? 'Generated Panels' : 'Chapters'}</p>
+                </div>
+                <div className="bg-neutral-50 rounded-xl p-4 text-center">
+                  <p className="text-2xl font-bold text-neutral-900">~{Math.round(book.totalWords / 250)}</p>
+                  <p className="text-xs text-neutral-500">Pages</p>
+                </div>
               </div>
-          )}
+
+              {/* Cancel Generation Button */}
+              <div className="mt-6 pt-6 border-t border-neutral-100">
+                <button
+                  onClick={handleCancelGeneration}
+                  disabled={cancelling}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-3 text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100 border border-neutral-200 rounded-xl font-medium transition-colors disabled:opacity-50"
+                >
+                  {cancelling ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Cancelling...
+                    </>
+                  ) : (
+                    'Cancel Generation'
+                  )}
+                </button>
+                <p className="text-xs text-neutral-400 text-center mt-2">
+                  Progress will be saved. You can retry later.
+                </p>
+              </div>
+
+              {/* Live Content Preview - Text Only Books */}
+              {!isIllustrated && book.chapters.length > 0 && (
+                <div className="mt-6 border-t border-neutral-100 pt-6">
+                  <div className="flex items-center justify-between mb-3">
+                    <p className="text-xs uppercase tracking-wide text-neutral-400">Live Preview</p>
+                    <span className="text-xs text-neutral-400">Chapter {book.chapters[book.chapters.length - 1].number}</span>
+                  </div>
+                  <div className="bg-neutral-50 rounded-xl p-4 border border-neutral-100 max-h-48 overflow-y-auto">
+                    <p className="text-sm text-neutral-700 leading-relaxed whitespace-pre-wrap">
+                      {book.chapters[book.chapters.length - 1].content.substring(0, 800)}
+                      {book.chapters[book.chapters.length - 1].content.length > 800 && '...'}
+                    </p>
+                  </div>
+                </div>
+              )}
 
               {/* Completed Section */}
               {book.status === 'completed' && (
@@ -1836,7 +1833,7 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
                 </div>
               )}
             </div>
-      </main>
+            </main>
     </div>
   );
 }

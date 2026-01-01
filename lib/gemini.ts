@@ -44,7 +44,7 @@ async function withTimeoutSimple<T>(
   }
 }
 
-// Timeout wrapper with automatic retry using backup API key
+// Timeout wrapper with automatic retry using next API key
 // Takes a function that creates the promise so we can retry with different key
 async function withTimeout<T>(
   createPromise: () => Promise<T>,
@@ -59,17 +59,20 @@ async function withTimeout<T>(
     const isRateLimit = error instanceof Error &&
       (error.message.includes('429') || error.message.includes('quota') || error.message.includes('rate'));
 
-    // If timeout or rate limit, try backup key
-    if ((isTimeout || isRateLimit) && process.env.GEMINI_API_KEY_BACKUP1 && !_useBackupKey) {
-      console.log(`[Gemini] ${operationName} failed (${isTimeout ? 'timeout' : 'rate limit'}), retrying with backup key...`);
-      switchToBackupKey();
+    // If timeout or rate limit, try next key
+    // We only try one rotation here to avoid infinite loops, higher level retry logic handles more
+    if ((isTimeout || isRateLimit)) {
+      const rotated = rotateApiKey();
+      if (rotated) {
+        console.log(`[Gemini] ${operationName} failed (${isTimeout ? 'timeout' : 'rate limit'}), rotating to next API key...`);
 
-      try {
-        // Retry with backup key
-        return await withTimeoutSimple(createPromise(), timeoutMs, operationName);
-      } catch (retryError) {
-        console.error(`[Gemini] Retry with backup key also failed:`, retryError);
-        throw retryError;
+        try {
+          // Retry with new key
+          return await withTimeoutSimple(createPromise(), timeoutMs, operationName);
+        } catch (retryError) {
+          console.error(`[Gemini] Retry with next key also failed:`, retryError);
+          throw retryError;
+        }
       }
     }
 
@@ -161,9 +164,13 @@ async function withRetry<T>(
   baseDelayMs: number = 5000
 ): Promise<T> {
   let lastError: Error | null = null;
-  let triedBackupKey = false;
+  // We track attempts slightly differently now - we allow retries up to maxRetries * available keys ideally, 
+  // but let's stick to simple logic: try, if fail rate limit, rotate, retry.
 
-  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+  // We will try up to (maxRetries + Number of keys) times to ensure we cycle through availability
+  const totalAttempts = maxRetries + 2;
+
+  for (let attempt = 0; attempt <= totalAttempts; attempt++) {
     try {
       return await fn();
     } catch (error) {
@@ -182,25 +189,22 @@ async function withRetry<T>(
         throw lastError;
       }
 
-      // Try switching to backup key before giving up
-      if (!triedBackupKey && attempt >= 1) {
-        const switched = switchToBackupKey();
-        if (switched) {
-          triedBackupKey = true;
-          console.log('[Gemini] Retrying with backup API key...');
-          // Don't count this as an attempt, just retry immediately with new key
-          attempt--;
-          continue;
-        }
+      // Try switching to next key before giving up or waiting
+      const rotated = rotateApiKey();
+      if (rotated) {
+        console.log('[Gemini] Rate limit hit, rotating API key and retrying immediately...');
+        // Don't count this as a "backoff" attempt, just a key switch
+        // We assume different keys have different quotas
+        continue;
       }
 
-      if (attempt === maxRetries) {
+      if (attempt >= totalAttempts) {
         throw lastError;
       }
 
       // Exponential backoff: 5s, 10s, 20s
       const delay = baseDelayMs * Math.pow(2, attempt);
-      console.log(`[Gemini] Rate limit hit, retrying in ${delay / 1000}s (attempt ${attempt + 1}/${maxRetries})...`);
+      console.log(`[Gemini] Rate limit hit (all keys exhausted for now), retrying in ${delay / 1000}s...`);
       await new Promise(resolve => setTimeout(resolve, delay));
     }
   }
@@ -353,13 +357,20 @@ function parseJSONFromResponse(response: string): object {
 
 // Lazy initialization to avoid errors during build
 // Support multiple API keys for rate limit failover
-let genAI: GoogleGenerativeAI | null = null;
-let genAIBackup: GoogleGenerativeAI | null = null;
+let _genAIInstances: (GoogleGenerativeAI | null)[] = [null, null, null];
 let _geminiPro: GenerativeModel | null = null;
 let _geminiFlash: GenerativeModel | null = null;
 let _geminiFlashLight: GenerativeModel | null = null; // Lightweight version for quick tasks
 let _geminiImage: GenerativeModel | null = null;
-let _useBackupKey = false; // Track if we should use backup key
+
+let _currentKeyIndex = 0;
+
+// Environment variable names for keys in order of preference
+const API_KEY_ENV_NAMES = [
+  'GEMINI_API_KEY',
+  'GEMINI_API_KEY_BACKUP1',
+  'GEMINI_API_BACKUP2'
+];
 
 // Reset model instances when switching API keys
 function resetModelInstances() {
@@ -369,48 +380,66 @@ function resetModelInstances() {
   _geminiImage = null;
 }
 
-// Switch to backup API key
-export function switchToBackupKey() {
-  if (process.env.GEMINI_API_KEY_BACKUP1) {
-    console.log('[Gemini] Switching to backup API key due to rate limits');
-    _useBackupKey = true;
-    resetModelInstances();
-    return true;
+// Rotate to the next available API key
+// Returns true if successfully rotated to a new valid key
+export function rotateApiKey(): boolean {
+  const start = _currentKeyIndex;
+
+  // Try finding next available key
+  // We loop at most once through all keys to find a valid next one
+  for (let i = 1; i < API_KEY_ENV_NAMES.length; i++) {
+    const nextIndex = (start + i) % API_KEY_ENV_NAMES.length;
+    const envName = API_KEY_ENV_NAMES[nextIndex];
+    if (process.env[envName]) {
+      console.log(`[Gemini] Rotating API Key: Switching from index ${start} to ${nextIndex} (${envName})`);
+      _currentKeyIndex = nextIndex;
+      resetModelInstances();
+      return true;
+    }
   }
+
+  console.warn('[Gemini] Attempted to rotate API key but no other keys found. Staying on current key.');
   return false;
+}
+
+// Alias for compatibility if imported elsewhere
+export function switchToBackupKey() {
+  return rotateApiKey();
 }
 
 // Switch back to primary key (can be called periodically to retry primary)
 export function switchToPrimaryKey() {
-  console.log('[Gemini] Switching back to primary API key');
-  _useBackupKey = false;
-  resetModelInstances();
+  if (_currentKeyIndex !== 0 && process.env.GEMINI_API_KEY) {
+    console.log('[Gemini] Resetting to primary API key');
+    _currentKeyIndex = 0;
+    resetModelInstances();
+  }
 }
 
 function getGenAI(): GoogleGenerativeAI {
-  // Use backup key if flagged
-  if (_useBackupKey) {
-    if (!genAIBackup) {
-      const backupKey = process.env.GEMINI_API_KEY_BACKUP1;
-      if (!backupKey) {
-        console.warn('[Gemini] Backup key requested but not available, falling back to primary');
-        _useBackupKey = false;
-      } else {
-        genAIBackup = new GoogleGenerativeAI(backupKey);
-      }
-    }
-    if (genAIBackup) return genAIBackup;
+  // Ensure we have a valid index
+  if (_currentKeyIndex >= API_KEY_ENV_NAMES.length) {
+    _currentKeyIndex = 0;
   }
 
-  // Use primary key
-  if (!genAI) {
-    const apiKey = process.env.GEMINI_API_KEY;
+  // Get current instance or create it
+  if (!_genAIInstances[_currentKeyIndex]) {
+    const envName = API_KEY_ENV_NAMES[_currentKeyIndex];
+    const apiKey = process.env[envName];
+
     if (!apiKey) {
-      throw new Error('GEMINI_API_KEY environment variable is not set');
+      // If current selected key is missing, try to rotate immediately
+      if (rotateApiKey()) {
+        // Recurse with new key
+        return getGenAI();
+      }
+      throw new Error(`GEMINI_API_KEY environment variable is not set (checked ${envName} and others)`);
     }
-    genAI = new GoogleGenerativeAI(apiKey);
+
+    _genAIInstances[_currentKeyIndex] = new GoogleGenerativeAI(apiKey);
   }
-  return genAI;
+
+  return _genAIInstances[_currentKeyIndex]!;
 }
 
 // Gemini 3 Flash for main generation (faster and cheaper, each chapter is independent)
