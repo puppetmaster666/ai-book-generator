@@ -89,15 +89,8 @@ function formatChapterContent(
   const isPictureBook = bookFormat === 'picture_book';
   const isComic = bookFormat === 'comic_book' || bookFormat === 'comic';
 
-  // Remove any AI-generated "The End" markers (we add our own proper ending page)
-  let cleanedContent = content
-    // Remove standalone "The End" variations at the end of content
-    .replace(/\n*[-~*]*\s*(The\s+End|THE\s+END|Fin|FIN|Ende)\.?\s*[-~*]*\s*$/gi, '')
-    // Remove "The End" wrapped in special characters
-    .replace(/\n*[*~_-]+\s*(The\s+End|THE\s+END)\s*[*~_-]+\s*$/gi, '')
-    // Remove "[THE END]" or similar bracketed versions
-    .replace(/\n*\[?\s*(THE\s+)?END(\s+OF\s+(BOOK|CHAPTER|STORY))?\s*\]?\s*$/gi, '')
-    .trim();
+  // Keep AI-generated "The End" markers
+  let cleanedContent = content.trim();
 
   // Convert plain text to HTML with proper formatting
   const paragraphsArray = cleanedContent
@@ -184,14 +177,7 @@ function formatChapterContent(
   `;
 }
 
-// Create the "The End" page for text books only
-function createEndPage(fonts: { heading: string; body: string }): string {
-  return `
-    <div style="text-align: center; margin-top: 30%; font-family: '${fonts.heading}', Georgia, serif;">
-      <h1 style="font-size: 2.5em; font-weight: normal; font-style: italic; letter-spacing: 0.1em;">The End</h1>
-    </div>
-  `;
-}
+
 
 export async function generateEpub(bookData: BookData): Promise<Buffer> {
   const fonts = FONT_STYLES[bookData.fontStyle];
@@ -250,12 +236,7 @@ export async function generateEpub(bookData: BookData): Promise<Buffer> {
   const isPictureBook = bookData.bookFormat === 'picture_book';
   const isVisualBook = isPictureBook || isComic;
 
-  // "The End" text for visual books (added to last panel)
-  const theEndText = `
-    <div style="text-align: center; margin-top: 2em; padding: 1em; font-family: '${fonts.heading}', Georgia, serif;">
-      <p style="font-size: 2em; font-style: italic; font-weight: bold;">The End</p>
-    </div>
-  `;
+
 
   // Build chapters array
   const chapterContents = bookData.chapters.map((chapter, index) => {
@@ -267,10 +248,7 @@ export async function generateEpub(bookData: BookData): Promise<Buffer> {
       effectiveFormat
     );
 
-    // For visual books, add "The End" to the last panel
-    if (isVisualBook && isLastChapter) {
-      content += theEndText;
-    }
+
 
     return {
       title: isComic ? `Panel ${chapter.number}` : chapter.title,
@@ -288,14 +266,7 @@ export async function generateEpub(bookData: BookData): Promise<Buffer> {
     ...chapterContents,
   ];
 
-  // For text books only, add a separate "The End" page
-  if (!isVisualBook) {
-    chapters.push({
-      title: 'The End',
-      content: createEndPage(fonts),
-      excludeFromToc: true,
-    });
-  }
+
 
   console.log(`Generating EPUB for ${bookData.title} (format: ${effectiveFormat}, chapters: ${chapters.length})`);
 
