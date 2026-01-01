@@ -1204,12 +1204,12 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
 
                 {/* Status Badge */}
                 <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium ${book.status === 'completed'
-                    ? 'bg-neutral-900 text-white'
-                    : book.status === 'failed'
-                      ? 'bg-red-50 text-red-700 border border-red-200'
-                      : isPending
-                        ? 'bg-neutral-100 text-neutral-600'
-                        : 'bg-neutral-100 text-neutral-700'
+                  ? 'bg-neutral-900 text-white'
+                  : book.status === 'failed'
+                    ? 'bg-red-50 text-red-700 border border-red-200'
+                    : isPending
+                      ? 'bg-neutral-100 text-neutral-600'
+                      : 'bg-neutral-100 text-neutral-700'
                   }`}>
                   {book.status === 'completed' && <Check className="h-4 w-4" />}
                   {isGenerating && <Loader2 className="h-4 w-4 animate-spin" />}
@@ -1449,8 +1449,8 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
                 </div>
               </div>
 
-              {/* Chapter Card Grid */}
-              {chapterStatuses.length > 0 && (
+              {/* Chapter Card Grid - Text Books Only */}
+              {!isIllustrated && chapterStatuses.length > 0 && (
                 <div className="mb-6">
                   <p className="text-xs uppercase tracking-wide text-neutral-400 mb-3">Chapter Progress</p>
                   <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 gap-2">
@@ -1458,12 +1458,12 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
                       <div
                         key={chapter.number}
                         className={`relative rounded-xl p-3 text-center transition-all ${chapter.status === 'done'
-                            ? 'bg-neutral-900 text-white'
-                            : chapter.status === 'generating'
-                              ? 'bg-neutral-100 border-2 border-neutral-900'
-                              : chapter.status === 'error'
-                                ? 'bg-red-50 border border-red-200'
-                                : 'bg-neutral-50 border border-neutral-200'
+                          ? 'bg-neutral-900 text-white'
+                          : chapter.status === 'generating'
+                            ? 'bg-neutral-100 border-2 border-neutral-900'
+                            : chapter.status === 'error'
+                              ? 'bg-red-50 border border-red-200'
+                              : 'bg-neutral-50 border border-neutral-200'
                           }`}
                       >
                         {/* Status Icon */}
@@ -1484,12 +1484,12 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
 
                         {/* Chapter Label */}
                         <p className={`text-xs font-medium truncate ${chapter.status === 'done'
-                            ? 'text-white'
-                            : chapter.status === 'generating'
-                              ? 'text-neutral-900'
-                              : chapter.status === 'error'
-                                ? 'text-red-700'
-                                : 'text-neutral-500'
+                          ? 'text-white'
+                          : chapter.status === 'generating'
+                            ? 'text-neutral-900'
+                            : chapter.status === 'error'
+                              ? 'text-red-700'
+                              : 'text-neutral-500'
                           }`}>
                           {chapter.status === 'generating'
                             ? 'Writing...'
@@ -1532,12 +1532,14 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
                 </div>
                 <div className="bg-neutral-50 rounded-xl p-4 text-center">
                   <p className="text-2xl font-bold text-neutral-900">
-                    {chapterStatuses.length > 0
-                      ? `${chapterStatuses.filter(c => c.status === 'done').length}/${chapterStatuses.length}`
-                      : book.chapters.length
+                    {isIllustrated
+                      ? (book.illustrations?.length || 0)
+                      : (chapterStatuses.length > 0
+                        ? `${chapterStatuses.filter(c => c.status === 'done').length}/${chapterStatuses.length}`
+                        : book.chapters.length)
                     }
                   </p>
-                  <p className="text-xs text-neutral-500">Chapters</p>
+                  <p className="text-xs text-neutral-500">{isIllustrated ? 'Generated Panels' : 'Chapters'}</p>
                 </div>
                 <div className="bg-neutral-50 rounded-xl p-4 text-center">
                   <p className="text-2xl font-bold text-neutral-900">~{Math.round(book.totalWords / 250)}</p>
@@ -1706,14 +1708,14 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
                   <div
                     key={chapter.id}
                     className={`flex items-center justify-between p-4 rounded-xl transition-all ${index === book.chapters.length - 1 && isGenerating
-                        ? 'bg-neutral-100 border border-neutral-300'
-                        : 'bg-neutral-50'
+                      ? 'bg-neutral-100 border border-neutral-300'
+                      : 'bg-neutral-50'
                       }`}
                   >
                     <div className="flex items-center gap-3">
                       <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${index === book.chapters.length - 1 && isGenerating
-                          ? 'bg-neutral-200 text-neutral-700'
-                          : 'bg-neutral-900 text-white'
+                        ? 'bg-neutral-200 text-neutral-700'
+                        : 'bg-neutral-900 text-white'
                         }`}>
                         {index === book.chapters.length - 1 && isGenerating ? (
                           <Loader2 className="h-4 w-4 animate-spin" />

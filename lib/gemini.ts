@@ -906,6 +906,35 @@ JSON format:
   };
 }
 
+// Helper to build prompt for speech bubbles
+export function buildSpeechBubblePrompt(dialogue: Array<{
+  speaker: string;
+  text: string;
+  position: string;
+  type?: string;
+}>): string {
+  if (!dialogue || dialogue.length === 0) return '';
+
+  let prompt = `\n\nSPEECH BUBBLES INSTRUCTION (CRITICAL):\nThis is a comic panel. You MUST include ${dialogue.length} speech bubbles in the image containing EXACTLY the following text:\n`;
+
+  dialogue.forEach((d, i) => {
+    prompt += `${i + 1}. Speaker: "${d.speaker}" (Location: ${d.position})\n   Text inside bubble: "${d.text}"\n`;
+  });
+
+  prompt += `\nRULES FOR TEXT:\n- The text must be LEGIBLE, CLEAR, and correctly spelled.\n- Place bubbles near the speaking characters but DO NOT cover their faces.\n- Use standard comic book lettering style.\n- Ensure high contrast between text and bubble background.\n`;
+
+  return prompt;
+}
+
+// Helper for picture book text (text at bottom)
+export function buildPictureBookTextPrompt(text: string): string {
+  if (!text) return '';
+
+  // For picture books, we usually want the text distinct or we let the client render it.
+  // But if we want it baked in (like a poster):
+  return `\n\nTEXT INTEGRATION:\nAt the bottom of the image, include the following story text in a clear, readable storybook font:\n"${text}"\n\nEnsure the text is legible against the background (use a text box or gradient if needed).`;
+}
+
 // Scene description for visual books
 export interface SceneDescription {
   location: string;

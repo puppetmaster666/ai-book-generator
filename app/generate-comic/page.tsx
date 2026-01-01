@@ -265,205 +265,143 @@ function GenerateComicContent() {
     }
   }, [panels]);
 
-  // Generate a single panel
-  const generatePanel = useCallback(async (panelIndex: number, signal?: AbortSignal) => {
-    if (!bookData || !panels[panelIndex]) return;
-
-    const panel = panels[panelIndex];
-
-    // Update status to generating
-    setPanels(prev => prev.map((p, i) =>
-      i === panelIndex ? { ...p, status: 'generating' as const } : p
-    ));
-
-    try {
-      const response = await fetch('/api/generate-panel', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          bookId: bookData.id,
-          panelNumber: panel.number,
-          scene: panel.scene,
-          dialogue: panel.dialogue,
-          artStyle: bookData.artStyle,
-          bookFormat: bookData.bookFormat,
-          characterVisualGuide: bookData.characterVisualGuide,
-          visualStyleGuide: bookData.visualStyleGuide,
-          chapterTitle: panel.title,
-          chapterText: panel.text,
-        }),
-        signal,
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to generate');
-      }
-
-      const result = await response.json();
-
-      setPanels(prev => prev.map((p, i) =>
-        i === panelIndex
-          ? { ...p, status: 'done' as const, imageUrl: result.imageUrl }
-          : p
-      ));
-    } catch (err) {
-      if (err instanceof Error && err.name === 'AbortError') {
-        // Request was cancelled
-        setPanels(prev => prev.map((p, i) =>
-          i === panelIndex
-            ? { ...p, status: 'pending' as const, error: undefined }
-            : p
-        ));
-        return;
-      }
-      const errorMsg = err instanceof Error ? err.message : 'Unknown error';
-      setPanels(prev => prev.map((p, i) =>
-        i === panelIndex
-          ? { ...p, status: 'error' as const, error: errorMsg }
-          : p
-      ));
-    }
-  }, [bookData, panels]);
-
-  // Generate panels SEQUENTIALLY to avoid rate limits
-  // Each image takes ~15 seconds, so this naturally stays under 20 RPM
-  const generateAllPanels = useCallback(async () => {
-    if (!bookData || panels.length === 0) return;
-
-    // Create new AbortController
-    abortControllerRef.current = new AbortController();
-    const signal = abortControllerRef.current.signal;
+  // Background generation trigger
+  const startBackgroundGeneration = useCallback(async () => {
+    if (!bookId || isGenerating) return;
 
     setIsGenerating(true);
     setError('');
 
-    // Generate panels one at a time to stay under rate limits
-    for (let i = 0; i < panels.length; i++) {
-      // Check if cancelled
-      if (signal.aborted) break;
+    try {
+      // Trigger background generation
+      const res = await fetch(`/api/books/${bookId}/generate-visual`, {
+        method: 'POST',
+      });
 
-      // Skip already completed panels
-      if (panels[i].status === 'done') continue;
-
-      // Generate this panel
-      await generatePanel(i, signal);
-
-      // Small delay between requests (2 seconds) to be safe with rate limits
-      if (i < panels.length - 1 && !signal.aborted) {
-        await new Promise(resolve => setTimeout(resolve, 2000));
+      if (!res.ok) {
+        throw new Error('Failed to start generation');
       }
-    }
 
-    if (!signal.aborted) {
+      // We don't await the whole process, just the kickoff.
+      // Now we poll.
+    } catch (err) {
+      console.error('Failed to start background generation:', err);
+      setError('Failed to start generation process. Please try again.');
       setIsGenerating(false);
     }
-  }, [bookData, panels, generatePanel]);
+  }, [bookId, isGenerating]);
+
+  // Polling for progress
+  useEffect(() => {
+    let pollInterval: NodeJS.Timeout;
+
+    if (bookId && (isGenerating || (panels.length > 0 && !allComplete))) {
+      pollInterval = setInterval(async () => {
+        try {
+          const res = await fetch(`/api/books/${bookId}`);
+          if (!res.ok) return;
+
+          const data = await res.json();
+          const book = data.book;
+
+          if (book.status === 'completed') {
+            setAllComplete(true);
+            setIsGenerating(false);
+            clearInterval(pollInterval);
+            router.replace(`/book/${bookId}`);
+            return;
+          }
+
+          // Update panels from DB illustrations
+          if (book.illustrations) {
+            const illustrationMap = new Map<number, any>();
+            book.illustrations.forEach((ill: any) => {
+              // Use position as the key source of truth
+              illustrationMap.set(ill.position || ill.chapterNumber || ill.pageNumber, ill);
+            });
+
+            setPanels(prev => prev.map(p => {
+              const ill = illustrationMap.get(p.number);
+              if (ill) {
+                return { ...p, status: 'done', imageUrl: ill.imageUrl };
+              }
+              return p;
+            }));
+
+            // Check if we are done based on book status or counts
+            const doneCount = book.illustrations.length;
+            const targetCount = Math.min(book.outline?.chapters?.length || 0, 24); // Cap at 24/20
+
+            if (doneCount >= targetCount && targetCount > 0) {
+              // Trigger assembly if not already triggering
+              if (!isAssembling) {
+                assembleBook();
+              }
+            }
+          }
+
+        } catch (e) {
+          console.error('Polling error:', e);
+        }
+      }, 3000);
+    }
+
+    return () => clearInterval(pollInterval);
+  }, [bookId, isGenerating, panels.length, allComplete, isAssembling, router]);
+
+  // Generate all panels (Now just starts the background process)
+  const generateAllPanels = startBackgroundGeneration;
 
   // Cancel generation
   const cancelGeneration = useCallback(async () => {
     setIsCancelling(true);
-
-    // Abort all pending requests
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-    }
-
-    // Reset all generating panels to pending
-    setPanels(prev => prev.map(p =>
-      p.status === 'generating' ? { ...p, status: 'pending' as const } : p
-    ));
+    // For background process, we can't easily "cancel" the running server request without an API.
+    // We'll just stop polling and redirect user home.
+    // Ideally we'd have a cancel endpoint.
 
     setIsGenerating(false);
     setIsCancelling(false);
 
-    // Ask if user wants to delete the book
-    if (confirm('Do you want to delete this book and go back home?')) {
-      try {
-        await fetch(`/api/books/${bookId}`, { method: 'DELETE' });
-      } catch (e) {
-        console.error('Failed to delete book:', e);
-      }
-      router.push('/');
+    if (confirm('Generation will continue in the background. Do you want to go to the book page to verify later?')) {
+      router.push(`/book/${bookId}`);
     }
   }, [bookId, router]);
 
-  // Emergency stop for admins - marks book as completed immediately
+  // Emergency stop for admins
   const emergencyStop = useCallback(async () => {
-    if (!confirm('ADMIN: Force mark this book as completed? This will stop all generation.')) {
+    if (!confirm('ADMIN: Force mark this book as completed?')) {
       return;
     }
-
-    setIsEmergencyStopping(true);
-
-    // Abort all pending requests
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-    }
-
+    // ... same as before ...
     try {
-      // Call API to mark book as completed
       const response = await fetch(`/api/books/${bookId}/emergency-stop`, {
         method: 'POST',
       });
-
       if (response.ok) {
         router.replace(`/book/${bookId}`);
-      } else {
-        setError('Failed to stop generation');
-        setIsEmergencyStopping(false);
       }
     } catch (err) {
-      console.error('Emergency stop failed:', err);
-      setError('Failed to stop generation');
-      setIsEmergencyStopping(false);
+      console.error(err);
     }
   }, [bookId, router]);
 
-  // Retry a failed panel
-  const retryPanel = useCallback((index: number) => {
-    generatePanel(index);
-  }, [generatePanel]);
-
-  // Retry all failed panels (sequentially to avoid rate limits)
-  const retryAllFailed = useCallback(async () => {
-    const failedIndices = panels
-      .map((p, i) => p.status === 'error' ? i : -1)
-      .filter(i => i !== -1);
-
-    setIsGenerating(true);
-    for (const index of failedIndices) {
-      await generatePanel(index);
-      // Small delay between retries
-      if (index !== failedIndices[failedIndices.length - 1]) {
-        await new Promise(resolve => setTimeout(resolve, 2000));
-      }
-    }
-    setIsGenerating(false);
-  }, [panels, generatePanel]);
 
   // Assemble the book when all panels are complete
   const assembleBook = async () => {
-    if (!bookId) return;
+    if (!bookId || isAssembling) return;
 
     setIsAssembling(true);
-    setError('');
 
     try {
       const response = await fetch(`/api/books/${bookId}/assemble`, {
         method: 'POST',
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to assemble book');
-      }
-
-      // Redirect to book page (which shows completed state)
+      if (!response.ok) throw new Error('Failed to assemble');
       router.push(`/book/${bookId}`);
     } catch (err) {
       console.error('Error assembling book:', err);
-      setError(err instanceof Error ? err.message : 'Failed to assemble book');
+      // Don't show error to user if it's just a timing issue, stick to polling
       setIsAssembling(false);
     }
   };
@@ -471,8 +409,20 @@ function GenerateComicContent() {
   // Calculate progress
   const doneCount = panels.filter(p => p.status === 'done').length;
   const errorCount = panels.filter(p => p.status === 'error').length;
+  // If we are generating in background, we consider non-done/non-error as generating implicitly for the progress bar
+  // But strictly, panels remain 'pending' in state until 'done'.
+  // We can treat all pending as generating if isGenerating is true for the UI.
   const pendingCount = panels.filter(p => p.status === 'pending').length;
-  const generatingCount = panels.filter(p => p.status === 'generating').length;
+  const generatingCount = isGenerating ? pendingCount : 0;
+
+  // retryPanel matches signature (index: number) -> void
+  const retryPanel = useCallback((_index: number) => {
+    startBackgroundGeneration();
+  }, [startBackgroundGeneration]);
+
+  // retryAllFailed matches signature () -> void
+  const retryAllFailed = startBackgroundGeneration;
+
 
   if (isLoading) {
     return (
@@ -541,7 +491,7 @@ function GenerateComicContent() {
               {bookData?.title || 'Generate Illustrated Book'}
             </h1>
             <p className="text-neutral-600">
-              {panels.length} {bookData?.dialogueStyle === 'bubbles' ? 'panels' : 'pages'} • {bookData?.artStyle} style
+              {panels.length} {bookData?.dialogueStyle === 'bubbles' ? 'panels' : 'panels'} • {bookData?.artStyle} style
             </p>
           </div>
 
@@ -549,7 +499,7 @@ function GenerateComicContent() {
           <div className="mb-8 bg-white rounded-2xl p-6 border border-neutral-200">
             <div className="flex items-center justify-between text-sm text-neutral-600 mb-2">
               <span>Progress</span>
-              <span>{doneCount} / {panels.length} {bookData?.dialogueStyle === 'bubbles' ? 'panels' : 'pages'} complete</span>
+              <span>{doneCount} / {panels.length} {bookData?.dialogueStyle === 'bubbles' ? 'panels' : 'panels'} complete</span>
             </div>
             <div className="h-3 bg-neutral-200 rounded-full overflow-hidden">
               <div
@@ -577,7 +527,7 @@ function GenerateComicContent() {
                 disabled={isGenerating}
                 className="flex items-center gap-2 px-8 py-4 bg-neutral-900 text-white rounded-full hover:bg-neutral-800 disabled:opacity-50 font-medium transition-all"
               >
-                Generate All {panels.length} {bookData?.dialogueStyle === 'bubbles' ? 'Panels' : 'Pages'}
+                Generate All {panels.length} {bookData?.dialogueStyle === 'bubbles' ? 'Panels' : 'Panels'}
               </button>
             )}
 
