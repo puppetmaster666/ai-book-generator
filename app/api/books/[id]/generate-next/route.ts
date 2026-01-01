@@ -180,21 +180,14 @@ export async function POST(
     const wordCount = countWords(chapterContent);
     totalWords += wordCount;
 
-    // Run summary and character state updates in PARALLEL to save time
-    // Each has graceful fallback if it fails or times out
-    const [summaryResult, characterStatesResult] = await Promise.allSettled([
-      summarizeChapter(chapterContent),
+    // Run character state update (summary DISABLED - causes 90s timeout waste)
+    // Gemini API is consistently timing out on summarization tasks
+    const [characterStatesResult] = await Promise.allSettled([
       updateCharacterStates(characterStates, chapterContent, nextChapterNum),
     ]);
 
-    // Extract summary with fallback
-    let summary: string;
-    if (summaryResult.status === 'fulfilled') {
-      summary = summaryResult.value;
-    } else {
-      console.error(`Failed to summarize chapter ${nextChapterNum}:`, summaryResult.reason);
-      summary = chapterContent.substring(0, 500) + '...';
-    }
+    // Use truncated content as summary instead of AI-generated
+    const summary = chapterContent.substring(0, 500) + '...';
 
     // Extract character states with fallback
     if (characterStatesResult.status === 'fulfilled') {

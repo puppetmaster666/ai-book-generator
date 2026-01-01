@@ -394,8 +394,6 @@ let _geminiImage: GenerativeModel | null = null;
 let _currentKeyIndex = 0;
 // Track which key last succeeded - this persists across requests in the same serverless instance
 let _lastWorkingKeyIndex = 0;
-// Timestamp of when the last key was marked as working (for potential reset after long periods)
-let _lastWorkingKeyTimestamp = 0;
 
 // Environment variable names for keys in order of preference
 const API_KEY_ENV_NAMES = [
@@ -407,7 +405,6 @@ const API_KEY_ENV_NAMES = [
 // Mark the current key as working - call this after a successful API call
 export function markKeyAsWorking(): void {
   _lastWorkingKeyIndex = _currentKeyIndex;
-  _lastWorkingKeyTimestamp = Date.now();
   console.log(`[Gemini] Marked key ${_currentKeyIndex} as last working key`);
 }
 
@@ -424,18 +421,8 @@ export function getCurrentKeyIndex(): number {
 // Switch to the last known working key (if different from current)
 // Returns true if switched, false if already on that key or key unavailable
 export function switchToLastWorkingKey(): boolean {
-  // If last working key is old (>5 minutes), don't trust it - try primary first
-  const MAX_AGE_MS = 5 * 60 * 1000;
-  if (Date.now() - _lastWorkingKeyTimestamp > MAX_AGE_MS) {
-    // Reset to primary if available
-    if (_currentKeyIndex !== 0 && process.env.GEMINI_API_KEY) {
-      console.log('[Gemini] Last working key is stale, switching to primary');
-      _currentKeyIndex = 0;
-      resetModelInstances();
-      return true;
-    }
-    return false;
-  }
+  // Always trust the last working key - no time limit
+  // Once a key works, stick with it until it fails
 
   if (_currentKeyIndex === _lastWorkingKeyIndex) {
     return false;
