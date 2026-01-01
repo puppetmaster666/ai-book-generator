@@ -1648,191 +1648,193 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
                   </div>
                 </div>
               )}
-
-              {/* Completed Section */}
-              {book.status === 'completed' && (
-                <div className="bg-white rounded-2xl border border-neutral-200 p-6 sm:p-8 mb-6">
-                  <div className="text-center mb-6">
-                    <div className="w-16 h-16 bg-neutral-900 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <Check className="h-8 w-8 text-white" />
-                    </div>
-                    <h2 className="text-2xl font-bold text-neutral-900 mb-2">Your Book is Ready!</h2>
-                    <p className="text-neutral-600">Download your masterpiece below</p>
-                  </div>
-
-                  {/* Stats - different for text vs illustrated books */}
-                  {isIllustrated ? (
-                    <div className="grid grid-cols-2 gap-4 mb-6">
-                      <div className="bg-neutral-50 rounded-xl p-4 text-center border border-neutral-100">
-                        <p className="text-2xl font-bold text-neutral-900">{book.illustrations?.length || book.totalChapters}</p>
-                        <p className="text-sm text-neutral-600">{isVisualBook ? 'Panels' : 'Pages'}</p>
-                      </div>
-                      <div className="bg-neutral-50 rounded-xl p-4 text-center border border-neutral-100">
-                        <p className="text-2xl font-bold text-neutral-900 capitalize">{book.artStyle?.replace(/_/g, ' ') || 'Custom'}</p>
-                        <p className="text-sm text-neutral-600">Art Style</p>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-3 gap-4 mb-6">
-                      <div className="bg-neutral-50 rounded-xl p-4 text-center border border-neutral-100">
-                        <p className="text-2xl font-bold text-neutral-900">{book.totalChapters}</p>
-                        <p className="text-sm text-neutral-600">Chapters</p>
-                      </div>
-                      <div className="bg-neutral-50 rounded-xl p-4 text-center border border-neutral-100">
-                        <p className="text-2xl font-bold text-neutral-900">{book.totalWords.toLocaleString()}</p>
-                        <p className="text-sm text-neutral-600">Words</p>
-                      </div>
-                      <div className="bg-neutral-50 rounded-xl p-4 text-center border border-neutral-100">
-                        <p className="text-2xl font-bold text-neutral-900">~{Math.round(book.totalWords / 250)}</p>
-                        <p className="text-sm text-neutral-600">Pages</p>
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="space-y-3">
-                    <button
-                      onClick={handleDownload}
-                      className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-neutral-900 text-white rounded-xl hover:bg-black font-medium transition-colors"
-                    >
-                      <Download className="h-5 w-5" /> Download {isIllustrated ? 'PDF' : 'EPUB'}
-                    </button>
-
-                    {/* TXT download for easy copy-paste - only for text books */}
-                    {!isIllustrated && (
-                      <button
-                        onClick={handleTxtDownload}
-                        className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-white text-neutral-900 border border-neutral-200 rounded-xl hover:bg-neutral-50 font-medium transition-colors"
-                      >
-                        <FileText className="h-5 w-5" /> Download TXT (for copy-paste)
-                      </button>
-                    )}
-
-                    {book.coverImageUrl && (
-                      <button
-                        onClick={handleCoverDownload}
-                        className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-white text-neutral-900 border border-neutral-200 rounded-xl hover:bg-neutral-50 font-medium transition-colors"
-                      >
-                        <ImageIcon className="h-5 w-5" /> Download Cover Image
-                      </button>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* Chapters List - only show for text books, not visual books */}
-              {!isIllustrated && book.chapters.length > 0 && (
-                <div className="bg-white rounded-2xl border border-neutral-200 p-6 sm:p-8 mb-6">
-                  <h2 className="text-lg font-semibold text-neutral-900 mb-4">
-                    Chapters {isGenerating && <span className="text-sm font-normal text-neutral-500">(updating live)</span>}
-                  </h2>
-                  <div className="space-y-2">
-                    {book.chapters.map((chapter, index) => (
-                      <div
-                        key={chapter.id}
-                        className={`flex items-center justify-between p-4 rounded-xl transition-all ${index === book.chapters.length - 1 && isGenerating
-                          ? 'bg-neutral-100 border border-neutral-300'
-                          : 'bg-neutral-50'
-                          }`}
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${index === book.chapters.length - 1 && isGenerating
-                            ? 'bg-neutral-200 text-neutral-700'
-                            : 'bg-neutral-900 text-white'
-                            }`}>
-                            {index === book.chapters.length - 1 && isGenerating ? (
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                            ) : (
-                              <Check className="h-4 w-4" />
-                            )}
-                          </div>
-                          <div>
-                            <p className="font-medium text-neutral-900">
-                              Chapter {chapter.number}: {chapter.title}
-                            </p>
-                            <p className="text-sm text-neutral-500">
-                              {chapter.wordCount.toLocaleString()} words
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Illustration Gallery - Illustrated Books (show even if not completed, for admin viewing) */}
-              {!isGenerating && isIllustrated && book.illustrations && book.illustrations.length > 0 && (
-                <div className="bg-white rounded-2xl border border-neutral-200 p-6 sm:p-8 mb-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-lg font-semibold text-neutral-900 flex items-center gap-2">
-                      <Palette className="h-5 w-5 text-neutral-600" />
-                      Illustrations
-                    </h2>
-                    <span className="text-sm text-neutral-500">{book.illustrations.length} images</span>
-                  </div>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                    {book.illustrations.map((illustration, index) => (
-                      <div
-                        key={illustration.id}
-                        className="aspect-square rounded-xl overflow-hidden bg-neutral-100 border border-neutral-200 hover:border-neutral-400 transition-colors cursor-pointer group"
-                        onClick={() => router.push(`/book/${id}/image/${illustration.id}`)}
-                      >
-                        <img
-                          src={illustration.imageUrl}
-                          alt={illustration.altText || `Illustration ${index + 1}`}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                        />
-                      </div>
-                    ))}
-                  </div>
-                  <p className="text-xs text-neutral-400 mt-3 text-center">Click any image to view full size</p>
-                </div>
-              )}
-
-              {/* Save Your Work Section - show when book is completed and user is NOT logged in */}
-              {book.status === 'completed' && !session && (
-                <div className="bg-gradient-to-br from-neutral-900 to-neutral-800 rounded-2xl p-6 sm:p-8 text-white">
-                  <div className="text-center mb-6">
-                    <div className="w-16 h-16 bg-white/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <Save className="h-8 w-8" />
-                    </div>
-                    <h2 className="text-xl font-bold mb-2">Save Your Book</h2>
-                    <p className="text-neutral-300 text-sm">
-                      Create a free account to save &quot;{book.title}&quot; to your library and access it anytime.
-                    </p>
-                  </div>
-
-                  <div className="space-y-3">
-                    <Link
-                      href={`/signup?bookId=${id}&callbackUrl=/book/${id}`}
-                      className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-white text-neutral-900 rounded-xl hover:bg-neutral-100 font-medium transition-colors"
-                    >
-                      <Mail className="h-5 w-5" /> Sign up with Email
-                    </Link>
-
-                    <Link
-                      href={`/api/auth/signin/google?callbackUrl=/book/${id}?claimBook=true`}
-                      className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-white/10 text-white rounded-xl hover:bg-white/20 font-medium transition-colors border border-white/20"
-                    >
-                      <svg className="h-5 w-5" viewBox="0 0 24 24">
-                        <path fill="#fff" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
-                        <path fill="#fff" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-                        <path fill="#fff" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
-                        <path fill="#fff" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
-                      </svg>
-                      Continue with Google
-                    </Link>
-                  </div>
-
-                  <p className="text-center text-sm text-neutral-400 mt-4">
-                    Already have an account?{' '}
-                    <Link href={`/login?bookId=${id}&callbackUrl=/book/${id}`} className="text-white underline hover:no-underline">
-                      Log in to save
-                    </Link>
-                  </p>
-                </div>
-              )}
             </div>
+          )}
+
+          {/* Completed Section */}
+          {book.status === 'completed' && (
+            <div className="bg-white rounded-2xl border border-neutral-200 p-6 sm:p-8 mb-6">
+              <div className="text-center mb-6">
+                <div className="w-16 h-16 bg-neutral-900 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Check className="h-8 w-8 text-white" />
+                </div>
+                <h2 className="text-2xl font-bold text-neutral-900 mb-2">Your Book is Ready!</h2>
+                <p className="text-neutral-600">Download your masterpiece below</p>
+              </div>
+
+              {/* Stats - different for text vs illustrated books */}
+              {isIllustrated ? (
+                <div className="grid grid-cols-2 gap-4 mb-6">
+                  <div className="bg-neutral-50 rounded-xl p-4 text-center border border-neutral-100">
+                    <p className="text-2xl font-bold text-neutral-900">{book.illustrations?.length || book.totalChapters}</p>
+                    <p className="text-sm text-neutral-600">{isVisualBook ? 'Panels' : 'Pages'}</p>
+                  </div>
+                  <div className="bg-neutral-50 rounded-xl p-4 text-center border border-neutral-100">
+                    <p className="text-2xl font-bold text-neutral-900 capitalize">{book.artStyle?.replace(/_/g, ' ') || 'Custom'}</p>
+                    <p className="text-sm text-neutral-600">Art Style</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-3 gap-4 mb-6">
+                  <div className="bg-neutral-50 rounded-xl p-4 text-center border border-neutral-100">
+                    <p className="text-2xl font-bold text-neutral-900">{book.totalChapters}</p>
+                    <p className="text-sm text-neutral-600">Chapters</p>
+                  </div>
+                  <div className="bg-neutral-50 rounded-xl p-4 text-center border border-neutral-100">
+                    <p className="text-2xl font-bold text-neutral-900">{book.totalWords.toLocaleString()}</p>
+                    <p className="text-sm text-neutral-600">Words</p>
+                  </div>
+                  <div className="bg-neutral-50 rounded-xl p-4 text-center border border-neutral-100">
+                    <p className="text-2xl font-bold text-neutral-900">~{Math.round(book.totalWords / 250)}</p>
+                    <p className="text-sm text-neutral-600">Pages</p>
+                  </div>
+                </div>
+              )}
+
+              <div className="space-y-3">
+                <button
+                  onClick={handleDownload}
+                  className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-neutral-900 text-white rounded-xl hover:bg-black font-medium transition-colors"
+                >
+                  <Download className="h-5 w-5" /> Download {isIllustrated ? 'PDF' : 'EPUB'}
+                </button>
+
+                {/* TXT download for easy copy-paste - only for text books */}
+                {!isIllustrated && (
+                  <button
+                    onClick={handleTxtDownload}
+                    className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-white text-neutral-900 border border-neutral-200 rounded-xl hover:bg-neutral-50 font-medium transition-colors"
+                  >
+                    <FileText className="h-5 w-5" /> Download TXT (for copy-paste)
+                  </button>
+                )}
+
+                {book.coverImageUrl && (
+                  <button
+                    onClick={handleCoverDownload}
+                    className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-white text-neutral-900 border border-neutral-200 rounded-xl hover:bg-neutral-50 font-medium transition-colors"
+                  >
+                    <ImageIcon className="h-5 w-5" /> Download Cover Image
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Chapters List - only show for text books, not visual books */}
+          {!isIllustrated && book.chapters.length > 0 && (
+            <div className="bg-white rounded-2xl border border-neutral-200 p-6 sm:p-8 mb-6">
+              <h2 className="text-lg font-semibold text-neutral-900 mb-4">
+                Chapters {isGenerating && <span className="text-sm font-normal text-neutral-500">(updating live)</span>}
+              </h2>
+              <div className="space-y-2">
+                {book.chapters.map((chapter, index) => (
+                  <div
+                    key={chapter.id}
+                    className={`flex items-center justify-between p-4 rounded-xl transition-all ${index === book.chapters.length - 1 && isGenerating
+                      ? 'bg-neutral-100 border border-neutral-300'
+                      : 'bg-neutral-50'
+                      }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${index === book.chapters.length - 1 && isGenerating
+                        ? 'bg-neutral-200 text-neutral-700'
+                        : 'bg-neutral-900 text-white'
+                        }`}>
+                        {index === book.chapters.length - 1 && isGenerating ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Check className="h-4 w-4" />
+                        )}
+                      </div>
+                      <div>
+                        <p className="font-medium text-neutral-900">
+                          Chapter {chapter.number}: {chapter.title}
+                        </p>
+                        <p className="text-sm text-neutral-500">
+                          {chapter.wordCount.toLocaleString()} words
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Illustration Gallery - Illustrated Books (show even if not completed, for admin viewing) */}
+          {!isGenerating && isIllustrated && book.illustrations && book.illustrations.length > 0 && (
+            <div className="bg-white rounded-2xl border border-neutral-200 p-6 sm:p-8 mb-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold text-neutral-900 flex items-center gap-2">
+                  <Palette className="h-5 w-5 text-neutral-600" />
+                  Illustrations
+                </h2>
+                <span className="text-sm text-neutral-500">{book.illustrations.length} images</span>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                {book.illustrations.map((illustration, index) => (
+                  <div
+                    key={illustration.id}
+                    className="aspect-square rounded-xl overflow-hidden bg-neutral-100 border border-neutral-200 hover:border-neutral-400 transition-colors cursor-pointer group"
+                    onClick={() => router.push(`/book/${id}/image/${illustration.id}`)}
+                  >
+                    <img
+                      src={illustration.imageUrl}
+                      alt={illustration.altText || `Illustration ${index + 1}`}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    />
+                  </div>
+                ))}
+              </div>
+              <p className="text-xs text-neutral-400 mt-3 text-center">Click any image to view full size</p>
+            </div>
+          )}
+
+          {/* Save Your Work Section - show when book is completed and user is NOT logged in */}
+          {book.status === 'completed' && !session && (
+            <div className="bg-gradient-to-br from-neutral-900 to-neutral-800 rounded-2xl p-6 sm:p-8 text-white">
+              <div className="text-center mb-6">
+                <div className="w-16 h-16 bg-white/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Save className="h-8 w-8" />
+                </div>
+                <h2 className="text-xl font-bold mb-2">Save Your Book</h2>
+                <p className="text-neutral-300 text-sm">
+                  Create a free account to save &quot;{book.title}&quot; to your library and access it anytime.
+                </p>
+              </div>
+
+              <div className="space-y-3">
+                <Link
+                  href={`/signup?bookId=${id}&callbackUrl=/book/${id}`}
+                  className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-white text-neutral-900 rounded-xl hover:bg-neutral-100 font-medium transition-colors"
+                >
+                  <Mail className="h-5 w-5" /> Sign up with Email
+                </Link>
+
+                <Link
+                  href={`/api/auth/signin/google?callbackUrl=/book/${id}?claimBook=true`}
+                  className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-white/10 text-white rounded-xl hover:bg-white/20 font-medium transition-colors border border-white/20"
+                >
+                  <svg className="h-5 w-5" viewBox="0 0 24 24">
+                    <path fill="#fff" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                    <path fill="#fff" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                    <path fill="#fff" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
+                    <path fill="#fff" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
+                  </svg>
+                  Continue with Google
+                </Link>
+              </div>
+
+              <p className="text-center text-sm text-neutral-400 mt-4">
+                Already have an account?{' '}
+                <Link href={`/login?bookId=${id}&callbackUrl=/book/${id}`} className="text-white underline hover:no-underline">
+                  Log in to save
+                </Link>
+              </p>
+            </div>
+          )}
+        </div>
 
       </main>
     </div>
