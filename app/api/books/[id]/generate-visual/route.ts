@@ -247,7 +247,7 @@ export async function POST(
         const finalCount = await prisma.illustration.count({ where: { bookId: id } });
         if (finalCount >= Math.min(targetChapters.length, maxIllustrations)) {
             // Assemble
-            const assembleUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'} / api / books / ${id} / assemble`;
+            const assembleUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/books/${id}/assemble`;
             await fetch(assembleUrl, { method: 'POST' });
             return NextResponse.json({ success: true, status: 'completed' });
         }
