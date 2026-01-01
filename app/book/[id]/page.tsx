@@ -144,6 +144,7 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
   const [generationStarted, setGenerationStarted] = useState(false);
   const [elapsedTime, setElapsedTime] = useState(0);
   const [retrying, setRetrying] = useState(false);
+  const [retryElapsed, setRetryElapsed] = useState(0);
   const [bookClaimed, setBookClaimed] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -659,6 +660,17 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
     return () => clearInterval(interval);
   }, [id, book?.status, retrying, serverStartTime, deleted]);
 
+  // Track retry button elapsed time
+  useEffect(() => {
+    if (!retrying) {
+      return;
+    }
+    const interval = setInterval(() => {
+      setRetryElapsed(prev => prev + 1);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [retrying]);
+
   // Show first book discount popup
   // Only show to the actual book owner, not admins viewing
   useEffect(() => {
@@ -704,6 +716,7 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
     if (!book || retrying) return;
 
     setRetrying(true);
+    setRetryElapsed(0);
     startTimeRef.current = Date.now();
     setElapsedTime(0);
     orchestrationRef.current = false; // Reset orchestration state
@@ -1322,7 +1335,7 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
                   {retrying ? (
                     <>
                       <Loader2 className="h-5 w-5 animate-spin" />
-                      Resuming...
+                      Resuming... {retryElapsed > 0 && <span className="font-mono text-sm opacity-75">({retryElapsed}s)</span>}
                     </>
                   ) : (
                     <>

@@ -196,6 +196,28 @@ function isJSONTruncated(response: string): boolean {
   return inString || braceCount !== 0 || bracketCount !== 0;
 }
 
+// Recursively clean en/em dashes from all string values in an object
+function cleanDashesFromObject(obj: unknown): unknown {
+  if (typeof obj === 'string') {
+    // Replace en dash (–), em dash (—), and spaced hyphens with comma or appropriate punctuation
+    return obj
+      .replace(/\s*[–—]\s*/g, ', ')
+      .replace(/\s+-\s+/g, ', ')
+      .trim();
+  }
+  if (Array.isArray(obj)) {
+    return obj.map(cleanDashesFromObject);
+  }
+  if (obj !== null && typeof obj === 'object') {
+    const cleaned: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(obj)) {
+      cleaned[key] = cleanDashesFromObject(value);
+    }
+    return cleaned;
+  }
+  return obj;
+}
+
 function parseJSONFromResponse(response: string): object {
   console.log('Raw LLM response length:', response.length);
   console.log('Raw LLM response start:', response.substring(0, 300));
@@ -229,12 +251,14 @@ function parseJSONFromResponse(response: string): object {
     .replace(/,(\s*[}\]])/g, '$1');
 
   try {
-    return JSON.parse(cleaned);
+    const parsed = JSON.parse(cleaned);
+    return cleanDashesFromObject(parsed) as object;
   } catch (e) {
     // Try with newline cleanup
     cleaned = cleaned.replace(/[\r\n]+/g, ' ').replace(/\s+/g, ' ');
     try {
-      return JSON.parse(cleaned);
+      const parsed = JSON.parse(cleaned);
+      return cleanDashesFromObject(parsed) as object;
     } catch (e2) {
       console.error('JSON parse failed. Cleaned:', cleaned.substring(0, 1500));
       throw e2;
@@ -631,18 +655,19 @@ VARIETY IS ESSENTIAL - Create something fresh and different:
     case 'adult_comic':
       categoryInstruction = `Generate a ${randomGenre} adult comic or graphic novel idea for mature readers (18+). Create a story with intense romantic tension, dangerous situations, and complex characters who are drawn to each other despite obstacles.
 
-MATURE CONTENT GUIDELINES:
-- Focus on tension, chemistry, and emotional intensity rather than explicit content
-- Include morally complex characters with dark pasts and conflicting desires
-- Create high stakes situations where the romance heightens the danger
-- Suggestive and sensual but not explicit or graphic
-- The attraction should feel earned through character interaction and chemistry
+ADULT CONTENT - BE EDGY:
+- Include profanity, crude humor, and adult dialogue naturally
+- Morally complex characters with dark pasts, addictions, vendettas, or dangerous desires
+- Intense physical attraction and sexual tension that builds throughout
+- Violence, blood, and high-stakes danger - people get hurt or killed
+- No sanitizing or softening - this is for ADULTS who want ADULT content
+- Characters can be crude, cynical, manipulative, or morally gray
 
 VARIETY IS ESSENTIAL:
-- Use diverse character archetypes: assassins, supernatural beings, spies, criminals, fallen angels, etc.
-- Different settings: noir cities, supernatural underworlds, space ships, historical periods, cyberpunk futures
-- Power dynamics: rivals, enemies, captor and captive, forbidden relationships, dangerous alliances
-- Visual drama that would look stunning in illustrated panels`;
+- Character types: assassins, hitmen, mob bosses, corrupt cops, fallen angels, demons, vampires, etc.
+- Settings: noir cities, criminal underworlds, supernatural realms, cyberpunk dystopias, war zones
+- Power dynamics: rivals, enemies, captor and captive, forbidden affairs, dangerous obsessions
+- Visual drama: blood, shadows, intimate moments, violent confrontations`;
       break;
   }
 
@@ -657,10 +682,10 @@ IMPORTANT RULES:
 - Make every sentence add new compelling information
 
 MAXIMIZE VARIETY - Each generation should feel fresh:
-- Use diverse character names from different cultures (Korean, Nigerian, Brazilian, Polish, Indian, etc.)
 - Vary protagonist ages, backgrounds, and personalities
 - For visual stories: create distinct character designs that would look unique when illustrated
 - The goal is that if someone generates 10 ideas, all 10 should feel completely different from each other
+- Match character names to the story's setting and genre (Japanese names for manga, French names for European settings, etc.)
 
 Example of the quality and length expected (but create something COMPLETELY DIFFERENT):
 "${randomExamples[0]}"
@@ -2099,9 +2124,9 @@ ${data.characters.map(c => `- ${c.name}: ${c.description}`).join('\n')}
 DESIGN PRINCIPLES - Create distinctive, memorable characters:
 - Give each character a UNIQUE silhouette that's instantly recognizable
 - Vary body types, heights, and builds realistically
-- Use diverse ethnicities and features that match the character names/backgrounds
-- Avoid generic "anime protagonist" looks - make each character feel specific
-- Clothing should reflect personality, not just be generic outfits
+- Match character ethnicity and features to the SETTING and GENRE (Japanese characters for manga set in Japan, French characters for European settings, etc.)
+- For anime/manga: use classic anime aesthetics appropriate to the genre (shounen, shoujo, seinen, 80s/90s City Hunter style, modern isekai, etc.)
+- Clothing should reflect personality, era, and setting - not generic outfits
 - If a character has powers, show it through subtle visual cues (not just glowing marks)
 
 Create EXTREMELY DETAILED visual descriptions for each character that an illustrator can follow consistently across ALL illustrations. These must be specific enough that the character is INSTANTLY recognizable in every single image.
