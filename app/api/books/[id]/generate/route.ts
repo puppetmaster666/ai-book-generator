@@ -50,8 +50,8 @@ function buildSpeechBubblePrompt(dialogue: DialogueBubble[]): string {
 
   const bubbleInstructions = dialogue.map((d, i) => {
     const bubbleType = d.type === 'thought' ? 'thought bubble (cloud-shaped)' :
-                       d.type === 'shout' ? 'jagged/spiky speech bubble' :
-                       'speech bubble';
+      d.type === 'shout' ? 'jagged/spiky speech bubble' :
+        'speech bubble';
     const position = d.position.replace('-', ' '); // "top-left" -> "top left"
 
     return `Speech Bubble ${i + 1}: Draw a ${bubbleType} in the ${position} area of the image. Inside the bubble, write the text: "${d.text}" (spoken by ${d.speaker})`;
@@ -642,16 +642,18 @@ export async function POST(
     console.log(`Book ${id}: format=${bookFormat}, preset=${book.bookPreset}, useVisualFlow=${useVisualFlow}, dialogueStyle=${dialogueStyle}`);
 
     // Step 1: Generate outline if not exists
-    let outline = book.outline as { chapters: Array<{
-      number: number;
-      title: string;
-      summary: string;
-      pov?: string;
-      targetWords: number;
-      text?: string;
-      dialogue?: DialogueEntry[];
-      scene?: SceneDescription;
-    }> } | null;
+    let outline = book.outline as {
+      chapters: Array<{
+        number: number;
+        title: string;
+        summary: string;
+        pov?: string;
+        targetWords: number;
+        text?: string;
+        dialogue?: DialogueEntry[];
+        scene?: SceneDescription;
+      }>
+    } | null;
 
     if (!outline) {
       if (useVisualFlow && dialogueStyle) {
@@ -669,7 +671,7 @@ export async function POST(
           ending: book.ending,
           writingStyle: book.writingStyle,
           targetWords: book.targetWords,
-          targetChapters: book.targetChapters,
+          targetChapters: Math.min(book.targetChapters, (book.bookFormat === 'comic_book' || book.bookFormat === 'comic' || dialogueStyle === 'bubbles' || book.bookPreset === 'comic_story') ? 24 : 20),
           dialogueStyle: dialogueStyle,
           characterVisualGuide: book.characterVisualGuide as CharacterVisualGuide | undefined,
           contentRating: (book.contentRating || 'general') as ContentRating,
@@ -1189,14 +1191,14 @@ export async function POST(
       console.error('Error Message:', error.message);
       console.error('Error Stack:', error.stack);
     }
-    
+
     const { id } = await params;
 
     // Check if this is a content moderation block
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     const isContentBlocked = errorMessage.includes('PROHIBITED_CONTENT') ||
-                             errorMessage.includes('blocked') ||
-                             errorMessage.includes('safety');
+      errorMessage.includes('blocked') ||
+      errorMessage.includes('safety');
 
     await prisma.book.update({
       where: { id },
