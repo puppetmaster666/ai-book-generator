@@ -399,7 +399,7 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
                 const fullData = await fullRes.json();
                 setBook(fullData.book);
                 lastKnownChapterCountRef.current = fullData.book?.chapters?.length || 0;
-            lastKnownIllustrationCountRef.current = fullData.book?.illustrations?.length || 0;
+                lastKnownIllustrationCountRef.current = fullData.book?.illustrations?.length || 0;
 
                 // Update chapter statuses
                 if (fullData.book?.chapters) {
@@ -474,7 +474,7 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
               const fullData = await fullRes.json();
               setBook(fullData.book);
               lastKnownChapterCountRef.current = fullData.book?.chapters?.length || 0;
-            lastKnownIllustrationCountRef.current = fullData.book?.illustrations?.length || 0;
+              lastKnownIllustrationCountRef.current = fullData.book?.illustrations?.length || 0;
             }
             break;
           }
@@ -855,7 +855,7 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
         const bookData = await bookRes.json();
         setBook(bookData.book);
         lastKnownChapterCountRef.current = bookData.book?.chapters?.length || 0;
-          lastKnownIllustrationCountRef.current = bookData.book?.illustrations?.length || 0;
+        lastKnownIllustrationCountRef.current = bookData.book?.illustrations?.length || 0;
       }
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Retry failed';
@@ -946,11 +946,13 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
         book.bookPreset === 'comic_story' ||
         book.bookPreset === 'childrens_picture';
 
-      // Step 3: Trigger outline generation
+      // Step 3: Trigger generation
+      // Visual books: outline only (comic page handles panel generation)
+      // Text books: full generation (no outlineOnly flag)
       const genRes = await fetch(`/api/books/${id}/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ outlineOnly: true }),
+        body: JSON.stringify(isVisual ? { outlineOnly: true } : {}),
       });
 
       if (!genRes.ok) {
