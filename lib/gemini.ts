@@ -21,94 +21,77 @@ export const SAFETY_SETTINGS = [
   },
 ];
 
-// Simple timeout wrapper (no retry)
-async function withTimeoutSimple<T>(
-  promise: Promise<T>,
-  timeoutMs: number,
-  operationName: string = 'operation'
-): Promise<T> {
-  let timeoutId: NodeJS.Timeout;
-  const timeoutPromise = new Promise<never>((_, reject) => {
-    timeoutId = setTimeout(() => {
-      reject(new Error(`${operationName} timed out after ${timeoutMs}ms`));
-    }, timeoutMs);
-  });
-
-  try {
-    const result = await Promise.race([promise, timeoutPromise]);
-    clearTimeout(timeoutId!);
-    return result;
-  } catch (error) {
-    clearTimeout(timeoutId!);
-    throw error;
-  }
-}
-
-// Timeout wrapper with FAST key switching - tries all 3 keys before giving up
+// Key rotation wrapper - tries all 3 keys before giving up
+// No artificial timeouts - let Gemini handle its own timing
 // Takes a function that creates the promise so we can retry with different key
 async function withTimeout<T>(
   createPromise: () => Promise<T>,
-  timeoutMs: number,
+  _timeoutMs: number, // DEPRECATED: kept for backwards compatibility, not used
   operationName: string = 'operation'
 ): Promise<T> {
   const totalKeys = 3;
-  let keysTriedThisCycle = 0;
   let lastError: Error | null = null;
   const failedKeys: { key: number; reason: string }[] = [];
+  const overallStart = Date.now();
 
   // Start with last working key if available
   switchToLastWorkingKey();
-  console.log(`[Gemini] Starting ${operationName} with key ${getCurrentKeyIndex()} (timeout: ${timeoutMs}ms)`);
+  console.log(`[Gemini] Starting ${operationName} with key ${getCurrentKeyIndex()} (no timeout - natural Gemini timing)`);
 
   // Try all keys before giving up
   for (let attempt = 0; attempt < totalKeys; attempt++) {
     const currentKey = getCurrentKeyIndex();
+    const attemptStart = Date.now();
+
     try {
-      const result = await withTimeoutSimple(createPromise(), timeoutMs, operationName);
+      // Call Gemini directly - no artificial timeout
+      const result = await createPromise();
+      const elapsed = Date.now() - attemptStart;
+
       // SUCCESS! Mark this key as working for future requests
       markKeyAsWorking();
-      console.log(`[Gemini] SUCCESS: ${operationName} completed with key ${currentKey}`);
+      console.log(`[Gemini] SUCCESS: ${operationName} completed with key ${currentKey} in ${elapsed}ms`);
       return result;
     } catch (error) {
       lastError = error as Error;
+      const elapsed = Date.now() - attemptStart;
       const errorMsg = lastError.message || 'Unknown error';
-      const isTimeout = errorMsg.includes('timed out');
       const isRateLimit = errorMsg.includes('429') || errorMsg.includes('quota') || errorMsg.includes('rate') || errorMsg.includes('exhausted');
+      const isGeminiTimeout = errorMsg.toLowerCase().includes('timeout') || errorMsg.toLowerCase().includes('deadline');
 
-      const failReason = isTimeout ? 'TIMEOUT' : isRateLimit ? 'RATE_LIMIT' : 'ERROR';
+      const failReason = isGeminiTimeout ? 'GEMINI_TIMEOUT' : isRateLimit ? 'RATE_LIMIT' : 'ERROR';
       failedKeys.push({ key: currentKey, reason: failReason });
-      console.error(`[Gemini] FAILED: ${operationName} on key ${currentKey} - ${failReason}: ${errorMsg.substring(0, 150)}`);
+      console.error(`[Gemini] FAILED: ${operationName} on key ${currentKey} after ${elapsed}ms - ${failReason}: ${errorMsg.substring(0, 150)}`);
 
       // If timeout or rate limit, IMMEDIATELY try next key (no delay)
-      if (isTimeout || isRateLimit) {
-        keysTriedThisCycle++;
-
+      if (isGeminiTimeout || isRateLimit) {
         const rotated = rotateApiKey();
-        if (rotated && keysTriedThisCycle < totalKeys) {
-          console.log(`[Gemini] Rotating to key ${getCurrentKeyIndex()} (attempt ${keysTriedThisCycle + 1}/${totalKeys})`);
+        if (rotated && attempt < totalKeys - 1) {
+          console.log(`[Gemini] Rotating to key ${getCurrentKeyIndex()} (attempt ${attempt + 2}/${totalKeys})`);
           continue; // Retry immediately with new key
         }
       }
 
       // Non-recoverable error or all keys exhausted
+      const totalElapsed = Date.now() - overallStart;
       const keysSummary = failedKeys.map(k => `key${k.key}:${k.reason}`).join(', ');
-      console.error(`[Gemini] ALL KEYS EXHAUSTED for ${operationName}. Summary: [${keysSummary}]`);
+      console.error(`[Gemini] ALL KEYS EXHAUSTED for ${operationName} after ${totalElapsed}ms. Summary: [${keysSummary}]`);
       throw new Error(`${operationName} failed - all ${totalKeys} API keys exhausted (${keysSummary}). Last error: ${errorMsg.substring(0, 100)}`);
     }
   }
 
+  const totalElapsed = Date.now() - overallStart;
   const keysSummary = failedKeys.map(k => `key${k.key}:${k.reason}`).join(', ');
-  console.error(`[Gemini] ALL KEYS EXHAUSTED for ${operationName}. Summary: [${keysSummary}]`);
+  console.error(`[Gemini] ALL KEYS EXHAUSTED for ${operationName} after ${totalElapsed}ms. Summary: [${keysSummary}]`);
   throw lastError || new Error(`${operationName} failed after trying all ${totalKeys} keys`);
 }
 
-// API timeout constants (in milliseconds)
-// With maxDuration=300s configured in route, we need tight timeouts
-// New budget: generate(90s) + summary(30s) + charStates(30s) = 150s per chapter
-// This allows ~2 chapters per 300s before hitting limit
-const CHAPTER_GENERATION_TIMEOUT = 90000; // 90 seconds for main chapter
-const REVIEW_PASS_TIMEOUT = 45000; // 45 seconds for review (background only)
-const FAST_TASK_TIMEOUT = 30000; // 30 seconds for summaries, char states
+// API timeout constants (DEPRECATED - kept for backwards compatibility)
+// These are no longer used as actual timeouts - Gemini handles its own timing
+// The values are passed to withTimeout() but ignored (natural Gemini timing is used)
+const CHAPTER_GENERATION_TIMEOUT = 90000; // DEPRECATED: kept for function signature compatibility
+const REVIEW_PASS_TIMEOUT = 45000; // DEPRECATED: kept for function signature compatibility
+const FAST_TASK_TIMEOUT = 30000; // DEPRECATED: kept for function signature compatibility
 
 // Truncate text to a maximum word count (for originalIdea preservation)
 const MAX_ORIGINAL_IDEA_WORDS = 1000;
