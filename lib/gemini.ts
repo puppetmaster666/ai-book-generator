@@ -289,8 +289,8 @@ function parseJSONFromResponse(response: string): object {
 
   // Check for truncation before attempting parse
   if (isJSONTruncated(response)) {
-    console.error('JSON appears to be truncated (unbalanced braces/brackets or unclosed string)');
-    console.error('Response ends with:', response.substring(response.length - 500));
+    console.warn('[JSON] Truncated response detected (unbalanced braces/brackets) - will retry');
+    console.warn('[JSON] Response ends with:', response.substring(response.length - 500));
     throw new Error('JSON_TRUNCATED: Response was cut off before completion');
   }
 
