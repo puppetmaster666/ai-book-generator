@@ -40,6 +40,8 @@ export default function Home() {
   const [ideaCategory, setIdeaCategory] = useState<IdeaCategory>('random');
   const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
   const [selectedComicCard, setSelectedComicCard] = useState<number | null>(null);
+  const [showStickyBanner, setShowStickyBanner] = useState(false);
+  const [stickyBannerDismissed, setStickyBannerDismissed] = useState(false);
 
   // Restore idea from sessionStorage on mount (for back navigation)
   useEffect(() => {
@@ -48,6 +50,17 @@ export default function Home() {
       setBookIdea(savedIdea);
     }
   }, []);
+
+  // Show sticky banner after scrolling past hero section
+  useEffect(() => {
+    const handleScroll = () => {
+      if (stickyBannerDismissed) return;
+      const scrollY = window.scrollY;
+      setShowStickyBanner(scrollY > 600);
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [stickyBannerDismissed]);
 
   const handleFindIdea = async () => {
     setIsGeneratingIdea(true);
@@ -88,6 +101,37 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-white">
       <Header variant="transparent" />
+
+      {/* Sticky CTA Banner - appears after scrolling */}
+      {showStickyBanner && !stickyBannerDismissed && (
+        <div className="fixed top-0 left-0 right-0 z-50 bg-neutral-900/95 backdrop-blur-sm border-b border-neutral-800 animate-in slide-in-from-top duration-300">
+          <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
+            <p className="text-white text-sm hidden sm:block">
+              <span className="font-medium">Ready to create your book?</span>
+              <span className="text-neutral-400 ml-2">First book free, no credit card required</span>
+            </p>
+            <p className="text-white text-sm sm:hidden">
+              First book free!
+            </p>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => document.getElementById('hero-form')?.scrollIntoView({ behavior: 'smooth' })}
+                className="bg-lime-400 text-neutral-900 px-4 py-2 rounded-lg text-sm font-medium hover:bg-lime-300 transition-colors flex items-center gap-2"
+              >
+                Create Your Free Book
+                <ArrowRight className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => setStickyBannerDismissed(true)}
+                className="text-neutral-400 hover:text-white p-1.5 rounded-lg hover:bg-neutral-800 transition-colors"
+                aria-label="Dismiss banner"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Hero Section */}
       <section className="relative min-h-screen flex flex-col pt-0">
@@ -205,7 +249,7 @@ export default function Home() {
                       </>
                     ) : (
                       <>
-                        Start writing
+                        Create Your Free Book
                         <ArrowRight className="h-4 w-4" />
                       </>
                     )}
@@ -218,7 +262,11 @@ export default function Home() {
             </form>
 
             {/* Trust signals */}
-            <div className="mt-8 flex items-center justify-center gap-8 text-sm text-white">
+            <div className="mt-8 flex flex-wrap items-center justify-center gap-x-8 gap-y-2 text-sm text-white">
+              <span className="flex items-center gap-2 font-medium">
+                <Check className="h-4 w-4 text-lime-400" />
+                No credit card required
+              </span>
               <span className="flex items-center gap-2">
                 <Check className="h-4 w-4" />
                 Full commercial rights
