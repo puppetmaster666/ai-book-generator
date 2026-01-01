@@ -25,6 +25,7 @@ interface BookData {
   artStyle: string | null;
   targetWords: number;
   targetChapters: number;
+  paymentStatus?: string;
   protagonistPhoto?: string | null;
   protagonistStyled?: string | null;
   protagonistDescription?: string | null;
@@ -459,6 +460,23 @@ function ReviewContent() {
       });
     } catch {
       // Continue even if update fails
+    }
+
+    // If book is already paid for (restart scenario), go directly to generation
+    if (book.paymentStatus === 'completed') {
+      // Mark as generating and redirect to book page
+      try {
+        await fetch(`/api/books/${bookId}/generate`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ outlineOnly: true }),
+        });
+        router.push(`/book/${bookId}`);
+      } catch {
+        setError('Failed to start generation. Please try again.');
+        setIsSubmitting(false);
+      }
+      return;
     }
 
     // If user is eligible for free book (first book free) or has credits
@@ -1001,11 +1019,10 @@ function ReviewContent() {
                   // Upload area
                   <div className="relative">
                     <label
-                      className={`flex flex-col items-center justify-center w-full max-w-xs h-40 border-2 border-dashed rounded-xl cursor-pointer transition-colors ${
-                        isStylizing
+                      className={`flex flex-col items-center justify-center w-full max-w-xs h-40 border-2 border-dashed rounded-xl cursor-pointer transition-colors ${isStylizing
                           ? 'border-amber-300 bg-amber-50'
                           : 'border-neutral-300 hover:border-neutral-400 bg-neutral-50 hover:bg-neutral-100'
-                      }`}
+                        }`}
                     >
                       {isStylizing ? (
                         <div className="flex flex-col items-center gap-2">
@@ -1174,11 +1191,10 @@ function ReviewContent() {
                       if (emailError) setEmailError('');
                     }}
                     placeholder="you@example.com"
-                    className={`w-full pl-10 pr-10 py-3 border rounded-xl focus:outline-none transition-colors ${
-                      emailError
+                    className={`w-full pl-10 pr-10 py-3 border rounded-xl focus:outline-none transition-colors ${emailError
                         ? 'border-red-400 focus:border-red-500 bg-red-50'
                         : 'border-neutral-200 focus:border-neutral-900'
-                    }`}
+                      }`}
                   />
                   {emailError && (
                     <AlertCircle className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-red-500" />
