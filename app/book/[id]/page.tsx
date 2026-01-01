@@ -1833,7 +1833,8 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
                 </div>
               )}
             </div>
-            </main>
+            </div>
+      </main>
     </div>
   );
 }
