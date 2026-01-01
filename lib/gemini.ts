@@ -1603,9 +1603,25 @@ PROSE QUALITY:
 - Be specific: "oak door" not "the door", "1967 Mustang" not "old car"
 - Avoid repeating distinctive words within 2-3 sentences
 
+SENTENCE VARIETY (CRITICAL - THIS IS MANDATORY):
+- NEVER start more than 2 consecutive sentences with the same word
+- Vary sentence starters aggressively: use dependent clauses, participial phrases, prepositional phrases
+- BAD: "She walked in. She sat down. She opened her laptop. She began typing."
+- GOOD: "She walked in. After sitting down, she opened her laptop and began typing."
+- BAD: "The room was dark. The air was cold. The walls were bare."
+- GOOD: "The room was dark. Cold air seeped through the walls, bare and unwelcoming."
+- Limit "She/He/It/The" sentence starters to max 20% of sentences in any paragraph
+- Use action, setting, or dependent clauses to start sentences: "Crossing the room, she...", "Without warning, the...", "As the door opened, he..."
+
+PRONOUN USAGE:
+- After first mention in a scene, use "he/she/they" instead of character names
+- BUT vary sentence structure so you're not starting every sentence with pronouns
+- Embed pronouns mid-sentence: "The screen flickered as she scrolled down"
+- Character names should appear roughly once every 100-150 words for clarity
+
 AVOID THESE COMMON ERRORS:
 - Clichés: "heart pounded", "blood ran cold", "time stood still"
-- Overusing character names when "he/she" works fine
+- Repetitive patterns: "She looked", "She thought", "She reached", "It was"
 - Starting consecutive sentences with the same word
 - Excessive metaphors. One per paragraph maximum
 - Adjective stacking: "the dark, gloomy, ominous shadows"
@@ -1758,15 +1774,29 @@ YOUR EDITING TASKS:
    - If a sentence is cut off or missing words, complete it logically
    - Remove any sentences that are clearly garbled and cannot be salvaged
 
-4. REMOVE REPETITION:
+4. FIX REPETITIVE SENTENCE STARTERS (CRITICAL):
+   - Scan for paragraphs where more than 2 consecutive sentences start with the same word
+   - Common offenders: "She [verb]", "He [verb]", "The [noun]", "It was/is"
+   - Rewrite to vary sentence structure using dependent clauses, participial phrases, prepositional phrases
+   - Example fix: "She opened the door. She walked inside. She saw the damage." → "She opened the door. Inside, the damage was immediately visible."
+   - If 20%+ of sentences in a paragraph start with "She/He/It/The", rewrite for variety
+
+5. REDUCE CHARACTER NAME OVERUSE:
+   - Character names should appear roughly once every 100-150 words
+   - Replace excessive name usage with pronouns (he/she/they)
+   - Exception: Keep names when needed for clarity (multiple people in scene)
+   - Don't just replace names with pronouns at sentence starts - vary the entire sentence structure
+
+6. REMOVE WORD REPETITION:
    - If the same unusual word appears more than twice in a paragraph, replace some instances with synonyms
    - Remove redundant phrases that say the same thing twice
+   - Watch for repetitive 2-word patterns: "She looked", "She thought", "She reached", "It was"
 
-5. FIX PUNCTUATION:
+7. FIX PUNCTUATION:
    - Replace any em dashes (—) or en dashes (–) with commas or periods
    - Ensure sentences end with proper punctuation
 
-${isOverLength ? `6. TRIM LENGTH:
+${isOverLength ? `8. TRIM LENGTH:
    - The chapter is ${currentWordCount - targetWords} words over target
    - Remove unnecessary adjectives and adverbs
    - Tighten wordy phrases
