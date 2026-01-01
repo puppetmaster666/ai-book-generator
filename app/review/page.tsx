@@ -463,7 +463,7 @@ function ReviewContent() {
     }
 
     // If book is already paid for (restart scenario), go directly to generation
-    if (book.paymentStatus === 'completed') {
+    if (book?.paymentStatus === 'completed') {
       // Mark as generating and redirect to book page
       try {
         await fetch(`/api/books/${bookId}/generate`, {
@@ -1020,8 +1020,8 @@ function ReviewContent() {
                   <div className="relative">
                     <label
                       className={`flex flex-col items-center justify-center w-full max-w-xs h-40 border-2 border-dashed rounded-xl cursor-pointer transition-colors ${isStylizing
-                          ? 'border-amber-300 bg-amber-50'
-                          : 'border-neutral-300 hover:border-neutral-400 bg-neutral-50 hover:bg-neutral-100'
+                        ? 'border-amber-300 bg-amber-50'
+                        : 'border-neutral-300 hover:border-neutral-400 bg-neutral-50 hover:bg-neutral-100'
                         }`}
                     >
                       {isStylizing ? (
@@ -1192,8 +1192,8 @@ function ReviewContent() {
                     }}
                     placeholder="you@example.com"
                     className={`w-full pl-10 pr-10 py-3 border rounded-xl focus:outline-none transition-colors ${emailError
-                        ? 'border-red-400 focus:border-red-500 bg-red-50'
-                        : 'border-neutral-200 focus:border-neutral-900'
+                      ? 'border-red-400 focus:border-red-500 bg-red-50'
+                      : 'border-neutral-200 focus:border-neutral-900'
                       }`}
                   />
                   {emailError && (
