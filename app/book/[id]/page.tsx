@@ -948,28 +948,18 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
         book.bookPreset === 'comic_story' ||
         book.bookPreset === 'childrens_picture';
 
-      // Step 3: Trigger generation
-      // Visual books: outline only (comic page handles panel generation)
-      // Text books: full generation (no outlineOnly flag)
-      const genRes = await fetch(`/api/books/${id}/generate`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(isVisual ? { outlineOnly: true } : {}),
-      });
-
-      if (!genRes.ok) {
-        const genData = await genRes.json();
-        console.error('Generate after restart failed:', genData.error);
-        // Even if generate fails, the restart was successful - page will show appropriate state
-      }
-
-      // Step 4: Navigate appropriately based on book type
+      // Step 3: Navigate to the appropriate page to restart the normal generation flow
+      // Both book types go through the review page first (outline will be regenerated)
+      // This mirrors the first-time generation experience, just without needing payment again
       if (isVisual) {
-        // Visual books should go to the comic generation page
+        // Visual books go to comic generation page
         router.push(`/generate-comic?bookId=${id}`);
       } else {
-        // Text books - reload the page to restart orchestration
-        window.location.reload();
+        // Text books go to review page, which will:
+        // 1. Generate outline
+        // 2. Show review page for confirmation
+        // 3. Then chapter-by-chapter generation via orchestration
+        router.push(`/review?bookId=${id}`);
       }
     } catch (err) {
       console.error('Restart error:', err);
