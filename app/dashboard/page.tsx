@@ -6,7 +6,7 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
-import { BookOpen, Plus, Download, Clock, Check, AlertCircle } from 'lucide-react';
+import { BookOpen, Plus, Download, Clock, Check, AlertCircle, Zap } from 'lucide-react';
 
 interface Book {
   id: string;
@@ -135,6 +135,14 @@ export default function Dashboard() {
               {!userInfo.hasFirstBookFree && userInfo.totalCredits === 0 && (
                 <span className="text-neutral-500">No credits</span>
               )}
+              {/* Upgrade Plan Button */}
+              <Link
+                href="/pricing"
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-neutral-900 text-white rounded-lg hover:bg-neutral-800 transition-colors font-medium"
+              >
+                <Zap className="h-4 w-4" />
+                {userInfo.plan === 'free' ? 'Upgrade Plan' : 'Manage Plan'}
+              </Link>
             </div>
           )}
 

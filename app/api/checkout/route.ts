@@ -86,7 +86,12 @@ export async function POST(request: NextRequest) {
       if (dbPromo && dbPromo.isActive &&
           (!dbPromo.validUntil || new Date() <= dbPromo.validUntil) &&
           dbPromo.currentUses < dbPromo.maxUses) {
-        amount = Math.round(amount * (1 - dbPromo.discount));
+        // Fixed price takes priority over percentage discount
+        if (dbPromo.fixedPrice !== null) {
+          amount = dbPromo.fixedPrice;
+        } else {
+          amount = Math.round(amount * (1 - dbPromo.discount));
+        }
         appliedPromo = code;
       } else if (HARDCODED_PROMOS[code] && new Date() <= HARDCODED_PROMOS[code].validUntil) {
         // Fallback to hardcoded promos

@@ -226,6 +226,7 @@ model PromoCode {
   id          String   @id @default(cuid())
   code        String   @unique
   discount    Float    @default(1.0) // 1.0 = 100% off (free)
+  fixedPrice  Int?     // If set, overrides price to this amount in cents (e.g., 150 = $1.50)
   maxUses     Int
   currentUses Int      @default(0)
   validUntil  DateTime?
