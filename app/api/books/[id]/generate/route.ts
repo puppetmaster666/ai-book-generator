@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
+import { auth } from '@/lib/auth';
 import {
   generateOutline,
   generateNonFictionOutline,
@@ -26,6 +27,9 @@ import { sendEmail, getBookReadyEmail } from '@/lib/email';
 
 // Allow up to 5 minutes for outline generation (Vercel Pro plan max: 300s)
 export const maxDuration = 300;
+
+// Admin emails - admins can bypass all generation limits
+const ADMIN_EMAILS = ['lhllparis@gmail.com'];
 
 // Timeout for illustration generation (30 seconds) - prevents 504 Gateway Timeout
 const ILLUSTRATION_TIMEOUT_MS = 30000;
@@ -494,6 +498,10 @@ export async function POST(
   try {
     const { id } = await params;
 
+    // Get current session to check admin status
+    const session = await auth();
+    const isAdmin = session?.user?.email && ADMIN_EMAILS.includes(session.user.email);
+
     // Check for outlineOnly mode (for comics - client handles parallel panel generation)
     let outlineOnly = false;
     try {
@@ -549,29 +557,23 @@ export async function POST(
     }
 
     // Check if user already has another book generating (non-admins only)
-    if (book.userId) {
-      const userCheck = await prisma.user.findUnique({
-        where: { id: book.userId },
-        select: { isAdmin: true },
+    // Admins can restart any book regardless of other books generating
+    if (book.userId && !isAdmin) {
+      const otherGeneratingBook = await prisma.book.findFirst({
+        where: {
+          userId: book.userId,
+          id: { not: id }, // Exclude current book
+          status: { in: ['generating', 'outlining'] },
+        },
+        select: { id: true, title: true },
       });
 
-      if (!userCheck?.isAdmin) {
-        const otherGeneratingBook = await prisma.book.findFirst({
-          where: {
-            userId: book.userId,
-            id: { not: id }, // Exclude current book
-            status: { in: ['generating', 'outlining'] },
-          },
-          select: { id: true, title: true },
-        });
-
-        if (otherGeneratingBook) {
-          return NextResponse.json({
-            error: 'You already have a book generating. Please wait for it to complete or cancel it first.',
-            existingBookId: otherGeneratingBook.id,
-            existingBookTitle: otherGeneratingBook.title,
-          }, { status: 409 });
-        }
+      if (otherGeneratingBook) {
+        return NextResponse.json({
+          error: 'You already have a book generating. Please wait for it to complete or cancel it first.',
+          existingBookId: otherGeneratingBook.id,
+          existingBookTitle: otherGeneratingBook.title,
+        }, { status: 409 });
       }
     }
 
