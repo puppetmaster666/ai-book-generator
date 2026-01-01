@@ -409,6 +409,8 @@ function ReviewContent() {
   let discountLabel = '';
   // Book is free if user is eligible for free book, has credits, OR has 100% promo discount
   const isFree = freeBookEligible || hasCredits || promoDiscount === 1;
+  // Check if this is a restart of an already-paid book
+  const isAlreadyPaid = book?.paymentStatus === 'completed';
 
   if (freeBookEligible || hasCredits) {
     finalPrice = 0;
@@ -1086,8 +1088,8 @@ function ReviewContent() {
             </div>
           </div>
 
-          {/* Promo Code - only show if user is not eligible for free book */}
-          {!freeBookEligible && (
+          {/* Promo Code - only show if user is not eligible for free book AND not already paid */}
+          {!freeBookEligible && !isAlreadyPaid && (
             <div className="bg-white rounded-2xl border border-neutral-200 p-6 mb-6">
               <h3 className="font-semibold text-lg mb-4">Have a promo code?</h3>
               <div className="flex gap-2">
@@ -1171,67 +1173,69 @@ function ReviewContent() {
             </>
           )}
 
-          {/* Your Details */}
-          <div className="bg-white rounded-2xl border border-neutral-200 p-6 mb-6">
-            <h3 className="font-semibold text-lg mb-4">Your Details</h3>
-            <div className="space-y-4">
-              {/* Email */}
-              <div>
-                <label className="block text-sm font-medium text-neutral-700 mb-1">
-                  Email Address <span className="text-red-500">*</span>
-                </label>
-                <div className="relative">
-                  <Mail className={`absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 ${emailError ? 'text-red-400' : 'text-neutral-400'}`} />
-                  <input
-                    id="email-input"
-                    type="email"
-                    value={email}
-                    onChange={(e) => {
-                      setEmail(e.target.value);
-                      if (emailError) setEmailError('');
-                    }}
-                    placeholder="you@example.com"
-                    className={`w-full pl-10 pr-10 py-3 border rounded-xl focus:outline-none transition-colors ${emailError
-                      ? 'border-red-400 focus:border-red-500 bg-red-50'
-                      : 'border-neutral-200 focus:border-neutral-900'
-                      }`}
-                  />
-                  {emailError && (
-                    <AlertCircle className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-red-500" />
+          {/* Your Details - hide for already paid books (they already have email on file) */}
+          {!isAlreadyPaid && (
+            <div className="bg-white rounded-2xl border border-neutral-200 p-6 mb-6">
+              <h3 className="font-semibold text-lg mb-4">Your Details</h3>
+              <div className="space-y-4">
+                {/* Email */}
+                <div>
+                  <label className="block text-sm font-medium text-neutral-700 mb-1">
+                    Email Address <span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <Mail className={`absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 ${emailError ? 'text-red-400' : 'text-neutral-400'}`} />
+                    <input
+                      id="email-input"
+                      type="email"
+                      value={email}
+                      onChange={(e) => {
+                        setEmail(e.target.value);
+                        if (emailError) setEmailError('');
+                      }}
+                      placeholder="you@example.com"
+                      className={`w-full pl-10 pr-10 py-3 border rounded-xl focus:outline-none transition-colors ${emailError
+                        ? 'border-red-400 focus:border-red-500 bg-red-50'
+                        : 'border-neutral-200 focus:border-neutral-900'
+                        }`}
+                    />
+                    {emailError && (
+                      <AlertCircle className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-red-500" />
+                    )}
+                  </div>
+                  {emailError ? (
+                    <p className="text-xs text-red-500 mt-1 flex items-center gap-1">
+                      {emailError}
+                    </p>
+                  ) : (
+                    <p className="text-xs text-neutral-500 mt-1">
+                      We&apos;ll send you a link when your book is ready
+                    </p>
                   )}
                 </div>
-                {emailError ? (
-                  <p className="text-xs text-red-500 mt-1 flex items-center gap-1">
-                    {emailError}
-                  </p>
-                ) : (
-                  <p className="text-xs text-neutral-500 mt-1">
-                    We&apos;ll send you a link when your book is ready
-                  </p>
-                )}
-              </div>
 
-              {/* Author Name */}
-              <div>
-                <label className="block text-sm font-medium text-neutral-700 mb-1">
-                  Author Name
-                </label>
-                <div className="relative">
-                  <Pencil className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-400" />
-                  <input
-                    type="text"
-                    value={authorName}
-                    onChange={(e) => setAuthorName(e.target.value)}
-                    placeholder="Your pen name or real name"
-                    className="w-full pl-10 pr-4 py-3 border border-neutral-200 rounded-xl focus:border-neutral-900 focus:outline-none transition-colors"
-                  />
+                {/* Author Name */}
+                <div>
+                  <label className="block text-sm font-medium text-neutral-700 mb-1">
+                    Author Name
+                  </label>
+                  <div className="relative">
+                    <Pencil className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-400" />
+                    <input
+                      type="text"
+                      value={authorName}
+                      onChange={(e) => setAuthorName(e.target.value)}
+                      placeholder="Your pen name or real name"
+                      className="w-full pl-10 pr-4 py-3 border border-neutral-200 rounded-xl focus:border-neutral-900 focus:outline-none transition-colors"
+                    />
+                  </div>
+                  <p className="text-xs text-neutral-500 mt-1">
+                    This will appear on your book cover
+                  </p>
                 </div>
-                <p className="text-xs text-neutral-500 mt-1">
-                  This will appear on your book cover
-                </p>
               </div>
             </div>
-          </div>
+          )}
 
           {/* What's Included */}
           <div className="bg-white rounded-2xl border border-neutral-200 p-6 mb-8">
@@ -1269,24 +1273,33 @@ function ReviewContent() {
           {/* CTA */}
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-neutral-900 text-white rounded-2xl p-6">
             <div>
-              <p className="text-neutral-400 text-sm mb-1">Total</p>
-              {freeBookEligible || hasCredits ? (
-                <div className="flex flex-col">
-                  <div className="flex items-center gap-2">
-                    <span className="text-lg text-neutral-400 line-through">${originalPrice.toFixed(2)}</span>
-                    <span className="text-3xl font-bold text-green-400">FREE</span>
-                  </div>
-                  <span className="text-sm text-green-400">{discountLabel}</span>
-                </div>
-              ) : promoDiscount ? (
-                <div className="flex items-center gap-2">
-                  <span className="text-lg text-neutral-400 line-through">${originalPrice.toFixed(2)}</span>
-                  <span className="text-3xl font-bold text-green-400">
-                    {isFree ? 'FREE' : `$${finalPrice.toFixed(2)}`}
-                  </span>
+              {isAlreadyPaid ? (
+                <div>
+                  <p className="text-neutral-400 text-sm mb-1">Already Paid</p>
+                  <p className="text-lg font-medium">Ready to regenerate</p>
                 </div>
               ) : (
-                <p className="text-3xl font-bold">${originalPrice.toFixed(2)}</p>
+                <>
+                  <p className="text-neutral-400 text-sm mb-1">Total</p>
+                  {freeBookEligible || hasCredits ? (
+                    <div className="flex flex-col">
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg text-neutral-400 line-through">${originalPrice.toFixed(2)}</span>
+                        <span className="text-3xl font-bold text-green-400">FREE</span>
+                      </div>
+                      <span className="text-sm text-green-400">{discountLabel}</span>
+                    </div>
+                  ) : promoDiscount ? (
+                    <div className="flex items-center gap-2">
+                      <span className="text-lg text-neutral-400 line-through">${originalPrice.toFixed(2)}</span>
+                      <span className="text-3xl font-bold text-green-400">
+                        {isFree ? 'FREE' : `$${finalPrice.toFixed(2)}`}
+                      </span>
+                    </div>
+                  ) : (
+                    <p className="text-3xl font-bold">${originalPrice.toFixed(2)}</p>
+                  )}
+                </>
               )}
             </div>
             <button
@@ -1298,6 +1311,10 @@ function ReviewContent() {
                 <>
                   <Loader2 className="h-5 w-5 animate-spin" />
                   Processing...
+                </>
+              ) : isAlreadyPaid ? (
+                <>
+                  Continue <ArrowRight className="h-5 w-5" />
                 </>
               ) : isFree ? (
                 <>
