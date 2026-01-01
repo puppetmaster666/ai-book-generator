@@ -1664,29 +1664,56 @@ OUTPUT: The chapter text only, starting with the chapter heading.`;
   return content;
 }
 
+// Smart fallback: extract meaningful summary when AI times out
+function smartSummaryFallback(chapterContent: string): string {
+  // Split into paragraphs
+  const paragraphs = chapterContent.split(/\n\n+/).filter(p => p.trim().length > 0);
+
+  if (paragraphs.length === 0) {
+    return chapterContent.substring(0, 500) + '...';
+  }
+
+  // Take first paragraph (sets scene) + last 2 paragraphs (chapter ending/cliffhanger)
+  const opener = paragraphs[0] || '';
+  const closer = paragraphs.length > 2
+    ? paragraphs.slice(-2).join('\n\n')
+    : paragraphs[paragraphs.length - 1] || '';
+
+  const combined = `${opener}\n...\n${closer}`;
+
+  // Limit to ~600 chars
+  return combined.length > 600
+    ? combined.substring(0, 600) + '...'
+    : combined;
+}
+
 export async function summarizeChapter(chapterContent: string): Promise<string> {
-  const prompt = `Summarize this chapter in exactly 150 words. Focus on:
-- Key plot events that happened
-- Character development or revelations
-- Any setups that need payoff later
-- Where characters ended up (location, emotional state)
+  // Simplified, shorter prompt for faster generation
+  const prompt = `Summarize this chapter in 100 words max. Include:
+- Main plot events
+- Character locations and emotional state at chapter end
+- Critical setups for future chapters
 
-Be factual and precise. This summary will be used to maintain story continuity.
-
-CHAPTER TEXT:
+CHAPTER:
 ${chapterContent}`;
 
   const startTime = Date.now();
-  const result = await withTimeout(
-    () => getGeminiFlash().generateContent(prompt),
-    FAST_TASK_TIMEOUT,
-    'Chapter summary'
-  );
-  const summary = result.response.text();
-  const elapsed = Date.now() - startTime;
-  const summaryWords = summary.split(/\s+/).filter(w => w.length > 0).length;
-  console.log(`[Summary] SUCCESS in ${elapsed}ms. ${summaryWords} words`);
-  return summary;
+  try {
+    const result = await withTimeout(
+      () => getGeminiFlashLight().generateContent(prompt), // Flash Light is faster
+      FAST_TASK_TIMEOUT,
+      'Chapter summary'
+    );
+    const summary = result.response.text().trim();
+    const elapsed = Date.now() - startTime;
+    const summaryWords = summary.split(/\s+/).filter(w => w.length > 0).length;
+    console.log(`[Summary] SUCCESS in ${elapsed}ms. ${summaryWords} words`);
+    return summary;
+  } catch (error) {
+    // Timeout or error - use smart fallback
+    console.log(`[Summary] AI failed, using smart fallback`);
+    return smartSummaryFallback(chapterContent);
+  }
 }
 
 // ============================================================

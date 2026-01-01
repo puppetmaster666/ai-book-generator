@@ -970,10 +970,14 @@ export async function POST(
         const wordCount = countWords(chapterContent);
         totalWords += wordCount;
 
-        // Generate chapter summary (DISABLED - causes 90s timeout waste per chapter)
-        // Gemini API is consistently timing out on summarization tasks
-        // Using truncated content as summary instead
-        const summary = chapterContent.substring(0, 500) + '...';
+        // Generate chapter summary (now using Flash Light with smart fallback)
+        let summary: string;
+        try {
+          summary = await summarizeChapter(chapterContent);
+        } catch (summaryError) {
+          console.error(`Failed to summarize chapter ${i}:`, summaryError);
+          summary = chapterContent.substring(0, 500) + '...'; // Final fallback
+        }
 
         // Update character states (with fallback)
         try {
