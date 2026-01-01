@@ -17,7 +17,7 @@ import {
 // Get API key by index
 const API_KEY_ENV_NAMES = [
   'GEMINI_API_KEY',
-  'GEMINI_API_KEY_BACKUP1',
+  'GEMINI_API_BACKUP1',
   'GEMINI_API_BACKUP2'
 ];
 
