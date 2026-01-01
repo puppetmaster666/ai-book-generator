@@ -1647,7 +1647,7 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
                     <p className="text-sm text-neutral-600">{isVisualBook ? 'Panels' : 'Pages'}</p>
                   </div>
                   <div className="bg-neutral-50 rounded-xl p-4 text-center border border-neutral-100">
-                    <p className="text-2xl font-bold text-neutral-900">{book.artStyle?.replace(/_/g, ' ') || 'Custom'}</p>
+                    <p className="text-2xl font-bold text-neutral-900 capitalize">{book.artStyle?.replace(/_/g, ' ') || 'Custom'}</p>
                     <p className="text-sm text-neutral-600">Art Style</p>
                   </div>
                 </div>

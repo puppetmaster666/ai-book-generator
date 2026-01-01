@@ -38,7 +38,8 @@
       "Bash(npx tsc:*)",
       "Bash(curl:*)",
       "Bash(grep:*)",
-      "Bash(node check-promo.js:*)"
+      "Bash(node check-promo.js:*)",
+      "Bash(echo:*)"
     ]
   }
 }
