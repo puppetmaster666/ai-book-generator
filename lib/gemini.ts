@@ -1646,17 +1646,20 @@ OUTPUT: The chapter text only, starting with the chapter heading.`;
     .replace(/,\s*,/g, ',')
     .trim();
 
-  // PASS 2: Review and polish the chapter (DISABLED - causes timeout issues)
-  // The generation prompts are detailed enough; review can be done async later if needed
-  // console.log(`[Chapter ${data.chapterNumber}] Starting review pass...`);
-  // const reviewResult = await reviewAndPolishChapter(content, data.targetWords, data.bookType);
-  // content = reviewResult.content;
-  // if (reviewResult.success) {
-  //   console.log(`[Chapter ${data.chapterNumber}] Review pass completed successfully.`);
-  // } else {
-  //   console.log(`[Chapter ${data.chapterNumber}] Review pass failed, using original content.`);
-  // }
-  console.log(`[Chapter ${data.chapterNumber}] Skipping review pass (disabled for performance).`);
+  // PASS 2: Review and polish the chapter (using Flash Light for speed)
+  console.log(`[Chapter ${data.chapterNumber}] Starting review pass...`);
+  try {
+    const reviewResult = await reviewAndPolishChapter(content, data.targetWords, data.bookType);
+    if (reviewResult.success) {
+      content = reviewResult.content;
+      console.log(`[Chapter ${data.chapterNumber}] Review pass completed successfully.`);
+    } else {
+      console.log(`[Chapter ${data.chapterNumber}] Review pass failed, using original content.`);
+    }
+  } catch (reviewError) {
+    console.error(`[Chapter ${data.chapterNumber}] Review pass error:`, reviewError);
+    // Keep original content on error
+  }
 
   return content;
 }
@@ -1756,8 +1759,8 @@ Return ONLY the corrected chapter text. No explanations, no comments, no markdow
   try {
     const startTime = Date.now();
     const result = await withTimeout(
-      () => getGeminiFlash().generateContent(prompt),
-      REVIEW_PASS_TIMEOUT,
+      () => getGeminiFlashLight().generateContent(prompt),
+      45000, // 45s timeout - faster model, simpler task
       'Chapter review'
     );
     let polished = result.response.text().trim();
