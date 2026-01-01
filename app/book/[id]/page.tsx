@@ -119,6 +119,15 @@ function formatElapsedTime(seconds: number): string {
   return `${mins}:${secs.toString().padStart(2, '0')}`;
 }
 
+// Format genre/type with proper capitalization
+function formatLabel(text: string | null | undefined): string {
+  if (!text) return '';
+  return text
+    .split(/[-_]/)
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ');
+}
+
 export default function BookProgress({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const searchParams = useSearchParams();
@@ -1146,6 +1155,27 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
                     <p className="text-neutral-500 leading-relaxed line-clamp-3">
                       {book.premise}
                     </p>
+                  </div>
+                )}
+
+                {/* Genre & Type Info */}
+                {(book.genre || book.bookType) && (
+                  <div className="mb-4 flex flex-wrap gap-2">
+                    {book.bookType && (
+                      <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-neutral-100 text-neutral-600">
+                        {formatLabel(book.bookType)}
+                      </span>
+                    )}
+                    {book.genre && (
+                      <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-neutral-100 text-neutral-600">
+                        {formatLabel(book.genre)}
+                      </span>
+                    )}
+                    {book.bookPreset && (
+                      <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-neutral-100 text-neutral-600">
+                        {formatLabel(book.bookPreset)}
+                      </span>
+                    )}
                   </div>
                 )}
 
