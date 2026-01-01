@@ -89,8 +89,18 @@ function formatChapterContent(
   const isPictureBook = bookFormat === 'picture_book';
   const isComic = bookFormat === 'comic_book' || bookFormat === 'comic';
 
+  // Remove any AI-generated "The End" markers (we add our own proper ending page)
+  let cleanedContent = content
+    // Remove standalone "The End" variations at the end of content
+    .replace(/\n*[-~*]*\s*(The\s+End|THE\s+END|Fin|FIN|Ende)\.?\s*[-~*]*\s*$/gi, '')
+    // Remove "The End" wrapped in special characters
+    .replace(/\n*[*~_-]+\s*(The\s+End|THE\s+END)\s*[*~_-]+\s*$/gi, '')
+    // Remove "[THE END]" or similar bracketed versions
+    .replace(/\n*\[?\s*(THE\s+)?END(\s+OF\s+(BOOK|CHAPTER|STORY))?\s*\]?\s*$/gi, '')
+    .trim();
+
   // Convert plain text to HTML with proper formatting
-  const paragraphsArray = content
+  const paragraphsArray = cleanedContent
     .split('\n\n')
     .filter(p => p.trim());
 

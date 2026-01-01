@@ -4,7 +4,7 @@ import { useState, useEffect, use, useRef } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import Header from '@/components/Header';
-import { Download, BookOpen, Loader2, Check, AlertCircle, ImageIcon, Mail, Palette, PenTool, Clock, Zap, AlertTriangle, Save, Trash2, RefreshCw, X } from 'lucide-react';
+import { Download, BookOpen, Loader2, Check, AlertCircle, ImageIcon, Mail, Palette, PenTool, Clock, Zap, AlertTriangle, Save, Trash2, RefreshCw, X, FileText } from 'lucide-react';
 import { useGeneratingBook } from '@/contexts/GeneratingBookContext';
 import Link from 'next/link';
 import FirstBookDiscountPopup from '@/components/FirstBookDiscountPopup';
@@ -701,6 +701,10 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
     window.open(`/api/books/${id}/download`, '_blank');
   };
 
+  const handleTxtDownload = () => {
+    window.open(`/api/books/${id}/download?format=txt`, '_blank');
+  };
+
   const handleCoverDownload = () => {
     if (book?.coverImageUrl) {
       const link = document.createElement('a');
@@ -897,17 +901,17 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
     }
   };
 
-  // Admin-only: Restart book generation from scratch
+  // Restart book generation from scratch (available for stuck/failed books or admins)
   const handleRestart = async () => {
-    if (!book || restarting || !isAdminUser) return;
+    if (!book || restarting) return;
 
     setRestarting(true);
     // Stop any ongoing orchestration first
     orchestrationRef.current = false;
 
     try {
-      // Step 1: Call restart API to reset the book
-      const restartRes = await fetch(`/api/admin/books/${id}/restart`, { method: 'POST' });
+      // Use user-facing restart API (checks ownership and allows restart for stuck/failed books)
+      const restartRes = await fetch(`/api/books/${id}/restart`, { method: 'POST' });
       if (!restartRes.ok) {
         const data = await restartRes.json();
         console.error('Restart failed:', data.error);
@@ -1013,9 +1017,13 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
 
   const isGenerating = book.status === 'generating' || book.status === 'outlining';
   const isPending = book.status === 'pending';
+  const isFailed = book.status === 'failed' || !!book.errorMessage;
   // Treat ?success=true as payment completed for UI (webhook may be delayed)
   const paymentCompleted = book.paymentStatus === 'completed' || success === 'true';
   const isIllustrated = book.bookFormat !== 'text_only';
+
+  // Show restart option for failed books or admins
+  const canRestart = isAdminUser || isFailed;
 
   return (
     <div className="min-h-screen bg-white">
@@ -1069,7 +1077,7 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
         </div>
       )}
 
-      {/* Restart Confirmation Modal (Admin Only) */}
+      {/* Restart Confirmation Modal */}
       {showRestartConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
           <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-xl">
@@ -1213,8 +1221,8 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
                   </span>
                 </div>
 
-                {/* Admin Restart Button */}
-                {isAdminUser && (
+                {/* Restart Button - shown for admins or when book has failed */}
+                {canRestart && (
                   <button
                     onClick={() => setShowRestartConfirm(true)}
                     disabled={restarting}
@@ -1667,6 +1675,16 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
                 >
                   <Download className="h-5 w-5" /> Download {isIllustrated ? 'PDF' : 'EPUB'}
                 </button>
+
+                {/* TXT download for easy copy-paste - only for text books */}
+                {!isIllustrated && (
+                  <button
+                    onClick={handleTxtDownload}
+                    className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-white text-neutral-900 border border-neutral-200 rounded-xl hover:bg-neutral-50 font-medium transition-colors"
+                  >
+                    <FileText className="h-5 w-5" /> Download TXT (for copy-paste)
+                  </button>
+                )}
 
                 {book.coverImageUrl && (
                   <button

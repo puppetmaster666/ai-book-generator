@@ -59,10 +59,10 @@ async function withTimeout<T>(
 // API timeout constants (in milliseconds)
 // With maxDuration=300s configured in route, we have more leeway
 // But still use timeouts to prevent infinite hangs from API issues
-// Flow: generate(120s) + review(30s) + summary(15s) + charStates(15s) = 180s max
+// Flow: generate(120s) + review(60s) + summary(30s) + charStates(30s) = 240s max
 const CHAPTER_GENERATION_TIMEOUT = 120000; // 2 minutes for main chapter (long chapters need time)
-const REVIEW_PASS_TIMEOUT = 30000; // 30 seconds for review (optional, falls back)
-const FAST_TASK_TIMEOUT = 15000; // 15 seconds for summaries, char states
+const REVIEW_PASS_TIMEOUT = 60000; // 60 seconds for review (important for quality)
+const FAST_TASK_TIMEOUT = 30000; // 30 seconds for summaries, char states (API can be slow under load)
 
 // Truncate text to a maximum word count (for originalIdea preservation)
 const MAX_ORIGINAL_IDEA_WORDS = 1000;
@@ -1475,12 +1475,12 @@ OUTPUT: The chapter text only, starting with the chapter heading.`;
   // PASS 2: Review and polish the chapter
   // This catches typos, formatting issues, and quality problems
   console.log(`[Chapter ${data.chapterNumber}] Starting review pass...`);
-  try {
-    content = await reviewAndPolishChapter(content, data.targetWords, data.bookType);
-    console.log(`[Chapter ${data.chapterNumber}] Review pass completed.`);
-  } catch (reviewError) {
-    console.error(`[Chapter ${data.chapterNumber}] Review pass failed, using original:`, reviewError);
-    // Continue with the original content if review fails
+  const reviewResult = await reviewAndPolishChapter(content, data.targetWords, data.bookType);
+  content = reviewResult.content;
+  if (reviewResult.success) {
+    console.log(`[Chapter ${data.chapterNumber}] Review pass completed successfully.`);
+  } else {
+    console.log(`[Chapter ${data.chapterNumber}] Review pass failed, using original content.`);
   }
 
   return content;
@@ -1498,12 +1498,17 @@ Be factual and precise. This summary will be used to maintain story continuity.
 CHAPTER TEXT:
 ${chapterContent}`;
 
+  const startTime = Date.now();
   const result = await withTimeout(
     () => getGeminiFlash().generateContent(prompt),
     FAST_TASK_TIMEOUT,
     'Chapter summary'
   );
-  return result.response.text();
+  const summary = result.response.text();
+  const elapsed = Date.now() - startTime;
+  const summaryWords = summary.split(/\s+/).filter(w => w.length > 0).length;
+  console.log(`[Summary] SUCCESS in ${elapsed}ms. ${summaryWords} words`);
+  return summary;
 }
 
 // ============================================================
@@ -1516,7 +1521,7 @@ export async function reviewAndPolishChapter(
   chapterContent: string,
   targetWords: number,
   bookType: string
-): Promise<string> {
+): Promise<{ content: string; success: boolean }> {
   const currentWordCount = chapterContent.split(/\s+/).filter(w => w.length > 0).length;
   const isOverLength = currentWordCount > targetWords * 1.15; // More than 15% over
 
@@ -1574,6 +1579,7 @@ OUTPUT:
 Return ONLY the corrected chapter text. No explanations, no comments, no markdown.`;
 
   try {
+    const startTime = Date.now();
     const result = await withTimeout(
       () => getGeminiFlash().generateContent(prompt),
       REVIEW_PASS_TIMEOUT,
@@ -1597,10 +1603,15 @@ Return ONLY the corrected chapter text. No explanations, no comments, no markdow
       .replace(/,\s*,/g, ',')
       .trim();
 
-    return polished;
+    const elapsed = Date.now() - startTime;
+    const originalWords = chapterContent.split(/\s+/).filter(w => w.length > 0).length;
+    const polishedWords = polished.split(/\s+/).filter(w => w.length > 0).length;
+    console.log(`[Review] SUCCESS in ${elapsed}ms. Words: ${originalWords} -> ${polishedWords}`);
+
+    return { content: polished, success: true };
   } catch (error) {
-    console.error('Review pass failed, returning original:', error);
-    return chapterContent; // Return original if review fails
+    console.error('[Review] FAILED:', error instanceof Error ? error.message : error);
+    return { content: chapterContent, success: false }; // Return original if review fails
   }
 }
 

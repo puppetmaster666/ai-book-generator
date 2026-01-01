@@ -4,12 +4,50 @@ import { generateEpub } from '@/lib/epub';
 import { generatePdf } from '@/lib/pdf';
 import { FontStyleKey } from '@/lib/constants';
 
+/**
+ * Generate a plain text version of the book for easy copy-paste
+ */
+function generateTxt(bookData: {
+  title: string;
+  authorName: string;
+  chapters: Array<{ number: number; title: string; content: string }>;
+}): string {
+  const lines: string[] = [];
+
+  // Title page
+  lines.push(bookData.title.toUpperCase());
+  lines.push('');
+  lines.push(`by ${bookData.authorName}`);
+  lines.push('');
+  lines.push('─'.repeat(50));
+  lines.push('');
+
+  // Chapters
+  for (const chapter of bookData.chapters) {
+    lines.push('');
+    lines.push(`CHAPTER ${chapter.number}: ${chapter.title.toUpperCase()}`);
+    lines.push('');
+    lines.push(chapter.content);
+    lines.push('');
+    lines.push('─'.repeat(50));
+  }
+
+  // End
+  lines.push('');
+  lines.push('THE END');
+  lines.push('');
+
+  return lines.join('\n');
+}
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id } = await params;
+    const { searchParams } = new URL(request.url);
+    const requestedFormat = searchParams.get('format'); // 'txt', 'epub', 'pdf', or null (auto)
 
     const book = await prisma.book.findUnique({
       where: { id },
@@ -66,8 +104,15 @@ export async function GET(
     const safeFilename = book.title.replace(/[^a-z0-9]/gi, '_');
 
     // Determine download format
-    const isPdf = isVisualBook && !isTextOnly;
-    const downloadFormat = isPdf ? 'pdf' : 'epub';
+    // If explicitly requested, use that format; otherwise auto-detect
+    let downloadFormat: 'txt' | 'epub' | 'pdf';
+    if (requestedFormat === 'txt') {
+      downloadFormat = 'txt';
+    } else if (requestedFormat === 'pdf' || (isVisualBook && !isTextOnly && requestedFormat !== 'epub')) {
+      downloadFormat = 'pdf';
+    } else {
+      downloadFormat = 'epub';
+    }
 
     // Track first download (only set if not already downloaded)
     if (!book.downloadedAt) {
@@ -80,8 +125,22 @@ export async function GET(
       });
     }
 
+    // Generate TXT for easy copy-paste
+    if (downloadFormat === 'txt') {
+      console.log(`Generating TXT for book ${id}`);
+
+      const txtContent = generateTxt(bookData);
+
+      return new NextResponse(txtContent, {
+        headers: {
+          'Content-Type': 'text/plain; charset=utf-8',
+          'Content-Disposition': `attachment; filename="${safeFilename}.txt"`,
+        },
+      });
+    }
+
     // Use PDF for visual books, EPUB for text-only novels
-    if (isPdf) {
+    if (downloadFormat === 'pdf') {
       console.log(`Generating PDF for visual book ${id}: format=${book.bookFormat}, dialogueStyle=${book.dialogueStyle}`);
 
       const pdfBuffer = await generatePdf(bookData);
