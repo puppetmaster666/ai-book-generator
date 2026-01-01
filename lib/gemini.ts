@@ -44,40 +44,50 @@ async function withTimeoutSimple<T>(
   }
 }
 
-// Timeout wrapper with automatic retry using next API key
+// Timeout wrapper with FAST key switching - tries all 3 keys before giving up
 // Takes a function that creates the promise so we can retry with different key
 async function withTimeout<T>(
   createPromise: () => Promise<T>,
   timeoutMs: number,
   operationName: string = 'operation'
 ): Promise<T> {
-  try {
-    // First attempt with current key
-    return await withTimeoutSimple(createPromise(), timeoutMs, operationName);
-  } catch (error) {
-    const isTimeout = error instanceof Error && error.message.includes('timed out');
-    const isRateLimit = error instanceof Error &&
-      (error.message.includes('429') || error.message.includes('quota') || error.message.includes('rate'));
+  const totalKeys = 3;
+  let keysTriedThisCycle = 0;
+  let lastError: Error | null = null;
 
-    // If timeout or rate limit, try next key
-    // We only try one rotation here to avoid infinite loops, higher level retry logic handles more
-    if ((isTimeout || isRateLimit)) {
-      const rotated = rotateApiKey();
-      if (rotated) {
-        console.log(`[Gemini] ${operationName} failed (${isTimeout ? 'timeout' : 'rate limit'}), rotating to next API key...`);
+  // Start with last working key if available
+  switchToLastWorkingKey();
 
-        try {
-          // Retry with new key
-          return await withTimeoutSimple(createPromise(), timeoutMs, operationName);
-        } catch (retryError) {
-          console.error(`[Gemini] Retry with next key also failed:`, retryError);
-          throw retryError;
+  // Try all keys before giving up
+  for (let attempt = 0; attempt < totalKeys; attempt++) {
+    try {
+      const result = await withTimeoutSimple(createPromise(), timeoutMs, operationName);
+      // SUCCESS! Mark this key as working for future requests
+      markKeyAsWorking();
+      return result;
+    } catch (error) {
+      lastError = error as Error;
+      const isTimeout = error instanceof Error && error.message.includes('timed out');
+      const isRateLimit = error instanceof Error &&
+        (error.message.includes('429') || error.message.includes('quota') || error.message.includes('rate') || error.message.includes('exhausted'));
+
+      // If timeout or rate limit, IMMEDIATELY try next key (no delay)
+      if (isTimeout || isRateLimit) {
+        keysTriedThisCycle++;
+        console.log(`[Gemini] ${operationName} failed (${isTimeout ? 'timeout' : 'rate limit'}) on key ${getCurrentKeyIndex()}, trying next key (${keysTriedThisCycle}/${totalKeys})...`);
+
+        const rotated = rotateApiKey();
+        if (rotated && keysTriedThisCycle < totalKeys) {
+          continue; // Retry immediately with new key
         }
       }
-    }
 
-    throw error;
+      // Non-recoverable error or all keys exhausted
+      throw lastError;
+    }
   }
+
+  throw lastError || new Error(`${operationName} failed after trying all keys`);
 }
 
 // API timeout constants (in milliseconds)
@@ -156,23 +166,27 @@ CONTENT GUIDELINES (General Audience):
   }
 }
 
-// Retry utility with exponential backoff for rate limit handling
-// Automatically switches to backup API key if available
+// Retry utility with FAST key switching - tries all 3 keys immediately, then waits
+// Only adds delay AFTER cycling through all keys
 async function withRetry<T>(
   fn: () => Promise<T>,
-  maxRetries: number = 3,
+  maxCycles: number = 2,
   baseDelayMs: number = 5000
 ): Promise<T> {
   let lastError: Error | null = null;
-  // We track attempts slightly differently now - we allow retries up to maxRetries * available keys ideally, 
-  // but let's stick to simple logic: try, if fail rate limit, rotate, retry.
+  const totalKeys = 3;
+  let keysTriedThisCycle = 0;
+  let currentCycle = 0;
 
-  // We will try up to (maxRetries + Number of keys) times to ensure we cycle through availability
-  const totalAttempts = maxRetries + 2;
+  // Start with last working key if available
+  switchToLastWorkingKey();
 
-  for (let attempt = 0; attempt <= totalAttempts; attempt++) {
+  for (let attempt = 0; attempt < (totalKeys * maxCycles) + 1; attempt++) {
     try {
-      return await fn();
+      const result = await fn();
+      // SUCCESS! Mark this key as working
+      markKeyAsWorking();
+      return result;
     } catch (error) {
       lastError = error as Error;
       const errorMessage = lastError.message?.toLowerCase() || '';
@@ -189,27 +203,29 @@ async function withRetry<T>(
         throw lastError;
       }
 
-      // Try switching to next key before giving up or waiting
+      // Rate limit - IMMEDIATELY try next key (no delay)
+      keysTriedThisCycle++;
+      console.log(`[Gemini] Rate limit on key ${getCurrentKeyIndex()}, trying next key (${keysTriedThisCycle}/${totalKeys} this cycle)...`);
+
       const rotated = rotateApiKey();
-      if (rotated) {
-        console.log('[Gemini] Rate limit hit, rotating API key and retrying immediately...');
-        // Don't count this as a "backoff" attempt, just a key switch
-        // We assume different keys have different quotas
-        continue;
+      if (rotated && keysTriedThisCycle < totalKeys) {
+        continue; // Retry immediately with new key
       }
 
-      if (attempt >= totalAttempts) {
+      // All keys exhausted in this cycle - add delay before next cycle
+      currentCycle++;
+      if (currentCycle >= maxCycles) {
         throw lastError;
       }
 
-      // Exponential backoff: 5s, 10s, 20s
-      const delay = baseDelayMs * Math.pow(2, attempt);
-      console.log(`[Gemini] Rate limit hit (all keys exhausted for now), retrying in ${delay / 1000}s...`);
+      keysTriedThisCycle = 0;
+      const delay = baseDelayMs * currentCycle; // 5s after first cycle, 10s after second
+      console.log(`[Gemini] All keys exhausted, waiting ${delay / 1000}s before cycle ${currentCycle + 1}...`);
       await new Promise(resolve => setTimeout(resolve, delay));
     }
   }
 
-  throw lastError;
+  throw lastError || new Error('withRetry exhausted all attempts');
 }
 
 // Detect if text contains non-Latin scripts and return language instruction
