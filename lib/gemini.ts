@@ -1659,16 +1659,17 @@ OUTPUT: The chapter text only, starting with the chapter heading.`;
     .replace(/,\s*,/g, ',')
     .trim();
 
-  // PASS 2: Review and polish the chapter
-  // This catches typos, formatting issues, and quality problems
-  console.log(`[Chapter ${data.chapterNumber}] Starting review pass...`);
-  const reviewResult = await reviewAndPolishChapter(content, data.targetWords, data.bookType);
-  content = reviewResult.content;
-  if (reviewResult.success) {
-    console.log(`[Chapter ${data.chapterNumber}] Review pass completed successfully.`);
-  } else {
-    console.log(`[Chapter ${data.chapterNumber}] Review pass failed, using original content.`);
-  }
+  // PASS 2: Review and polish the chapter (DISABLED - causes timeout issues)
+  // The generation prompts are detailed enough; review can be done async later if needed
+  // console.log(`[Chapter ${data.chapterNumber}] Starting review pass...`);
+  // const reviewResult = await reviewAndPolishChapter(content, data.targetWords, data.bookType);
+  // content = reviewResult.content;
+  // if (reviewResult.success) {
+  //   console.log(`[Chapter ${data.chapterNumber}] Review pass completed successfully.`);
+  // } else {
+  //   console.log(`[Chapter ${data.chapterNumber}] Review pass failed, using original content.`);
+  // }
+  console.log(`[Chapter ${data.chapterNumber}] Skipping review pass (disabled for performance).`);
 
   return content;
 }
