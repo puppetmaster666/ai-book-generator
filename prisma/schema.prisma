@@ -172,6 +172,7 @@ model Chapter {
   dialogue         Json?   // Array of { speaker, text, position }
 
   illustrations Illustration[]
+  reviewed      Boolean  @default(false)  // Track if async review has been done
   createdAt     DateTime @default(now())
 
   @@unique([bookId, number])

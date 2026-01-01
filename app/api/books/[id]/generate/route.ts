@@ -1016,6 +1016,15 @@ export async function POST(
         });
         console.log(`Chapter ${i} saved successfully. Word count: ${wordCount}`);
 
+        // Fire off async review (non-blocking - runs in background)
+        // Don't await - let it run independently while we continue generating
+        const reviewUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/books/${id}/review-chapter`;
+        fetch(reviewUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ chapterId: chapter.id }),
+        }).catch(err => console.log(`[Review] Background review request failed for chapter ${i}:`, err.message));
+
         // Generate illustrations if book has illustrations enabled (using pre-generated visual guides)
         // Uses smart retry with sanitized prompts if content policy blocks occur
         if (formatConfig && formatConfig.illustrationsPerChapter > 0 && book.artStyle) {
