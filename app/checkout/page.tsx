@@ -4,6 +4,7 @@ import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import Header from '@/components/Header';
+import ToastModal from '@/components/ToastModal';
 import Link from 'next/link';
 import { Check, CreditCard, Loader2, Tag, X, Gift, ArrowRight, User } from 'lucide-react';
 import { PRICING } from '@/lib/constants';
@@ -43,6 +44,7 @@ function CheckoutContent() {
   const [promoDiscount, setPromoDiscount] = useState<number | null>(null);
   const [promoError, setPromoError] = useState('');
   const [isValidatingPromo, setIsValidatingPromo] = useState(false);
+  const [toast, setToast] = useState<{ title: string; message: string; type: 'error' | 'success' | 'info' | 'warning' } | null>(null);
 
   // Fetch book details (only for book purchases, not subscriptions)
   useEffect(() => {
@@ -145,7 +147,7 @@ function CheckoutContent() {
 
   const handleCheckout = async () => {
     if (!email) {
-      alert('Please enter your email');
+      setToast({ title: 'Email Required', message: 'Please enter your email address.', type: 'error' });
       return;
     }
 
@@ -169,7 +171,7 @@ function CheckoutContent() {
       }
     } catch (error) {
       console.error('Checkout error:', error);
-      alert('Failed to start checkout. Please try again.');
+      setToast({ title: 'Checkout Failed', message: 'Failed to start checkout. Please try again.', type: 'error' });
     } finally {
       setIsLoading(false);
     }
@@ -223,6 +225,17 @@ function CheckoutContent() {
   return (
     <div className="min-h-screen bg-white">
       <Header />
+
+      {/* Toast Modal for errors/notifications */}
+      {toast && (
+        <ToastModal
+          isOpen={!!toast}
+          onClose={() => setToast(null)}
+          title={toast.title}
+          message={toast.message}
+          type={toast.type}
+        />
+      )}
 
       <main className="py-16 px-6">
         <div className="max-w-xl mx-auto">

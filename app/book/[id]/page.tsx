@@ -4,6 +4,7 @@ import { useState, useEffect, use, useRef } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import Header from '@/components/Header';
+import ToastModal from '@/components/ToastModal';
 import { Download, BookOpen, Loader2, Check, AlertCircle, ImageIcon, Mail, Palette, PenTool, Clock, Zap, AlertTriangle, Save, Trash2, RefreshCw, X, FileText } from 'lucide-react';
 import { useGeneratingBook } from '@/contexts/GeneratingBookContext';
 import Link from 'next/link';
@@ -156,6 +157,7 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
   const [isFirstCompletedBook, setIsFirstCompletedBook] = useState(false);
   const [chapterStatuses, setChapterStatuses] = useState<ChapterCardStatus[]>([]);
   const [serverStartTime, setServerStartTime] = useState<Date | null>(null);
+  const [toast, setToast] = useState<{ title: string; message: string; type: 'error' | 'success' | 'info' | 'warning' } | null>(null);
   const startTimeRef = useRef<number | null>(null);
   const orchestrationRef = useRef<boolean>(false);
   // Session ID to prevent multiple orchestration loops - incremented on each new generation attempt
@@ -934,7 +936,7 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
       if (!restartRes.ok) {
         const data = await restartRes.json();
         console.error('Restart failed:', data.error);
-        alert(`Restart failed: ${data.error || 'Unknown error'}`);
+        setToast({ title: 'Restart Failed', message: data.error || 'Unknown error', type: 'error' });
         setShowRestartConfirm(false);
         setRestarting(false);
         return;
@@ -971,7 +973,7 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
       }
     } catch (err) {
       console.error('Restart error:', err);
-      alert('Restart failed. Please try again.');
+      setToast({ title: 'Restart Failed', message: 'Please try again.', type: 'error' });
       setShowRestartConfirm(false);
       setRestarting(false);
     }
@@ -1053,6 +1055,17 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
       {/* First Book Discount Popup */}
       {showFirstBookDiscount && (
         <FirstBookDiscountPopup onDismiss={handleDismissFirstBookDiscount} />
+      )}
+
+      {/* Toast Modal for errors/notifications */}
+      {toast && (
+        <ToastModal
+          isOpen={!!toast}
+          onClose={() => setToast(null)}
+          title={toast.title}
+          message={toast.message}
+          type={toast.type}
+        />
       )}
 
       {/* Delete Confirmation Modal */}
