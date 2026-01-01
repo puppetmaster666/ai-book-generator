@@ -124,13 +124,10 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Search by BOTH userId AND email to catch books created before user association
-    const whereConditions = [];
-    if (userId) whereConditions.push({ userId });
-    if (email) whereConditions.push({ email });
-
+    // ONLY match on userId - email matching was causing admin to see user books they restarted
+    // Users should claim anonymous books via /claim endpoint, not via email matching
     const books = await prisma.book.findMany({
-      where: whereConditions.length > 1 ? { OR: whereConditions } : whereConditions[0],
+      where: { userId: userId || undefined },
       orderBy: { createdAt: 'desc' },
       select: {
         id: true,

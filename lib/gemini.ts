@@ -1799,8 +1799,8 @@ Return ONLY the corrected chapter text. No explanations, no comments, no markdow
   try {
     const startTime = Date.now();
     const result = await withTimeout(
-      () => getGeminiFlashLight().generateContent(prompt),
-      45000, // 45s timeout - faster model, simpler task
+      () => getGeminiFlash().generateContent(prompt), // Use full Flash, not Flash Light
+      45000, // 45s timeout
       'Chapter review'
     );
     let polished = result.response.text().trim();
@@ -1824,8 +1824,14 @@ Return ONLY the corrected chapter text. No explanations, no comments, no markdow
     const elapsed = Date.now() - startTime;
     const originalWords = chapterContent.split(/\s+/).filter(w => w.length > 0).length;
     const polishedWords = polished.split(/\s+/).filter(w => w.length > 0).length;
-    console.log(`[Review] SUCCESS in ${elapsed}ms. Words: ${originalWords} -> ${polishedWords}`);
 
+    // SAFETY CHECK: If review destroyed the chapter (< 50% of original), reject it
+    if (polishedWords < originalWords * 0.5) {
+      console.error(`[Review] REJECTED: Output too short (${polishedWords} vs ${originalWords} words). Keeping original.`);
+      return { content: chapterContent, success: false };
+    }
+
+    console.log(`[Review] SUCCESS in ${elapsed}ms. Words: ${originalWords} -> ${polishedWords}`);
     return { content: polished, success: true };
   } catch (error) {
     console.error('[Review] FAILED:', error instanceof Error ? error.message : error);
