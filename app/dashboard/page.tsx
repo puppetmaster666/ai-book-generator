@@ -113,13 +113,23 @@ export default function Dashboard() {
             </Link>
           </div>
 
-          {/* Credits Section */}
+          {/* Plan & Credits Section */}
           {userInfo && (
-            <div className="mb-8 flex items-center gap-4 text-sm">
+            <div className="mb-8 flex flex-wrap items-center gap-3 text-sm">
+              {/* Current Plan Badge */}
+              <div className={`px-3 py-1.5 rounded-lg font-medium ${
+                userInfo.plan === 'yearly'
+                  ? 'bg-amber-100 text-amber-800 border border-amber-200'
+                  : userInfo.plan === 'monthly'
+                  ? 'bg-blue-100 text-blue-800 border border-blue-200'
+                  : 'bg-neutral-100 text-neutral-600 border border-neutral-200'
+              }`}>
+                {userInfo.plan === 'yearly' ? 'Yearly Plan' : userInfo.plan === 'monthly' ? 'Monthly Plan' : 'Free Plan'}
+              </div>
               {userInfo.hasFirstBookFree && (
                 <Link
                   href="/create"
-                  className="px-3 py-1.5 bg-neutral-100 border border-neutral-200 rounded-lg hover:bg-neutral-200 transition-colors font-medium text-neutral-900"
+                  className="px-3 py-1.5 bg-lime-100 border border-lime-200 rounded-lg hover:bg-lime-200 transition-colors font-medium text-lime-800"
                 >
                   First book free
                 </Link>
@@ -132,7 +142,7 @@ export default function Dashboard() {
                   Credits: {userInfo.totalCredits}
                 </Link>
               )}
-              {!userInfo.hasFirstBookFree && userInfo.totalCredits === 0 && (
+              {!userInfo.hasFirstBookFree && userInfo.totalCredits === 0 && userInfo.plan === 'free' && (
                 <span className="text-neutral-500">No credits</span>
               )}
               {/* Upgrade Plan Button */}
