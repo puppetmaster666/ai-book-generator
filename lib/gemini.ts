@@ -1,5 +1,69 @@
 import { GoogleGenerativeAI, GenerativeModel } from '@google/generative-ai';
 
+// Simple timeout wrapper (no retry)
+async function withTimeoutSimple<T>(
+  promise: Promise<T>,
+  timeoutMs: number,
+  operationName: string = 'operation'
+): Promise<T> {
+  let timeoutId: NodeJS.Timeout;
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timeoutId = setTimeout(() => {
+      reject(new Error(`${operationName} timed out after ${timeoutMs}ms`));
+    }, timeoutMs);
+  });
+
+  try {
+    const result = await Promise.race([promise, timeoutPromise]);
+    clearTimeout(timeoutId!);
+    return result;
+  } catch (error) {
+    clearTimeout(timeoutId!);
+    throw error;
+  }
+}
+
+// Timeout wrapper with automatic retry using backup API key
+// Takes a function that creates the promise so we can retry with different key
+async function withTimeout<T>(
+  createPromise: () => Promise<T>,
+  timeoutMs: number,
+  operationName: string = 'operation'
+): Promise<T> {
+  try {
+    // First attempt with current key
+    return await withTimeoutSimple(createPromise(), timeoutMs, operationName);
+  } catch (error) {
+    const isTimeout = error instanceof Error && error.message.includes('timed out');
+    const isRateLimit = error instanceof Error &&
+      (error.message.includes('429') || error.message.includes('quota') || error.message.includes('rate'));
+
+    // If timeout or rate limit, try backup key
+    if ((isTimeout || isRateLimit) && process.env.GEMINI_API_KEY_BACKUP1 && !_useBackupKey) {
+      console.log(`[Gemini] ${operationName} failed (${isTimeout ? 'timeout' : 'rate limit'}), retrying with backup key...`);
+      switchToBackupKey();
+
+      try {
+        // Retry with backup key
+        return await withTimeoutSimple(createPromise(), timeoutMs, operationName);
+      } catch (retryError) {
+        console.error(`[Gemini] Retry with backup key also failed:`, retryError);
+        throw retryError;
+      }
+    }
+
+    throw error;
+  }
+}
+
+// API timeout constants (in milliseconds)
+// With maxDuration=300s configured in route, we have more leeway
+// But still use timeouts to prevent infinite hangs from API issues
+// Flow: generate(120s) + review(30s) + summary(15s) + charStates(15s) = 180s max
+const CHAPTER_GENERATION_TIMEOUT = 120000; // 2 minutes for main chapter (long chapters need time)
+const REVIEW_PASS_TIMEOUT = 30000; // 30 seconds for review (optional, falls back)
+const FAST_TASK_TIMEOUT = 15000; // 15 seconds for summaries, char states
+
 // Truncate text to a maximum word count (for originalIdea preservation)
 const MAX_ORIGINAL_IDEA_WORDS = 1000;
 function truncateToWordLimit(text: string, maxWords: number = MAX_ORIGINAL_IDEA_WORDS): string {
@@ -1390,8 +1454,12 @@ WORD LIMIT: ${data.targetWords} words MAXIMUM. This is a hard limit. Write a com
 OUTPUT: The chapter text only, starting with the chapter heading.`;
   }
 
-  // PASS 1: Generate the chapter
-  const result = await getGeminiPro().generateContent(prompt);
+  // PASS 1: Generate the chapter (with timeout to prevent hanging)
+  const result = await withTimeout(
+    () => getGeminiPro().generateContent(prompt),
+    CHAPTER_GENERATION_TIMEOUT,
+    `Chapter ${data.chapterNumber} generation`
+  );
   let content = result.response.text();
 
   // Quick cleanup of obvious AI artifacts
@@ -1430,7 +1498,11 @@ Be factual and precise. This summary will be used to maintain story continuity.
 CHAPTER TEXT:
 ${chapterContent}`;
 
-  const result = await getGeminiFlash().generateContent(prompt);
+  const result = await withTimeout(
+    () => getGeminiFlash().generateContent(prompt),
+    FAST_TASK_TIMEOUT,
+    'Chapter summary'
+  );
   return result.response.text();
 }
 
@@ -1502,7 +1574,11 @@ OUTPUT:
 Return ONLY the corrected chapter text. No explanations, no comments, no markdown.`;
 
   try {
-    const result = await getGeminiFlash().generateContent(prompt);
+    const result = await withTimeout(
+      () => getGeminiFlash().generateContent(prompt),
+      REVIEW_PASS_TIMEOUT,
+      'Chapter review'
+    );
     let polished = result.response.text().trim();
 
     // Final cleanup pass
@@ -1549,12 +1625,16 @@ For each character that appeared or was mentioned, update their state with:
 
 Output ONLY valid JSON with the updated character states.`;
 
-  const result = await getGeminiFlash().generateContent(prompt);
-  const response = result.response.text();
-
   try {
+    const result = await withTimeout(
+      () => getGeminiFlash().generateContent(prompt),
+      FAST_TASK_TIMEOUT,
+      'Character state update'
+    );
+    const response = result.response.text();
     return parseJSONFromResponse(response) as Record<string, object>;
-  } catch {
+  } catch (error) {
+    console.error('Character state update failed, keeping current:', error);
     return currentStates;
   }
 }

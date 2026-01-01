@@ -24,6 +24,9 @@ import { countWords } from '@/lib/epub';
 import { BOOK_FORMATS, ART_STYLES, ILLUSTRATION_DIMENSIONS, BOOK_PRESETS, type BookFormatKey, type ArtStyleKey, type BookPresetKey } from '@/lib/constants';
 import { sendEmail, getBookReadyEmail } from '@/lib/email';
 
+// Allow up to 5 minutes for outline generation (Vercel Pro plan max: 300s)
+export const maxDuration = 300;
+
 // Timeout for illustration generation (30 seconds) - prevents 504 Gateway Timeout
 const ILLUSTRATION_TIMEOUT_MS = 30000;
 

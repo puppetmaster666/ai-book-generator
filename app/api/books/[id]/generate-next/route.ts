@@ -11,6 +11,9 @@ import {
 import { countWords } from '@/lib/epub';
 import { sendEmail, getBookReadyEmail } from '@/lib/email';
 
+// Allow up to 5 minutes for chapter generation (Vercel Pro plan max: 300s)
+export const maxDuration = 300;
+
 /**
  * Generate the next chapter of a book.
  * This endpoint generates ONE chapter at a time to avoid Vercel timeout limits.
@@ -174,24 +177,28 @@ export async function POST(
     const wordCount = countWords(chapterContent);
     totalWords += wordCount;
 
-    // Generate chapter summary (with fallback)
+    // Run summary and character state updates in PARALLEL to save time
+    // Each has graceful fallback if it fails or times out
+    const [summaryResult, characterStatesResult] = await Promise.allSettled([
+      summarizeChapter(chapterContent),
+      updateCharacterStates(characterStates, chapterContent, nextChapterNum),
+    ]);
+
+    // Extract summary with fallback
     let summary: string;
-    try {
-      summary = await summarizeChapter(chapterContent);
-    } catch (summaryError) {
-      console.error(`Failed to summarize chapter ${nextChapterNum}:`, summaryError);
+    if (summaryResult.status === 'fulfilled') {
+      summary = summaryResult.value;
+    } else {
+      console.error(`Failed to summarize chapter ${nextChapterNum}:`, summaryResult.reason);
       summary = chapterContent.substring(0, 500) + '...';
     }
 
-    // Update character states (with fallback)
-    try {
-      characterStates = await updateCharacterStates(
-        characterStates,
-        chapterContent,
-        nextChapterNum
-      );
-    } catch (stateError) {
-      console.error(`Failed to update character states for chapter ${nextChapterNum}:`, stateError);
+    // Extract character states with fallback
+    if (characterStatesResult.status === 'fulfilled') {
+      characterStates = characterStatesResult.value;
+    } else {
+      console.error(`Failed to update character states for chapter ${nextChapterNum}:`, characterStatesResult.reason);
+      // Keep existing characterStates
     }
 
     // Update story so far
