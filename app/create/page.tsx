@@ -448,8 +448,8 @@ export default function CreateBook() {
                     </div>
                   </div>
 
-                  <span className="text-sm text-neutral-500">
-                    {idea.length} characters
+                  <span className={`text-sm ${idea.trim().split(/\s+/).filter(w => w).length > 1000 ? 'text-amber-600' : 'text-neutral-500'}`}>
+                    {idea.trim() ? idea.trim().split(/\s+/).filter(w => w).length : 0} / 1,000 words
                   </span>
                 </div>
 

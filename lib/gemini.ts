@@ -1,5 +1,13 @@
 import { GoogleGenerativeAI, GenerativeModel } from '@google/generative-ai';
 
+// Truncate text to a maximum word count (for originalIdea preservation)
+const MAX_ORIGINAL_IDEA_WORDS = 1000;
+function truncateToWordLimit(text: string, maxWords: number = MAX_ORIGINAL_IDEA_WORDS): string {
+  const words = text.trim().split(/\s+/);
+  if (words.length <= maxWords) return text;
+  return words.slice(0, maxWords).join(' ') + '...';
+}
+
 // Content rating types
 export type ContentRating = 'childrens' | 'general' | 'mature';
 
@@ -653,6 +661,7 @@ export async function expandIdea(idea: string, hintBookType?: string): Promise<{
   writingStyle: string;
   targetWords: number;
   targetChapters: number;
+  originalIdea: string; // Preserve user's full original input
 }> {
   const isNonFiction = hintBookType === 'non-fiction';
 
@@ -660,10 +669,12 @@ export async function expandIdea(idea: string, hintBookType?: string): Promise<{
 
 STRICT RULES:
 - Output ONLY valid JSON, no other text
-- Keep ALL string values under 100 words each
+- The "premise" field should be a DETAILED summary (up to 300 words) - capture ALL key details from the user's idea
+- Keep other string values under 150 words each
 - Use exactly 2-3 characters, not more
 - No special characters that break JSON
 - Complete the entire JSON structure
+- IMPORTANT: Preserve specific details, names, plot points, and unique elements from the user's idea in the premise
 
 CHARACTER VARIETY - Make each character unique and memorable:
 - Use diverse names from various cultures (not just Western names)
@@ -673,13 +684,14 @@ CHARACTER VARIETY - Make each character unique and memorable:
 - Character descriptions should paint a clear visual picture
 
 JSON format:
-{"title":"Title","genre":"mystery","bookType":"fiction","premise":"Short premise","characters":[{"name":"Name","description":"Brief desc with visual details"}],"beginning":"Start","middle":"Middle","ending":"End","writingStyle":"commercial","targetWords":70000,"targetChapters":20}`;
+{"title":"Title","genre":"mystery","bookType":"fiction","premise":"Detailed premise preserving user's vision (up to 300 words)","characters":[{"name":"Name","description":"Brief desc with visual details"}],"beginning":"Start","middle":"Middle","ending":"End","writingStyle":"commercial","targetWords":70000,"targetChapters":20}`;
 
   const nonFictionPrompt = `Create a NON-FICTION book plan from this idea: "${idea}"
 
 This is for a non-fiction book (self-help, how-to, history, business, biography, educational, documentary, memoir).
 
 IMPORTANT - Determine the type and structure:
+- "premise" = A DETAILED description of what this book covers (up to 300 words) - preserve ALL specific topics, angles, and unique approaches from the user's idea
 - "beginning" = The introduction/hook - what problem does this book solve or what will readers learn?
 - "middle" = The main topics/sections of the book (list 4-6 key topics, comma-separated)
 - "ending" = The conclusion/call-to-action - how will readers' lives be different after reading?
@@ -688,20 +700,21 @@ IMPORTANT - Determine the type and structure:
 
 STRICT RULES:
 - Output ONLY valid JSON, no other text
-- Keep ALL string values under 100 words each
+- The "premise" field should be DETAILED (up to 300 words) - capture ALL key details
+- Keep other string values under 150 words each
 - Characters array MUST be empty []
 - No special characters that break JSON
 - Complete the entire JSON structure
 - bookType MUST be "non-fiction"
 
 JSON format:
-{"title":"Title","genre":"selfhelp","bookType":"non-fiction","premise":"What this book teaches","characters":[],"beginning":"Introduction hook","middle":"Topic 1, Topic 2, Topic 3, Topic 4","ending":"Conclusion and takeaways","writingStyle":"informative","targetWords":50000,"targetChapters":15}`;
+{"title":"Title","genre":"selfhelp","bookType":"non-fiction","premise":"Detailed description of the book's content (up to 300 words)","characters":[],"beginning":"Introduction hook","middle":"Topic 1, Topic 2, Topic 3, Topic 4","ending":"Conclusion and takeaways","writingStyle":"informative","targetWords":50000,"targetChapters":15}`;
 
   const prompt = isNonFiction ? nonFictionPrompt : fictionPrompt;
   const result = await getGeminiFlash().generateContent(prompt);
   const response = result.response.text();
 
-  return parseJSONFromResponse(response) as {
+  const parsed = parseJSONFromResponse(response) as {
     title: string;
     genre: string;
     bookType: 'fiction' | 'non-fiction';
@@ -713,6 +726,12 @@ JSON format:
     writingStyle: string;
     targetWords: number;
     targetChapters: number;
+  };
+
+  // Return parsed result with original idea preserved (capped at 1000 words for AI context)
+  return {
+    ...parsed,
+    originalIdea: truncateToWordLimit(idea),
   };
 }
 
@@ -757,6 +776,7 @@ export async function generateIllustratedOutline(bookData: {
   genre: string;
   bookType: string;
   premise: string;
+  originalIdea?: string;
   characters: { name: string; description: string }[];
   beginning: string;
   middle: string;
@@ -816,10 +836,15 @@ For each page, the "text" field contains the prose that appears under/around the
 Keep text short and age-appropriate (${wordsPerPage} words average per page).
 `;
 
+  // Include original idea if provided (gives AI more context from user's vision)
+  const originalIdeaSection = bookData.originalIdea
+    ? `\nORIGINAL AUTHOR VISION (preserve these specific details, story elements, and visual ideas):\n${bookData.originalIdea}\n`
+    : '';
+
   const prompt = `You are creating a detailed page-by-page outline for an illustrated ${isComicStyle ? 'comic/graphic story' : 'picture book'}.
 ${languageInstruction ? `\n${languageInstruction}\n` : ''}
 ${contentGuidelines}
-
+${originalIdeaSection}
 BOOK DETAILS:
 - Title: "${bookData.title}"
 - Genre: ${bookData.genre}
@@ -835,6 +860,8 @@ CHARACTERS (use these EXACT descriptions for consistency):
 ${characterRef}
 
 Create EXACTLY ${bookData.targetChapters} pages. Each page needs BOTH the text/dialogue AND a detailed scene description for illustration.
+
+IMPORTANT: If an "Original Author Vision" is provided above, ensure the story incorporates all the specific details, character traits, plot elements, and unique ideas from it. The author's original vision takes priority.
 
 ${dialogueInstructions}
 
@@ -956,6 +983,7 @@ export async function generateOutline(bookData: {
   genre: string;
   bookType: string;
   premise: string;
+  originalIdea?: string;
   characters: { name: string; description: string }[];
   beginning: string;
   middle: string;
@@ -975,9 +1003,14 @@ export async function generateOutline(bookData: {
   // Detect language from title and premise
   const languageInstruction = detectLanguageInstruction(bookData.title + ' ' + bookData.premise);
 
+  // Include original idea if provided (gives AI more context from user's vision)
+  const originalIdeaSection = bookData.originalIdea
+    ? `\nORIGINAL AUTHOR VISION (preserve these specific details, names, and plot points):\n${bookData.originalIdea}\n`
+    : '';
+
   const prompt = `You are a professional book outliner. Create a detailed chapter-by-chapter outline.
 ${languageInstruction ? `\n${languageInstruction}\n` : ''}
-
+${originalIdeaSection}
 BOOK DETAILS:
 - Title: ${bookData.title}
 - Genre: ${bookData.genre}
@@ -989,6 +1022,8 @@ BOOK DETAILS:
 - Ending: ${bookData.ending}
 - Writing Style: ${bookData.writingStyle}
 - Target Length: ${bookData.targetWords} words (${bookData.targetChapters} chapters)
+
+IMPORTANT: If an "Original Author Vision" is provided above, ensure the outline incorporates all the specific details, character names, plot elements, and unique ideas from it. The author's original vision takes priority.
 
 Create an outline with exactly ${bookData.targetChapters} chapters. For each chapter provide:
 1. Chapter number
@@ -1030,6 +1065,7 @@ export async function generateNonFictionOutline(bookData: {
   genre: string;
   bookType: string;
   premise: string;
+  originalIdea?: string;
   beginning: string;  // Introduction/hook
   middle: string;     // Main topics (comma-separated)
   ending: string;     // Conclusion/takeaways
@@ -1051,9 +1087,14 @@ export async function generateNonFictionOutline(bookData: {
   // Parse the main topics from the middle field
   const mainTopics = bookData.middle.split(',').map(t => t.trim()).filter(t => t);
 
+  // Include original idea if provided (gives AI more context from user's vision)
+  const originalIdeaSection = bookData.originalIdea
+    ? `\nORIGINAL AUTHOR VISION (preserve these specific details, topics, and insights):\n${bookData.originalIdea}\n`
+    : '';
+
   const prompt = `You are a professional non-fiction book outliner. Create a detailed chapter-by-chapter outline.
 ${languageInstruction ? `\n${languageInstruction}\n` : ''}
-
+${originalIdeaSection}
 BOOK DETAILS:
 - Title: ${bookData.title}
 - Genre: ${bookData.genre} (non-fiction)
@@ -1065,6 +1106,8 @@ BOOK DETAILS:
 - Target Length: ${bookData.targetWords} words (${bookData.targetChapters} chapters)
 
 Create an outline with exactly ${bookData.targetChapters} chapters for this NON-FICTION book.
+
+IMPORTANT: If an "Original Author Vision" is provided above, ensure the outline incorporates all the specific topics, insights, examples, and unique perspectives from it. The author's original vision takes priority.
 
 STRUCTURE GUIDELINES:
 - Chapter 1 should be an Introduction that hooks the reader and previews what they'll learn

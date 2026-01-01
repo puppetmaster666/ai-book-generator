@@ -90,6 +90,7 @@ model Book {
   genre           String
   bookType        String    // fiction, non-fiction
   premise         String    @db.Text
+  originalIdea    String?   @db.Text  // User's full original input (preserved for context)
   characters      Json      // Array of {name, description}
   beginning       String    @db.Text
   middle          String    @db.Text

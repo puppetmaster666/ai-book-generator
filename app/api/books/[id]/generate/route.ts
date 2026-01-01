@@ -659,6 +659,7 @@ export async function POST(
           genre: book.genre,
           bookType: book.bookType,
           premise: book.premise,
+          originalIdea: book.originalIdea || undefined,
           characters: book.characters as { name: string; description: string }[],
           beginning: book.beginning,
           middle: book.middle,
@@ -679,6 +680,7 @@ export async function POST(
           genre: book.genre,
           bookType: book.bookType,
           premise: book.premise,
+          originalIdea: book.originalIdea || undefined,
           beginning: book.beginning,
           middle: book.middle,
           ending: book.ending,
@@ -701,6 +703,7 @@ export async function POST(
           genre: book.genre,
           bookType: book.bookType,
           premise: book.premise,
+          originalIdea: book.originalIdea || undefined,
           characters: book.characters as { name: string; description: string }[],
           beginning: book.beginning,
           middle: book.middle,
@@ -850,9 +853,20 @@ export async function POST(
         const wordCount = countWords(chapterContent);
         totalWords += wordCount;
 
-        // Save chapter with scene description and dialogue
-        const chapter = await prisma.chapter.create({
-          data: {
+        // Save chapter with scene description and dialogue (upsert to handle retries)
+        const chapter = await prisma.chapter.upsert({
+          where: {
+            bookId_number: { bookId: id, number: i },
+          },
+          update: {
+            title: chapterPlan.title,
+            content: chapterContent,
+            summary: chapterPlan.summary || chapterContent.substring(0, 200),
+            wordCount,
+            sceneDescription: chapterPlan.scene as object || null,
+            dialogue: chapterPlan.dialogue as object[] || null,
+          },
+          create: {
             bookId: id,
             number: i,
             title: chapterPlan.title,
@@ -865,9 +879,13 @@ export async function POST(
         });
         console.log(`Page ${i} saved. Word count: ${wordCount}`);
 
-        // Save illustration if generated
+        // Save illustration if generated (delete existing first to handle retries)
         const illustration = illustrationResults.get(i);
         if (illustration) {
+          // Delete any existing illustrations for this chapter (from previous retry)
+          await prisma.illustration.deleteMany({
+            where: { chapterId: chapter.id },
+          });
           await prisma.illustration.create({
             data: {
               bookId: id,
@@ -971,9 +989,18 @@ export async function POST(
         // Update story so far
         storySoFar += `\n\nChapter ${i}: ${chapterPlan.title}\n${summary}`;
 
-        // Save chapter
-        const chapter = await prisma.chapter.create({
-          data: {
+        // Save chapter (upsert to handle edge cases)
+        const chapter = await prisma.chapter.upsert({
+          where: {
+            bookId_number: { bookId: id, number: i },
+          },
+          update: {
+            title: chapterPlan.title,
+            content: chapterContent,
+            summary,
+            wordCount,
+          },
+          create: {
             bookId: id,
             number: i,
             title: chapterPlan.title,
