@@ -367,7 +367,7 @@ function isCompleteSentence(text: string): boolean {
 }
 
 // Category types for idea generation
-export type IdeaCategory = 'novel' | 'childrens' | 'comic' | 'nonfiction' | 'random';
+export type IdeaCategory = 'novel' | 'childrens' | 'comic' | 'nonfiction' | 'adult_comic' | 'random';
 
 // Example pools for different categories - randomly selected to avoid repetition
 // Each category has 8+ example pairs for maximum variety
@@ -521,6 +521,40 @@ const IDEA_EXAMPLES: Record<Exclude<IdeaCategory, 'random'>, string[][]> = {
       "A practical guide to negotiation for people who hate negotiating, offering simple scripts and strategies for everything from salary negotiations and car purchases to difficult conversations with family members. This book proves that effective negotiation is a learnable skill, not an innate talent.",
     ],
   ],
+  adult_comic: [
+    [
+      "Vampiress Selene runs a late night underground club where supernatural beings gather to unwind, and her regulars include a handsome incubus bartender, a flirtatious shapeshifter bouncer, and a mysterious warlock who keeps buying her drinks. When a mortal stumbles through her doors seeking protection from demon hunters, Selene must decide whether to risk her neutral territory or let an innocent die. The attraction between them is undeniable, but protecting him means making enemies of both the hunters and the demons who want him silenced.",
+      "Marco, a retired hitman turned art thief, takes one final job to steal a cursed painting from a corrupt billionaire's private collection, only to discover his target has hired an equally dangerous woman named Cassandra to guard it. Their cat and mouse game through the mansion becomes increasingly heated as they discover they share the same dark past and the same enemies. Neither can complete their mission without betraying the other, but neither wants to pull the trigger anymore.",
+    ],
+    [
+      "When witch hunter Diana accidentally bonds with the very demon she was sent to destroy, she discovers Azrael is nothing like the monsters she was trained to kill. He is charming, protective, and infuriatingly attractive, with knowledge of a conspiracy within her own order that has been sacrificing innocent people. Now hunted by her former allies and bound to a creature of darkness, Diana must decide where her loyalties truly lie as the attraction between them threatens to consume them both.",
+      "Galactic bounty hunter Kira captures her most valuable target yet, a notorious space pirate captain named Dex who is worth enough credits to retire on. During the long journey back to claim her reward, stuck together on her small ship, the tension between captor and captive transforms into something neither expected. When she discovers he was framed by the same corporation that destroyed her home world, she must choose between the bounty and an unlikely alliance.",
+    ],
+    [
+      "Rival assassins Viktor and Natasha have been trying to kill each other for years, but when both are betrayed by their agencies on the same night, they form a reluctant partnership to survive. Hiding out together in a safehouse, their hatred slowly transforms into something far more complicated and dangerous than either anticipated. They agree to one rule: no attachments. But some rules were made to be broken, especially when death could come at any moment.",
+      "After centuries of solitude, vampire lord Sebastian attends a masquerade ball and becomes obsessed with a mysterious woman who seems immune to his powers of seduction. Evangeline is actually a dhampir sent to assassinate him, but as they dance through the night, playing increasingly dangerous games of cat and mouse, neither can bring themselves to end the other. Their forbidden attraction threatens to destroy them both or unite two worlds that have been at war for millennia.",
+    ],
+    [
+      "Detective Noir Raven investigates supernatural crimes in a city where magic is real and monsters hide in plain sight, and her newest case brings her face to face with a crime boss who is half demon and entirely too attractive for her own good. Damien offers information she desperately needs, but his price is her company, not her body. As they work together through the city's dangerous underbelly, the line between work and pleasure becomes impossible to distinguish.",
+      "Succubus Lilith is terrible at her job because she actually wants her targets to enjoy themselves, which has made her the laughingstock of the underworld. When she is assigned to corrupt an incorruptible priest named Father Marcus, she discovers he is not as pure as his reputation suggests. He has his own dark desires and his own reasons for being in the church, and their encounters become a battle of wills that neither is prepared to lose.",
+    ],
+    [
+      "In a world where gladiatorial combat has returned as entertainment for the ultra wealthy, undefeated champion Alexei meets his match in newcomer Jade, a fighter with a mysterious past and moves he has never seen before. Their rivalry in the arena is legendary, but what the crowds do not see are their secret meetings in the dark corridors beneath the stadium. When they discover the games are rigged to end in death for one of them, they must choose between love and survival.",
+      "Thief extraordinaire Camille is hired to steal a priceless artifact from a high security museum, not knowing that her mysterious employer Dante will be joining her on the heist. He is arrogant, infuriating, and far too skilled at reading her every move, yet their chemistry during the mission is undeniable. When the job goes wrong and they are trapped together in the vault, they discover they have been set up by the same person, and the only way out requires trusting each other completely.",
+    ],
+    [
+      "Dragon shifter Ember has sworn off humans after centuries of betrayal, until a stubborn archaeologist named Dr. James Chen refuses to leave her territory despite her threats. He is searching for an ancient artifact that could save his dying sister, and his determination reminds her of someone she loved long ago. As she reluctantly helps him navigate deadly ruins filled with traps and rival treasure hunters, she finds herself drawn to his warmth in ways that threaten to melt her frozen heart.",
+      "Mercenary captain Zara accepts a contract to transport a mysterious prince across hostile territory, but Prince Kael is nothing like the pampered royalty she expected. He fights like a demon, drinks like a sailor, and matches her sharp tongue word for word, creating friction that their crew finds both annoying and entertaining. When assassins attack and his true identity is revealed as something far more dangerous than royalty, Zara must decide if the massive bounty on his head is worth more than what they have built together.",
+    ],
+    [
+      "In a cyberpunk megacity where bodies can be rented and minds uploaded, hacker Nyx takes a contract to infiltrate the memories of reclusive billionaire Orion Cross. What she discovers inside his mind are not corporate secrets but desperate loneliness and desire that mirror her own. When he realizes she has seen his innermost thoughts and does not recoil, he offers her something no one else has: complete access to everything he is. Their connection transcends the digital divide in ways neither thought possible.",
+      "Werewolf pack leader Luna has no time for the arrogant alpha who arrives claiming territory rights, but Fenris is also the only one who can help stop the hunters decimating her people. Their alliance is tense, their arguments legendary, and their physical confrontations leave them both breathless for reasons that have nothing to do with combat. Pack law forbids what they both want, but some instincts are impossible to deny.",
+    ],
+    [
+      "Former spy Alexandra thought she left her dangerous past behind until her ex handler shows up at her quiet beach bar with one last mission: seduce and extract secrets from arms dealer Vincent Cruz. The problem is Vincent knows exactly who she is and what she was sent to do, and he finds the game between them far more interesting than actually conducting business. As they play increasingly dangerous games of deception and desire, neither can tell who is hunting whom anymore.",
+      "Fallen angel Raziel is assigned to guard a mortal woman named Eve who holds the key to preventing the apocalypse, but heaven did not warn him she would challenge everything he believed about humans. She is fierce, funny, and frustratingly unimpressed by his celestial nature, treating him like any other man despite his wings. As demons hunt them across the globe, he begins to understand why his kind was forbidden from loving mortals, and why so many broke that rule.",
+    ],
+  ],
 };
 
 // Genre variations for each category - expanded for more variety
@@ -548,6 +582,13 @@ const GENRE_HINTS: Record<Exclude<IdeaCategory, 'random'>, string[]> = {
     'personal finance', 'career development', 'productivity', 'leadership', 'entrepreneurship',
     'health and wellness', 'psychology', 'science explained', 'true crime', 'investigative',
     'technology', 'philosophy', 'education', 'parenting', 'relationships', 'travel'
+  ],
+  adult_comic: [
+    'supernatural romance', 'dark fantasy', 'urban fantasy noir', 'enemies to lovers',
+    'paranormal thriller', 'cyberpunk romance', 'forbidden love', 'vampire romance',
+    'shifter romance', 'assassin romance', 'rivals to lovers', 'forced proximity',
+    'mafia romance', 'demon romance', 'spy thriller romance', 'bounty hunter romance',
+    'dragon shifter', 'angel and demon', 'second chance romance', 'bodyguard romance'
   ],
 };
 
@@ -586,6 +627,22 @@ VARIETY IS ESSENTIAL - Create something fresh and different:
       break;
     case 'nonfiction':
       categoryInstruction = `Generate a compelling ${randomGenre} non-fiction book idea that promises to teach readers something valuable, share untold stories, or provide practical guidance they can apply to their lives. Focus on what makes this book unique and why readers would want to buy it.`;
+      break;
+    case 'adult_comic':
+      categoryInstruction = `Generate a ${randomGenre} adult comic or graphic novel idea for mature readers (18+). Create a story with intense romantic tension, dangerous situations, and complex characters who are drawn to each other despite obstacles.
+
+MATURE CONTENT GUIDELINES:
+- Focus on tension, chemistry, and emotional intensity rather than explicit content
+- Include morally complex characters with dark pasts and conflicting desires
+- Create high stakes situations where the romance heightens the danger
+- Suggestive and sensual but not explicit or graphic
+- The attraction should feel earned through character interaction and chemistry
+
+VARIETY IS ESSENTIAL:
+- Use diverse character archetypes: assassins, supernatural beings, spies, criminals, fallen angels, etc.
+- Different settings: noir cities, supernatural underworlds, space ships, historical periods, cyberpunk futures
+- Power dynamics: rivals, enemies, captor and captive, forbidden relationships, dangerous alliances
+- Visual drama that would look stunning in illustrated panels`;
       break;
   }
 

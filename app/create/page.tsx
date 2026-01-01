@@ -10,7 +10,7 @@ import { ArrowLeft, ArrowRight, Sparkles, Loader2, BookOpen, Palette, Layers, Ch
 import { BOOK_PRESETS, ART_STYLES, GENRES, type BookPresetKey, type ArtStyleKey } from '@/lib/constants';
 
 // Idea categories for the Surprise Me feature
-type IdeaCategory = 'random' | 'novel' | 'childrens' | 'comic' | 'nonfiction';
+type IdeaCategory = 'random' | 'novel' | 'childrens' | 'comic' | 'nonfiction' | 'adult_comic';
 
 const IDEA_CATEGORIES: { value: IdeaCategory; label: string; emoji: string }[] = [
   { value: 'random', label: 'Surprise Me', emoji: '🎲' },
@@ -18,6 +18,7 @@ const IDEA_CATEGORIES: { value: IdeaCategory; label: string; emoji: string }[] =
   { value: 'childrens', label: "Children's", emoji: '🧒' },
   { value: 'comic', label: 'Comic', emoji: '💥' },
   { value: 'nonfiction', label: 'Non-Fiction', emoji: '📚' },
+  { value: 'adult_comic', label: 'Adult Comic (18+)', emoji: '🔥' },
 ];
 
 // Icons for book types

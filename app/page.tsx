@@ -12,7 +12,7 @@ import Testimonials from '@/components/Testimonials';
 import FAQ from '@/components/FAQ';
 
 // Idea categories for the Surprise Me feature
-type IdeaCategory = 'random' | 'novel' | 'childrens' | 'comic' | 'nonfiction';
+type IdeaCategory = 'random' | 'novel' | 'childrens' | 'comic' | 'nonfiction' | 'adult_comic';
 
 const IDEA_CATEGORIES: { value: IdeaCategory; label: string; emoji: string }[] = [
   { value: 'random', label: 'Any Type', emoji: '🎲' },
@@ -20,6 +20,7 @@ const IDEA_CATEGORIES: { value: IdeaCategory; label: string; emoji: string }[] =
   { value: 'childrens', label: "Children's", emoji: '🧸' },
   { value: 'comic', label: 'Comic', emoji: '💥' },
   { value: 'nonfiction', label: 'Non-Fiction', emoji: '📖' },
+  { value: 'adult_comic', label: 'Adult Comic (18+)', emoji: '🔥' },
 ];
 
 // Locked accent color: Lime
