@@ -1013,6 +1013,8 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
 
   const isGenerating = book.status === 'generating' || book.status === 'outlining';
   const isPending = book.status === 'pending';
+  // Treat ?success=true as payment completed for UI (webhook may be delayed)
+  const paymentCompleted = book.paymentStatus === 'completed' || success === 'true';
   const isIllustrated = book.bookFormat !== 'text_only';
 
   return (
@@ -1238,7 +1240,7 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
           {/* Pending - Waiting for Generation */}
           {isPending && (
             <div className="bg-white rounded-2xl border border-neutral-200 p-8 mb-6">
-              {book.paymentStatus === 'completed' ? (
+              {paymentCompleted ? (
                 <div className="text-center">
                   <div className="relative w-16 h-16 mx-auto mb-4">
                     <div className="absolute inset-0 rounded-full border-4 border-neutral-100" />
