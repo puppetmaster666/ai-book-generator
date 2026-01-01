@@ -1,7 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { ART_STYLES, ILLUSTRATION_DIMENSIONS, type ArtStyleKey } from '@/lib/constants';
-import { switchToBackupKey, SAFETY_SETTINGS } from '@/lib/gemini';
+import {
+  rotateApiKey,
+  switchToLastWorkingKey,
+  markKeyAsWorking,
+  getCurrentKeyIndex,
+  SAFETY_SETTINGS
+} from '@/lib/gemini';
 
 // Types for visual consistency guides
 type CharacterVisualGuide = {
@@ -26,79 +32,35 @@ type VisualStyleGuide = {
   consistencyRules: string[];
 };
 
-// Lazy initialization with backup key support
+// Get API key by index
+const API_KEY_ENV_NAMES = [
+  'GEMINI_API_KEY',
+  'GEMINI_API_KEY_BACKUP1',
+  'GEMINI_API_BACKUP2'
+];
+
+// Lazy initialization - recreated when key changes
 let genAI: GoogleGenerativeAI | null = null;
-let _useBackupKey = false;
+let _currentKeyIndexLocal = -1;
 
 function getGenAI(): GoogleGenerativeAI {
-  if (!genAI) {
-    // Try backup key first if flagged
-    if (_useBackupKey && process.env.GEMINI_API_KEY_BACKUP1) {
-      genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY_BACKUP1);
-      return genAI;
-    }
-    // Use primary key
-    const apiKey = process.env.GEMINI_API_KEY;
+  const currentKeyIndex = getCurrentKeyIndex();
+
+  // Recreate if key changed
+  if (genAI === null || _currentKeyIndexLocal !== currentKeyIndex) {
+    const envName = API_KEY_ENV_NAMES[currentKeyIndex];
+    const apiKey = process.env[envName];
+
     if (!apiKey) {
-      throw new Error('GEMINI_API_KEY environment variable is not set');
+      throw new Error(`API key ${envName} is not set`);
     }
+
     genAI = new GoogleGenerativeAI(apiKey);
+    _currentKeyIndexLocal = currentKeyIndex;
+    console.log(`[Illustration] Using API key index ${currentKeyIndex}`);
   }
+
   return genAI;
-}
-
-// Retry utility with backup key failover
-async function withRetry<T>(
-  fn: () => Promise<T>,
-  maxRetries: number = 3,
-  baseDelayMs: number = 3000
-): Promise<T> {
-  let lastError: Error | null = null;
-  let triedBackupKey = false;
-
-  for (let attempt = 0; attempt <= maxRetries; attempt++) {
-    try {
-      return await fn();
-    } catch (error) {
-      lastError = error as Error;
-      const errorMessage = lastError.message?.toLowerCase() || '';
-
-      // Check if it's a rate limit or quota error
-      const isRateLimitError =
-        errorMessage.includes('rate limit') ||
-        errorMessage.includes('quota') ||
-        errorMessage.includes('429') ||
-        errorMessage.includes('resource exhausted') ||
-        errorMessage.includes('too many requests');
-
-      if (!isRateLimitError) {
-        throw lastError;
-      }
-
-      // Try switching to backup key
-      if (!triedBackupKey && attempt >= 1) {
-        const switched = switchToBackupKey();
-        if (switched) {
-          triedBackupKey = true;
-          _useBackupKey = true;
-          genAI = null; // Reset to pick up new key
-          console.log('[Illustration] Retrying with backup API key...');
-          attempt--;
-          continue;
-        }
-      }
-
-      if (attempt === maxRetries) {
-        throw lastError;
-      }
-
-      const delay = baseDelayMs * Math.pow(2, attempt);
-      console.log(`[Illustration] Rate limit hit, retrying in ${delay / 1000}s (attempt ${attempt + 1}/${maxRetries})...`);
-      await new Promise(resolve => setTimeout(resolve, delay));
-    }
-  }
-
-  throw lastError;
 }
 
 // Important: For illustrations, we need to be very specific about text
@@ -209,41 +171,45 @@ export async function POST(request: NextRequest) {
       return { imageData, altText };
     };
 
-    // Retry utility modified to handle safety blocks
+    // Retry utility with FAST key switching
+    // Key rotation happens IMMEDIATELY on rate limit - no delay for first switch
     const attemptGeneration = async () => {
       let lastError: Error | null = null;
+      let keysTriedThisCycle = 0;
+      const totalKeys = 3;
+      const maxCycles = 2;
+      let currentCycle = 0;
 
-      for (let attempt = 0; attempt <= 3; attempt++) {
+      // Start with last working key if available
+      switchToLastWorkingKey();
+      genAI = null;
+
+      for (let attempt = 0; attempt < (totalKeys * maxCycles) + 1; attempt++) {
         try {
-          // If we had a safety block previously, enable safe mode for retries
-          // We don't reset useSafeMode here so it persists across retries
-
           const result = await generateWithSafeMode();
 
-          // Check if blocked
+          // Check if blocked by safety
           if ('blocked' in result && result.blocked) {
-            console.warn(`[Illustration] Blocked by ${result.reason} (attempt ${attempt + 1}/4)`);
+            console.warn(`[Illustration] Blocked by ${result.reason} (attempt ${attempt + 1})`);
 
-            // If we get blocked, enable safe mode for next attempt
-            if (!useSafeMode && attempt < 3) {
+            if (!useSafeMode) {
               useSafeMode = true;
               console.log('[Illustration] Enabling SAFE MODE for retry...');
-              // Don't wait for rate limit delay if it's just a safety block, retry immediately
               continue;
             }
 
-            // If we're already in safe mode and still blocked, or out of retries, return the block
-            if (attempt === 3) return result;
-
-            // If standard block, continue to next retry
-            await new Promise(resolve => setTimeout(resolve, 2000));
+            if (attempt >= 3) return result;
+            await new Promise(resolve => setTimeout(resolve, 1000));
             continue;
           }
+
+          // SUCCESS! Mark this key as working
+          markKeyAsWorking();
+          console.log(`[Illustration] Successfully generated with key index ${getCurrentKeyIndex()}`);
 
           return result;
 
         } catch (error) {
-          // Standard error handling (rate limits, etc)
           lastError = error as Error;
           const errorMessage = lastError.message?.toLowerCase() || '';
 
@@ -256,13 +222,28 @@ export async function POST(request: NextRequest) {
 
           if (!isRateLimitError) throw lastError;
 
-          // Rate limit handling
-          if (attempt < 3) {
-            const delay = 3000 * Math.pow(2, attempt);
-            console.log(`[Illustration] Rate limit hit, retrying in ${delay / 1000}s...`);
-            await new Promise(resolve => setTimeout(resolve, delay));
-            continue;
+          // Rate limit - IMMEDIATELY try next key
+          keysTriedThisCycle++;
+          console.log(`[Illustration] Rate limit on key ${getCurrentKeyIndex()}, trying next key (${keysTriedThisCycle}/${totalKeys})...`);
+
+          const rotated = rotateApiKey();
+          if (rotated) {
+            genAI = null;
+            if (keysTriedThisCycle < totalKeys) {
+              continue;
+            }
           }
+
+          // All keys exhausted - add delay before next cycle
+          currentCycle++;
+          if (currentCycle >= maxCycles) {
+            throw lastError;
+          }
+
+          keysTriedThisCycle = 0;
+          const delay = 5000 * currentCycle;
+          console.log(`[Illustration] All keys exhausted, waiting ${delay / 1000}s before cycle ${currentCycle + 1}...`);
+          await new Promise(resolve => setTimeout(resolve, delay));
         }
       }
       throw lastError || new Error('Failed to generate after retries');

@@ -364,6 +364,10 @@ let _geminiFlashLight: GenerativeModel | null = null; // Lightweight version for
 let _geminiImage: GenerativeModel | null = null;
 
 let _currentKeyIndex = 0;
+// Track which key last succeeded - this persists across requests in the same serverless instance
+let _lastWorkingKeyIndex = 0;
+// Timestamp of when the last key was marked as working (for potential reset after long periods)
+let _lastWorkingKeyTimestamp = 0;
 
 // Environment variable names for keys in order of preference
 const API_KEY_ENV_NAMES = [
@@ -371,6 +375,54 @@ const API_KEY_ENV_NAMES = [
   'GEMINI_API_KEY_BACKUP1',
   'GEMINI_API_BACKUP2'
 ];
+
+// Mark the current key as working - call this after a successful API call
+export function markKeyAsWorking(): void {
+  _lastWorkingKeyIndex = _currentKeyIndex;
+  _lastWorkingKeyTimestamp = Date.now();
+  console.log(`[Gemini] Marked key ${_currentKeyIndex} as last working key`);
+}
+
+// Get the index of the last working key
+export function getLastWorkingKeyIndex(): number {
+  return _lastWorkingKeyIndex;
+}
+
+// Get the current key index
+export function getCurrentKeyIndex(): number {
+  return _currentKeyIndex;
+}
+
+// Switch to the last known working key (if different from current)
+// Returns true if switched, false if already on that key or key unavailable
+export function switchToLastWorkingKey(): boolean {
+  // If last working key is old (>5 minutes), don't trust it - try primary first
+  const MAX_AGE_MS = 5 * 60 * 1000;
+  if (Date.now() - _lastWorkingKeyTimestamp > MAX_AGE_MS) {
+    // Reset to primary if available
+    if (_currentKeyIndex !== 0 && process.env.GEMINI_API_KEY) {
+      console.log('[Gemini] Last working key is stale, switching to primary');
+      _currentKeyIndex = 0;
+      resetModelInstances();
+      return true;
+    }
+    return false;
+  }
+
+  if (_currentKeyIndex === _lastWorkingKeyIndex) {
+    return false;
+  }
+
+  const envName = API_KEY_ENV_NAMES[_lastWorkingKeyIndex];
+  if (process.env[envName]) {
+    console.log(`[Gemini] Switching to last working key: index ${_lastWorkingKeyIndex} (${envName})`);
+    _currentKeyIndex = _lastWorkingKeyIndex;
+    resetModelInstances();
+    return true;
+  }
+
+  return false;
+}
 
 // Reset model instances when switching API keys
 function resetModelInstances() {

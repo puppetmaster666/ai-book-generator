@@ -162,6 +162,8 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
   const orchestrationSessionRef = useRef<number>(0);
   // Track chapter count to detect new chapters in status polling (avoids stale closure issues)
   const lastKnownChapterCountRef = useRef<number>(0);
+  // Track illustration count for visual books - triggers full fetch when new panels are generated
+  const lastKnownIllustrationCountRef = useRef<number>(0);
   const { setGeneratingBookId } = useGeneratingBook();
 
   // Claim book for user after Google sign-in redirect
@@ -281,6 +283,7 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
         // Not a comic, or already in progress - show this page
         setBook(loadedBook);
         lastKnownChapterCountRef.current = loadedBook?.chapters?.length || 0;
+        lastKnownIllustrationCountRef.current = loadedBook?.illustrations?.length || 0;
         setIsFirstCompletedBook(data.isFirstCompletedBook || false);
         setLoading(false);
       } catch (err) {
@@ -396,6 +399,7 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
                 const fullData = await fullRes.json();
                 setBook(fullData.book);
                 lastKnownChapterCountRef.current = fullData.book?.chapters?.length || 0;
+            lastKnownIllustrationCountRef.current = fullData.book?.illustrations?.length || 0;
 
                 // Update chapter statuses
                 if (fullData.book?.chapters) {
@@ -470,6 +474,7 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
               const fullData = await fullRes.json();
               setBook(fullData.book);
               lastKnownChapterCountRef.current = fullData.book?.chapters?.length || 0;
+            lastKnownIllustrationCountRef.current = fullData.book?.illustrations?.length || 0;
             }
             break;
           }
@@ -489,6 +494,7 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
             const updatedData = await updatedRes.json();
             setBook(updatedData.book);
             lastKnownChapterCountRef.current = updatedData.book?.chapters?.length || 0;
+            lastKnownIllustrationCountRef.current = updatedData.book?.illustrations?.length || 0;
           }
 
           // Small delay between chapters to avoid overwhelming the API
@@ -518,6 +524,7 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
                 const failedData = await failedRes.json();
                 setBook(failedData.book);
                 lastKnownChapterCountRef.current = failedData.book?.chapters?.length || 0;
+                lastKnownIllustrationCountRef.current = failedData.book?.illustrations?.length || 0;
               }
             } catch (cancelErr) {
               console.error('Failed to mark book as failed:', cancelErr);
@@ -618,15 +625,23 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
         const serverChapterCount = status.chapterCount || 0;
         const hasNewChapters = serverChapterCount > localChapterCount;
 
-        // Fetch full book data if there are new chapters OR status completed
-        if (hasNewChapters || (status.status === 'completed' && book?.status !== 'completed')) {
-          console.log(`Fetching full book data: ${hasNewChapters ? 'new chapters detected' : 'book completed'} (local: ${localChapterCount}, server: ${serverChapterCount})`);
+        // Check if there are new illustrations (for visual books)
+        const localIllustrationCount = lastKnownIllustrationCountRef.current;
+        const serverIllustrationCount = status.illustrationCount || 0;
+        const hasNewIllustrations = serverIllustrationCount > localIllustrationCount;
+
+        // Fetch full book data if there are new chapters, new illustrations, OR status completed
+        if (hasNewChapters || hasNewIllustrations || (status.status === 'completed' && book?.status !== 'completed')) {
+          const reason = hasNewChapters ? 'new chapters' : hasNewIllustrations ? 'new illustrations' : 'book completed';
+          console.log(`Fetching full book data: ${reason} (chapters: ${localChapterCount}→${serverChapterCount}, illustrations: ${localIllustrationCount}→${serverIllustrationCount})`);
           const fullRes = await fetch(`/api/books/${id}`);
           if (fullRes.ok) {
             const fullData = await fullRes.json();
             setBook(fullData.book);
-            // Update ref with new chapter count
+            // Update refs with new counts
             lastKnownChapterCountRef.current = fullData.book?.chapters?.length || 0;
+            lastKnownIllustrationCountRef.current = fullData.book?.illustrations?.length || 0;
+            lastKnownIllustrationCountRef.current = fullData.book?.illustrations?.length || 0;
           }
         } else {
           // Just update status fields (preserves existing heavy data)
@@ -757,6 +772,7 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
           const bookData = await bookRes.json();
           setBook(bookData.book);
           lastKnownChapterCountRef.current = bookData.book?.chapters?.length || 0;
+          lastKnownIllustrationCountRef.current = bookData.book?.illustrations?.length || 0;
         }
       } else {
         // For visual books or books without outline, call generate
@@ -801,6 +817,7 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
           console.log('Book data after generate:', bookData.book?.status, bookData.book?.outline ? 'has outline' : 'no outline');
           setBook(bookData.book);
           lastKnownChapterCountRef.current = bookData.book?.chapters?.length || 0;
+          lastKnownIllustrationCountRef.current = bookData.book?.illustrations?.length || 0;
         }
       }
     } catch (err) {
@@ -838,6 +855,7 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
         const bookData = await bookRes.json();
         setBook(bookData.book);
         lastKnownChapterCountRef.current = bookData.book?.chapters?.length || 0;
+          lastKnownIllustrationCountRef.current = bookData.book?.illustrations?.length || 0;
       }
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Retry failed';
@@ -864,6 +882,7 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
         const data = await res.json();
         setBook(data.book);
         lastKnownChapterCountRef.current = data.book?.chapters?.length || 0;
+        lastKnownIllustrationCountRef.current = data.book?.illustrations?.length || 0;
       }
     } catch (err) {
       console.error('Cancel error:', err);
