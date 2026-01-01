@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { ART_STYLES, ILLUSTRATION_DIMENSIONS, type ArtStyleKey } from '@/lib/constants';
-import { switchToBackupKey } from '@/lib/gemini';
+import { switchToBackupKey, SAFETY_SETTINGS } from '@/lib/gemini';
 
 // Types for visual consistency guides
 type CharacterVisualGuide = {
@@ -93,7 +93,7 @@ async function withRetry<T>(
       }
 
       const delay = baseDelayMs * Math.pow(2, attempt);
-      console.log(`[Illustration] Rate limit hit, retrying in ${delay/1000}s (attempt ${attempt + 1}/${maxRetries})...`);
+      console.log(`[Illustration] Rate limit hit, retrying in ${delay / 1000}s (attempt ${attempt + 1}/${maxRetries})...`);
       await new Promise(resolve => setTimeout(resolve, delay));
     }
   }
@@ -145,32 +145,43 @@ export async function POST(request: NextRequest) {
       aspectRatioPrompt: dimensions.prompt,
     });
 
-    // Generate image using Gemini Image model with retry for rate limits
-    const generateImage = async () => {
+    // Execute with retry logic that handles safety blocks
+    let useSafeMode = false;
+
+    const generateWithSafeMode = async () => {
+      // If in safe mode, sanitize the prompt
+      let currentPrompt = prompt;
+      if (useSafeMode) {
+        console.log('[Illustration] Using SAFE MODE prompt due to previous block');
+        // Add strong safety override instruction
+        currentPrompt = prompt + `\n\nIMPORTANT SAFETY OVERRIDE: The previous attempt was blocked by content filters. Re-generate this scene to be completely safe for general audiences. Use euphemisms, remove any violence/gore/sexual themes, and focus on atmosphere/mood instead of explicit details. Make it PG-rated.`;
+
+        // If a mature context was added, remove it
+        currentPrompt = currentPrompt.replace(/MATURE VISUAL STYLE:.*$/m, '');
+      }
+
       const model = getGenAI().getGenerativeModel({
         model: 'gemini-3-pro-image-preview',
+        safetySettings: SAFETY_SETTINGS,
       });
 
-      const result = await model.generateContent(prompt);
+      const result = await model.generateContent(currentPrompt);
       const response = result.response;
 
       // Check for content policy blocks
       const candidate = response.candidates?.[0];
       if (!candidate) {
         const blockReason = response.promptFeedback?.blockReason;
-        const safetyRatings = response.promptFeedback?.safetyRatings;
-        console.error('[Illustration] No candidates returned. Block reason:', blockReason);
-        console.error('[Illustration] Safety ratings:', JSON.stringify(safetyRatings, null, 2));
-        // This could be a rate limit - throw error to trigger retry
+        // This could be a rate limit OR a block
+        if (blockReason === 'SAFETY' || blockReason === 'OTHER') {
+          return { blocked: true, reason: blockReason };
+        }
         throw new Error(`No candidates - possible rate limit. Reason: ${blockReason || 'unknown'}`);
       }
 
       // Check if generation was blocked due to safety
-      if (candidate.finishReason === 'SAFETY') {
-        console.error('[Illustration] Generation blocked for safety. Safety ratings:',
-          JSON.stringify(candidate.safetyRatings, null, 2));
-        // Don't retry safety blocks - return specific error
-        return { blocked: true, reason: 'SAFETY' };
+      if (candidate.finishReason === 'SAFETY' || candidate.finishReason === 'OTHER') {
+        return { blocked: true, reason: candidate.finishReason };
       }
 
       // Extract image from response
@@ -178,7 +189,6 @@ export async function POST(request: NextRequest) {
 
       // If parts is empty, this is often a rate limit issue - throw to retry
       if (parts.length === 0) {
-        console.error('[Illustration] Empty parts array - possible rate limit or model issue');
         throw new Error('Empty response - possible rate limit');
       }
 
@@ -199,8 +209,66 @@ export async function POST(request: NextRequest) {
       return { imageData, altText };
     };
 
-    // Execute with retry logic
-    const result = await withRetry(generateImage, 3, 3000);
+    // Retry utility modified to handle safety blocks
+    const attemptGeneration = async () => {
+      let lastError: Error | null = null;
+
+      for (let attempt = 0; attempt <= 3; attempt++) {
+        try {
+          // If we had a safety block previously, enable safe mode for retries
+          // We don't reset useSafeMode here so it persists across retries
+
+          const result = await generateWithSafeMode();
+
+          // Check if blocked
+          if ('blocked' in result && result.blocked) {
+            console.warn(`[Illustration] Blocked by ${result.reason} (attempt ${attempt + 1}/4)`);
+
+            // If we get blocked, enable safe mode for next attempt
+            if (!useSafeMode && attempt < 3) {
+              useSafeMode = true;
+              console.log('[Illustration] Enabling SAFE MODE for retry...');
+              // Don't wait for rate limit delay if it's just a safety block, retry immediately
+              continue;
+            }
+
+            // If we're already in safe mode and still blocked, or out of retries, return the block
+            if (attempt === 3) return result;
+
+            // If standard block, continue to next retry
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            continue;
+          }
+
+          return result;
+
+        } catch (error) {
+          // Standard error handling (rate limits, etc)
+          lastError = error as Error;
+          const errorMessage = lastError.message?.toLowerCase() || '';
+
+          const isRateLimitError =
+            errorMessage.includes('rate limit') ||
+            errorMessage.includes('quota') ||
+            errorMessage.includes('429') ||
+            errorMessage.includes('resource exhausted') ||
+            errorMessage.includes('too many requests');
+
+          if (!isRateLimitError) throw lastError;
+
+          // Rate limit handling
+          if (attempt < 3) {
+            const delay = 3000 * Math.pow(2, attempt);
+            console.log(`[Illustration] Rate limit hit, retrying in ${delay / 1000}s...`);
+            await new Promise(resolve => setTimeout(resolve, delay));
+            continue;
+          }
+        }
+      }
+      throw lastError || new Error('Failed to generate after retries');
+    };
+
+    const result = await attemptGeneration();
 
     // Check if blocked by safety
     if ('blocked' in result && result.blocked) {

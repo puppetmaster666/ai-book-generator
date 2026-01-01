@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { prisma } from '@/lib/db';
 import { ART_STYLES, type ArtStyleKey } from '@/lib/constants';
-import { switchToBackupKey } from '@/lib/gemini';
+import { switchToBackupKey, SAFETY_SETTINGS } from '@/lib/gemini';
 
 // Lazy initialization with backup key support
 let genAI: GoogleGenerativeAI | null = null;
@@ -148,6 +148,7 @@ DO NOT include any text, words, or labels in the image.`;
     // Use Gemini to transform the image
     const model = getGenAI().getGenerativeModel({
       model: 'gemini-3-pro-image-preview',
+      safetySettings: SAFETY_SETTINGS,
     });
 
     const result = await withRetry(async () => {
@@ -209,7 +210,8 @@ DO NOT include any text, words, or labels in the image.`;
     // Now analyze the stylized character to generate a text description
     // This will be used for consistency in future illustrations
     const descriptionModel = getGenAI().getGenerativeModel({
-      model: 'gemini-2.0-flash',
+      model: 'gemini-3-flash-preview',
+      safetySettings: SAFETY_SETTINGS,
     });
 
     const descriptionResult = await withRetry(async () => {

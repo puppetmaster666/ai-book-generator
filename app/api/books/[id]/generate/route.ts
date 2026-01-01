@@ -1185,7 +1185,11 @@ export async function POST(
     });
   } catch (error) {
     console.error('Error generating book:', error);
-
+    if (error instanceof Error) {
+      console.error('Error Message:', error.message);
+      console.error('Error Stack:', error.stack);
+    }
+    
     const { id } = await params;
 
     // Check if this is a content moderation block

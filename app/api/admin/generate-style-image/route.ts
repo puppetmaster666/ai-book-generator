@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { SAFETY_SETTINGS } from '@/lib/gemini';
 
 // Lazy initialization
 let genAI: GoogleGenerativeAI | null = null;
@@ -49,6 +50,7 @@ Image specifications:
     // Generate image using Gemini Image model
     const model = getGenAI().getGenerativeModel({
       model: 'gemini-3-pro-image-preview',
+      safetySettings: SAFETY_SETTINGS,
     });
 
     const result = await model.generateContent(fullPrompt);

@@ -1,4 +1,25 @@
-import { GoogleGenerativeAI, GenerativeModel } from '@google/generative-ai';
+import { GoogleGenerativeAI, GenerativeModel, HarmCategory, HarmBlockThreshold } from '@google/generative-ai';
+
+// Permissive safety settings to avoid false positives for creative writing
+// We handle content moderation at the application level if needed
+export const SAFETY_SETTINGS = [
+  {
+    category: HarmCategory.HARM_CATEGORY_HARASSMENT,
+    threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH,
+  },
+  {
+    category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,
+    threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH,
+  },
+  {
+    category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
+    threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH,
+  },
+  {
+    category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
+    threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH,
+  },
+];
 
 // Simple timeout wrapper (no retry)
 async function withTimeoutSimple<T>(
@@ -61,8 +82,8 @@ async function withTimeout<T>(
 // But still use timeouts to prevent infinite hangs from API issues
 // Flow: generate(120s) + review(60s) + summary(30s) + charStates(30s) = 240s max
 const CHAPTER_GENERATION_TIMEOUT = 120000; // 2 minutes for main chapter (long chapters need time)
-const REVIEW_PASS_TIMEOUT = 60000; // 60 seconds for review (important for quality)
-const FAST_TASK_TIMEOUT = 30000; // 30 seconds for summaries, char states (API can be slow under load)
+const REVIEW_PASS_TIMEOUT = 90000; // 90 seconds for review (important for quality)
+const FAST_TASK_TIMEOUT = 60000; // 60 seconds for summaries, char states (API can be slow under load)
 
 // Truncate text to a maximum word count (for originalIdea preservation)
 const MAX_ORIGINAL_IDEA_WORDS = 1000;
@@ -179,7 +200,7 @@ async function withRetry<T>(
 
       // Exponential backoff: 5s, 10s, 20s
       const delay = baseDelayMs * Math.pow(2, attempt);
-      console.log(`[Gemini] Rate limit hit, retrying in ${delay/1000}s (attempt ${attempt + 1}/${maxRetries})...`);
+      console.log(`[Gemini] Rate limit hit, retrying in ${delay / 1000}s (attempt ${attempt + 1}/${maxRetries})...`);
       await new Promise(resolve => setTimeout(resolve, delay));
     }
   }
@@ -397,6 +418,7 @@ function getGeminiPro(): GenerativeModel {
   if (!_geminiPro) {
     _geminiPro = getGenAI().getGenerativeModel({
       model: 'gemini-3-flash-preview',
+      safetySettings: SAFETY_SETTINGS,
       generationConfig: {
         temperature: 0.8,
         topP: 0.95,
@@ -413,6 +435,7 @@ function getGeminiFlash(): GenerativeModel {
   if (!_geminiFlash) {
     _geminiFlash = getGenAI().getGenerativeModel({
       model: 'gemini-3-flash-preview',
+      safetySettings: SAFETY_SETTINGS,
       generationConfig: {
         temperature: 0.3,
         topP: 0.9,
@@ -428,6 +451,7 @@ function getGeminiFlashLight(): GenerativeModel {
   if (!_geminiFlashLight) {
     _geminiFlashLight = getGenAI().getGenerativeModel({
       model: 'gemini-3-flash-preview',
+      safetySettings: SAFETY_SETTINGS,
       generationConfig: {
         temperature: 0.9,
         topP: 0.95,
@@ -443,6 +467,7 @@ function getGeminiImage(): GenerativeModel {
   if (!_geminiImage) {
     _geminiImage = getGenAI().getGenerativeModel({
       model: 'gemini-3-pro-image-preview',
+      safetySettings: SAFETY_SETTINGS,
     });
   }
   return _geminiImage;
@@ -955,8 +980,8 @@ export async function generateIllustratedOutline(bookData: {
   // Build character reference for consistency
   const characterRef = bookData.characterVisualGuide
     ? bookData.characterVisualGuide.characters.map(c =>
-        `${c.name}: ${c.physicalDescription}. Wears: ${c.clothing}. Distinct: ${c.distinctiveFeatures}`
-      ).join('\n')
+      `${c.name}: ${c.physicalDescription}. Wears: ${c.clothing}. Distinct: ${c.distinctiveFeatures}`
+    ).join('\n')
     : bookData.characters.map(c => `${c.name}: ${c.description}`).join('\n');
 
   const dialogueInstructions = isComicStyle
@@ -1083,14 +1108,27 @@ Output ONLY valid JSON:
   ]
 }`;
 
-  // Retry logic for truncation
+  // Retry logic for truncation and safety blocks
   const maxAttempts = 3;
   let lastError: Error | null = null;
+  let useSafeMode = false;
 
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
-      console.log(`generateIllustratedOutline: attempt ${attempt}/${maxAttempts}`);
-      const result = await getGeminiPro().generateContent(prompt);
+      console.log(`generateIllustratedOutline: attempt ${attempt}/${maxAttempts}${useSafeMode ? ' (SAFE MODE)' : ''}`);
+
+      // If using safe mode (after a block), override content guidelines
+      let currentPrompt = prompt;
+      if (useSafeMode) {
+        // Replace the content guidelines section with the safe version
+        // We do this by replacing the original content lines with the safe version
+        const safeGuidelines = getContentRatingInstructions('general');
+
+        // Improve safety by appending a strong instruction
+        currentPrompt = prompt + `\n\nIMPORTANT SAFETY OVERRIDE: The previous attempt was blocked by content safety filters. You MUST rewrite the scene descriptions to be less explicit/violent/sexual. Use euphemisms and focus on atmosphere rather than graphic details. Make it suitable for a general audience.`;
+      }
+
+      const result = await getGeminiPro().generateContent(currentPrompt);
       const response = result.response.text();
 
       // Log finish reason for debugging
@@ -1109,9 +1147,20 @@ Output ONLY valid JSON:
       lastError = error as Error;
       const errorMsg = lastError.message || '';
 
-      // Only retry on truncation errors
-      if (errorMsg.includes('JSON_TRUNCATED') && attempt < maxAttempts) {
-        console.log(`JSON truncation detected, retrying (attempt ${attempt + 1}/${maxAttempts})...`);
+      // Check for PROHIBITED_CONTENT or safety blocks
+      const isSafetyBlock = errorMsg.includes('PROHIBITED_CONTENT') ||
+        errorMsg.includes('safety') ||
+        errorMsg.includes('blocked');
+
+      // Retry on truncation or safety errors
+      if ((errorMsg.includes('JSON_TRUNCATED') || isSafetyBlock) && attempt < maxAttempts) {
+        console.log(`Error detected: ${isSafetyBlock ? 'SAFETY BLOCK' : 'TRUNCATION'}, retrying (attempt ${attempt + 1}/${maxAttempts})...`);
+
+        if (isSafetyBlock) {
+          useSafeMode = true;
+          console.log('Switching to SAFE MODE for retry to avoid prohibited content.');
+        }
+
         // Small delay before retry
         await new Promise(resolve => setTimeout(resolve, 2000));
         continue;
@@ -1799,8 +1848,8 @@ export async function generateCoverPrompt(bookData: {
     characterSection = `
 MAIN CHARACTERS (if featuring characters on cover, use these EXACT descriptions):
 ${bookData.characterVisualGuide.characters.slice(0, 2).map(c =>
-  `- ${c.name}: ${c.physicalDescription}. Wearing: ${c.clothing}. Distinctive: ${c.distinctiveFeatures}. Colors: ${c.colorPalette}`
-).join('\n')}
+      `- ${c.name}: ${c.physicalDescription}. Wearing: ${c.clothing}. Distinctive: ${c.distinctiveFeatures}. Colors: ${c.colorPalette}`
+    ).join('\n')}
 `;
   }
 
@@ -1929,12 +1978,14 @@ Output ONLY valid JSON:
   const response = result.response.text();
 
   try {
-    const parsed = parseJSONFromResponse(response) as { illustrations: Array<{
-      scene: string;
-      description: string;
-      characters: string[];
-      emotion: string;
-    }> };
+    const parsed = parseJSONFromResponse(response) as {
+      illustrations: Array<{
+        scene: string;
+        description: string;
+        characters: string[];
+        emotion: string;
+      }>
+    };
     return parsed.illustrations;
   } catch {
     // Return a single default illustration if parsing fails

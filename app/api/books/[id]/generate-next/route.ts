@@ -117,6 +117,9 @@ export async function POST(
         where: { id },
         data: { currentChapter: nextChapterNum },
       });
+
+      // If we skipped, we need to verify if we should jump to the next one or if we're done
+      // But adhering to the protocol, we return status so client can request next
       return NextResponse.json({
         done: false,
         currentChapter: nextChapterNum,

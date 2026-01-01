@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { prisma } from '@/lib/db';
 import { ART_STYLES, ILLUSTRATION_DIMENSIONS, type ArtStyleKey } from '@/lib/constants';
-import { buildIllustrationPromptFromScene, SceneDescription, type PanelLayout, switchToBackupKey, type ContentRating } from '@/lib/gemini';
+import { buildIllustrationPromptFromScene, SceneDescription, type PanelLayout, switchToBackupKey, type ContentRating, SAFETY_SETTINGS } from '@/lib/gemini';
 
 // Retry utility with exponential backoff for rate limit handling
 // Automatically switches to backup API key if available
@@ -52,7 +52,7 @@ async function withRetry<T>(
 
       // Exponential backoff: 5s, 10s, 20s
       const delay = baseDelayMs * Math.pow(2, attempt);
-      console.log(`[Panel Gen] Rate limit hit, retrying in ${delay/1000}s (attempt ${attempt + 1}/${maxRetries})...`);
+      console.log(`[Panel Gen] Rate limit hit, retrying in ${delay / 1000}s (attempt ${attempt + 1}/${maxRetries})...`);
       await new Promise(resolve => setTimeout(resolve, delay));
     }
   }
@@ -98,8 +98,8 @@ function buildSpeechBubblePrompt(dialogue: DialogueBubble[]): string {
 
   const bubbleInstructions = dialogue.map((d, i) => {
     const bubbleType = d.type === 'thought' ? 'thought bubble (cloud-shaped)' :
-                       d.type === 'shout' ? 'jagged/spiky speech bubble' :
-                       'speech bubble';
+      d.type === 'shout' ? 'jagged/spiky speech bubble' :
+        'speech bubble';
     const position = d.position.replace('-', ' '); // "top-left" -> "top left"
 
     return `Speech Bubble ${i + 1}: Draw a ${bubbleType} in the ${position} area of the image. Inside the bubble, write the text: "${d.text}" (spoken by ${d.speaker})`;
@@ -202,9 +202,9 @@ export async function POST(request: NextRequest) {
     // Comics (24 panels): bookFormat=comic_book OR dialogueStyle=bubbles OR bookPreset=comic_story
     // Picture books (20 pages): everything else
     const isComic = book.bookFormat === 'comic_book' ||
-                    book.bookFormat === 'comic' ||
-                    book.dialogueStyle === 'bubbles' ||
-                    book.bookPreset === 'comic_story';
+      book.bookFormat === 'comic' ||
+      book.dialogueStyle === 'bubbles' ||
+      book.bookPreset === 'comic_story';
     const maxIllustrations = isComic ? 24 : 20;
     if (book._count.illustrations >= maxIllustrations) {
       return NextResponse.json(
@@ -305,18 +305,132 @@ export async function POST(request: NextRequest) {
 
     console.log(`[Panel ${panelNumber}] Generating illustration for book ${bookId}`);
 
-    // Generate image using Gemini Image model with retry for rate limits
-    const model = getGenAI().getGenerativeModel({
-      model: 'gemini-3-pro-image-preview',
-    });
+    // Execute with retry logic that handles safety blocks
+    let useSafeMode = false;
 
-    const result = await withRetry(() => model.generateContent(prompt));
-    const response = result.response;
+    const generateWithSafeMode = async () => {
+      // If in safe mode, sanitize the prompt
+      let currentPrompt = prompt;
+      if (useSafeMode) {
+        console.log(`[Panel ${panelNumber}] Using SAFE MODE prompt due to previous block`);
+        // Add strong safety override instruction
+        currentPrompt = prompt + `\n\nIMPORTANT SAFETY OVERRIDE: The previous attempt was blocked by content filters. Re-generate this scene to be completely safe for general audiences. Use euphemisms, remove any violence/gore/sexual themes, and focus on atmosphere/mood instead of explicit details. Make it PG-rated.`;
+
+        // If a mature context was added, remove it
+        currentPrompt = currentPrompt.replace(/MATURE VISUAL STYLE:.*$/m, '');
+      }
+
+      const model = getGenAI().getGenerativeModel({
+        model: 'gemini-3-pro-image-preview',
+        safetySettings: SAFETY_SETTINGS,
+      });
+
+      const result = await model.generateContent(currentPrompt);
+      const response = result.response;
+
+      // Check for content policy blocks
+      const candidate = response.candidates?.[0];
+      if (!candidate) {
+        const blockReason = response.promptFeedback?.blockReason;
+        // This could be a rate limit OR a block
+        if (blockReason === 'SAFETY' || blockReason === 'OTHER') {
+          return { blocked: true, reason: blockReason };
+        }
+        throw new Error(`No candidates - possible rate limit. Reason: ${blockReason || 'unknown'}`);
+      }
+
+      // Check if generation was blocked due to safety
+      if (candidate.finishReason === 'SAFETY' || candidate.finishReason === 'OTHER') {
+        return { blocked: true, reason: candidate.finishReason };
+      }
+
+      // Extract image from response
+      const parts = candidate.content?.parts || [];
+
+      // If parts is empty, this is often a rate limit issue - throw to retry
+      if (parts.length === 0) {
+        throw new Error('Empty response - possible rate limit');
+      }
+
+      let imageData = null;
+
+      for (const part of parts) {
+        if (part.inlineData?.mimeType?.startsWith('image/')) {
+          imageData = {
+            base64: part.inlineData.data,
+            mimeType: part.inlineData.mimeType,
+          };
+          break;
+        }
+      }
+
+      return { imageData };
+    };
+
+    // Retry utility modified to handle safety blocks
+    const attemptGeneration = async () => {
+      let lastError: Error | null = null;
+
+      for (let attempt = 0; attempt <= 3; attempt++) {
+        try {
+          // If we had a safety block previously, enable safe mode for retries
+          // We don't reset useSafeMode here so it persists across retries
+
+          const result = await generateWithSafeMode();
+
+          // Check if blocked
+          if ('blocked' in result && result.blocked) {
+            console.warn(`[Panel ${panelNumber}] Blocked by ${result.reason} (attempt ${attempt + 1}/4)`);
+
+            // If we get blocked, enable safe mode for next attempt
+            if (!useSafeMode && attempt < 3) {
+              useSafeMode = true;
+              console.log(`[Panel ${panelNumber}] Enabling SAFE MODE for retry...`);
+              // Don't wait for rate limit delay if it's just a safety block, retry immediately
+              continue;
+            }
+
+            // If we're already in safe mode and still blocked, or out of retries, return the block
+            if (attempt === 3) return result;
+
+            // If standard block, continue to next retry
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            continue;
+          }
+
+          return result;
+
+        } catch (error) {
+          // Standard error handling (rate limits, etc)
+          lastError = error as Error;
+          const errorMessage = lastError.message?.toLowerCase() || '';
+
+          const isRateLimitError =
+            errorMessage.includes('rate limit') ||
+            errorMessage.includes('quota') ||
+            errorMessage.includes('429') ||
+            errorMessage.includes('resource exhausted') ||
+            errorMessage.includes('too many requests');
+
+          if (!isRateLimitError) throw lastError;
+
+          // Rate limit handling
+          if (attempt < 3) {
+            const delay = 3000 * Math.pow(2, attempt);
+            console.log(`[Panel ${panelNumber}] Rate limit hit, retrying in ${delay / 1000}s...`);
+            await new Promise(resolve => setTimeout(resolve, delay));
+            continue;
+          }
+        }
+      }
+      throw lastError || new Error('Failed to generate after retries');
+    };
+
+    const result = await attemptGeneration();
 
     // Check for content policy blocks
-    const candidate = response.candidates?.[0];
-    if (!candidate) {
-      const blockReason = response.promptFeedback?.blockReason;
+    if ('blocked' in result && result.blocked) {
+      const blockReason = result.reason;
       console.error(`[Panel ${panelNumber}] No candidates. Block reason:`, blockReason);
       return NextResponse.json(
         { error: 'Content blocked by safety filter', blocked: true, panelNumber },
@@ -324,27 +438,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (candidate.finishReason === 'SAFETY') {
-      console.error(`[Panel ${panelNumber}] Safety block:`, candidate.safetyRatings);
-      return NextResponse.json(
-        { error: 'Image blocked by content policy', blocked: true, panelNumber },
-        { status: 400 }
-      );
-    }
-
-    // Extract image from response
-    const parts = candidate.content?.parts || [];
-    let imageData: { base64: string; mimeType: string } | null = null;
-
-    for (const part of parts) {
-      if (part.inlineData?.mimeType?.startsWith('image/')) {
-        imageData = {
-          base64: part.inlineData.data,
-          mimeType: part.inlineData.mimeType,
-        };
-        break;
-      }
-    }
+    const { imageData } = result as { imageData: { base64: string; mimeType: string } | null; };
 
     if (!imageData) {
       console.error(`[Panel ${panelNumber}] No image in response`);
