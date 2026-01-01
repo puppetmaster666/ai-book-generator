@@ -34,9 +34,10 @@ export async function POST(
     request: NextRequest,
     { params }: { params: Promise<{ id: string }> }
 ) {
-    try {
-        const { id } = await params;
+    // Extract id outside try-catch so it's available in error handler
+    const { id } = await params;
 
+    try {
         // 1. Verify book and status
         const book = await prisma.book.findUnique({
             where: { id },
@@ -230,21 +231,31 @@ export async function POST(
                     });
                     return chapter.number;
                 }
-            } catch (e) {
-                console.error(`Failed panel ${chapter.number}`, e);
+            } catch (e: any) {
+                const errorMsg = e?.message || 'Unknown error';
+                console.error(`[Visual Gen] FAILED panel ${chapter.number}: ${errorMsg}`);
+                // Track failures but don't throw - let other panels continue
             }
             return null;
         };
 
         // Process all pending in parallel batches
         // We do ALL of them. The 5 min timeout is the hard limit.
+        let totalFailures = 0;
         for (let i = 0; i < pendingChapters.length; i += CONCURRENCY) {
             const chunk = pendingChapters.slice(i, i + CONCURRENCY);
-            await Promise.all(chunk.map(ch => generateOne(ch)));
+            const results = await Promise.all(chunk.map(ch => generateOne(ch)));
+            totalFailures += results.filter(r => r === null).length;
+
+            // Log progress
+            const completed = await prisma.illustration.count({ where: { bookId: id } });
+            console.log(`[Visual Gen] Batch complete: ${completed}/${targetChapters.length} panels done, ${totalFailures} failures`);
         }
 
         // Check completion again
         const finalCount = await prisma.illustration.count({ where: { bookId: id } });
+        console.log(`[Visual Gen] Generation finished: ${finalCount}/${targetChapters.length} panels, ${totalFailures} failures`);
+
         if (finalCount >= Math.min(targetChapters.length, maxIllustrations)) {
             // Assemble
             const assembleUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/books/${id}/assemble`;
@@ -252,10 +263,40 @@ export async function POST(
             return NextResponse.json({ success: true, status: 'completed' });
         }
 
-        return NextResponse.json({ success: true, status: 'partial', produced: finalCount });
+        // If we have some panels but not all, check if it's a total failure
+        if (finalCount === 0 && pendingChapters.length > 0) {
+            // All panels failed - mark book as failed
+            console.error(`[Visual Gen] ALL panels failed for book ${id}. Marking as failed.`);
+            await prisma.book.update({
+                where: { id },
+                data: {
+                    status: 'failed',
+                    errorMessage: 'All panel generations failed. API keys may be exhausted. Please try again later.',
+                },
+            });
+            return NextResponse.json({ error: 'All panel generations failed', status: 'failed' }, { status: 500 });
+        }
+
+        return NextResponse.json({ success: true, status: 'partial', produced: finalCount, failures: totalFailures });
 
     } catch (err: any) {
-        console.error('Background generation error:', err);
-        return NextResponse.json({ error: err.message }, { status: 500 });
+        const errorMsg = err?.message || 'Unknown error';
+        console.error(`[Visual Gen] Background generation error for book ${id}: ${errorMsg}`);
+
+        // Try to mark book as failed
+        try {
+            await prisma.book.update({
+                where: { id },
+                data: {
+                    status: 'failed',
+                    errorMessage: `Generation failed: ${errorMsg.substring(0, 200)}`,
+                },
+            });
+            console.log(`[Visual Gen] Marked book ${id} as failed`);
+        } catch (updateErr) {
+            console.error('[Visual Gen] Failed to update book status:', updateErr);
+        }
+
+        return NextResponse.json({ error: errorMsg }, { status: 500 });
     }
 }

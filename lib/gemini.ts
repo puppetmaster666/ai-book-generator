@@ -54,40 +54,52 @@ async function withTimeout<T>(
   const totalKeys = 3;
   let keysTriedThisCycle = 0;
   let lastError: Error | null = null;
+  const failedKeys: { key: number; reason: string }[] = [];
 
   // Start with last working key if available
   switchToLastWorkingKey();
+  console.log(`[Gemini] Starting ${operationName} with key ${getCurrentKeyIndex()} (timeout: ${timeoutMs}ms)`);
 
   // Try all keys before giving up
   for (let attempt = 0; attempt < totalKeys; attempt++) {
+    const currentKey = getCurrentKeyIndex();
     try {
       const result = await withTimeoutSimple(createPromise(), timeoutMs, operationName);
       // SUCCESS! Mark this key as working for future requests
       markKeyAsWorking();
+      console.log(`[Gemini] SUCCESS: ${operationName} completed with key ${currentKey}`);
       return result;
     } catch (error) {
       lastError = error as Error;
-      const isTimeout = error instanceof Error && error.message.includes('timed out');
-      const isRateLimit = error instanceof Error &&
-        (error.message.includes('429') || error.message.includes('quota') || error.message.includes('rate') || error.message.includes('exhausted'));
+      const errorMsg = lastError.message || 'Unknown error';
+      const isTimeout = errorMsg.includes('timed out');
+      const isRateLimit = errorMsg.includes('429') || errorMsg.includes('quota') || errorMsg.includes('rate') || errorMsg.includes('exhausted');
+
+      const failReason = isTimeout ? 'TIMEOUT' : isRateLimit ? 'RATE_LIMIT' : 'ERROR';
+      failedKeys.push({ key: currentKey, reason: failReason });
+      console.error(`[Gemini] FAILED: ${operationName} on key ${currentKey} - ${failReason}: ${errorMsg.substring(0, 150)}`);
 
       // If timeout or rate limit, IMMEDIATELY try next key (no delay)
       if (isTimeout || isRateLimit) {
         keysTriedThisCycle++;
-        console.log(`[Gemini] ${operationName} failed (${isTimeout ? 'timeout' : 'rate limit'}) on key ${getCurrentKeyIndex()}, trying next key (${keysTriedThisCycle}/${totalKeys})...`);
 
         const rotated = rotateApiKey();
         if (rotated && keysTriedThisCycle < totalKeys) {
+          console.log(`[Gemini] Rotating to key ${getCurrentKeyIndex()} (attempt ${keysTriedThisCycle + 1}/${totalKeys})`);
           continue; // Retry immediately with new key
         }
       }
 
       // Non-recoverable error or all keys exhausted
-      throw lastError;
+      const keysSummary = failedKeys.map(k => `key${k.key}:${k.reason}`).join(', ');
+      console.error(`[Gemini] ALL KEYS EXHAUSTED for ${operationName}. Summary: [${keysSummary}]`);
+      throw new Error(`${operationName} failed - all ${totalKeys} API keys exhausted (${keysSummary}). Last error: ${errorMsg.substring(0, 100)}`);
     }
   }
 
-  throw lastError || new Error(`${operationName} failed after trying all keys`);
+  const keysSummary = failedKeys.map(k => `key${k.key}:${k.reason}`).join(', ');
+  console.error(`[Gemini] ALL KEYS EXHAUSTED for ${operationName}. Summary: [${keysSummary}]`);
+  throw lastError || new Error(`${operationName} failed after trying all ${totalKeys} keys`);
 }
 
 // API timeout constants (in milliseconds)
