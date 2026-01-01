@@ -70,6 +70,8 @@ function ReviewContent() {
   // Promo code state
   const [promoCode, setPromoCode] = useState(urlPromoCode || '');
   const [promoDiscount, setPromoDiscount] = useState<number | null>(null);
+  const [promoFixedPrice, setPromoFixedPrice] = useState<number | null>(null); // Fixed price in cents
+  const [promoDescription, setPromoDescription] = useState<string>('');
   const [promoError, setPromoError] = useState('');
   const [isValidatingPromo, setIsValidatingPromo] = useState(false);
 
@@ -142,6 +144,8 @@ function ReviewContent() {
   const validatePromoCode = async (code: string) => {
     if (!code.trim()) {
       setPromoDiscount(null);
+      setPromoFixedPrice(null);
+      setPromoDescription('');
       setPromoError('');
       return;
     }
@@ -160,13 +164,19 @@ function ReviewContent() {
 
       if (data.valid) {
         setPromoDiscount(data.discount);
+        setPromoFixedPrice(data.fixedPrice || null);
+        setPromoDescription(data.description || '');
         setPromoError('');
       } else {
         setPromoDiscount(null);
+        setPromoFixedPrice(null);
+        setPromoDescription('');
         setPromoError(data.error || 'Invalid promo code');
       }
     } catch {
       setPromoDiscount(null);
+      setPromoFixedPrice(null);
+      setPromoDescription('');
       setPromoError('Failed to validate promo code');
     } finally {
       setIsValidatingPromo(false);
@@ -176,6 +186,8 @@ function ReviewContent() {
   const clearPromoCode = () => {
     setPromoCode('');
     setPromoDiscount(null);
+    setPromoFixedPrice(null);
+    setPromoDescription('');
     setPromoError('');
   };
 
@@ -404,6 +416,10 @@ function ReviewContent() {
     } else {
       discountLabel = 'First book FREE!';
     }
+  } else if (promoFixedPrice !== null) {
+    // Fixed price promo (e.g., $1.50 beta price)
+    finalPrice = promoFixedPrice / 100;
+    discountLabel = promoDescription || `$${finalPrice.toFixed(2)}`;
   } else if (promoDiscount) {
     finalPrice = originalPrice * (1 - promoDiscount);
     discountLabel = promoDiscount === 1 ? 'FREE' : `${Math.round(promoDiscount * 100)}% off`;

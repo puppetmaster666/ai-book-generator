@@ -37,7 +37,8 @@
       "Bash(node fix-book.js:*)",
       "Bash(npx tsc:*)",
       "Bash(curl:*)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(node check-promo.js:*)"
     ]
   }
 }

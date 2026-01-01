@@ -46,6 +46,19 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ valid: false, error: 'Promo code has reached its usage limit' });
       }
 
+      // Handle fixed price promos vs percentage discounts
+      if (dbPromo.fixedPrice !== null) {
+        const fixedPriceFormatted = (dbPromo.fixedPrice / 100).toFixed(2);
+        return NextResponse.json({
+          valid: true,
+          discount: 1, // Treat as "discount applied" for UI
+          fixedPrice: dbPromo.fixedPrice,
+          discountPercent: null,
+          description: `Beta Price: $${fixedPriceFormatted}`,
+          remaining: dbPromo.maxUses - dbPromo.currentUses,
+        });
+      }
+
       return NextResponse.json({
         valid: true,
         discount: dbPromo.discount,
