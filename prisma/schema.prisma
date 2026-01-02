@@ -83,6 +83,7 @@ model Book {
 
   // For anonymous users
   email           String?
+  ipAddress       String?   // Track IP for rate limiting
 
   // User inputs
   title           String
