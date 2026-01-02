@@ -868,6 +868,40 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
     }
   };
 
+  // Retry failed panels for visual books
+  const handleRetryPanels = async () => {
+    if (!book || retrying) return;
+
+    setRetrying(true);
+    setRetryElapsed(0);
+
+    try {
+      // Trigger visual generation endpoint to retry failed panels
+      const res = await fetch(`/api/books/${id}/generate-visual`, { method: 'POST' });
+
+      if (!res.ok) {
+        const data = await res.json();
+        setError(data.error || 'Failed to retry panels');
+        setRetrying(false);
+        return;
+      }
+
+      // Refresh book data
+      const bookRes = await fetch(`/api/books/${id}`);
+      if (bookRes.ok) {
+        const bookData = await bookRes.json();
+        setBook(bookData.book);
+        lastKnownChapterCountRef.current = bookData.book?.chapters?.length || 0;
+        lastKnownIllustrationCountRef.current = bookData.book?.illustrations?.length || 0;
+      }
+    } catch (err) {
+      console.error('Retry panels error:', err);
+      setError(err instanceof Error ? err.message : 'Failed to retry panels');
+    } finally {
+      setRetrying(false);
+    }
+  };
+
   const handleCancelGeneration = async () => {
     if (!book || cancelling) return;
 
@@ -1495,6 +1529,45 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
               {/* Panel Grid - Illustrated Books */}
               {isIllustrated && (
                 <div className="mb-6">
+                  {/* Retry Failed Panels Button */}
+                  {(() => {
+                    const totalPanels = (book.bookFormat === 'comic_book' || book.bookFormat === 'comic' || book.dialogueStyle === 'bubbles' || book.bookPreset === 'comic_story') ? 24 : 20;
+                    const generatedCount = book.illustrations?.length || 0;
+                    const failedCount = totalPanels - generatedCount;
+                    const showRetryButton = failedCount > 0 && !isGenerating && book.status !== 'completed';
+
+                    if (!showRetryButton) return null;
+
+                    return (
+                      <div className="mb-4 flex items-center gap-3 p-3 bg-amber-50 border border-amber-200 rounded-xl">
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-amber-900">
+                            {failedCount} {failedCount === 1 ? 'panel' : 'panels'} failed to generate
+                          </p>
+                          <p className="text-xs text-amber-700 mt-0.5">
+                            Click retry to regenerate missing panels
+                          </p>
+                        </div>
+                        <button
+                          onClick={handleRetryPanels}
+                          disabled={retrying}
+                          className="px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 whitespace-nowrap"
+                        >
+                          {retrying ? (
+                            <>
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                              Retrying...
+                            </>
+                          ) : (
+                            <>
+                              <RefreshCw className="h-4 w-4" />
+                              Retry {failedCount} {failedCount === 1 ? 'panel' : 'panels'}
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    );
+                  })()}
                   <p className="text-xs uppercase tracking-wide text-neutral-400 mb-3">Panels</p>
                   <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
                     {(() => {
