@@ -4,7 +4,6 @@ import {
   generateChapter,
   summarizeChapter,
   updateCharacterStates,
-  reviewAndPolishChapter,
   generateCoverPrompt,
   generateCoverImage,
   type ContentRating,
@@ -261,37 +260,6 @@ export async function POST(
         errorMessage: null, // Clear any previous error
       },
     });
-
-    // PASS 2: Review and polish (happens AFTER chapter is saved)
-    // If this fails, we don't care - chapter is already saved and generation continues
-    // Has same retry/key rotation logic as generation
-    console.log(`[Chapter ${nextChapterNum}] Starting review pass (non-blocking)...`);
-    try {
-      const reviewResult = await reviewAndPolishChapter(chapterContent, chapterPlan.targetWords, book.bookType);
-      if (reviewResult.success) {
-        // Review succeeded - update the chapter with polished content
-        const polishedWordCount = countWords(reviewResult.content);
-        await prisma.chapter.update({
-          where: {
-            bookId_number: {
-              bookId: id,
-              number: nextChapterNum,
-            },
-          },
-          data: {
-            content: reviewResult.content,
-            wordCount: polishedWordCount,
-          },
-        });
-        console.log(`[Chapter ${nextChapterNum}] Review pass SUCCESS. Updated chapter with polished content.`);
-      } else {
-        console.log(`[Chapter ${nextChapterNum}] Review pass REJECTED (content too short). Keeping original.`);
-      }
-    } catch (reviewError) {
-      // Review failed - that's OK, we already have the original chapter saved
-      console.error(`[Chapter ${nextChapterNum}] Review pass FAILED:`, reviewError);
-      console.log(`[Chapter ${nextChapterNum}] Keeping original content and continuing generation.`);
-    }
 
     // Check if this was the last chapter
     if (nextChapterNum >= totalChapters) {
