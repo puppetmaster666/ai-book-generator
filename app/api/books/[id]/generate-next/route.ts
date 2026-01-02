@@ -217,23 +217,10 @@ export async function POST(
       }, { status: 404 });
     }
 
-    // Update chapter placeholder with generated content
-    // Chapter record already exists from outline phase (created as placeholder)
+    // Save chapter
     try {
-      await prisma.chapter.upsert({
-        where: {
-          bookId_number: {
-            bookId: id,
-            number: nextChapterNum,
-          },
-        },
-        update: {
-          content: chapterContent,
-          summary,
-          wordCount,
-        },
-        create: {
-          // Fallback: create if placeholder doesn't exist (shouldn't happen, but safety)
+      await prisma.chapter.create({
+        data: {
           bookId: id,
           number: nextChapterNum,
           title: chapterPlan.title,
@@ -242,10 +229,26 @@ export async function POST(
           wordCount,
         },
       });
-      console.log(`Chapter ${nextChapterNum} content saved. Word count: ${wordCount}`);
-    } catch (updateError: unknown) {
-      console.error(`Failed to update chapter ${nextChapterNum}:`, updateError);
-      throw updateError;
+      console.log(`Chapter ${nextChapterNum} saved. Word count: ${wordCount}`);
+    } catch (createError: unknown) {
+      // Handle unique constraint violation - chapter already exists (race condition)
+      if (createError && typeof createError === 'object' && 'code' in createError && createError.code === 'P2002') {
+        console.log(`Chapter ${nextChapterNum} already exists (race condition), skipping save`);
+        // Update progress and continue
+        await prisma.book.update({
+          where: { id },
+          data: { currentChapter: nextChapterNum },
+        });
+        return NextResponse.json({
+          done: false,
+          currentChapter: nextChapterNum,
+          totalChapters,
+          totalWords: book.totalWords,
+          message: `Chapter ${nextChapterNum} already exists. Continuing...`,
+          skipped: true,
+        });
+      }
+      throw createError;
     }
 
     // Update book progress

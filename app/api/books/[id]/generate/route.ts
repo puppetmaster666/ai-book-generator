@@ -735,26 +735,6 @@ export async function POST(
           status: 'generating',
         },
       });
-
-      // Create chapter placeholders immediately for visual feedback
-      // Users can see all planned chapters with titles/premises while content generates
-      console.log(`Creating ${outline.chapters.length} chapter placeholders for immediate visual feedback...`);
-      const chapterPlaceholders = outline.chapters.map(chapter => ({
-        bookId: id,
-        number: chapter.number,
-        title: chapter.title,
-        content: '', // Empty - will be filled during generation
-        summary: chapter.summary || '',
-        wordCount: 0,
-      }));
-
-      // Use createMany for efficiency (batch insert)
-      await prisma.chapter.createMany({
-        data: chapterPlaceholders,
-        skipDuplicates: true, // Safety: skip if chapters already exist
-      });
-
-      console.log(`Chapter placeholders created. Users can now see all ${outline.chapters.length} chapters immediately.`);
     }
 
     // Step 1.5: Generate visual guides for illustrated books (before any illustrations)
