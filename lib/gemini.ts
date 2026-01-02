@@ -1265,6 +1265,13 @@ IMPORTANT: If an "Original Author Vision" is provided above, ensure the story in
 
 ${dialogueInstructions}
 
+COPYRIGHT PROTECTION - CRITICAL:
+- Create 100% ORIGINAL scene descriptions - NEVER reference existing copyrighted characters, shows, movies, comics, or anime
+- Even if character names match famous characters (Velma, Daphne, Spider-Man, Naruto, etc.), describe completely UNIQUE visual designs and poses
+- DO NOT describe copyrighted visual elements (specific costumes, logos, signature poses, iconic character designs from existing media)
+- DO NOT use settings, locations, or props that are distinctive to existing copyrighted works
+- Focus on original character designs, unique settings, and original compositions
+
 For EVERY page's "scene", provide:
 - location: The specific place/setting (e.g., "castle kitchen", "forest clearing", "city rooftop") - VARY THIS!
 - description: What's happening in this specific moment (1-2 sentences, UNIQUE to this page)
@@ -2216,6 +2223,12 @@ ${data.characters.map(c => `- ${c.name}: ${c.description}`).join('\n')}
 
 ART STYLE: ${data.artStyle}
 
+COPYRIGHT PROTECTION - CRITICAL:
+- Create 100% ORIGINAL visual descriptions - NEVER reference existing copyrighted characters, shows, movies, or comics
+- Even if character names match famous characters (Velma, Daphne, Spider-Man, etc.), describe completely UNIQUE visuals
+- DO NOT describe copyrighted visual elements (specific costumes, logos, signature poses, or iconic designs from existing media)
+- Focus on original character designs, settings, and compositions
+
 CHAPTER CONTENT:
 ${data.chapterContent.substring(0, 3000)}...
 
@@ -2293,6 +2306,12 @@ ${data.characters.map(c => `- ${c.name}: ${c.description}`).join('\n')}
 
 SETTING: ${data.setting}
 ART STYLE: ${data.artStyle}
+
+COPYRIGHT PROTECTION - CRITICAL:
+- Create 100% ORIGINAL visual descriptions - NEVER reference existing copyrighted characters, shows, movies, or comics
+- Even if character names match famous characters (Velma, Daphne, Spider-Man, etc.), describe completely UNIQUE visuals
+- DO NOT describe copyrighted visual elements (specific costumes, logos, signature poses, or iconic designs from existing media)
+- Focus on original character designs, settings, and compositions
 
 Create a detailed illustration plan for this page. Children's book illustrations should:
 - Be visually engaging and age-appropriate
@@ -2574,6 +2593,14 @@ DESIGN PRINCIPLES - Create distinctive, memorable characters:
 - For anime/manga: use classic anime aesthetics appropriate to the genre (shounen, shoujo, seinen, 80s/90s City Hunter style, modern isekai, etc.)
 - Clothing should reflect personality, era, and setting - not generic outfits
 - If a character has powers, show it through subtle visual cues (not just glowing marks)
+
+COPYRIGHT PROTECTION - CRITICAL:
+- Create 100% ORIGINAL character designs - NEVER copy from existing media, cartoons, anime, comics, or films
+- Even if a character's NAME matches a famous character (Velma, Daphne, Batman, Spider-Man, Naruto, etc.), you MUST create a COMPLETELY UNIQUE visual design
+- DO NOT use signature features from copyrighted characters (Scooby-Doo's collar, Spider-Man's web pattern, Batman's cape, anime character hairstyles from existing shows, etc.)
+- DO NOT make characters look like actors, celebrities, or existing fictional characters
+- If you suspect a character name is from existing media, deliberately design them to look NOTHING like the famous version
+- Example: A character named "Velma" should NOT have orange turtleneck, bob haircut, or glasses similar to Scooby-Doo's Velma - create a completely different look
 
 Create EXTREMELY DETAILED visual descriptions for each character that an illustrator can follow consistently across ALL illustrations. These must be specific enough that the character is INSTANTLY recognizable in every single image.
 
