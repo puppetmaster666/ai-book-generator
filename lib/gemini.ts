@@ -2142,7 +2142,7 @@ STYLE CONSISTENCY (match interior illustrations):
 
 BOOK DETAILS:
 - Title: "${bookData.title}"
-- Author: "${bookData.authorName}"
+${bookData.authorName ? `- Author: "${bookData.authorName}"` : ''}
 - Genre: ${bookData.genre}
 - Type: ${bookData.bookType}
 - Premise: ${bookData.premise}
@@ -2173,10 +2173,10 @@ COVER STYLE VARIETY - Choose ONE of these approaches based on what fits the book
 
 The cover MUST include:
 - The title "${bookData.title}" prominently displayed with excellent readability
-- "by ${bookData.authorName}" at the bottom (include the word "by" before the author name)
+${bookData.authorName ? `- "by ${bookData.authorName}" at the bottom (include the word "by" before the author name)` : '- DO NOT include any author name (no author specified)'}
 
 The cover must NOT include:
-- Any other text besides title and author name
+- Any other text besides title${bookData.authorName ? ' and author name' : ''}
 - Detailed faces (use silhouettes or artistic representations instead)
 - Copyright-infringing elements
 - Cluttered or busy designs that compete with the title

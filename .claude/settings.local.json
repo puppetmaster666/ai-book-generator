@@ -41,7 +41,9 @@
       "Bash(node check-promo.js:*)",
       "Bash(echo:*)",
       "Bash(wc:*)",
-      "Bash(head:*)"
+      "Bash(head:*)",
+      "Bash(node analyze-repetition.js:*)",
+      "Bash(node scripts/sync-stripe-payments.js:*)"
     ]
   }
 }

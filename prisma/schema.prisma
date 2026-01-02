@@ -87,7 +87,7 @@ model Book {
 
   // User inputs
   title           String
-  authorName      String    @default("Anonymous")
+  authorName      String    @default("")
   genre           String
   bookType        String    // fiction, non-fiction
   premise         String    @db.Text

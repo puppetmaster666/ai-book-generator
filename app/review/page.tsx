@@ -457,7 +457,7 @@ function ReviewContent() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           email: email.trim().toLowerCase(),
-          authorName: authorName.trim() || 'Anonymous',
+          authorName: authorName.trim(),
         }),
       });
     } catch {

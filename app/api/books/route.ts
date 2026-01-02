@@ -162,7 +162,7 @@ export async function POST(request: NextRequest) {
       data: {
         id: uuidv4(),
         title,
-        authorName: authorName || 'Anonymous',
+        authorName: authorName || '',
         genre,
         bookType: bookType || genreConfig?.type || 'fiction',
         premise,
