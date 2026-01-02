@@ -31,6 +31,7 @@ export async function POST(
         email: true,
         updatedAt: true,
         errorMessage: true,
+        totalWords: true,
         _count: {
           select: {
             chapters: true,
@@ -64,7 +65,10 @@ export async function POST(
     const hasFailed = book.status === 'failed' || book.errorMessage;
 
     // Admins can always restart, users can only restart failed/stuck books
-    if (!isAdmin) {
+    // EXCEPTION: Allow anyone to restart "completed" books with 0 words (clearly broken)
+    const isBrokenCompletion = book.status === 'completed' && (book.totalWords === 0 || book._count.chapters === 0);
+
+    if (!isAdmin && !isBrokenCompletion) {
       if (book.status === 'completed') {
         return NextResponse.json({
           error: 'Cannot restart a completed book. If you need changes, please create a new book.'
