@@ -498,9 +498,15 @@ export async function POST(
   try {
     const { id } = await params;
 
-    // Get current session to check admin status
-    const session = await auth();
-    const isAdmin = session?.user?.email && ADMIN_EMAILS.includes(session.user.email);
+    // Get current session to check admin status (gracefully handle no session)
+    let isAdmin = false;
+    try {
+      const session = await auth();
+      isAdmin = !!(session?.user?.email && ADMIN_EMAILS.includes(session.user.email));
+    } catch (authError) {
+      // No session or auth error - treat as non-admin (allows webhooks/background jobs)
+      console.log('[Generate] No auth session, treating as non-admin');
+    }
 
     // Check for outlineOnly mode (for comics - client handles parallel panel generation)
     let outlineOnly = false;
