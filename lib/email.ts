@@ -50,7 +50,7 @@ export async function sendEmail({ to, subject, html, replyTo }: EmailOptions): P
     console.log(`Email sent successfully to ${to}: "${subject}"`);
     return true;
   } catch (error) {
-    console.error('Email send error:', error);
+    console.error('[Email] Failed to send (non-critical, book generation continues):', error instanceof Error ? error.message : error);
     return false;
   }
 }
