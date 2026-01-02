@@ -503,16 +503,17 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
           await new Promise(resolve => setTimeout(resolve, 500));
 
         } catch (err) {
-          console.error(`[Session ${currentSession}] Orchestration error:`, err);
+          const errorMsg = err instanceof Error ? err.message : 'Unknown error';
+          console.error(`[Session ${currentSession}] Orchestration error (attempt ${consecutiveErrors + 1}/${maxConsecutiveErrors}):`, errorMsg);
           consecutiveErrors++;
 
           // Only stop after many consecutive REAL errors (not timeouts)
           if (consecutiveErrors >= maxConsecutiveErrors) {
             console.error(`[Session ${currentSession}] Too many consecutive errors (${maxConsecutiveErrors}), stopping orchestration`);
+            console.error(`[Session ${currentSession}] Final error:`, err);
             orchestrationRef.current = false;
 
             // Mark current chapter as error in the UI
-            const errorMsg = err instanceof Error ? err.message : 'Generation failed';
             setChapterStatuses(prev => prev.map(ch =>
               ch.status === 'generating' ? { ...ch, status: 'error' as const, error: errorMsg } : ch
             ));
@@ -1357,8 +1358,19 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
                     {book.currentChapter} chapter{book.currentChapter > 1 ? 's' : ''} completed ({book.totalWords.toLocaleString()} words)
                   </p>
                 )}
+
+                {/* Show actual error message if available */}
+                {book.errorMessage && book.errorMessage !== 'content_blocked' && (
+                  <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-4 max-w-lg mx-auto">
+                    <p className="text-sm font-medium text-red-900 mb-1">Error Details:</p>
+                    <p className="text-sm text-red-700">{book.errorMessage}</p>
+                  </div>
+                )}
+
                 <p className="text-sm text-neutral-500 mb-6">
-                  Click retry to continue from where you left off.
+                  {book.errorMessage?.includes('exhausted') || book.errorMessage?.includes('API')
+                    ? 'Our AI service is experiencing high demand. Please retry in a few minutes.'
+                    : 'Click retry to continue from where you left off.'}
                 </p>
                 <button
                   onClick={handleRetry}

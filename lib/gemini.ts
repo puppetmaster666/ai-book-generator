@@ -89,14 +89,28 @@ async function withTimeout<T>(
       const totalElapsed = Date.now() - overallStart;
       const keysSummary = failedKeys.map(k => `key${k.key}:${k.reason}`).join(', ');
       console.error(`[Gemini] ALL KEYS EXHAUSTED for ${operationName} after ${totalElapsed}ms. Summary: [${keysSummary}]`);
-      throw new Error(`${operationName} failed - all ${totalKeys} API keys exhausted (${keysSummary}). Last error: ${errorMsg.substring(0, 100)}`);
+
+      // User-friendly error message
+      const userMessage = failedKeys.every(k => k.reason.includes('RATE_LIMIT'))
+        ? 'AI service rate limit reached. Please wait a few minutes and retry.'
+        : failedKeys.every(k => k.reason.includes('TIMEOUT'))
+          ? 'AI service timed out. This can happen with complex requests. Please retry.'
+          : `AI service temporarily unavailable. Please retry in a few minutes.`;
+
+      // Technical details for logging
+      console.error(`Technical details: ${errorMsg.substring(0, 200)}`);
+
+      throw new Error(userMessage);
     }
   }
 
   const totalElapsed = Date.now() - overallStart;
   const keysSummary = failedKeys.map(k => `key${k.key}:${k.reason}`).join(', ');
   console.error(`[Gemini] ALL KEYS EXHAUSTED for ${operationName} after ${totalElapsed}ms. Summary: [${keysSummary}]`);
-  throw lastError || new Error(`${operationName} failed after trying all ${totalKeys} keys`);
+
+  // User-friendly error message
+  const userMessage = 'AI service temporarily unavailable. Please retry in a few minutes.';
+  throw lastError || new Error(userMessage);
 }
 
 // API timeout constants (DEPRECATED - kept for backwards compatibility)
@@ -387,16 +401,17 @@ let _geminiFlash: GenerativeModel | null = null;
 let _geminiFlashLight: GenerativeModel | null = null; // Lightweight version for quick tasks
 let _geminiImage: GenerativeModel | null = null;
 
-let _currentKeyIndex = 1; // Start with backup1 key (more reliable)
+let _currentKeyIndex = 3; // Start with backup3 key
 // Track which key last succeeded - this persists across requests in the same serverless instance
-let _lastWorkingKeyIndex = 1; // Start with backup1 key by default
+let _lastWorkingKeyIndex = 3; // Start with backup3 key by default
 
 // Environment variable names for keys in order of preference
 const API_KEY_ENV_NAMES = [
   'GEMINI_API_KEY',
   'GEMINI_API_BACKUP1',
   'GEMINI_API_BACKUP2',
-  'GEMINI_API_BACKUP3'
+  'GEMINI_API_BACKUP3',
+  'GEMINI_API_BACKUP4'
 ];
 
 // Mark the current key as working - call this after a successful API call
@@ -2421,6 +2436,22 @@ export function buildIllustrationPromptFromScene(
 
   // Build the prompt
   let prompt = `${artStylePrompt}. `;
+
+  // COPYRIGHT PROTECTION - CRITICAL: Prevent generation of famous copyrighted characters
+  prompt += `
+⚠️ COPYRIGHT PROTECTION - ABSOLUTELY CRITICAL:
+- Create 100% ORIGINAL character designs - NEVER copy from existing media, movies, TV shows, comics, or famous characters
+- Even if a character's NAME matches a famous character (Superman, Batman, Spider-Man, Wonder Woman, Velma, Daphne, Scooby, Harry Potter, etc.), you MUST create COMPLETELY UNIQUE visual designs that look NOTHING like the copyrighted character
+- DO NOT use ANY signature elements from copyrighted characters:
+  * NO iconic costumes (Superman's blue suit with S symbol, Batman's bat suit, Spider-Man's web pattern, Wonder Woman's tiara, etc.)
+  * NO trademarked symbols, logos, or insignias on clothing (S, Bat symbol, Spider symbol, etc.)
+  * NO distinctive hairstyles, glasses, or accessories from famous characters
+  * NO signature colors or visual styles associated with copyrighted characters
+- If the character name is "Superman", create a unique person with NO connection to the copyrighted character - different hair, different clothes, NO cape, NO S symbol, COMPLETELY ORIGINAL
+- This is LEGALLY REQUIRED to avoid copyright infringement and potential lawsuit
+⚠️ END COPYRIGHT PROTECTION
+
+`;
 
   // Add location context first
   if (scene.location) {

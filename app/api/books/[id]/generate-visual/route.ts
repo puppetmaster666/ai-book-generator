@@ -14,6 +14,7 @@ import {
 } from '@/lib/gemini';
 import { getBookReadyEmail, sendEmail } from '@/lib/email';
 import { BOOK_PRESETS, type BookPresetKey } from '@/lib/constants';
+import { generateIllustrationWithRetry } from '@/lib/illustration-utils';
 
 // Set max duration for this background task (5 minutes is Vercel Pro limit)
 export const maxDuration = 300;
@@ -96,6 +97,32 @@ export async function POST(
 
         const pendingChapters = targetChapters.filter(ch => !existingPanelNumbers.has(ch.number));
 
+        // Get visual guides from book data for consistency and copyright protection
+        const characterVisualGuide = book.characterVisualGuide as any;
+        const visualStyleGuide = book.visualStyleGuide as any;
+
+        // Track character first appearances for reference images
+        // Map of characterName -> { panelNumber, imageData }
+        const characterFirstAppearances = new Map<string, { panelNumber: number; imageData: string }>();
+
+        // Load existing illustrations to populate character first appearances
+        for (const illustration of book.illustrations) {
+            if (illustration.imageUrl && illustration.position) {
+                // Extract which characters appear in this panel from the scene
+                const panelChapter = targetChapters.find(ch => ch.number === illustration.position);
+                if (panelChapter?.scene?.characters) {
+                    for (const charName of panelChapter.scene.characters) {
+                        if (!characterFirstAppearances.has(charName)) {
+                            characterFirstAppearances.set(charName, {
+                                panelNumber: illustration.position,
+                                imageData: illustration.imageUrl
+                            });
+                        }
+                    }
+                }
+            }
+        }
+
         if (pendingChapters.length === 0) {
             // All done! Trigger assembly!
             // We can call the assemble endpoint logic directly or fetch it
@@ -167,23 +194,44 @@ export async function POST(
                     illustrationPrompt += `\nCRITICAL: Do NOT include any text, words, letters, numbers, signs, labels, or written characters anywhere in the image.`;
                 }
 
-                // Use internal API call or direct generation. Direct generation is better for background tasks if we can.
-                // But re-using the logic via fetch is safer for consistency.
-                const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-                const genRes = await fetch(`${baseUrl}/api/generate-illustration`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        scene: illustrationPrompt,
-                        artStyle: book.artStyle,
-                        bookFormat: bookFormat,
-                    })
+                // Build reference images for characters that have appeared before
+                const referenceImages = [];
+                if (chapter.scene.characters && Array.isArray(chapter.scene.characters)) {
+                    for (const charName of chapter.scene.characters) {
+                        const firstAppearance = characterFirstAppearances.get(charName);
+                        if (firstAppearance && firstAppearance.panelNumber < chapter.number) {
+                            // This character appeared before - use their first image as reference
+                            referenceImages.push({
+                                characterName: charName,
+                                imageData: firstAppearance.imageData
+                            });
+                            console.log(`[Visual Gen] Panel ${chapter.number}: Using reference image for "${charName}" from panel ${firstAppearance.panelNumber}`);
+                        }
+                    }
+                }
+
+                // Use shared utility with robust retry/fallback logic
+                const genResult = await generateIllustrationWithRetry({
+                    scene: illustrationPrompt,
+                    artStyle: book.artStyle || 'illustration',
+                    bookTitle: book.title,
+                    chapterTitle: chapter.title || `Panel ${chapter.number}`,
+                    setting: chapter.scene.background,
+                    bookFormat: bookFormat,
+                    characterVisualGuide: characterVisualGuide,
+                    visualStyleGuide: visualStyleGuide,
+                    referenceImages: referenceImages.length > 0 ? referenceImages : undefined,
                 });
 
-                if (!genRes.ok) throw new Error('Generation failed');
-                const genData = await genRes.json();
+                // Build genData format to match existing code below
+                const genData = genResult ? {
+                    image: {
+                        mimeType: 'image/png',
+                        base64: genResult.imageUrl.replace(/^data:image\/\w+;base64,/, '')
+                    }
+                } : null;
 
-                if (genData.image) {
+                if (genData?.image) {
                     // Ensure Chapter exists to link to
                     // For visual books, chapters are often created on the fly or might not exist yet if only outline exists.
                     // We typically want to create the chapter record to hold the text/summary too.
@@ -219,16 +267,32 @@ export async function POST(
 
                     // Save to DB
                     // Note: illustration model uses 'position' and 'chapterId'
+                    const imageUrl = `data:${genData.image.mimeType};base64,${genData.image.base64}`;
                     await prisma.illustration.create({
                         data: {
                             bookId: id,
                             chapterId: chapterId,
                             position: chapter.number, // Using position to store the sequence order/page number
                             prompt: illustrationPrompt,
-                            imageUrl: `data:${genData.image.mimeType};base64,${genData.image.base64}`,
+                            imageUrl: imageUrl,
                             altText: chapter.scene.description.slice(0, 200),
                         }
                     });
+
+                    // Update character first appearances for future reference
+                    // Any character appearing in this panel for the first time gets stored
+                    if (chapter.scene.characters && Array.isArray(chapter.scene.characters)) {
+                        for (const charName of chapter.scene.characters) {
+                            if (!characterFirstAppearances.has(charName)) {
+                                characterFirstAppearances.set(charName, {
+                                    panelNumber: chapter.number,
+                                    imageData: imageUrl
+                                });
+                                console.log(`[Visual Gen] Stored first appearance for "${charName}" in panel ${chapter.number}`);
+                            }
+                        }
+                    }
+
                     return chapter.number;
                 }
             } catch (e: any) {
