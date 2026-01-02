@@ -9,6 +9,36 @@ import {
   SAFETY_SETTINGS
 } from '@/lib/gemini';
 
+/**
+ * Character Consistency with Reference Images
+ *
+ * This endpoint supports maintaining visual consistency across illustrations by using
+ * reference images from previous illustrations.
+ *
+ * How it works:
+ * 1. When a character appears for the first time, that illustration becomes their "reference"
+ * 2. For subsequent illustrations, pass the character's first appearance as a reference image
+ * 3. Gemini will match the character's appearance to the reference image
+ *
+ * Usage from client:
+ * - Track which characters appear in which illustrations (store in state/database)
+ * - When generating a new illustration, check if any characters have appeared before
+ * - Pass those previous illustrations as referenceImages array
+ *
+ * Example:
+ * ```
+ * const referenceImages = [
+ *   { characterName: "Alice", imageData: "data:image/png;base64,..." },
+ *   { characterName: "Bob", imageData: "data:image/png;base64,..." }
+ * ];
+ *
+ * fetch('/api/generate-illustration', {
+ *   method: 'POST',
+ *   body: JSON.stringify({ scene, referenceImages, ... })
+ * });
+ * ```
+ */
+
 // Types for visual consistency guides
 type CharacterVisualGuide = {
   characters: Array<{
@@ -20,6 +50,11 @@ type CharacterVisualGuide = {
     expressionNotes: string;
   }>;
   styleNotes: string;
+};
+
+type CharacterReferenceImage = {
+  characterName: string;
+  imageData: string; // Base64 encoded image data (with or without data URL prefix)
 };
 
 type VisualStyleGuide = {
@@ -78,6 +113,7 @@ export async function POST(request: NextRequest) {
       characterVisualGuide,
       visualStyleGuide,
       bookFormat,
+      referenceImages, // Array of { characterName: string, imageData: string (base64) }
     } = await request.json();
 
     if (!scene) {
@@ -96,7 +132,7 @@ export async function POST(request: NextRequest) {
     const dimensions = ILLUSTRATION_DIMENSIONS[formatKey] || ILLUSTRATION_DIMENSIONS.picture_book;
 
     // Build a detailed prompt for the illustration with consistency guides
-    const prompt = buildIllustrationPrompt({
+    const { prompt, hasReferenceImages } = buildIllustrationPrompt({
       scene,
       stylePrompt,
       characters,
@@ -105,6 +141,7 @@ export async function POST(request: NextRequest) {
       characterVisualGuide: characterVisualGuide as CharacterVisualGuide | undefined,
       visualStyleGuide: visualStyleGuide as VisualStyleGuide | undefined,
       aspectRatioPrompt: dimensions.prompt,
+      referenceImages: referenceImages as CharacterReferenceImage[] | undefined,
     });
 
     // Execute with retry logic that handles safety blocks
@@ -127,7 +164,35 @@ export async function POST(request: NextRequest) {
         safetySettings: SAFETY_SETTINGS,
       });
 
-      const result = await model.generateContent(currentPrompt);
+      // Build content array with reference images if provided
+      let content: Array<{ text?: string; inlineData?: { data: string; mimeType: string } }>;
+
+      if (referenceImages && referenceImages.length > 0) {
+        console.log(`[Illustration] Using ${referenceImages.length} reference image(s) for character consistency`);
+        content = [
+          { text: currentPrompt },
+        ];
+
+        // Add each reference image to the content
+        referenceImages.forEach((ref: CharacterReferenceImage) => {
+          // Remove data URL prefix if present (e.g., "data:image/png;base64,")
+          const base64Data = ref.imageData.replace(/^data:image\/\w+;base64,/, '');
+
+          content.push({
+            inlineData: {
+              data: base64Data,
+              mimeType: 'image/png',
+            },
+          });
+          content.push({
+            text: `Use this reference image to maintain visual consistency for the character "${ref.characterName}". The character should look EXACTLY like they do in this reference image.`,
+          });
+        });
+      } else {
+        content = [{ text: currentPrompt }];
+      }
+
+      const result = await model.generateContent(content);
       const response = result.response;
 
       // Check for content policy blocks
@@ -307,6 +372,7 @@ function buildIllustrationPrompt({
   characterVisualGuide,
   visualStyleGuide,
   aspectRatioPrompt,
+  referenceImages,
 }: {
   scene: string;
   stylePrompt: string;
@@ -316,7 +382,8 @@ function buildIllustrationPrompt({
   characterVisualGuide?: CharacterVisualGuide;
   visualStyleGuide?: VisualStyleGuide;
   aspectRatioPrompt?: string;
-}): string {
+  referenceImages?: CharacterReferenceImage[];
+}): { prompt: string; hasReferenceImages: boolean } {
   let prompt = `Create a beautiful book illustration in ${stylePrompt} style.\n\n`;
 
   prompt += `${NO_TEXT_INSTRUCTION}\n\n`;
@@ -370,16 +437,31 @@ function buildIllustrationPrompt({
     prompt += `Setting/Environment: ${setting}\n\n`;
   }
 
+  // Add reference image instructions if provided
+  const hasReferenceImages = !!(referenceImages && referenceImages.length > 0);
+  if (hasReferenceImages) {
+    prompt += `CHARACTER REFERENCE IMAGES:\n`;
+    prompt += `Reference images are provided below showing how specific characters have appeared in previous illustrations.\n`;
+    prompt += `CRITICAL: These characters MUST look IDENTICAL to their reference images in this new illustration.\n`;
+    prompt += `Match their:\n`;
+    prompt += `- Facial features, hair style, and hair color EXACTLY\n`;
+    prompt += `- Clothing and accessories EXACTLY\n`;
+    prompt += `- Body proportions and build EXACTLY\n`;
+    prompt += `- Color palette EXACTLY\n`;
+    prompt += `- Art style and line work EXACTLY\n`;
+    prompt += `\nThe reference images take HIGHEST PRIORITY for character appearance. If there's any conflict between the written description and the reference image, ALWAYS follow the reference image.\n\n`;
+  }
+
   prompt += `CRITICAL REQUIREMENTS:
 - Create a single cohesive illustration that captures the emotional essence of the scene
 - Use expressive, dynamic composition
 - MAINTAIN ABSOLUTE CONSISTENCY in character appearances across all illustrations
-- Characters must look EXACTLY as described in the character guide
+${hasReferenceImages ? '- Characters with reference images must look EXACTLY like they do in the reference images (same face, hair, clothing, proportions, colors)' : '- Characters must look EXACTLY as described in the character guide'}
 - Use the SAME color palette and style throughout
 - The illustration should be suitable for a ${bookTitle ? `book titled "${bookTitle}"` : 'published book'}
 - Focus on visual storytelling without any text elements
 - High quality, professional book illustration suitable for print
 - Ensure characters are instantly recognizable from other illustrations in the book`;
 
-  return prompt;
+  return { prompt, hasReferenceImages };
 }
