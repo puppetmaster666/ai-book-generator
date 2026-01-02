@@ -2396,22 +2396,59 @@ This is an ADULT comic. Make the visuals match the mature tone:
 }
 
 export async function generateCoverImage(coverPrompt: string): Promise<string> {
-  const fullPrompt = `Professional book cover, high quality, 1600x2560 aspect ratio, suitable for Amazon KDP. ${coverPrompt}`;
+  const maxRetries = 3;
 
-  return withRetry(async () => {
-    const result = await getGeminiImage().generateContent(fullPrompt);
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      // Sanitize prompt more aggressively on retries
+      let sanitizedPrompt = coverPrompt;
+      if (attempt > 0) {
+        console.log(`[Cover] Retry ${attempt}: Sanitizing prompt to avoid content policy...`);
+        // Remove potentially offensive words and make it more generic
+        sanitizedPrompt = sanitizedPrompt
+          .replace(/\b(blood|violence|weapon|gun|knife|death|kill|murder|gore)\b/gi, '')
+          .replace(/\b(sexy|nude|naked|provocative)\b/gi, '')
+          .replace(/\s+/g, ' ')
+          .trim();
 
-    // Extract image URL or base64 from response
-    const response = result.response;
+        // Make it even more generic on later retries
+        if (attempt > 1) {
+          sanitizedPrompt = `A ${sanitizedPrompt.substring(0, 100)} book cover, family-friendly, professional design`;
+        }
+      }
 
-    // Handle the image response based on Gemini 3 Pro Image API format
-    if (response.candidates?.[0]?.content?.parts?.[0]?.inlineData) {
-      const imageData = response.candidates[0].content.parts[0].inlineData;
-      return `data:${imageData.mimeType};base64,${imageData.data}`;
+      const fullPrompt = `Professional book cover, high quality, 1600x2560 aspect ratio, suitable for Amazon KDP, family-friendly. ${sanitizedPrompt}`;
+
+      const result = await withRetry(async () => {
+        return await getGeminiImage().generateContent(fullPrompt);
+      });
+
+      // Extract image URL or base64 from response
+      const response = result.response;
+
+      // Handle the image response based on Gemini 3 Pro Image API format
+      if (response.candidates?.[0]?.content?.parts?.[0]?.inlineData) {
+        const imageData = response.candidates[0].content.parts[0].inlineData;
+        console.log(`[Cover] SUCCESS on attempt ${attempt + 1}`);
+        return `data:${imageData.mimeType};base64,${imageData.data}`;
+      }
+
+      throw new Error('Failed to generate cover image - no image data in response');
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      const isContentPolicyError = errorMsg.includes('PROHIBITED_CONTENT') || errorMsg.includes('blocked');
+
+      if (isContentPolicyError && attempt < maxRetries - 1) {
+        console.log(`[Cover] Content policy block on attempt ${attempt + 1}, retrying with sanitized prompt...`);
+        continue; // Retry with sanitized prompt
+      }
+
+      // Not a content policy error or no retries left
+      throw error;
     }
+  }
 
-    throw new Error('Failed to generate cover image');
-  });
+  throw new Error('Failed to generate cover after all retries');
 }
 
 // Generate detailed visual character sheets for consistent illustrations
