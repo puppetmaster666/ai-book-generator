@@ -685,6 +685,13 @@ export async function POST(
           contentRating: (book.contentRating || 'general') as ContentRating,
         });
         outline = visualOutline;
+
+        // ENFORCE maximum chapter count - AI sometimes ignores "Create EXACTLY X" instruction
+        const maxChapters = (book.bookFormat === 'comic_book' || book.bookFormat === 'comic' || dialogueStyle === 'bubbles' || book.bookPreset === 'comic_story') ? 24 : 20;
+        if (outline.chapters.length > maxChapters) {
+          console.warn(`AI generated ${outline.chapters.length} chapters, trimming to ${maxChapters}`);
+          outline.chapters = outline.chapters.slice(0, maxChapters);
+        }
       } else if (book.bookType === 'non-fiction') {
         // Use non-fiction outline for non-fiction books
         console.log('Generating non-fiction outline with topic structure...');
