@@ -71,7 +71,8 @@ type VisualStyleGuide = {
 const API_KEY_ENV_NAMES = [
   'GEMINI_API_KEY',
   'GEMINI_API_BACKUP1',
-  'GEMINI_API_BACKUP2'
+  'GEMINI_API_BACKUP2',
+  'GEMINI_API_BACKUP3'
 ];
 
 // Lazy initialization - recreated when key changes
@@ -241,7 +242,7 @@ export async function POST(request: NextRequest) {
     const attemptGeneration = async () => {
       let lastError: Error | null = null;
       let keysTriedThisCycle = 0;
-      const totalKeys = 3;
+      const totalKeys = 4;
       const maxCycles = 2;
       let currentCycle = 0;
 

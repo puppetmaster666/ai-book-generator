@@ -25,7 +25,7 @@ export const SAFETY_SETTINGS = [
 // Vercel kills function at 300s, so we timeout at 240s to rotate keys before death
 const SAFETY_TIMEOUT_MS = 240000; // 4 minutes
 
-// Key rotation wrapper - tries all 3 keys before giving up
+// Key rotation wrapper - tries all 4 keys before giving up
 // Each key attempt has a 240s safety timeout to prevent Vercel from killing the function
 // Takes a function that creates the promise so we can retry with different key
 async function withTimeout<T>(
@@ -33,7 +33,7 @@ async function withTimeout<T>(
   _timeoutMs: number, // DEPRECATED: kept for backwards compatibility, not used
   operationName: string = 'operation'
 ): Promise<T> {
-  const totalKeys = 3;
+  const totalKeys = 4;
   let lastError: Error | null = null;
   const failedKeys: { key: number; reason: string }[] = [];
   const overallStart = Date.now();
@@ -174,7 +174,7 @@ CONTENT GUIDELINES (General Audience):
   }
 }
 
-// Retry utility with FAST key switching - tries all 3 keys immediately, then waits
+// Retry utility with FAST key switching - tries all 4 keys immediately, then waits
 // Only adds delay AFTER cycling through all keys
 async function withRetry<T>(
   fn: () => Promise<T>,
@@ -182,7 +182,7 @@ async function withRetry<T>(
   baseDelayMs: number = 5000
 ): Promise<T> {
   let lastError: Error | null = null;
-  const totalKeys = 3;
+  const totalKeys = 4;
   let keysTriedThisCycle = 0;
   let currentCycle = 0;
 
@@ -395,7 +395,8 @@ let _lastWorkingKeyIndex = 1; // Start with backup1 key by default
 const API_KEY_ENV_NAMES = [
   'GEMINI_API_KEY',
   'GEMINI_API_BACKUP1',
-  'GEMINI_API_BACKUP2'
+  'GEMINI_API_BACKUP2',
+  'GEMINI_API_BACKUP3'
 ];
 
 // Mark the current key as working - call this after a successful API call

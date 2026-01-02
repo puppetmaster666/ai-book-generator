@@ -18,7 +18,8 @@ import {
 const API_KEY_ENV_NAMES = [
   'GEMINI_API_KEY',
   'GEMINI_API_BACKUP1',
-  'GEMINI_API_BACKUP2'
+  'GEMINI_API_BACKUP2',
+  'GEMINI_API_BACKUP3'
 ];
 
 // Lazy initialization - recreated when key changes
@@ -333,11 +334,11 @@ export async function POST(request: NextRequest) {
 
     // Retry utility modified to handle safety blocks with FAST key switching
     // Key rotation happens IMMEDIATELY on rate limit - no delay for first switch
-    // Only adds delay after cycling through all 3 keys
+    // Only adds delay after cycling through all 4 keys
     const attemptGeneration = async () => {
       let lastError: Error | null = null;
       let keysTriedThisCycle = 0;
-      const totalKeys = 3;
+      const totalKeys = 4;
       const maxCycles = 2; // Try each key up to 2 times with backoff between cycles
       let currentCycle = 0;
 
