@@ -166,13 +166,11 @@ export async function POST(request: NextRequest) {
       });
 
       // Build content array with reference images if provided
-      let content: Array<{ text?: string; inlineData?: { data: string; mimeType: string } }>;
+      const content: Array<string | { text: string } | { inlineData: { data: string; mimeType: string } }> = [];
 
       if (referenceImages && referenceImages.length > 0) {
         console.log(`[Illustration] Using ${referenceImages.length} reference image(s) for character consistency`);
-        content = [
-          { text: currentPrompt },
-        ];
+        content.push({ text: currentPrompt });
 
         // Add each reference image to the content
         referenceImages.forEach((ref: CharacterReferenceImage) => {
@@ -190,7 +188,7 @@ export async function POST(request: NextRequest) {
           });
         });
       } else {
-        content = [{ text: currentPrompt }];
+        content.push({ text: currentPrompt });
       }
 
       const result = await model.generateContent(content);
