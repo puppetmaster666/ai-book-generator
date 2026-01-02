@@ -973,29 +973,79 @@ STRICT RULES:
 JSON format:
 {"title":"Title","genre":"selfhelp","bookType":"non-fiction","premise":"Detailed description of the book's content (up to 300 words)","characters":[],"beginning":"Introduction hook","middle":"Topic 1, Topic 2, Topic 3, Topic 4","ending":"Conclusion and takeaways","writingStyle":"informative","targetWords":50000,"targetChapters":15}`;
 
-  const prompt = isNonFiction ? nonFictionPrompt : fictionPrompt;
-  const result = await getGeminiFlash().generateContent(prompt);
-  const response = result.response.text();
+  // Retry with sanitization if content policy blocks
+  const maxRetries = 3;
+  let lastError: Error | null = null;
 
-  const parsed = parseJSONFromResponse(response) as {
-    title: string;
-    genre: string;
-    bookType: 'fiction' | 'non-fiction';
-    premise: string;
-    characters: { name: string; description: string }[];
-    beginning: string;
-    middle: string;
-    ending: string;
-    writingStyle: string;
-    targetWords: number;
-    targetChapters: number;
-  };
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      let sanitizedIdea = idea;
 
-  // Return parsed result with original idea preserved (capped at 1000 words for AI context)
-  return {
-    ...parsed,
-    originalIdea: truncateToWordLimit(idea),
-  };
+      // Sanitize on retries
+      if (attempt > 0) {
+        console.log(`[ExpandIdea] Retry ${attempt}: Sanitizing idea to avoid content policy...`);
+        // Remove potentially offensive words
+        sanitizedIdea = idea
+          .replace(/\b(kill|murder|death|blood|violence|weapon|gun|knife|gore|brutal)\b/gi, '')
+          .replace(/\b(sex|sexy|nude|naked|porn|explicit)\b/gi, '')
+          .replace(/\b(drug|cocaine|heroin|meth)\b/gi, '')
+          .replace(/\s+/g, ' ')
+          .trim();
+
+        // Make it even more generic on later retries
+        if (attempt > 1) {
+          sanitizedIdea = `A story about: ${sanitizedIdea.substring(0, 200)}`;
+        }
+      }
+
+      const sanitizedPrompt = isNonFiction
+        ? nonFictionPrompt.replace(idea, sanitizedIdea)
+        : fictionPrompt.replace(idea, sanitizedIdea);
+
+      const result = await getGeminiFlash().generateContent(sanitizedPrompt);
+      const response = result.response.text();
+
+      const parsed = parseJSONFromResponse(response) as {
+        title: string;
+        genre: string;
+        bookType: 'fiction' | 'non-fiction';
+        premise: string;
+        characters: { name: string; description: string }[];
+        beginning: string;
+        middle: string;
+        ending: string;
+        writingStyle: string;
+        targetWords: number;
+        targetChapters: number;
+      };
+
+      // Success! Return parsed result with original idea preserved
+      if (attempt > 0) {
+        console.log(`[ExpandIdea] SUCCESS on attempt ${attempt + 1} after sanitization`);
+      }
+
+      return {
+        ...parsed,
+        originalIdea: truncateToWordLimit(idea),
+      };
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      const isSafetyError = errorMsg.includes('SAFETY') || errorMsg.includes('blocked') || errorMsg.includes('Prohibited Use');
+
+      lastError = error as Error;
+
+      if (isSafetyError && attempt < maxRetries - 1) {
+        console.log(`[ExpandIdea] Content policy block on attempt ${attempt + 1}, retrying with sanitized prompt...`);
+        continue; // Retry with sanitized version
+      }
+
+      // Not a safety error or out of retries
+      throw error;
+    }
+  }
+
+  // If we got here, all retries failed
+  throw new Error(`Failed to expand idea after ${maxRetries} attempts. The idea may contain words that violate content policies. Please try rephrasing your idea. Last error: ${lastError?.message}`);
 }
 
 // Helper to build prompt for speech bubbles
