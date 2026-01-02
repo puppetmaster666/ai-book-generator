@@ -387,6 +387,25 @@ function buildIllustrationPrompt({
 
   prompt += `${NO_TEXT_INSTRUCTION}\n\n`;
 
+  // COPYRIGHT PROTECTION - CRITICAL
+  prompt += `
+⚠️ COPYRIGHT PROTECTION - ABSOLUTELY CRITICAL:
+- Create 100% ORIGINAL character designs - NEVER copy from existing media, movies, TV shows, comics, or famous characters
+- Even if a character's NAME matches a famous character (Superman, Batman, Spider-Man, Wonder Woman, Iron Man, Captain America, The Flash, Green Lantern, Aquaman, etc.), you MUST create COMPLETELY UNIQUE visual designs that look NOTHING like the copyrighted character
+- DO NOT use ANY signature elements from copyrighted characters:
+  * NO iconic costumes or suits (Superman's blue/red suit, Batman's bat suit, Spider-Man's web pattern, Iron Man's armor, etc.)
+  * NO trademarked symbols, logos, or insignias on clothing (S symbol, Bat symbol, Spider symbol, Arc Reactor, Captain America's star, etc.)
+  * NO distinctive masks, helmets, or headgear from famous characters
+  * NO signature colors or visual styles associated with copyrighted characters (Superman's red cape + blue suit, etc.)
+  * NO capes, unless the character description explicitly requires it AND it's styled completely differently from famous characters
+- If the character name is "Superman", create a unique person with NO connection to the copyrighted character - different hair, different clothes, NO cape, NO S symbol, NO red/blue color scheme, COMPLETELY ORIGINAL
+- If the character name is "Batman", create a unique person - NO bat ears, NO cape, NO black suit, NO bat symbol, COMPLETELY ORIGINAL
+- This is LEGALLY REQUIRED to avoid copyright infringement and potential lawsuit
+- When in doubt, make characters look like regular people in regular clothes, NOT superheroes in costumes
+⚠️ END COPYRIGHT PROTECTION
+
+`;
+
   // Add aspect ratio instruction
   if (aspectRatioPrompt) {
     prompt += `FORMAT: ${aspectRatioPrompt}\n\n`;
