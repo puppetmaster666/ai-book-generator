@@ -798,7 +798,7 @@ export async function POST(
           data: {
             characterVisualGuide: characterVisualGuide as object,
             visualStyleGuide: visualStyleGuide as object,
-            characterPortraits: characterPortraits ? (characterPortraits as object) : null,
+            characterPortraits: characterPortraits ? (characterPortraits as object) : undefined,
           },
         });
 
