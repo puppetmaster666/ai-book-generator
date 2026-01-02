@@ -1148,13 +1148,6 @@ export async function generateIllustratedOutline(bookData: {
   // Get content rating instructions
   const contentGuidelines = getContentRatingInstructions(bookData.contentRating || (isComicStyle ? 'general' : 'childrens'));
 
-  // Build character reference for consistency
-  const characterRef = bookData.characterVisualGuide
-    ? bookData.characterVisualGuide.characters.map(c =>
-      `${c.name}: ${c.physicalDescription}. Wears: ${c.clothing}. Distinct: ${c.distinctiveFeatures}`
-    ).join('\n')
-    : bookData.characters.map(c => `${c.name}: ${c.description}`).join('\n');
-
   const dialogueInstructions = isComicStyle
     ? `
 For each page, include "dialogue" array with speech bubbles:
@@ -1178,30 +1171,95 @@ For each page, the "text" field contains the prose that appears under/around the
 Keep text short and age-appropriate (${wordsPerPage} words average per page).
 `;
 
-  // Include original idea if provided (gives AI more context from user's vision)
-  const originalIdeaSection = bookData.originalIdea
-    ? `\nORIGINAL AUTHOR VISION (preserve these specific details, story elements, and visual ideas):\n${bookData.originalIdea}\n`
-    : '';
+  // Retry logic for truncation and safety blocks (prompt built inside loop with sanitized data)
+  const maxAttempts = 3;
+  let lastError: Error | null = null;
+  let useSafeMode = false;
 
-  const prompt = `You are creating a detailed page-by-page outline for an illustrated ${isComicStyle ? 'comic/graphic story' : 'picture book'}.
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      console.log(`generateIllustratedOutline: attempt ${attempt}/${maxAttempts}${useSafeMode ? ' (SAFE MODE)' : ''}`);
+
+      // Sanitize INPUT data on retries (not just prompt instructions)
+      let sanitizedBookData = bookData;
+      if (useSafeMode) {
+        console.log(`[IllustratedOutline] Retry ${attempt}: Sanitizing book data to avoid content policy...`);
+
+        // Sanitization function - removes potentially offensive words
+        const sanitizeText = (text: string, aggressive: boolean = false): string => {
+          let sanitized = text
+            // Violence & weapons
+            .replace(/\b(kill|murder|death|dead|die|dying|blood|bloody|violence|violent|weapon|gun|knife|sword|blade|gore|brutal|brutally|torture|wound|stab|shoot|shooting|shot)\b/gi, '')
+            // Sexual content
+            .replace(/\b(sex|sexy|nude|naked|porn|explicit|erotic|sensual|seductive|aroused)\b/gi, '')
+            // Drugs & substances
+            .replace(/\b(drug|cocaine|heroin|meth|marijuana|weed|addict)\b/gi, '')
+            // Clean up extra whitespace
+            .replace(/\s+/g, ' ')
+            .trim();
+
+          // More aggressive on later attempts
+          if (aggressive) {
+            sanitized = sanitized.substring(0, 200) + '...';
+          }
+
+          return sanitized;
+        };
+
+        const isAggressive = attempt > 2;
+
+        sanitizedBookData = {
+          ...bookData,
+          premise: sanitizeText(bookData.premise, isAggressive),
+          beginning: sanitizeText(bookData.beginning, isAggressive),
+          middle: sanitizeText(bookData.middle, isAggressive),
+          ending: sanitizeText(bookData.ending, isAggressive),
+          originalIdea: bookData.originalIdea ? sanitizeText(bookData.originalIdea, isAggressive) : undefined,
+          characters: bookData.characters.map(c => ({
+            name: c.name,
+            description: sanitizeText(c.description, isAggressive),
+          })),
+          characterVisualGuide: bookData.characterVisualGuide ? {
+            characters: bookData.characterVisualGuide.characters.map(c => ({
+              name: c.name,
+              physicalDescription: sanitizeText(c.physicalDescription, isAggressive),
+              clothing: sanitizeText(c.clothing, isAggressive),
+              distinctiveFeatures: sanitizeText(c.distinctiveFeatures, isAggressive),
+            })),
+          } : undefined,
+        };
+      }
+
+      // Rebuild prompt with sanitized data
+      const characterRefSanitized = sanitizedBookData.characterVisualGuide
+        ? sanitizedBookData.characterVisualGuide.characters.map(c =>
+          `${c.name}: ${c.physicalDescription}. Wears: ${c.clothing}. Distinct: ${c.distinctiveFeatures}`
+        ).join('\n')
+        : sanitizedBookData.characters.map(c => `${c.name}: ${c.description}`).join('\n');
+
+      const originalIdeaSectionSanitized = sanitizedBookData.originalIdea
+        ? `\nORIGINAL AUTHOR VISION (preserve these specific details, story elements, and visual ideas):\n${sanitizedBookData.originalIdea}\n`
+        : '';
+
+      let currentPrompt = `You are creating a detailed page-by-page outline for an illustrated ${isComicStyle ? 'comic/graphic story' : 'picture book'}.
 ${languageInstruction ? `\n${languageInstruction}\n` : ''}
 ${contentGuidelines}
-${originalIdeaSection}
+${originalIdeaSectionSanitized}
 BOOK DETAILS:
-- Title: "${bookData.title}"
-- Genre: ${bookData.genre}
-- Premise: ${bookData.premise}
-- Beginning: ${bookData.beginning}
-- Middle: ${bookData.middle}
-- Ending: ${bookData.ending}
-- Style: ${bookData.writingStyle}
-- Total pages: ${bookData.targetChapters}
-- Total words: ~${bookData.targetWords}
+- Title: "${sanitizedBookData.title}"
+- Genre: ${sanitizedBookData.genre}
+- Premise: ${sanitizedBookData.premise}
+- Beginning: ${sanitizedBookData.beginning}
+- Middle: ${sanitizedBookData.middle}
+- Ending: ${sanitizedBookData.ending}
+- Style: ${sanitizedBookData.writingStyle}
+- Total pages: ${sanitizedBookData.targetChapters}
+- Total words: ~${sanitizedBookData.targetWords}
 
 CHARACTERS (use these EXACT descriptions for consistency):
-${characterRef}
+${characterRefSanitized}
 
-Create EXACTLY ${bookData.targetChapters} pages. Each page needs BOTH the text/dialogue AND a detailed scene description for illustration.
+Create EXACTLY ${sanitizedBookData.targetChapters} pages. Each page needs BOTH the text/dialogue AND a detailed scene description for illustration.
 
 IMPORTANT: If an "Original Author Vision" is provided above, ensure the story incorporates all the specific details, character traits, plot elements, and unique ideas from it. The author's original vision takes priority.
 
@@ -1279,24 +1337,8 @@ Output ONLY valid JSON:
   ]
 }`;
 
-  // Retry logic for truncation and safety blocks
-  const maxAttempts = 3;
-  let lastError: Error | null = null;
-  let useSafeMode = false;
-
-  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-    try {
-      console.log(`generateIllustratedOutline: attempt ${attempt}/${maxAttempts}${useSafeMode ? ' (SAFE MODE)' : ''}`);
-
-      // If using safe mode (after a block), override content guidelines
-      let currentPrompt = prompt;
       if (useSafeMode) {
-        // Replace the content guidelines section with the safe version
-        // We do this by replacing the original content lines with the safe version
-        const safeGuidelines = getContentRatingInstructions('general');
-
-        // Improve safety by appending a strong instruction
-        currentPrompt = prompt + `\n\nIMPORTANT SAFETY OVERRIDE: The previous attempt was blocked by content safety filters. You MUST rewrite the scene descriptions to be less explicit/violent/sexual. Use euphemisms and focus on atmosphere rather than graphic details. Make it suitable for a general audience.`;
+        currentPrompt += `\n\nIMPORTANT SAFETY OVERRIDE: The previous attempt was blocked by content safety filters. You MUST write family-friendly scene descriptions. Use euphemisms and focus on atmosphere rather than graphic details. Keep all content suitable for a general audience.`;
       }
 
       const result = await getGeminiPro().generateContent(currentPrompt);
