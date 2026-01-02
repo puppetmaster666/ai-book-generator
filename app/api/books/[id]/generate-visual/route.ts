@@ -253,12 +253,15 @@ export async function POST(
                 });
 
                 // Build genData format to match existing code below
-                const genData = genResult ? {
-                    image: {
-                        mimeType: 'image/png',
-                        base64: genResult.imageUrl.replace(/^data:image\/\w+;base64,/, '')
-                    }
-                } : null;
+                const genData = genResult ? (() => {
+                    // Extract MIME type from data URL instead of hardcoding
+                    const mimeMatch = genResult.imageUrl.match(/^data:image\/([a-z]+);base64,/i);
+                    const mimeType = mimeMatch ? `image/${mimeMatch[1]}` : 'image/png';
+                    const base64 = genResult.imageUrl.replace(/^data:image\/\w+;base64,/, '');
+                    return {
+                        image: { mimeType, base64 }
+                    };
+                })() : null;
 
                 if (genData?.image) {
                     // Ensure Chapter exists to link to
