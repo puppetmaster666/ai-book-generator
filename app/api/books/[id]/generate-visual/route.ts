@@ -100,27 +100,33 @@ export async function POST(
         // Get visual guides from book data for consistency and copyright protection
         const characterVisualGuide = book.characterVisualGuide as any;
         const visualStyleGuide = book.visualStyleGuide as any;
+        const characterPortraits = book.characterPortraits as Array<{characterName: string; facePortrait: string; fullBodyPortrait: string}> | null;
 
-        // Track character first appearances for reference images
+        // Track character first appearances for reference images (FALLBACK if no portraits)
         // Map of characterName -> { panelNumber, imageData }
         const characterFirstAppearances = new Map<string, { panelNumber: number; imageData: string }>();
 
-        // Load existing illustrations to populate character first appearances
-        for (const illustration of book.illustrations) {
-            if (illustration.imageUrl && illustration.position) {
-                // Extract which characters appear in this panel from the scene
-                const panelChapter = targetChapters.find(ch => ch.number === illustration.position);
-                if (panelChapter?.scene?.characters) {
-                    for (const charName of panelChapter.scene.characters) {
-                        if (!characterFirstAppearances.has(charName)) {
-                            characterFirstAppearances.set(charName, {
-                                panelNumber: illustration.position,
-                                imageData: illustration.imageUrl
-                            });
+        // Load existing illustrations to populate character first appearances (fallback)
+        if (!characterPortraits || characterPortraits.length === 0) {
+            console.log('[Visual Gen] No character portraits found, using first appearances as references');
+            for (const illustration of book.illustrations) {
+                if (illustration.imageUrl && illustration.position) {
+                    // Extract which characters appear in this panel from the scene
+                    const panelChapter = targetChapters.find(ch => ch.number === illustration.position);
+                    if (panelChapter?.scene?.characters) {
+                        for (const charName of panelChapter.scene.characters) {
+                            if (!characterFirstAppearances.has(charName)) {
+                                characterFirstAppearances.set(charName, {
+                                    panelNumber: illustration.position,
+                                    imageData: illustration.imageUrl
+                                });
+                            }
                         }
                     }
                 }
             }
+        } else {
+            console.log(`[Visual Gen] Using ${characterPortraits.length} character portraits as references`);
         }
 
         if (pendingChapters.length === 0) {
@@ -194,18 +200,41 @@ export async function POST(
                     illustrationPrompt += `\nCRITICAL: Do NOT include any text, words, letters, numbers, signs, labels, or written characters anywhere in the image.`;
                 }
 
-                // Build reference images for characters that have appeared before
+                // Build reference images for characters - PREFER portraits, fallback to first appearances
                 const referenceImages = [];
                 if (chapter.scene.characters && Array.isArray(chapter.scene.characters)) {
                     for (const charName of chapter.scene.characters) {
-                        const firstAppearance = characterFirstAppearances.get(charName);
-                        if (firstAppearance && firstAppearance.panelNumber < chapter.number) {
-                            // This character appeared before - use their first image as reference
-                            referenceImages.push({
-                                characterName: charName,
-                                imageData: firstAppearance.imageData
-                            });
-                            console.log(`[Visual Gen] Panel ${chapter.number}: Using reference image for "${charName}" from panel ${firstAppearance.panelNumber}`);
+                        // PRIORITY 1: Use character portraits if available (canonical references)
+                        if (characterPortraits && characterPortraits.length > 0) {
+                            const portrait = characterPortraits.find(p =>
+                                p.characterName.toLowerCase() === charName.toLowerCase()
+                            );
+                            if (portrait) {
+                                // Add both face and full body portraits for maximum consistency
+                                referenceImages.push({
+                                    characterName: `${charName} (face reference)`,
+                                    imageData: portrait.facePortrait
+                                });
+                                referenceImages.push({
+                                    characterName: `${charName} (body reference)`,
+                                    imageData: portrait.fullBodyPortrait
+                                });
+                                console.log(`[Visual Gen] Panel ${chapter.number}: Using portrait references for "${charName}"`);
+                            } else {
+                                console.log(`[Visual Gen] Panel ${chapter.number}: No portrait found for "${charName}", will use visual guide only`);
+                            }
+                        }
+                        // PRIORITY 2: Fallback to first appearance if no portraits
+                        else {
+                            const firstAppearance = characterFirstAppearances.get(charName);
+                            if (firstAppearance && firstAppearance.panelNumber < chapter.number) {
+                                // This character appeared before - use their first image as reference
+                                referenceImages.push({
+                                    characterName: charName,
+                                    imageData: firstAppearance.imageData
+                                });
+                                console.log(`[Visual Gen] Panel ${chapter.number}: Using first appearance for "${charName}" from panel ${firstAppearance.panelNumber}`);
+                            }
                         }
                     }
                 }

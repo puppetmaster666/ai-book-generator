@@ -119,6 +119,7 @@ model Book {
   // Visual consistency guides (for illustrated books)
   characterVisualGuide Json?  // Detailed character descriptions for consistent illustrations
   visualStyleGuide     Json?  // Style guide for maintaining illustration consistency
+  characterPortraits   Json?  // Array of {characterName, facePortrait, fullBodyPortrait} - canonical reference images
 
   // Protagonist image (for illustrated books - user uploads their photo)
   protagonistPhoto     String?   @db.Text  // Original uploaded photo (base64)

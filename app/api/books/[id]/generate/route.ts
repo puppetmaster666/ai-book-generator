@@ -15,6 +15,7 @@ import {
   generateChildrensIllustrationPrompts,
   generateCharacterVisualGuide,
   generateVisualStyleGuide,
+  generateCharacterPortraits,
   type VisualChapter,
   type SceneDescription,
   type DialogueEntry,
@@ -774,12 +775,30 @@ export async function POST(
           bookFormat: book.bookFormat,
         });
 
-        // Store the guides in the database
+        // Generate character portraits for consistency (AFTER visual guide is created)
+        console.log('Generating character portrait references...');
+        let characterPortraits = null;
+        try {
+          characterPortraits = await generateCharacterPortraits({
+            title: book.title,
+            genre: book.genre,
+            artStyle: book.artStyle,
+            bookFormat: book.bookFormat,
+            characterVisualGuide,
+          });
+          console.log(`Generated ${characterPortraits.length} character portraits`);
+        } catch (portraitError) {
+          console.error('Failed to generate character portraits:', portraitError);
+          // Continue without portraits - will fall back to first appearance references
+        }
+
+        // Store the guides and portraits in the database
         await prisma.book.update({
           where: { id },
           data: {
             characterVisualGuide: characterVisualGuide as object,
             visualStyleGuide: visualStyleGuide as object,
+            characterPortraits: characterPortraits ? (characterPortraits as object) : null,
           },
         });
 

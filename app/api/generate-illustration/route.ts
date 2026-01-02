@@ -401,7 +401,7 @@ function buildIllustrationPrompt({
 - If the character name is "Superman", create a unique person with NO connection to the copyrighted character - different hair, different clothes, NO cape, NO S symbol, NO red/blue color scheme, COMPLETELY ORIGINAL
 - If the character name is "Batman", create a unique person - NO bat ears, NO cape, NO black suit, NO bat symbol, COMPLETELY ORIGINAL
 - This is LEGALLY REQUIRED to avoid copyright infringement and potential lawsuit
-- When in doubt, make characters look like regular people in regular clothes, NOT superheroes in costumes
+- IMPORTANT: Follow the character visual guide and reference images below EXACTLY - these are ORIGINAL designs. Characters may wear costumes, unique outfits, or fantasy clothing as specified in the guide. The goal is to avoid COPYING copyrighted characters from existing media, NOT to avoid creative original designs.
 ⚠️ END COPYRIGHT PROTECTION
 
 `;

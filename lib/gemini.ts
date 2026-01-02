@@ -1,4 +1,5 @@
 import { GoogleGenerativeAI, GenerativeModel, HarmCategory, HarmBlockThreshold } from '@google/generative-ai';
+import { generateIllustrationWithRetry } from './illustration-utils';
 
 // Permissive safety settings to avoid false positives for creative writing
 // We handle content moderation at the application level if needed
@@ -2724,6 +2725,138 @@ Output ONLY valid JSON:
       styleNotes: `Maintain consistent ${data.artStyle} style throughout all illustrations.`,
     };
   }
+}
+
+/**
+ * Generate canonical character portrait images for consistent reference across all panels.
+ * This creates dedicated portrait images (face + full body) that are used as references
+ * when generating story panels, ensuring characters look identical throughout the book.
+ *
+ * Benefits:
+ * - Better quality references than using first appearance from a scene
+ * - Focused portraits with clean backgrounds and neutral poses
+ * - Both face and full-body shots for comprehensive reference
+ * - Avoids the "first appearance might be bad" problem
+ */
+export async function generateCharacterPortraits(data: {
+  title: string;
+  genre: string;
+  artStyle: string;
+  bookFormat: string;
+  characterVisualGuide: {
+    characters: Array<{
+      name: string;
+      physicalDescription: string;
+      clothing: string;
+      distinctiveFeatures: string;
+      colorPalette: string;
+      expressionNotes: string;
+    }>;
+    styleNotes: string;
+  };
+}): Promise<Array<{
+  characterName: string;
+  facePortrait: string;  // Base64 data URL
+  fullBodyPortrait: string;  // Base64 data URL
+}>> {
+  const portraits = [];
+
+  console.log(`[Portrait Gen] Generating ${data.characterVisualGuide.characters.length} character portraits...`);
+
+  for (const character of data.characterVisualGuide.characters) {
+    console.log(`[Portrait Gen] Creating portraits for "${character.name}"...`);
+
+    // Generate face portrait (head and shoulders, neutral expression)
+    const faceScene = `Professional character portrait - CLOSE-UP of head and shoulders only, facing forward directly at camera, neutral calm expression, clean solid color background.
+
+CHARACTER: ${character.name}
+Physical Description: ${character.physicalDescription}
+Clothing (shoulders visible): ${character.clothing}
+Distinctive Features: ${character.distinctiveFeatures}
+Color Palette: ${character.colorPalette}
+
+CRITICAL REQUIREMENTS:
+- This is a REFERENCE PORTRAIT for character consistency - make it clear and well-lit
+- Character facing directly forward at camera (front view)
+- Neutral, calm expression (no extreme emotions)
+- Clean, simple background - solid color or subtle gradient
+- Focus on facial features, hair, and distinctive characteristics
+- Show head, neck, and shoulders only
+- Professional portrait quality - this will be the canonical reference for this character`;
+
+    const faceResult = await generateIllustrationWithRetry({
+      scene: faceScene,
+      artStyle: data.artStyle,
+      bookTitle: data.title,
+      chapterTitle: `${character.name} Portrait`,
+      bookFormat: 'square', // Square format for portraits
+      characterVisualGuide: undefined, // Don't pass guide to avoid recursion
+      visualStyleGuide: undefined,
+      referenceImages: undefined, // No references for portraits - this IS the reference
+    });
+
+    if (!faceResult) {
+      console.error(`[Portrait Gen] FAILED to generate face portrait for "${character.name}"`);
+      continue;
+    }
+
+    console.log(`[Portrait Gen] ✓ Face portrait for "${character.name}"`);
+
+    // Generate full body portrait (standing pose, neutral stance)
+    const fullBodyScene = `Professional character reference sheet - FULL BODY shot showing character from head to toe, standing in neutral pose, facing forward, clean solid color background.
+
+CHARACTER: ${character.name}
+Physical Description: ${character.physicalDescription}
+Clothing (full outfit): ${character.clothing}
+Distinctive Features: ${character.distinctiveFeatures}
+Color Palette: ${character.colorPalette}
+Body Type/Build: (as described above)
+
+CRITICAL REQUIREMENTS:
+- This is a REFERENCE IMAGE for character consistency - make it clear and well-lit
+- Show ENTIRE character from head to feet (full body visible)
+- Standing in relaxed neutral stance (not action pose)
+- Character facing directly forward at camera (front view)
+- Arms at sides or relaxed position (not dynamic pose)
+- Clean, simple background - solid color or subtle gradient
+- Show complete outfit and physical proportions clearly
+- Professional character sheet quality - this will be the canonical reference for this character's body and outfit`;
+
+    const fullBodyResult = await generateIllustrationWithRetry({
+      scene: fullBodyScene,
+      artStyle: data.artStyle,
+      bookTitle: data.title,
+      chapterTitle: `${character.name} Full Body Reference`,
+      bookFormat: 'square', // Square format for portraits
+      characterVisualGuide: undefined,
+      visualStyleGuide: undefined,
+      referenceImages: undefined,
+    });
+
+    if (!fullBodyResult) {
+      console.error(`[Portrait Gen] FAILED to generate full body portrait for "${character.name}"`);
+      // Still save the face portrait if we have it
+      if (faceResult) {
+        portraits.push({
+          characterName: character.name,
+          facePortrait: faceResult.imageUrl,
+          fullBodyPortrait: faceResult.imageUrl, // Use face as fallback
+        });
+      }
+      continue;
+    }
+
+    console.log(`[Portrait Gen] ✓ Full body portrait for "${character.name}"`);
+
+    portraits.push({
+      characterName: character.name,
+      facePortrait: faceResult.imageUrl,
+      fullBodyPortrait: fullBodyResult.imageUrl,
+    });
+  }
+
+  console.log(`[Portrait Gen] Completed ${portraits.length}/${data.characterVisualGuide.characters.length} character portraits`);
+  return portraits;
 }
 
 // Generate a visual style guide for the book's illustrations

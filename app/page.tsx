@@ -7,6 +7,7 @@ import Image from 'next/image';
 import { ArrowRight, Loader2, Sparkles, X, Check, ChevronRight, Zap, BookOpen, Download, ExternalLink, ChevronDown, Play } from 'lucide-react';
 import Footer from '@/components/Footer';
 import NewYearPopup from '@/components/NewYearPopup';
+import ApiLimitWarning from '@/components/ApiLimitWarning';
 import Header from '@/components/Header';
 import Testimonials from '@/components/Testimonials';
 import FAQ from '@/components/FAQ';
@@ -810,6 +811,9 @@ export default function Home() {
 
       {/* New Year Promo Popup */}
       <NewYearPopup />
+
+      {/* API Limit Warning */}
+      <ApiLimitWarning />
     </div>
   );
 }
