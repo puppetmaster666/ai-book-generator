@@ -1658,21 +1658,8 @@ OUTPUT: The chapter text only, starting with the chapter heading.`;
     .replace(/,\s*,/g, ',')
     .trim();
 
-  // PASS 2: Review and polish the chapter (using Flash Light for speed)
-  console.log(`[Chapter ${data.chapterNumber}] Starting review pass...`);
-  try {
-    const reviewResult = await reviewAndPolishChapter(content, data.targetWords, data.bookType);
-    if (reviewResult.success) {
-      content = reviewResult.content;
-      console.log(`[Chapter ${data.chapterNumber}] Review pass completed successfully.`);
-    } else {
-      console.log(`[Chapter ${data.chapterNumber}] Review pass failed, using original content.`);
-    }
-  } catch (reviewError) {
-    console.error(`[Chapter ${data.chapterNumber}] Review pass error:`, reviewError);
-    // Keep original content on error
-  }
-
+  // Review/polish now happens separately in generate-next after chapter is saved
+  // This allows the chapter to be saved immediately and review to fail independently
   return content;
 }
 
