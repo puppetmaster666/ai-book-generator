@@ -29,17 +29,21 @@ export async function POST(request: NextRequest) {
     switch (event.type) {
       case 'checkout.session.completed': {
         const session = event.data.object as Stripe.Checkout.Session;
+        const { bookId, productType } = session.metadata || {};
 
-        // Update payment record
-        await prisma.payment.updateMany({
-          where: { stripePaymentId: session.id },
+        // Create payment record now that payment is confirmed
+        // We don't create it during checkout to avoid tracking abandoned sessions
+        await prisma.payment.create({
           data: {
-            status: 'completed',
+            stripePaymentId: session.id,
             stripeCustomerId: session.customer as string,
+            email: session.customer_email || session.customer_details?.email || 'unknown',
+            amount: session.amount_total || 0,
+            status: 'completed',
+            productType: productType || 'one-time',
+            bookId: bookId || null,
           },
         });
-
-        const { bookId, productType } = session.metadata || {};
 
         // Handle one-time purchase
         if (productType === 'one-time' && bookId) {

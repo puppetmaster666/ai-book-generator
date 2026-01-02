@@ -141,17 +141,8 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Create payment record
-    await prisma.payment.create({
-      data: {
-        stripePaymentId: session.id,
-        email,
-        amount,
-        status: 'pending',
-        productType,
-        bookId: bookId || null,
-      },
-    });
+    // Don't create payment record here - wait for webhook to confirm actual payment
+    // This prevents "pending" payments from cluttering admin when users abandon checkout
 
     return NextResponse.json({ sessionId: session.id, url: session.url });
   } catch (error) {
