@@ -21,8 +21,12 @@ export const SAFETY_SETTINGS = [
   },
 ];
 
+// Safety timeout: 240s per key (4 minutes) - prevents Vercel 300s hard kill
+// Vercel kills function at 300s, so we timeout at 240s to rotate keys before death
+const SAFETY_TIMEOUT_MS = 240000; // 4 minutes
+
 // Key rotation wrapper - tries all 3 keys before giving up
-// No artificial timeouts - let Gemini handle its own timing
+// Each key attempt has a 240s safety timeout to prevent Vercel from killing the function
 // Takes a function that creates the promise so we can retry with different key
 async function withTimeout<T>(
   createPromise: () => Promise<T>,
@@ -36,7 +40,7 @@ async function withTimeout<T>(
 
   // Start with last working key if available
   switchToLastWorkingKey();
-  console.log(`[Gemini] Starting ${operationName} with key ${getCurrentKeyIndex()} (no timeout - natural Gemini timing)`);
+  console.log(`[Gemini] Starting ${operationName} with key ${getCurrentKeyIndex()} (${SAFETY_TIMEOUT_MS / 1000}s safety timeout per key)`);
 
   // Try all keys before giving up
   for (let attempt = 0; attempt < totalKeys; attempt++) {
@@ -44,8 +48,15 @@ async function withTimeout<T>(
     const attemptStart = Date.now();
 
     try {
-      // Call Gemini directly - no artificial timeout
-      const result = await createPromise();
+      // Wrap Gemini call with safety timeout to prevent Vercel from killing us
+      const result = await Promise.race([
+        createPromise(),
+        new Promise<T>((_, reject) =>
+          setTimeout(() => {
+            reject(new Error(`SAFETY_TIMEOUT: Operation exceeded ${SAFETY_TIMEOUT_MS / 1000}s limit (Gemini may be hanging)`));
+          }, SAFETY_TIMEOUT_MS)
+        )
+      ]);
       const elapsed = Date.now() - attemptStart;
 
       // SUCCESS! Mark this key as working for future requests
@@ -57,14 +68,16 @@ async function withTimeout<T>(
       const elapsed = Date.now() - attemptStart;
       const errorMsg = lastError.message || 'Unknown error';
       const isRateLimit = errorMsg.includes('429') || errorMsg.includes('quota') || errorMsg.includes('rate') || errorMsg.includes('exhausted');
+      const isSafetyTimeout = errorMsg.includes('SAFETY_TIMEOUT');
       const isGeminiTimeout = errorMsg.toLowerCase().includes('timeout') || errorMsg.toLowerCase().includes('deadline');
+      const isTimeout = isSafetyTimeout || isGeminiTimeout;
 
-      const failReason = isGeminiTimeout ? 'GEMINI_TIMEOUT' : isRateLimit ? 'RATE_LIMIT' : 'ERROR';
+      const failReason = isSafetyTimeout ? 'SAFETY_TIMEOUT' : isGeminiTimeout ? 'GEMINI_TIMEOUT' : isRateLimit ? 'RATE_LIMIT' : 'ERROR';
       failedKeys.push({ key: currentKey, reason: failReason });
       console.error(`[Gemini] FAILED: ${operationName} on key ${currentKey} after ${elapsed}ms - ${failReason}: ${errorMsg.substring(0, 150)}`);
 
       // If timeout or rate limit, IMMEDIATELY try next key (no delay)
-      if (isGeminiTimeout || isRateLimit) {
+      if (isTimeout || isRateLimit) {
         const rotated = rotateApiKey();
         if (rotated && attempt < totalKeys - 1) {
           console.log(`[Gemini] Rotating to key ${getCurrentKeyIndex()} (attempt ${attempt + 2}/${totalKeys})`);
@@ -374,9 +387,9 @@ let _geminiFlash: GenerativeModel | null = null;
 let _geminiFlashLight: GenerativeModel | null = null; // Lightweight version for quick tasks
 let _geminiImage: GenerativeModel | null = null;
 
-let _currentKeyIndex = 0;
+let _currentKeyIndex = 1; // Start with backup1 key (more reliable)
 // Track which key last succeeded - this persists across requests in the same serverless instance
-let _lastWorkingKeyIndex = 0;
+let _lastWorkingKeyIndex = 1; // Start with backup1 key by default
 
 // Environment variable names for keys in order of preference
 const API_KEY_ENV_NAMES = [
