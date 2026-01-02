@@ -1274,15 +1274,30 @@ BOOK DETAILS:
 CHARACTERS (use these EXACT descriptions for consistency):
 ${characterRefSanitized}
 
+⚠️ COPYRIGHT PROTECTION - CHARACTER NAMES:
+CRITICAL: If ANY character names match famous characters from existing media, YOU MUST RENAME THEM to completely original names in your outline.
+Check these character names against this list of prohibited names:
+- Superheroes: Superman, Batman, Spider-Man, Iron Man, Captain America, Wonder Woman, The Flash, Green Lantern, Aquaman, Thor, Hulk, Black Widow, Wolverine, Deadpool, etc.
+- Cartoon/Animation: Velma, Daphne, Fred, Shaggy, Scooby, Mickey, Minnie, Donald, Goofy, SpongeBob, Patrick, Squidward, Homer, Bart, Lisa, Marge, Peter Griffin, etc.
+- Anime: Naruto, Sasuke, Goku, Vegeta, Luffy, Pikachu, etc.
+- Other famous characters: Harry Potter, Hermione, Ron, Frodo, Gandalf, Darth Vader, Luke Skywalker, etc.
+
+If you detect ANY of these names or similar famous character names:
+1. Replace them with COMPLETELY ORIGINAL names
+2. Keep the character descriptions but use the new name throughout the entire outline
+3. Document the name change at the start of your response
+
+Example: If you see "Superman" → rename to "Marcus Stone", "Velma" → rename to "Sarah Martinez", etc.
+
 Create EXACTLY ${sanitizedBookData.targetChapters} pages. Each page needs BOTH the text/dialogue AND a detailed scene description for illustration.
 
 IMPORTANT: If an "Original Author Vision" is provided above, ensure the story incorporates all the specific details, character traits, plot elements, and unique ideas from it. The author's original vision takes priority.
 
 ${dialogueInstructions}
 
-COPYRIGHT PROTECTION - CRITICAL:
+COPYRIGHT PROTECTION - VISUAL CONTENT:
 - Create 100% ORIGINAL scene descriptions - NEVER reference existing copyrighted characters, shows, movies, comics, or anime
-- Even if character names match famous characters (Velma, Daphne, Spider-Man, Naruto, etc.), describe completely UNIQUE visual designs and poses
+- Even if you renamed characters above, describe completely UNIQUE visual designs and poses (NO iconic costumes, logos, or trademark elements)
 - DO NOT describe copyrighted visual elements (specific costumes, logos, signature poses, iconic character designs from existing media)
 - DO NOT use settings, locations, or props that are distinctive to existing copyrighted works
 - Focus on original character designs, unique settings, and original compositions
