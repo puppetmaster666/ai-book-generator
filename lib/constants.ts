@@ -78,8 +78,8 @@ export const ART_STYLES = {
   noir: {
     label: 'Noir / Sin City',
     description: 'High contrast black and white',
-    prompt: 'noir comic book style, high contrast black and white only, no colors, dramatic shadows, stark lighting, Frank Miller Sin City aesthetic, monochrome, ink style, cinematic',
-    coverStyle: 'noir black and white comic style',
+    prompt: 'STRICT MONOCHROME: noir comic book style, ABSOLUTELY NO COLORS - pure black and white only, grayscale only, high contrast shadows, stark lighting, Frank Miller Sin City aesthetic, ink-heavy style, cinematic. CRITICAL: Use ONLY black, white, and shades of gray - NO colors whatsoever',
+    coverStyle: 'noir black and white comic style, pure monochrome',
     category: 'comic',
   },
   manga: {

@@ -2580,9 +2580,15 @@ export async function generateCharacterVisualGuide(data: {
   }>;
   styleNotes: string;
 }> {
+  const isNoir = data.artStyle.toLowerCase().includes('noir');
+  const colorInstruction = isNoir
+    ? 'NOIR BLACK AND WHITE ONLY: This is a noir/monochrome style. Use ONLY grayscale values (black, white, and shades of gray). NO colors whatsoever.'
+    : '';
+
   const prompt = `You are an art director creating a character design guide for a ${data.genre} book titled "${data.title}".
 
 The illustrations will be in ${data.artStyle} style.
+${colorInstruction}
 
 CHARACTERS TO DESIGN:
 ${data.characters.map(c => `- ${c.name}: ${c.description}`).join('\n')}
@@ -2617,11 +2623,11 @@ For each character provide:
    - Height/build (tall and lanky, short and stocky, average height with athletic build)
    - Nose shape and any notable facial features
 
-2. Clothing: Their CONSISTENT outfit throughout the story (colors, style, accessories they always wear)
+2. Clothing: Their CONSISTENT outfit throughout the story (${isNoir ? 'grayscale shading' : 'colors'}, style, accessories they always wear)
 
 3. Distinctive Features: Unique visual identifiers that make them INSTANTLY recognizable (glasses, freckles, a specific accessory, a scar, etc.)
 
-4. Color Palette: 3-4 SPECIFIC hex-describable colors (like "bright red #E74C3C", "navy blue", "sunny yellow")
+4. ${isNoir ? 'Grayscale Palette' : 'Color Palette'}: ${isNoir ? '3-4 SPECIFIC grayscale values (like "pure black", "charcoal gray", "light gray", "pure white") - ABSOLUTELY NO COLORS' : '3-4 SPECIFIC hex-describable colors (like "bright red #E74C3C", "navy blue", "sunny yellow")'}
 
 5. Expression Notes: Their default facial expression and how they typically emote
 
@@ -2692,6 +2698,11 @@ export async function generateVisualStyleGuide(data: {
   moodAndAtmosphere: string;
   consistencyRules: string[];
 }> {
+  const isNoir = data.artStyle.toLowerCase().includes('noir');
+  const colorInstruction = isNoir
+    ? 'NOIR BLACK AND WHITE ONLY: This is a noir/monochrome style. Use ONLY grayscale values (black, white, and shades of gray). NO colors whatsoever.'
+    : '';
+
   const prompt = `You are an art director creating a visual style guide for illustrated book.
 
 BOOK DETAILS:
@@ -2700,12 +2711,13 @@ BOOK DETAILS:
 - Art Style: ${data.artStyle} (${data.artStylePrompt})
 - Format: ${data.bookFormat}
 - Premise: ${data.premise}
+${colorInstruction}
 
 Create a comprehensive style guide that ensures ALL illustrations in this book look like they belong together.
 
 Define:
 1. Overall Style: How the ${data.artStyle} style should be interpreted for this specific book
-2. Color Palette: Primary, secondary, and accent colors to use throughout
+2. ${isNoir ? 'Grayscale Palette' : 'Color Palette'}: ${isNoir ? 'Grayscale values (black, white, shades of gray) to use throughout - ABSOLUTELY NO COLORS' : 'Primary, secondary, and accent colors to use throughout'}
 3. Lighting Style: How light and shadow should be rendered
 4. Line Weight: Thick/thin lines, outline style, edge treatment
 5. Background Treatment: How backgrounds should be handled
