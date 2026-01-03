@@ -203,6 +203,10 @@ export default function AdminDashboard() {
   const [isLoadingEmailLogs, setIsLoadingEmailLogs] = useState(false);
   const [emailLogsFilter, setEmailLogsFilter] = useState<'all' | 'sent' | 'failed'>('all');
 
+  // Site settings state
+  const [trafficWarningEnabled, setTrafficWarningEnabled] = useState(false);
+  const [isTogglingTrafficWarning, setIsTogglingTrafficWarning] = useState(false);
+
   const fetchStats = async (showRefresh = false, booksPg = booksPage, usersPg = usersPage) => {
     if (showRefresh) setIsRefreshing(true);
     try {
@@ -565,6 +569,36 @@ export default function AdminDashboard() {
     }
   };
 
+  const fetchSiteSettings = async () => {
+    try {
+      const response = await fetch('/api/admin/site-settings');
+      if (response.ok) {
+        const data = await response.json();
+        setTrafficWarningEnabled(data.trafficWarningEnabled);
+      }
+    } catch (err) {
+      console.error('Failed to fetch site settings:', err);
+    }
+  };
+
+  const toggleTrafficWarning = async () => {
+    setIsTogglingTrafficWarning(true);
+    try {
+      const response = await fetch('/api/admin/site-settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ trafficWarningEnabled: !trafficWarningEnabled }),
+      });
+      if (response.ok) {
+        setTrafficWarningEnabled(!trafficWarningEnabled);
+      }
+    } catch (err) {
+      console.error('Failed to toggle traffic warning:', err);
+    } finally {
+      setIsTogglingTrafficWarning(false);
+    }
+  };
+
   useEffect(() => {
     if (sessionStatus === 'loading') return;
     if (!session) {
@@ -573,6 +607,7 @@ export default function AdminDashboard() {
     }
     fetchStats();
     fetchEmailLogs();
+    fetchSiteSettings();
   }, [session, sessionStatus, router]);
 
   if (sessionStatus === 'loading' || isLoading) {
@@ -643,14 +678,37 @@ export default function AdminDashboard() {
               Admin Dashboard
             </h1>
           </div>
-          <button
-            onClick={() => fetchStats(true)}
-            disabled={isRefreshing}
-            className="flex items-center gap-2 text-sm text-neutral-600 hover:text-neutral-900 disabled:opacity-50"
-          >
-            <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-            Refresh
-          </button>
+          <div className="flex items-center gap-4">
+            {/* Traffic Warning Toggle */}
+            <div className="flex items-center gap-3 px-4 py-2 bg-neutral-50 rounded-xl border border-neutral-200">
+              <div className="flex items-center gap-2">
+                <div className={`h-2 w-2 rounded-full ${trafficWarningEnabled ? 'bg-amber-500 animate-pulse' : 'bg-neutral-300'}`} />
+                <span className="text-sm font-medium text-neutral-700">Traffic Warning</span>
+              </div>
+              <button
+                onClick={toggleTrafficWarning}
+                disabled={isTogglingTrafficWarning}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-neutral-500 focus:ring-offset-2 disabled:opacity-50 ${
+                  trafficWarningEnabled ? 'bg-amber-500' : 'bg-neutral-300'
+                }`}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-md transition-transform ${
+                    trafficWarningEnabled ? 'translate-x-6' : 'translate-x-1'
+                  }`}
+                />
+              </button>
+            </div>
+
+            <button
+              onClick={() => fetchStats(true)}
+              disabled={isRefreshing}
+              className="flex items-center gap-2 text-sm text-neutral-600 hover:text-neutral-900 disabled:opacity-50"
+            >
+              <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+              Refresh
+            </button>
+          </div>
         </div>
       </header>
 

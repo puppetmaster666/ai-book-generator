@@ -301,3 +301,9 @@ model EmailLog {
   @@index([status])
   @@index([createdAt])
 }
+
+model SiteSettings {
+  id                   String   @id @default("default")
+  trafficWarningEnabled Boolean @default(false)
+  updatedAt            DateTime @updatedAt
+}
