@@ -49,10 +49,10 @@ export default function TrafficWarning() {
             </div>
 
             {/* Text content */}
-            <div className="max-w-[240px]">
+            <div className="max-w-[260px]">
               <div className="flex items-center gap-2 mb-0.5">
                 <span className="text-xs font-bold uppercase tracking-wider text-amber-700">
-                  High Traffic
+                  API Issues
                 </span>
                 <span className="relative flex h-2 w-2">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
@@ -60,7 +60,7 @@ export default function TrafficWarning() {
                 </span>
               </div>
               <p className="text-xs text-amber-900/80 leading-tight">
-                Some features may be limited, but don't worry—your books are guaranteed to be generated!
+                We are experiencing API issues. Generations may not work. If yours fails, we will re-credit you for a retry.
               </p>
             </div>
           </div>
