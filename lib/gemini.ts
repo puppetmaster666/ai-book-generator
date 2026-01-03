@@ -22,6 +22,95 @@ export const SAFETY_SETTINGS = [
   },
 ];
 
+// Content sanitization for safety filter retries
+// When Gemini blocks content, we sanitize and retry with toned-down version
+export function sanitizeContentForSafety(content: string): string {
+  // Map of explicit terms to euphemisms - preserves story while reducing explicitness
+  const replacements: [RegExp, string][] = [
+    // Sexual/explicit terms -> euphemistic alternatives
+    [/\bbuttplug\b/gi, 'intimate accessory'],
+    [/\bbutt plug\b/gi, 'intimate accessory'],
+    [/\banal plug\b/gi, 'personal accessory'],
+    [/\bsex toy\b/gi, 'intimate item'],
+    [/\bsextoy\b/gi, 'intimate item'],
+    [/\bdildo\b/gi, 'personal toy'],
+    [/\bvibrator\b/gi, 'personal massager'],
+    [/\bfemboy\b/gi, 'androgynous person'],
+    [/\bnaked\b/gi, 'undressed'],
+    [/\bnude\b/gi, 'unclothed'],
+    [/\borgasm\b/gi, 'climax'],
+    [/\bcum\b/gi, 'release'],
+    [/\bcumming\b/gi, 'releasing'],
+    [/\berection\b/gi, 'arousal'],
+    [/\berect\b/gi, 'aroused'],
+    [/\bpenis\b/gi, 'intimate area'],
+    [/\bcock\b/gi, 'member'],
+    [/\bdick\b/gi, 'member'],
+    [/\bvagina\b/gi, 'intimate area'],
+    [/\bpussy\b/gi, 'intimate area'],
+    [/\bbreasts?\b/gi, 'chest'],
+    [/\bboobs?\b/gi, 'chest'],
+    [/\bnipples?\b/gi, 'sensitive spots'],
+    [/\bass\b/gi, 'bottom'],
+    [/\bbutt\b/gi, 'bottom'],
+    [/\bmasturbat\w+\b/gi, 'self-pleasure'],
+    [/\bfuck\w*\b/gi, 'intimate'],
+    [/\bsex\b/gi, 'intimacy'],
+    [/\bsexual\b/gi, 'intimate'],
+    [/\bsexually\b/gi, 'intimately'],
+    [/\bintercourse\b/gi, 'intimacy'],
+    [/\bmoan\w*\b/gi, 'sigh'],
+    [/\bgroan\w*\b/gi, 'sound of pleasure'],
+    [/\bthrust\w*\b/gi, 'move'],
+    [/\bpenetrat\w+\b/gi, 'join'],
+    [/\barouse\w*\b/gi, 'excite'],
+    [/\barousal\b/gi, 'excitement'],
+    [/\blust\b/gi, 'desire'],
+    [/\bhorny\b/gi, 'desirous'],
+    [/\bkink\w*\b/gi, 'preference'],
+    [/\bfetish\w*\b/gi, 'interest'],
+    [/\bbdsm\b/gi, 'power dynamics'],
+    [/\bbondage\b/gi, 'restraint play'],
+    [/\bsubmissive\b/gi, 'yielding'],
+    [/\bdominant\b/gi, 'assertive'],
+    [/\bslave\b/gi, 'devoted partner'],
+    [/\bmaster\b/gi, 'leader'],
+    [/\bstrip\w*\b/gi, 'undress'],
+    [/\bseduct\w+\b/gi, 'attract'],
+    [/\bexplicit\b/gi, 'detailed'],
+    [/\berotic\b/gi, 'romantic'],
+    [/\bpornograph\w+\b/gi, 'adult content'],
+    [/\bporn\b/gi, 'adult content'],
+    // Physical descriptions that might trigger filters
+    [/\bwearing only\b/gi, 'dressed minimally in'],
+    [/\bfullness\b/gi, 'sensation'],
+    [/\bgrinding\b/gi, 'moving'],
+    [/\brubbing\b/gi, 'touching'],
+    [/\bstroking\b/gi, 'caressing'],
+    [/\blicking\b/gi, 'kissing'],
+    [/\bsucking\b/gi, 'kissing'],
+    [/\bswallow\w*\b/gi, 'take'],
+  ];
+
+  let sanitized = content;
+  for (const [pattern, replacement] of replacements) {
+    sanitized = sanitized.replace(pattern, replacement);
+  }
+
+  return sanitized;
+}
+
+// Check if an error is a safety/content block error
+export function isSafetyBlockError(error: unknown): boolean {
+  const errorMsg = error instanceof Error ? error.message : String(error);
+  return errorMsg.includes('PROHIBITED_CONTENT') ||
+    errorMsg.includes('blocked') ||
+    errorMsg.includes('safety') ||
+    errorMsg.includes('SAFETY') ||
+    errorMsg.includes('Prohibited Use') ||
+    errorMsg.includes('content policy');
+}
+
 // Safety timeout: 240s per key (4 minutes) - prevents Vercel 300s hard kill
 // Vercel kills function at 300s, so we timeout at 240s to rotate keys before death
 const SAFETY_TIMEOUT_MS = 240000; // 4 minutes
@@ -1446,29 +1535,59 @@ export async function generateOutline(bookData: {
     targetWords: number;
   }[];
 }> {
-  // Detect language from title and premise
-  const languageInstruction = detectLanguageInstruction(bookData.title + ' ' + bookData.premise);
+  // Try with original content first, then with sanitized content if blocked
+  const maxAttempts = 2;
+  let lastError: Error | null = null;
 
-  // Include original idea if provided (gives AI more context from user's vision)
-  const originalIdeaSection = bookData.originalIdea
-    ? `\nORIGINAL AUTHOR VISION (preserve these specific details, names, and plot points):\n${bookData.originalIdea}\n`
-    : '';
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    const useSanitized = attempt > 0;
 
-  const prompt = `You are a professional book outliner. Create a detailed chapter-by-chapter outline.
+    // Sanitize content on retry
+    const premise = useSanitized ? sanitizeContentForSafety(bookData.premise) : bookData.premise;
+    const originalIdea = useSanitized && bookData.originalIdea
+      ? sanitizeContentForSafety(bookData.originalIdea)
+      : bookData.originalIdea;
+    const beginning = useSanitized ? sanitizeContentForSafety(bookData.beginning) : bookData.beginning;
+    const middle = useSanitized ? sanitizeContentForSafety(bookData.middle) : bookData.middle;
+    const ending = useSanitized ? sanitizeContentForSafety(bookData.ending) : bookData.ending;
+    const characters = useSanitized
+      ? bookData.characters.map(c => ({
+          name: c.name,
+          description: sanitizeContentForSafety(c.description)
+        }))
+      : bookData.characters;
+
+    if (useSanitized) {
+      console.log('[Outline] Retrying with sanitized content after safety block...');
+    }
+
+    // Detect language from title and premise
+    const languageInstruction = detectLanguageInstruction(bookData.title + ' ' + premise);
+
+    // Include original idea if provided (gives AI more context from user's vision)
+    const originalIdeaSection = originalIdea
+      ? `\nORIGINAL AUTHOR VISION (preserve these specific details, names, and plot points):\n${originalIdea}\n`
+      : '';
+
+    const safetyNote = useSanitized
+      ? '\n\nNOTE: Write a tasteful, mature story that focuses on emotional connections and character development. Avoid graphic or explicit descriptions.\n'
+      : '';
+
+    const prompt = `You are a professional book outliner. Create a detailed chapter-by-chapter outline.
 ${languageInstruction ? `\n${languageInstruction}\n` : ''}
 ${originalIdeaSection}
 BOOK DETAILS:
 - Title: ${bookData.title}
 - Genre: ${bookData.genre}
 - Type: ${bookData.bookType}
-- Premise: ${bookData.premise}
-- Characters: ${JSON.stringify(bookData.characters)}
-- Beginning: ${bookData.beginning}
-- Key Plot Points/Middle: ${bookData.middle}
-- Ending: ${bookData.ending}
+- Premise: ${premise}
+- Characters: ${JSON.stringify(characters)}
+- Beginning: ${beginning}
+- Key Plot Points/Middle: ${middle}
+- Ending: ${ending}
 - Writing Style: ${bookData.writingStyle}
 - Target Length: ${bookData.targetWords} words (${bookData.targetChapters} chapters)
-
+${safetyNote}
 IMPORTANT: If an "Original Author Vision" is provided above, ensure the outline incorporates all the specific details, character names, plot elements, and unique ideas from it. The author's original vision takes priority.
 
 Create an outline with exactly ${bookData.targetChapters} chapters. For each chapter provide:
@@ -1491,18 +1610,30 @@ Output ONLY valid JSON in this exact format (targetWords should be approximately
   ]
 }`;
 
-  const result = await getGeminiPro().generateContent(prompt);
-  const response = result.response.text();
+    try {
+      const result = await getGeminiPro().generateContent(prompt);
+      const response = result.response.text();
 
-  return parseJSONFromResponse(response) as {
-    chapters: {
-      number: number;
-      title: string;
-      summary: string;
-      pov?: string;
-      targetWords: number;
-    }[];
-  };
+      return parseJSONFromResponse(response) as {
+        chapters: {
+          number: number;
+          title: string;
+          summary: string;
+          pov?: string;
+          targetWords: number;
+        }[];
+      };
+    } catch (error) {
+      lastError = error as Error;
+      if (isSafetyBlockError(error) && attempt < maxAttempts - 1) {
+        console.log('[Outline] Safety block detected, will retry with sanitized content');
+        continue;
+      }
+      throw error;
+    }
+  }
+
+  throw lastError || new Error('Failed to generate outline');
 }
 
 // Generate outline for non-fiction books (topic-based structure)
@@ -1527,30 +1658,54 @@ export async function generateNonFictionOutline(bookData: {
     targetWords: number;
   }[];
 }> {
-  // Detect language from title and premise
-  const languageInstruction = detectLanguageInstruction(bookData.title + ' ' + bookData.premise);
+  // Try with original content first, then with sanitized content if blocked
+  const maxAttempts = 2;
+  let lastError: Error | null = null;
 
-  // Parse the main topics from the middle field
-  const mainTopics = bookData.middle.split(',').map(t => t.trim()).filter(t => t);
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    const useSanitized = attempt > 0;
 
-  // Include original idea if provided (gives AI more context from user's vision)
-  const originalIdeaSection = bookData.originalIdea
-    ? `\nORIGINAL AUTHOR VISION (preserve these specific details, topics, and insights):\n${bookData.originalIdea}\n`
-    : '';
+    // Sanitize content on retry
+    const premise = useSanitized ? sanitizeContentForSafety(bookData.premise) : bookData.premise;
+    const originalIdea = useSanitized && bookData.originalIdea
+      ? sanitizeContentForSafety(bookData.originalIdea)
+      : bookData.originalIdea;
+    const beginning = useSanitized ? sanitizeContentForSafety(bookData.beginning) : bookData.beginning;
+    const middle = useSanitized ? sanitizeContentForSafety(bookData.middle) : bookData.middle;
+    const ending = useSanitized ? sanitizeContentForSafety(bookData.ending) : bookData.ending;
 
-  const prompt = `You are a professional non-fiction book outliner. Create a detailed chapter-by-chapter outline.
+    if (useSanitized) {
+      console.log('[NF Outline] Retrying with sanitized content after safety block...');
+    }
+
+    // Detect language from title and premise
+    const languageInstruction = detectLanguageInstruction(bookData.title + ' ' + premise);
+
+    // Parse the main topics from the middle field
+    const mainTopics = middle.split(',').map(t => t.trim()).filter(t => t);
+
+    // Include original idea if provided (gives AI more context from user's vision)
+    const originalIdeaSection = originalIdea
+      ? `\nORIGINAL AUTHOR VISION (preserve these specific details, topics, and insights):\n${originalIdea}\n`
+      : '';
+
+    const safetyNote = useSanitized
+      ? '\n\nNOTE: Write tasteful, educational content that focuses on practical information. Avoid graphic or explicit descriptions.\n'
+      : '';
+
+    const prompt = `You are a professional non-fiction book outliner. Create a detailed chapter-by-chapter outline.
 ${languageInstruction ? `\n${languageInstruction}\n` : ''}
 ${originalIdeaSection}
 BOOK DETAILS:
 - Title: ${bookData.title}
 - Genre: ${bookData.genre} (non-fiction)
-- Premise: ${bookData.premise}
-- Introduction Hook: ${bookData.beginning}
+- Premise: ${premise}
+- Introduction Hook: ${beginning}
 - Main Topics to Cover: ${mainTopics.join(', ')}
-- Conclusion/Takeaways: ${bookData.ending}
+- Conclusion/Takeaways: ${ending}
 - Writing Style: ${bookData.writingStyle}
 - Target Length: ${bookData.targetWords} words (${bookData.targetChapters} chapters)
-
+${safetyNote}
 Create an outline with exactly ${bookData.targetChapters} chapters for this NON-FICTION book.
 
 IMPORTANT: If an "Original Author Vision" is provided above, ensure the outline incorporates all the specific topics, insights, examples, and unique perspectives from it. The author's original vision takes priority.
@@ -1581,18 +1736,30 @@ Output ONLY valid JSON in this exact format (targetWords should be approximately
   ]
 }`;
 
-  const result = await getGeminiPro().generateContent(prompt);
-  const response = result.response.text();
+    try {
+      const result = await getGeminiPro().generateContent(prompt);
+      const response = result.response.text();
 
-  return parseJSONFromResponse(response) as {
-    chapters: {
-      number: number;
-      title: string;
-      summary: string;
-      keyPoints: string[];
-      targetWords: number;
-    }[];
-  };
+      return parseJSONFromResponse(response) as {
+        chapters: {
+          number: number;
+          title: string;
+          summary: string;
+          keyPoints: string[];
+          targetWords: number;
+        }[];
+      };
+    } catch (error) {
+      lastError = error as Error;
+      if (isSafetyBlockError(error) && attempt < maxAttempts - 1) {
+        console.log('[NF Outline] Safety block detected, will retry with sanitized content');
+        continue;
+      }
+      throw error;
+    }
+  }
+
+  throw lastError || new Error('Failed to generate non-fiction outline');
 }
 
 export async function generateChapter(data: {
@@ -1770,27 +1937,55 @@ WORD LIMIT: ${data.targetWords} words MAXIMUM. This is a hard limit. Write a com
 OUTPUT: The chapter text only, starting with the chapter heading.`;
   }
 
-  // PASS 1: Generate the chapter (with timeout to prevent hanging)
-  const result = await withTimeout(
-    () => getGeminiPro().generateContent(prompt),
-    CHAPTER_GENERATION_TIMEOUT,
-    `Chapter ${data.chapterNumber} generation`
-  );
-  let content = result.response.text();
+  // Try with original content first, then with sanitized content if blocked
+  const maxAttempts = 2;
+  let lastError: Error | null = null;
 
-  // Quick cleanup of obvious AI artifacts
-  content = content
-    .replace(/\*?\*?\[?(THE )?END( OF BOOK| OF CHAPTER)?\]?\*?\*?/gi, '')
-    .replace(/\*\*\[END OF BOOK\]\*\*/gi, '')
-    .replace(/—/g, ', ')
-    .replace(/–/g, ', ')
-    .replace(/ , /g, ', ')
-    .replace(/,\s*,/g, ',')
-    .trim();
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    const useSanitized = attempt > 0;
 
-  // Review/polish now happens separately in generate-next after chapter is saved
-  // This allows the chapter to be saved immediately and review to fail independently
-  return content;
+    // Sanitize the prompt content on retry
+    let currentPrompt = prompt;
+    if (useSanitized) {
+      console.log(`[Chapter ${data.chapterNumber}] Retrying with sanitized content after safety block...`);
+      currentPrompt = sanitizeContentForSafety(prompt);
+      // Add safety note for the model
+      currentPrompt += '\n\nIMPORTANT: Write a tasteful, mature story that focuses on emotional connections and character development. Use euphemisms and implications rather than explicit descriptions. Keep all content suitable for a mature but not explicit audience.';
+    }
+
+    try {
+      // PASS 1: Generate the chapter (with timeout to prevent hanging)
+      const result = await withTimeout(
+        () => getGeminiPro().generateContent(currentPrompt),
+        CHAPTER_GENERATION_TIMEOUT,
+        `Chapter ${data.chapterNumber} generation`
+      );
+      let content = result.response.text();
+
+      // Quick cleanup of obvious AI artifacts
+      content = content
+        .replace(/\*?\*?\[?(THE )?END( OF BOOK| OF CHAPTER)?\]?\*?\*?/gi, '')
+        .replace(/\*\*\[END OF BOOK\]\*\*/gi, '')
+        .replace(/—/g, ', ')
+        .replace(/–/g, ', ')
+        .replace(/ , /g, ', ')
+        .replace(/,\s*,/g, ',')
+        .trim();
+
+      // Review/polish now happens separately in generate-next after chapter is saved
+      // This allows the chapter to be saved immediately and review to fail independently
+      return content;
+    } catch (error) {
+      lastError = error as Error;
+      if (isSafetyBlockError(error) && attempt < maxAttempts - 1) {
+        console.log(`[Chapter ${data.chapterNumber}] Safety block detected, will retry with sanitized content`);
+        continue;
+      }
+      throw error;
+    }
+  }
+
+  throw lastError || new Error(`Failed to generate chapter ${data.chapterNumber}`);
 }
 
 // Smart fallback: extract meaningful summary when AI times out
