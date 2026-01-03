@@ -175,6 +175,7 @@ export async function POST(
       chapterFormat: book.chapterFormat,
       chapterKeyPoints: chapterPlan.keyPoints, // Pass key points for non-fiction
       contentRating: (book.contentRating || 'general') as ContentRating,
+      totalChapters, // For adding "The End" on final chapter
     });
 
     const wordCount = countWords(chapterContent);
@@ -218,8 +219,9 @@ export async function POST(
     }
 
     // Save chapter
+    let savedChapter;
     try {
-      await prisma.chapter.create({
+      savedChapter = await prisma.chapter.create({
         data: {
           bookId: id,
           number: nextChapterNum,
@@ -230,6 +232,21 @@ export async function POST(
         },
       });
       console.log(`Chapter ${nextChapterNum} saved. Word count: ${wordCount}`);
+
+      // Fire off async review ONLY for text-heavy books (novels, non-fiction)
+      // Skip review for visual books (illustrated, picture_book, comic) - their text is minimal
+      const isTextHeavyBook = book.bookFormat === 'text_only' || !book.bookFormat;
+      if (isTextHeavyBook) {
+        const reviewUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/books/${id}/review-chapter`;
+        fetch(reviewUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ chapterId: savedChapter.id }),
+        }).catch(err => console.log(`[Review] Background review request failed for chapter ${nextChapterNum}:`, err.message));
+      } else {
+        console.log(`[Review] Skipping review for visual book format: ${book.bookFormat}`);
+      }
+
     } catch (createError: unknown) {
       // Handle unique constraint violation - chapter already exists (race condition)
       if (createError && typeof createError === 'object' && 'code' in createError && createError.code === 'P2002') {

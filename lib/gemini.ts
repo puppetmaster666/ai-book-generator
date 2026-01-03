@@ -503,6 +503,68 @@ const API_KEY_ENV_NAMES = [
   'GEMINI_API_BACKUP3'
 ];
 
+// Review pass key management - uses a different key from current generation key
+// This prevents reviews from competing with chapter generation for rate limits
+let _reviewKeyIndex: number | null = null;
+let _reviewGenAI: GoogleGenerativeAI | null = null;
+let _reviewFlash: GenerativeModel | null = null;
+
+// Get a key index different from the current generation key
+function getReviewKeyIndex(): number {
+  const currentGenKey = _currentKeyIndex;
+
+  // Find a different available key
+  for (let i = 0; i < API_KEY_ENV_NAMES.length; i++) {
+    const candidateIndex = (currentGenKey + 1 + i) % API_KEY_ENV_NAMES.length;
+    if (candidateIndex !== currentGenKey && process.env[API_KEY_ENV_NAMES[candidateIndex]]) {
+      return candidateIndex;
+    }
+  }
+
+  // Fallback to current key if no other available
+  return currentGenKey;
+}
+
+// Get or create the review GenAI instance
+function getReviewGenAI(): GoogleGenerativeAI {
+  const desiredKeyIndex = getReviewKeyIndex();
+
+  // Reset if key changed
+  if (_reviewKeyIndex !== desiredKeyIndex) {
+    _reviewGenAI = null;
+    _reviewFlash = null;
+    _reviewKeyIndex = desiredKeyIndex;
+  }
+
+  if (!_reviewGenAI) {
+    const envName = API_KEY_ENV_NAMES[desiredKeyIndex];
+    const apiKey = process.env[envName];
+
+    if (!apiKey) {
+      throw new Error('No API key available for reviews');
+    }
+
+    _reviewGenAI = new GoogleGenerativeAI(apiKey);
+    console.log(`[Gemini] Review using key index ${desiredKeyIndex} (${envName}) - different from generation key ${_currentKeyIndex}`);
+  }
+  return _reviewGenAI;
+}
+
+// Flash model for reviews - uses different API key than generation
+export function getGeminiFlashForReview(): GenerativeModel {
+  // Always refresh to ensure we're using a different key than current generation
+  const desiredKeyIndex = getReviewKeyIndex();
+  if (_reviewKeyIndex !== desiredKeyIndex || !_reviewFlash) {
+    _reviewKeyIndex = desiredKeyIndex;
+    _reviewGenAI = null;
+    _reviewFlash = getReviewGenAI().getGenerativeModel({
+      model: 'gemini-2.0-flash',
+      safetySettings: SAFETY_SETTINGS,
+    });
+  }
+  return _reviewFlash;
+}
+
 // Mark the current key as working - call this after a successful API call
 export function markKeyAsWorking(): void {
   _lastWorkingKeyIndex = _currentKeyIndex;
@@ -1590,6 +1652,11 @@ BOOK DETAILS:
 ${safetyNote}
 IMPORTANT: If an "Original Author Vision" is provided above, ensure the outline incorporates all the specific details, character names, plot elements, and unique ideas from it. The author's original vision takes priority.
 
+WRITING QUALITY NOTES:
+- Each chapter should have a distinct tone and pacing - avoid repetitive structure
+- Vary chapter openings - never start multiple chapters the same way
+- Use ONLY the characters provided - do not invent major characters
+
 Create an outline with exactly ${bookData.targetChapters} chapters. For each chapter provide:
 1. Chapter number
 2. Chapter title (engaging, evocative)
@@ -1716,6 +1783,12 @@ STRUCTURE GUIDELINES:
 - Final chapter should be a Conclusion with actionable takeaways
 - Each chapter should have a clear learning objective
 
+ANTI-AI WRITING NOTES:
+- Do NOT use "Have you ever..." to open any chapters - this is the #1 AI tell
+- Each chapter must have a DIFFERENT opening style: fact, anecdote, bold statement, scene, etc.
+- Case study names must be DIVERSE and UNIQUE - never reuse names across chapters
+- Avoid generic names like Marcus, Sarah, David, Mark - use culturally diverse names
+
 For each chapter provide:
 1. Chapter number
 2. Chapter title (clear, descriptive, benefit-focused)
@@ -1778,13 +1851,15 @@ export async function generateChapter(data: {
   chapterFormat: string;
   chapterKeyPoints?: string[]; // For non-fiction chapters
   contentRating?: ContentRating; // Content maturity level
+  totalChapters?: number; // Total chapters in book (for "The End" on last chapter)
 }): Promise<string> {
+  const isLastChapter = data.totalChapters && data.chapterNumber >= data.totalChapters;
   const formatInstruction = {
-    numbers: `Start with "Chapter ${data.chapterNumber}"`,
-    titles: `Start with "${data.chapterTitle}"`,
-    both: `Start with "Chapter ${data.chapterNumber}: ${data.chapterTitle}"`,
-    pov: `Start with "${data.chapterPov?.toUpperCase() || 'NARRATOR'}\n\nChapter ${data.chapterNumber}"`,
-  }[data.chapterFormat] || `Start with "Chapter ${data.chapterNumber}: ${data.chapterTitle}"`;
+    numbers: `Start with EXACTLY "Chapter ${data.chapterNumber}" on its own line, then begin the content. Do NOT repeat or rephrase the chapter heading.`,
+    titles: `Start with EXACTLY "${data.chapterTitle}" on its own line, then begin the content. Do NOT repeat or rephrase the title.`,
+    both: `Start with EXACTLY "Chapter ${data.chapterNumber}: ${data.chapterTitle}" on its own line, then begin the content. Do NOT repeat or rephrase the heading.`,
+    pov: `Start with EXACTLY "${data.chapterPov?.toUpperCase() || 'NARRATOR'}" then "Chapter ${data.chapterNumber}" on the next line, then begin content. Do NOT repeat headings.`,
+  }[data.chapterFormat] || `Start with EXACTLY "Chapter ${data.chapterNumber}: ${data.chapterTitle}" on its own line, then begin the content. Do NOT repeat or rephrase the heading.`;
 
   // Detect language from title to ensure content matches input language
   const languageInstruction = detectLanguageInstruction(data.title);
@@ -1819,18 +1894,29 @@ ${formatInstruction}
 === MANDATORY WRITING STANDARDS ===
 
 CONTENT REQUIREMENTS:
-- Start with a hook that draws readers in (question, story, surprising fact)
+- Start with a VARIED hook. NEVER use "Have you ever..." - this is AI-detectable
+- Chapter opening hooks should rotate through: surprising fact, brief anecdote, bold statement, vivid scene, counter-intuitive claim, or a specific example
 - Explain concepts clearly before using technical terms
-- Include 1-2 real-world examples or case studies per major point
+- Include 1-2 SPECIFIC real-world examples with concrete details (names, dates, places when possible)
+- Case studies must have UNIQUE names - never reuse Marcus, Sarah, David, or Mark
 - Provide actionable takeaways readers can apply immediately
-- End with a transition to the next chapter's topic
+- End with a transition that doesn't always follow "In the next chapter, we will..."
 
 PROSE QUALITY:
 - Write in clear, accessible language. Avoid jargon unless explained
-- Use "you" to address readers directly: "You might wonder..." not "One might wonder..."
+- Use "you" to address readers directly, but don't overuse "You might wonder..."
 - Vary paragraph length. Mix short punchy paragraphs with longer explanatory ones
 - Use subheadings sparingly (only if chapter is very long)
 - Complete all sentences properly. No fragments or garbled text
+- SPECIFIC DETAILS matter: "a 2019 Stanford study" is better than "research shows"
+
+AVOID THESE AI PATTERNS (CRITICAL):
+- NEVER start chapters with "Have you ever..." - this is the #1 AI tell
+- NEVER use the same chapter opening structure twice in the book
+- Avoid formulaic case studies: "Consider the case of [Name]. [Name] was a [professional] who..."
+- Don't use the same physical descriptions repeatedly ("shoulders dropped", "heart rate slowed")
+- Vary your transition phrases - don't always use "In the next chapter..."
+- Avoid repetitive 3-part structures: "It is not X. It is Y. It is Z."
 
 AVOID THESE ERRORS:
 - Making up statistics, studies, or fake research
@@ -1838,6 +1924,7 @@ AVOID THESE ERRORS:
 - Repeating the same point multiple ways without adding value
 - Excessive bullet points. Integrate information into flowing prose
 - Starting multiple paragraphs with the same word
+- Using the same character names across different case studies
 
 STRUCTURE:
 - This is chapter ${data.chapterNumber} of ${(data.outline as { chapters?: unknown[] })?.chapters?.length || 15}
@@ -1850,9 +1937,12 @@ FORBIDDEN:
 - Author notes, meta-commentary, or markdown formatting
 - Incomplete words or typos
 - Citing specific authors/books unless you're certain they exist
+${isLastChapter ? '' : '- "The End" - this is NOT the final chapter'}
 
 WORD LIMIT: ${data.targetWords} words MAXIMUM. This is a hard limit. Cover the topic thoroughly within this limit.
-
+${isLastChapter ? `
+FINAL CHAPTER REQUIREMENT:
+This is the FINAL chapter. End the book with "The End" on its own line at the very end. Do not use any other variation like "THE END" or "[The End]".` : ''}
 OUTPUT: The chapter text only, starting with the chapter heading.`;
   } else {
     // Fiction prompt - narrative style with strict quality requirements
@@ -1931,9 +2021,12 @@ FORBIDDEN:
 - Author notes, commentary, or markdown
 - Inventing major characters not in the outline
 - Incomplete words or typos like "susped" instead of "suspended"
+${isLastChapter ? '' : '- "The End" - this is NOT the final chapter'}
 
 WORD LIMIT: ${data.targetWords} words MAXIMUM. This is a hard limit. Write a complete, satisfying chapter within this limit. Do not pad with unnecessary description.
-
+${isLastChapter ? `
+FINAL CHAPTER REQUIREMENT:
+This is the FINAL chapter. End the book with "The End" on its own line at the very end. Do not use any other variation like "THE END" or "[The End]".` : ''}
 OUTPUT: The chapter text only, starting with the chapter heading.`;
   }
 
@@ -1962,7 +2055,7 @@ OUTPUT: The chapter text only, starting with the chapter heading.`;
       );
       let content = result.response.text();
 
-      // Quick cleanup of obvious AI artifacts
+      // Quick cleanup of obvious AI artifacts and word truncation errors
       content = content
         .replace(/\*?\*?\[?(THE )?END( OF BOOK| OF CHAPTER)?\]?\*?\*?/gi, '')
         .replace(/\*\*\[END OF BOOK\]\*\*/gi, '')
@@ -1970,7 +2063,30 @@ OUTPUT: The chapter text only, starting with the chapter heading.`;
         .replace(/–/g, ', ')
         .replace(/ , /g, ', ')
         .replace(/,\s*,/g, ',')
+        // Fix common AI word truncation artifacts
+        .replace(/\blegary\b/gi, 'legendary')
+        .replace(/\bLeg of Zelda\b/g, 'Legend of Zelda')
+        .replace(/\bsurrer\b/gi, 'surrender')
+        .replace(/\bsurrering\b/gi, 'surrendering')
+        .replace(/\bsurrered\b/gi, 'surrendered')
+        .replace(/\brecomm\b/gi, 'recommend')
+        .replace(/\brecommation\b/gi, 'recommendation')
+        .replace(/\bsp\s+(\w)/g, 'spend $1')
+        .replace(/\bbl\s+(\w)/g, 'blend $1')
+        .replace(/\borphins\b/gi, 'endorphins')
+        .replace(/\binted\b/gi, 'intended')
+        .replace(/\bintions\b/gi, 'intentions')
+        .replace(/\bdesced\b/gi, 'descended')
+        .replace(/\bsusped\b/gi, 'suspended')
+        .replace(/\bNinto\b/g, 'Nintendo')
         .trim();
+
+      // Remove duplicate chapter titles (AI sometimes outputs title twice - ALL CAPS then Title Case)
+      // Pattern: "CHAPTER N: TITLE\n\nChapter N: Title" -> keep only the properly formatted one
+      content = removeDuplicateChapterHeading(content, data.chapterNumber, data.chapterTitle);
+
+      // Handle "The End" for final chapter
+      content = normalizeTheEnd(content, isLastChapter || false);
 
       // Review/polish now happens separately in generate-next after chapter is saved
       // This allows the chapter to be saved immediately and review to fail independently
@@ -1986,6 +2102,157 @@ OUTPUT: The chapter text only, starting with the chapter heading.`;
   }
 
   throw lastError || new Error(`Failed to generate chapter ${data.chapterNumber}`);
+}
+
+// Remove duplicate chapter headings that appear twice (e.g., ALL CAPS then Title Case)
+function removeDuplicateChapterHeading(content: string, chapterNum: number, chapterTitle?: string): string {
+  const lines = content.split('\n');
+  if (lines.length < 3) return content;
+
+  // Look for chapter heading patterns in the first few lines
+  const chapterPatterns = [
+    // "CHAPTER N" or "Chapter N" with optional title
+    new RegExp(`^\\s*CHAPTER\\s+${chapterNum}\\s*[:.]?\\s*(.*)$`, 'i'),
+    // Just number and title
+    new RegExp(`^\\s*${chapterNum}\\s*[:.]?\\s+(.*)$`),
+  ];
+
+  // Find lines that look like chapter headings
+  const headingIndices: number[] = [];
+  for (let i = 0; i < Math.min(lines.length, 10); i++) {
+    const line = lines[i].trim();
+    if (!line) continue;
+
+    for (const pattern of chapterPatterns) {
+      if (pattern.test(line)) {
+        headingIndices.push(i);
+        break;
+      }
+    }
+
+    // Also check if line matches the chapter title closely (case-insensitive)
+    if (chapterTitle) {
+      const normalizedLine = line.toLowerCase().replace(/[^a-z0-9]/g, '');
+      const normalizedTitle = chapterTitle.toLowerCase().replace(/[^a-z0-9]/g, '');
+      // If line is mostly the title (>70% match)
+      if (normalizedLine.includes(normalizedTitle) || normalizedTitle.includes(normalizedLine)) {
+        if (normalizedLine.length > 10 && !headingIndices.includes(i)) {
+          headingIndices.push(i);
+        }
+      }
+    }
+  }
+
+  // If we found 2+ heading-like lines, remove the ALL CAPS one or the first duplicate
+  if (headingIndices.length >= 2) {
+    // Prefer to remove the ALL CAPS version
+    let indexToRemove = -1;
+    for (const idx of headingIndices) {
+      const line = lines[idx].trim();
+      // Check if line is ALL CAPS (or mostly caps)
+      const upperCount = (line.match(/[A-Z]/g) || []).length;
+      const letterCount = (line.match(/[A-Za-z]/g) || []).length;
+      if (letterCount > 0 && upperCount / letterCount > 0.8) {
+        indexToRemove = idx;
+        break;
+      }
+    }
+
+    // If no ALL CAPS version, just remove the first duplicate
+    if (indexToRemove === -1) {
+      indexToRemove = headingIndices[0];
+    }
+
+    // Remove that line and any following empty lines
+    lines.splice(indexToRemove, 1);
+    while (indexToRemove < lines.length && lines[indexToRemove].trim() === '') {
+      lines.splice(indexToRemove, 1);
+    }
+
+    return lines.join('\n');
+  }
+
+  return content;
+}
+
+// Normalize "The End" - remove from non-final chapters, ensure single properly formatted instance on final chapter
+function normalizeTheEnd(content: string, isLastChapter: boolean): string {
+  // Pattern to match various forms of "The End"
+  const theEndPatterns = [
+    /\n*\s*\*?\*?\[?THE\s+END\]?\*?\*?\s*$/gi,
+    /\n*\s*\*?\*?\[?The\s+End\]?\*?\*?\s*$/gi,
+    /\n*\s*\*?\*?\[?the\s+end\]?\*?\*?\s*$/gi,
+    /\n*\s*---+\s*THE\s+END\s*---*\s*$/gi,
+    /\n*\s*~+\s*The\s+End\s*~*\s*$/gi,
+  ];
+
+  // Remove all "The End" variations first
+  let cleaned = content;
+  for (const pattern of theEndPatterns) {
+    cleaned = cleaned.replace(pattern, '');
+  }
+  cleaned = cleaned.trim();
+
+  // If this is the last chapter, add "The End" properly formatted
+  if (isLastChapter) {
+    cleaned = cleaned + '\n\nThe End';
+  }
+
+  return cleaned;
+}
+
+// Generic version that detects duplicate chapter headings without needing chapter info
+function removeDuplicateChapterHeadingGeneric(content: string): string {
+  const lines = content.split('\n');
+  if (lines.length < 3) return content;
+
+  // Look for any chapter heading pattern in the first few lines
+  const chapterPattern = /^\s*(CHAPTER\s+\d+|Chapter\s+\d+)\s*[:.]?\s*(.*)$/i;
+
+  // Find lines that look like chapter headings
+  const headings: { index: number; num: string; title: string; isUpperCase: boolean }[] = [];
+  for (let i = 0; i < Math.min(lines.length, 10); i++) {
+    const line = lines[i].trim();
+    if (!line) continue;
+
+    const match = line.match(chapterPattern);
+    if (match) {
+      // Extract chapter number
+      const numMatch = match[1].match(/\d+/);
+      if (numMatch) {
+        const upperCount = (line.match(/[A-Z]/g) || []).length;
+        const letterCount = (line.match(/[A-Za-z]/g) || []).length;
+        headings.push({
+          index: i,
+          num: numMatch[0],
+          title: (match[2] || '').toLowerCase().replace(/[^a-z0-9]/g, ''),
+          isUpperCase: letterCount > 0 && upperCount / letterCount > 0.8,
+        });
+      }
+    }
+  }
+
+  // If we have 2+ headings with the same chapter number, remove the ALL CAPS one
+  if (headings.length >= 2) {
+    const firstNum = headings[0].num;
+    const duplicates = headings.filter(h => h.num === firstNum);
+
+    if (duplicates.length >= 2) {
+      // Prefer to remove the ALL CAPS version
+      const upperCaseOne = duplicates.find(h => h.isUpperCase);
+      const indexToRemove = upperCaseOne ? upperCaseOne.index : duplicates[0].index;
+
+      // Remove that line and any following empty lines
+      lines.splice(indexToRemove, 1);
+      while (indexToRemove < lines.length && lines[indexToRemove].trim() === '') {
+        lines.splice(indexToRemove, 1);
+      }
+
+      return lines.join('\n');
+    }
+  }
+
+  return content;
 }
 
 // Smart fallback: extract meaningful summary when AI times out
@@ -2100,11 +2367,18 @@ YOUR EDITING TASKS:
    - Remove redundant phrases that say the same thing twice
    - Watch for repetitive 2-word patterns: "She looked", "She thought", "She reached", "It was"
 
-7. FIX PUNCTUATION:
+7. FIX AI-DETECTABLE PATTERNS:
+   - If chapter opens with "Have you ever..." - REWRITE the opening with a different hook
+   - Replace overused physical descriptions ("shoulders dropped", "heart rate slowed") with varied alternatives
+   - Fix formulaic case study intros: "Consider the case of [Name]. [Name] was a..." - make them natural
+   - Vary transition phrases - not every chapter should end with "In the next chapter, we will..."
+   - Fix truncated words: "legary"→"legendary", "surrer"→"surrender", "sp time"→"spend time", "Ninto"→"Nintendo"
+
+8. FIX PUNCTUATION:
    - Replace any em dashes (—) or en dashes (–) with commas or periods
    - Ensure sentences end with proper punctuation
 
-${isOverLength ? `8. TRIM LENGTH:
+${isOverLength ? `9. TRIM LENGTH:
    - The chapter is ${currentWordCount - targetWords} words over target
    - Remove unnecessary adjectives and adverbs
    - Tighten wordy phrases
@@ -2124,7 +2398,7 @@ Return ONLY the corrected chapter text. No explanations, no comments, no markdow
   try {
     const startTime = Date.now();
     const result = await withTimeout(
-      () => getGeminiFlash().generateContent(prompt), // Use full Flash, not Flash Light
+      () => getGeminiFlashForReview().generateContent(prompt), // Use dedicated review API key
       45000, // 45s timeout
       'Chapter review'
     );
@@ -2132,8 +2406,10 @@ Return ONLY the corrected chapter text. No explanations, no comments, no markdow
 
     // Final cleanup pass
     polished = polished
-      // Remove any AI artifacts
-      .replace(/\*?\*?\[?(THE )?END( OF BOOK| OF CHAPTER)?\]?\*?\*?/gi, '')
+      // Remove ugly AI end markers, but preserve properly formatted "The End"
+      .replace(/\*+\s*(THE\s+)?END\s*\*+/gi, '') // *END* or **THE END**
+      .replace(/\[+(THE\s+)?END\]+/gi, '') // [END] or [THE END]
+      .replace(/(THE\s+)?END\s+OF\s+(BOOK|CHAPTER)/gi, '') // "END OF BOOK" etc
       .replace(/^\s*---+\s*$/gm, '')
       // Fix double punctuation
       .replace(/([.!?])\1+/g, '$1')
@@ -2144,7 +2420,30 @@ Return ONLY the corrected chapter text. No explanations, no comments, no markdow
       .replace(/–/g, ', ')
       .replace(/ , /g, ', ')
       .replace(/,\s*,/g, ',')
+      // Fix common AI word truncation artifacts
+      .replace(/\blegary\b/gi, 'legendary')
+      .replace(/\bLeg of Zelda\b/g, 'Legend of Zelda')
+      .replace(/\bsurrer\b/gi, 'surrender')
+      .replace(/\bsurrering\b/gi, 'surrendering')
+      .replace(/\bsurrered\b/gi, 'surrendered')
+      .replace(/\brecomm\b/gi, 'recommend')
+      .replace(/\brecommation\b/gi, 'recommendation')
+      .replace(/\b(\w{2,})ed\s+(\1ing)\b/gi, '$1ed') // Fix doubled verbs
+      .replace(/\bsp\s+(\w)/g, 'spend $1') // "sp time" -> "spend time"
+      .replace(/\bbl\s+(\w)/g, 'blend $1') // "bl together" -> "blend together"
+      .replace(/\bOrpheus\s+s\b/gi, 'Orpheus says')
+      .replace(/\bends\s+s\b/gi, 'ends')
+      .replace(/\b(\w+)s\s+s\b/g, '$1s') // Fix doubled 's'
+      .replace(/\borphins\b/gi, 'endorphins')
+      .replace(/\binted\b/gi, 'intended')
+      .replace(/\bintions\b/gi, 'intentions')
+      .replace(/\bdesced\b/gi, 'descended')
+      .replace(/\bsusped\b/gi, 'suspended')
+      .replace(/\bNinto\b/g, 'Nintendo')
       .trim();
+
+    // Also remove duplicate chapter headings in review pass
+    polished = removeDuplicateChapterHeadingGeneric(polished);
 
     const elapsed = Date.now() - startTime;
     const originalWords = chapterContent.split(/\s+/).filter(w => w.length > 0).length;
