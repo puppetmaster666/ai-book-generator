@@ -35,32 +35,32 @@ export default function TrafficWarning() {
     <div className="fixed top-4 right-4 z-[100] animate-in slide-in-from-right duration-500">
       <div className="relative">
         {/* Glow effect */}
-        <div className="absolute inset-0 bg-amber-400/30 rounded-2xl blur-xl animate-pulse" />
+        <div className="absolute inset-0 bg-red-500/40 rounded-xl blur-lg animate-pulse" />
 
         {/* Main label */}
-        <div className="relative bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-2xl px-4 py-3 shadow-lg backdrop-blur-sm">
-          <div className="flex items-center gap-3">
+        <div className="relative bg-gradient-to-br from-red-600 to-red-700 border border-red-500 rounded-xl px-3 py-2.5 shadow-lg">
+          <div className="flex items-center gap-2.5">
             {/* Pulsing warning icon */}
             <div className="relative flex-shrink-0">
-              <div className="absolute inset-0 bg-amber-400 rounded-full animate-ping opacity-30" />
-              <div className="relative h-10 w-10 bg-gradient-to-br from-amber-400 to-orange-500 rounded-full flex items-center justify-center shadow-md">
-                <AlertTriangle className="h-5 w-5 text-white" />
+              <div className="absolute inset-0 bg-yellow-400 rounded-full animate-ping opacity-30" />
+              <div className="relative h-8 w-8 bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-full flex items-center justify-center shadow-md">
+                <AlertTriangle className="h-4 w-4 text-red-700" />
               </div>
             </div>
 
             {/* Text content */}
-            <div className="max-w-[260px]">
-              <div className="flex items-center gap-2 mb-0.5">
-                <span className="text-xs font-bold uppercase tracking-wider text-amber-700">
+            <div className="max-w-[180px]">
+              <div className="flex items-center gap-1.5 mb-0.5">
+                <span className="text-xs font-bold uppercase tracking-wider text-yellow-300">
                   API Issues
                 </span>
-                <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
+                <span className="relative flex h-1.5 w-1.5">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-yellow-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-yellow-400"></span>
                 </span>
               </div>
-              <p className="text-xs text-amber-900/80 leading-tight">
-                We are experiencing API issues. Generations may not work. If yours fails, we will re-credit you for a retry.
+              <p className="text-[11px] text-yellow-100 leading-tight">
+                Generations may fail. If yours does, we will re-credit you.
               </p>
             </div>
           </div>
