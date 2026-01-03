@@ -201,7 +201,11 @@ export async function POST(
                 }
 
                 // Build reference images for characters - PREFER portraits, fallback to first appearances
-                const referenceImages = [];
+                // LIMIT: Max 2 characters' portraits to avoid FUNCTION_PAYLOAD_TOO_LARGE error
+                const referenceImages: { characterName: string; imageData: string }[] = [];
+                const MAX_PORTRAIT_CHARACTERS = 2; // Vercel payload limit ~4.5MB, each portrait ~500KB-1MB
+                let portraitCount = 0;
+
                 if (chapter.scene.characters && Array.isArray(chapter.scene.characters)) {
                     for (const charName of chapter.scene.characters) {
                         // PRIORITY 1: Use character portraits if available (canonical references)
@@ -209,17 +213,30 @@ export async function POST(
                             const portrait = characterPortraits.find(p =>
                                 p.characterName.toLowerCase() === charName.toLowerCase()
                             );
-                            if (portrait) {
-                                // Add both face and full body portraits for maximum consistency
-                                referenceImages.push({
-                                    characterName: `${charName} (face reference)`,
-                                    imageData: portrait.facePortrait
-                                });
-                                referenceImages.push({
-                                    characterName: `${charName} (body reference)`,
-                                    imageData: portrait.fullBodyPortrait
-                                });
-                                console.log(`[Visual Gen] Panel ${chapter.number}: Using portrait references for "${charName}"`);
+                            if (portrait && portraitCount < MAX_PORTRAIT_CHARACTERS) {
+                                // Only add face portrait if multiple characters (to reduce payload)
+                                // Add both if only 1-2 characters in scene
+                                const sceneCharCount = chapter.scene.characters.length;
+                                if (sceneCharCount <= 2) {
+                                    referenceImages.push({
+                                        characterName: `${charName} (face reference)`,
+                                        imageData: portrait.facePortrait
+                                    });
+                                    referenceImages.push({
+                                        characterName: `${charName} (body reference)`,
+                                        imageData: portrait.fullBodyPortrait
+                                    });
+                                } else {
+                                    // Multiple characters - only send face portrait to save space
+                                    referenceImages.push({
+                                        characterName: `${charName} (face reference)`,
+                                        imageData: portrait.facePortrait
+                                    });
+                                }
+                                portraitCount++;
+                                console.log(`[Visual Gen] Panel ${chapter.number}: Using portrait references for "${charName}"${sceneCharCount > 2 ? ' (face only - multi-char scene)' : ''}`);
+                            } else if (portrait) {
+                                console.log(`[Visual Gen] Panel ${chapter.number}: Skipping portrait for "${charName}" (limit reached, using visual guide)`);
                             } else {
                                 console.log(`[Visual Gen] Panel ${chapter.number}: No portrait found for "${charName}", will use visual guide only`);
                             }
@@ -227,12 +244,13 @@ export async function POST(
                         // PRIORITY 2: Fallback to first appearance if no portraits
                         else {
                             const firstAppearance = characterFirstAppearances.get(charName);
-                            if (firstAppearance && firstAppearance.panelNumber < chapter.number) {
+                            if (firstAppearance && firstAppearance.panelNumber < chapter.number && portraitCount < MAX_PORTRAIT_CHARACTERS) {
                                 // This character appeared before - use their first image as reference
                                 referenceImages.push({
                                     characterName: charName,
                                     imageData: firstAppearance.imageData
                                 });
+                                portraitCount++;
                                 console.log(`[Visual Gen] Panel ${chapter.number}: Using first appearance for "${charName}" from panel ${firstAppearance.panelNumber}`);
                             }
                         }
