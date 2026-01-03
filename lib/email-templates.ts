@@ -314,7 +314,7 @@ export function getBetaFeedbackEmail(
         <p style="color: #171717; font-size: 15px; line-height: 1.8; margin: 0;">
           <strong>1.</strong> How was your free book? Did it meet your expectations?<br><br>
           <strong>2.</strong> What would you create next if you had another book?<br><br>
-          <strong>3.</strong> What would make you pay $19.99 for your next one?<br><br>
+          <strong>3.</strong> What would make you pay $9.99 for your next one?<br><br>
           <strong>4.</strong> Did you run into any bugs or confusing parts?
         </p>
       </div>

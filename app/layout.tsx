@@ -143,7 +143,7 @@ const jsonLdSoftwareApp = {
     '@type': 'Offer',
     price: '0',
     priceCurrency: 'USD',
-    description: 'First book free, then $19.99 per book',
+    description: 'Free preview, then $9.99 per book',
   },
   aggregateRating: {
     '@type': 'AggregateRating',

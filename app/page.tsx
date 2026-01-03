@@ -642,7 +642,7 @@ export default function Home() {
               </div>
             </button>
 
-            {/* One-Time - Any Book */}
+            {/* Single Book */}
             <button
               onClick={() => router.push('/create')}
               className="group bg-white rounded-2xl p-6 border-2 border-neutral-200 hover:border-neutral-900 card-hover text-left cursor-pointer"
@@ -652,9 +652,9 @@ export default function Home() {
                   <BookOpen className="h-5 w-5 text-neutral-700 group-hover:text-white transition-colors" />
                 </div>
               </div>
-              <h3 className="text-xl font-semibold mb-1" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>One Book</h3>
+              <h3 className="text-xl font-semibold mb-1" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>Single Book</h3>
               <div className="flex items-baseline gap-1 mb-2">
-                <span className="text-4xl font-bold">$19.99</span>
+                <span className="text-4xl font-bold">$9.99</span>
               </div>
               <p className="text-sm text-neutral-500 mb-4">Novel, Comic, or Picture Book</p>
               <ul className="space-y-2 text-sm text-neutral-600 mb-6">
@@ -676,33 +676,33 @@ export default function Home() {
               </div>
             </button>
 
-            {/* Monthly Subscription */}
+            {/* Author Plan */}
             <button
               onClick={() => router.push(session ? '/checkout?plan=monthly' : '/signup?plan=monthly')}
               className="group bg-neutral-900 text-white rounded-2xl p-6 border-2 border-neutral-900 card-hover text-left cursor-pointer relative"
             >
               <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-lime-400 text-neutral-900 px-3 py-1 rounded-full text-xs font-medium">
-                Most Popular
+                Best Value
               </div>
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-10 h-10 bg-white/10 rounded-lg flex items-center justify-center">
                   <Sparkles className="h-5 w-5 text-white" />
                 </div>
               </div>
-              <h3 className="text-xl font-semibold mb-1" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>Monthly</h3>
+              <h3 className="text-xl font-semibold mb-1" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>Author Plan</h3>
               <div className="flex items-baseline gap-1 mb-2">
-                <span className="text-4xl font-bold">$69</span>
+                <span className="text-4xl font-bold">$39</span>
                 <span className="text-neutral-400 text-sm">/mo</span>
               </div>
               <p className="text-sm text-neutral-300 mb-4">5 books per month</p>
               <ul className="space-y-2 text-sm text-neutral-200 mb-6">
                 <li className="flex items-center gap-2">
                   <Check className="h-4 w-4 text-neutral-400 flex-shrink-0" />
-                  $13.80 per book
+                  $7.80 per book
                 </li>
                 <li className="flex items-center gap-2">
                   <Check className="h-4 w-4 text-neutral-400 flex-shrink-0" />
-                  Priority generation
+                  Unused books roll over
                 </li>
                 <li className="flex items-center gap-2">
                   <Check className="h-4 w-4 text-neutral-400 flex-shrink-0" />
@@ -711,41 +711,6 @@ export default function Home() {
               </ul>
               <div className="w-full bg-white text-neutral-900 py-3 rounded-xl text-sm font-medium text-center group-hover:bg-neutral-100 transition-colors">
                 Subscribe
-              </div>
-            </button>
-
-            {/* Yearly Subscription */}
-            <button
-              onClick={() => router.push(session ? '/checkout?plan=yearly' : '/signup?plan=yearly')}
-              className="group bg-white rounded-2xl p-6 border-2 border-neutral-200 hover:border-neutral-900 card-hover text-left cursor-pointer"
-            >
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 bg-neutral-100 rounded-lg flex items-center justify-center group-hover:bg-neutral-900 transition-colors">
-                  <BookOpen className="h-5 w-5 text-neutral-700 group-hover:text-white transition-colors" />
-                </div>
-              </div>
-              <h3 className="text-xl font-semibold mb-1" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>Yearly</h3>
-              <div className="flex items-baseline gap-1 mb-2">
-                <span className="text-4xl font-bold">$499</span>
-                <span className="text-neutral-500 text-sm">/yr</span>
-              </div>
-              <p className="text-sm text-neutral-500 mb-4">50 book credits</p>
-              <ul className="space-y-2 text-sm text-neutral-600 mb-6">
-                <li className="flex items-center gap-2">
-                  <Check className="h-4 w-4 text-neutral-400 flex-shrink-0" />
-                  $10 per book
-                </li>
-                <li className="flex items-center gap-2">
-                  <Check className="h-4 w-4 text-neutral-400 flex-shrink-0" />
-                  Credits never expire
-                </li>
-                <li className="flex items-center gap-2">
-                  <Check className="h-4 w-4 text-neutral-400 flex-shrink-0" />
-                  Priority support
-                </li>
-              </ul>
-              <div className="w-full bg-neutral-900 text-white py-3 rounded-xl text-sm font-medium text-center group-hover:bg-neutral-800 transition-colors">
-                Get Started
               </div>
             </button>
           </div>

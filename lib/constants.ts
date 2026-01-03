@@ -1,27 +1,23 @@
 // Pricing
 export const PRICING = {
-  // Text-only books
+  // Single book purchase (any type)
   ONE_TIME: {
-    price: 1999, // cents
-    priceDisplay: '$19.99',
+    price: 999, // cents
+    priceDisplay: '$9.99',
     books: 1,
   },
+  // Author Plan - monthly subscription with rollover
   MONTHLY: {
-    price: 6900,
-    priceDisplay: '$69',
+    price: 3900,
+    priceDisplay: '$39',
     books: 5,
     interval: 'month',
+    rollover: true, // unused books roll over to next month
   },
-  YEARLY: {
-    price: 49900,
-    priceDisplay: '$499',
-    credits: 50,
-    interval: 'year',
-  },
-  // Visual books (comics & children's)
+  // Visual books use same pricing as text
   VISUAL: {
-    price: 1999, // cents
-    priceDisplay: '$19.99',
+    price: 999, // cents
+    priceDisplay: '$9.99',
   },
 } as const;
 
@@ -133,7 +129,7 @@ export const BOOK_PRESETS = {
     defaultGenre: 'literary',
     targetWords: 60000,
     chapters: 20,
-    priceDisplay: '$19.99',
+    priceDisplay: '$9.99',
     downloadFormat: 'epub',
     contentRating: 'general',
   },
@@ -147,7 +143,7 @@ export const BOOK_PRESETS = {
     defaultGenre: 'childrens',
     targetWords: 500,
     chapters: 20, // Standard picture books have 24-32 pages
-    priceDisplay: '$19.99',
+    priceDisplay: '$9.99',
     downloadFormat: 'pdf',
     contentRating: 'childrens',
   },
@@ -161,7 +157,7 @@ export const BOOK_PRESETS = {
     defaultGenre: 'ya',
     targetWords: 1000,
     chapters: 24, // Standard comic issues have 22-24 pages
-    priceDisplay: '$19.99',
+    priceDisplay: '$9.99',
     downloadFormat: 'pdf',
     contentRating: 'general',
   },
@@ -175,7 +171,7 @@ export const BOOK_PRESETS = {
     defaultGenre: 'horror',
     targetWords: 1200,
     chapters: 24,
-    priceDisplay: '$19.99',
+    priceDisplay: '$9.99',
     downloadFormat: 'pdf',
     contentRating: 'mature',
   },
@@ -189,7 +185,7 @@ export const BOOK_PRESETS = {
     defaultGenre: 'selfhelp',
     targetWords: 50000,
     chapters: 15,
-    priceDisplay: '$19.99',
+    priceDisplay: '$9.99',
     downloadFormat: 'epub',
     contentRating: 'general',
   },

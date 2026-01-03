@@ -60,11 +60,7 @@ export async function POST(request: NextRequest) {
         break;
       case 'monthly':
         amount = PRICING.MONTHLY.price;
-        description = 'AI Book Generator - Monthly Plan (5 books/month)';
-        break;
-      case 'yearly':
-        amount = PRICING.YEARLY.price;
-        description = 'AI Book Generator - Yearly Plan (50 credits)';
+        description = 'AI Book Generator - Author Plan (5 books/month, rollover)';
         break;
       default:
         return NextResponse.json(

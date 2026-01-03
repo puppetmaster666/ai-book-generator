@@ -71,11 +71,11 @@ const faqs = [
     questions: [
       {
         q: 'What does each plan include?',
-        a: 'Single Book ($19.99): 1 book + cover. Monthly ($69): 5 books/month + covers. Yearly ($499): 50 credits to use anytime. All plans include full commercial rights and EPUB downloads.'
+        a: 'Single Book ($9.99): 1 book + cover. Author Plan ($39/month): 5 books/month with rollover. All plans include full commercial rights and downloads.'
       },
       {
-        q: 'Do yearly credits expire?',
-        a: 'No. Your 50 credits are available until you use them. Use them all in month one or spread them over the year. When you run out, simply purchase another yearly plan.'
+        q: 'Do unused books roll over?',
+        a: 'Yes! With the Author Plan, any unused books roll over to the next month as long as your subscription is active.'
       },
       {
         q: 'What is your refund policy?',
@@ -83,7 +83,7 @@ const faqs = [
       },
       {
         q: 'Can I cancel my subscription?',
-        a: 'Yes, you can cancel anytime. For monthly plans, you keep access until the end of your billing period. For yearly plans, you keep your remaining credits.'
+        a: 'Yes, you can cancel anytime. You keep access until the end of your billing period and your rolled-over credits remain available.'
       }
     ]
   }

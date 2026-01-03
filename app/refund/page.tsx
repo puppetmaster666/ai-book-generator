@@ -29,7 +29,7 @@ export default function RefundPolicy() {
             </section>
 
             <section>
-              <h2 className="text-2xl font-semibold mb-4" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>Single Book Purchases ($19.99)</h2>
+              <h2 className="text-2xl font-semibold mb-4" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>Single Book Purchases ($9.99)</h2>
               <div className="bg-neutral-50 border border-neutral-200 rounded-xl p-6">
                 <p className="text-neutral-600 leading-relaxed mb-4">
                   <strong>Full refund available if:</strong>
@@ -46,23 +46,13 @@ export default function RefundPolicy() {
             </section>
 
             <section>
-              <h2 className="text-2xl font-semibold mb-4" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>Subscription Plans</h2>
+              <h2 className="text-2xl font-semibold mb-4" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>Author Plan ($39/month)</h2>
               <div className="bg-neutral-50 border border-neutral-200 rounded-xl p-6">
-                <p className="text-neutral-600 leading-relaxed mb-4">
-                  <strong>Monthly ($69/month):</strong>
-                </p>
-                <ul className="list-disc pl-6 text-neutral-600 space-y-2 mb-6">
+                <ul className="list-disc pl-6 text-neutral-600 space-y-2">
                   <li>Cancel anytime before your next billing date</li>
                   <li>No refunds for partial months</li>
                   <li>Access continues until end of billing period</li>
-                </ul>
-                <p className="text-neutral-600 leading-relaxed mb-4">
-                  <strong>Yearly ($499/year):</strong>
-                </p>
-                <ul className="list-disc pl-6 text-neutral-600 space-y-2">
-                  <li>Pro-rated refund available within first 30 days if fewer than 5 books generated</li>
-                  <li>After 30 days, unused credits remain available until expiration</li>
-                  <li>No refunds after credits have been substantially used</li>
+                  <li>Unused book credits roll over to next month while subscribed</li>
                 </ul>
               </div>
             </section>

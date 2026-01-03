@@ -180,7 +180,7 @@ function CheckoutContent() {
   // Get price based on product type
   const getBasePrice = () => {
     if (isSubscription) {
-      return planType === 'monthly' ? PRICING.MONTHLY.price : PRICING.YEARLY.price;
+      return PRICING.MONTHLY.price; // Only monthly subscription available now
     }
     if (!bookDetails) return PRICING.ONE_TIME.price;
     if (bookDetails.bookFormat === 'picture_book') return PRICING.VISUAL.price;
@@ -189,7 +189,7 @@ function CheckoutContent() {
 
   const getProductLabel = () => {
     if (isSubscription) {
-      return planType === 'monthly' ? 'Monthly Subscription' : 'Yearly Subscription';
+      return 'Author Plan';
     }
     if (!bookDetails) return 'AI Book Generation';
     if (bookDetails.bookFormat === 'picture_book') return 'Visual Book';
@@ -198,7 +198,6 @@ function CheckoutContent() {
 
   const getPriceLabel = () => {
     if (planType === 'monthly') return '/month';
-    if (planType === 'yearly') return '/year';
     return '';
   };
 

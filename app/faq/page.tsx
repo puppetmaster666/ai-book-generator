@@ -51,7 +51,7 @@ const faqJsonLd = {
       name: 'What does each plan include?',
       acceptedAnswer: {
         '@type': 'Answer',
-        text: 'Single Book ($19.99): 1 book + cover. Monthly ($69): 5 books/month + covers. Yearly ($499): 50 credits to use anytime. All plans include full commercial rights and EPUB downloads.',
+        text: 'Single Book ($9.99): 1 book + cover. Author Plan ($39/month): 5 books/month with rollover. All plans include full commercial rights and downloads.',
       },
     },
   ],

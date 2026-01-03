@@ -3,10 +3,10 @@ import PricingContent from './PricingContent';
 
 export const metadata: Metadata = {
   title: 'Pricing',
-  description: 'Simple, transparent pricing for AI book generation. One-time purchase at $19.99, monthly subscription at $69/mo, or yearly at $499/yr with 50 book credits.',
+  description: 'Simple, transparent pricing for AI book generation. Single book at $9.99 or Author Plan at $39/mo for 5 books with rollover.',
   openGraph: {
     title: 'Pricing - Draft My Book',
-    description: 'Simple, transparent pricing for AI book generation. Create full-length books starting at $19.99.',
+    description: 'Simple, transparent pricing for AI book generation. Create full-length books starting at $9.99.',
   },
 };
 
