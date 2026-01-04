@@ -400,14 +400,18 @@ export default function CreateBook() {
         }),
       });
 
-      if (!response.ok) throw new Error('Failed to create book');
+      const data = await response.json();
 
-      const { bookId } = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to create book');
+      }
+
+      const { bookId } = data;
       clearFormState();
       router.push(`/review?bookId=${bookId}`);
     } catch (err) {
       console.error('Error:', err);
-      setError('Something went wrong. Please try again.');
+      setError(err instanceof Error ? err.message : 'Something went wrong. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
