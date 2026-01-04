@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import Image from 'next/image';
-import { ArrowRight, Loader2, Sparkles, X, Check, ChevronRight, Zap, BookOpen, Download, ExternalLink, ChevronDown, Play, Crown } from 'lucide-react';
+import { ArrowRight, Loader2, Sparkles, X, Check, ChevronRight, Zap, BookOpen, Download, ExternalLink, ChevronDown, Play, Crown, Upload, FileText } from 'lucide-react';
 import Footer from '@/components/Footer';
 import NewYearPopup from '@/components/NewYearPopup';
 import TrafficWarning from '@/components/TrafficWarning';
@@ -44,6 +44,9 @@ export default function Home() {
   const [selectedComicCard, setSelectedComicCard] = useState<number | null>(null);
   const [showStickyBanner, setShowStickyBanner] = useState(false);
   const [stickyBannerDismissed, setStickyBannerDismissed] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
+  const [isParsingFile, setIsParsingFile] = useState(false);
 
   // Restore idea from sessionStorage on mount (for back navigation)
   useEffect(() => {
@@ -98,6 +101,109 @@ export default function Home() {
     // Store the idea and redirect to /create where user can choose book type
     sessionStorage.setItem('bookIdea', bookIdea);
     router.push('/create');
+  };
+
+  // File parsing for drag and drop / upload
+  const parseFileContent = async (file: File): Promise<string> => {
+    const extension = file.name.split('.').pop()?.toLowerCase();
+
+    if (extension === 'txt' || extension === 'md') {
+      return await file.text();
+    }
+
+    if (extension === 'docx') {
+      try {
+        const mammoth = await import('mammoth');
+        const arrayBuffer = await file.arrayBuffer();
+        const result = await mammoth.extractRawText({ arrayBuffer });
+        return result.value;
+      } catch {
+        throw new Error('Could not parse DOCX file. Please try copying the text directly.');
+      }
+    }
+
+    if (extension === 'pdf') {
+      try {
+        const pdfjs = await import('pdfjs-dist');
+        pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
+        const arrayBuffer = await file.arrayBuffer();
+        const pdf = await pdfjs.getDocument({ data: arrayBuffer }).promise;
+        let fullText = '';
+        for (let i = 1; i <= pdf.numPages; i++) {
+          const page = await pdf.getPage(i);
+          const textContent = await page.getTextContent();
+          const pageText = textContent.items
+            .map((item) => ('str' in item ? (item as { str: string }).str : ''))
+            .filter(Boolean)
+            .join(' ');
+          fullText += pageText + '\n\n';
+        }
+        return fullText.trim();
+      } catch {
+        throw new Error('Could not parse PDF file. Please try copying the text directly.');
+      }
+    }
+
+    throw new Error(`Unsupported file type: .${extension}. Please use .txt, .md, .docx, or .pdf`);
+  };
+
+  const processFile = async (file: File) => {
+    if (file.size > 5 * 1024 * 1024) {
+      setError('File too large. Maximum size is 5MB.');
+      return;
+    }
+
+    setIsParsingFile(true);
+    setError('');
+
+    try {
+      const content = await parseFileContent(file);
+      const trimmedContent = content.slice(0, 120000);
+      setBookIdea(trimmedContent);
+      setUploadedFileName(file.name);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to parse file');
+    } finally {
+      setIsParsingFile(false);
+    }
+  };
+
+  const handleFileDrop = async (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+
+    const files = e.dataTransfer.files;
+    if (files.length === 0) return;
+
+    const file = files[0];
+    await processFile(file);
+  };
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    const file = files[0];
+    await processFile(file);
+    e.target.value = '';
+  };
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const clearUploadedFile = () => {
+    setUploadedFileName(null);
+    setBookIdea('');
   };
 
   return (
@@ -182,13 +288,65 @@ export default function Home() {
             {/* Form */}
             <form id="hero-form" onSubmit={handleSubmit} className="max-w-2xl mx-auto">
               <div className="bg-white/90 backdrop-blur rounded-2xl border border-neutral-200 shadow-lg p-2">
-                <textarea
-                  value={bookIdea}
-                  onChange={(e) => setBookIdea(e.target.value)}
-                  placeholder="Describe your book idea... A mystery novel about a detective who discovers her own name in a cold case file from 1985..."
-                  className="w-full h-32 px-4 py-3 text-base bg-transparent focus:outline-none resize-none placeholder-neutral-400"
-                  disabled={isLoading || isGeneratingIdea}
-                />
+                {/* Uploaded file indicator */}
+                {uploadedFileName && (
+                  <div className="flex items-center justify-between bg-neutral-100 px-4 py-2 rounded-lg mx-2 mt-2 mb-1">
+                    <div className="flex items-center gap-2 text-sm text-neutral-700">
+                      <FileText className="h-4 w-4" />
+                      <span className="font-medium truncate max-w-[200px]">{uploadedFileName}</span>
+                      <span className="text-neutral-500">uploaded</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={clearUploadedFile}
+                      className="text-neutral-400 hover:text-neutral-600 transition-colors"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                )}
+
+                {/* Drag and drop zone */}
+                <div
+                  className="relative"
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleFileDrop}
+                >
+                  <textarea
+                    value={bookIdea}
+                    onChange={(e) => {
+                      setBookIdea(e.target.value);
+                      if (uploadedFileName) setUploadedFileName(null);
+                    }}
+                    placeholder="Describe your book idea... A mystery novel about a detective who discovers her own name in a cold case file from 1985..."
+                    className={`w-full h-32 px-4 py-3 text-base bg-transparent focus:outline-none resize-none placeholder-neutral-400 ${
+                      isDragging ? 'opacity-50' : ''
+                    }`}
+                    disabled={isLoading || isGeneratingIdea || isParsingFile}
+                  />
+
+                  {/* Drag overlay */}
+                  {isDragging && (
+                    <div className="absolute inset-0 bg-neutral-900/10 rounded-xl flex items-center justify-center border-2 border-dashed border-neutral-900 pointer-events-none">
+                      <div className="bg-white px-6 py-4 rounded-xl shadow-lg flex items-center gap-3">
+                        <Upload className="h-6 w-6 text-neutral-700" />
+                        <span className="font-medium text-neutral-900">Drop your file here</span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Parsing overlay */}
+                  {isParsingFile && (
+                    <div className="absolute inset-0 bg-white/80 rounded-xl flex items-center justify-center">
+                      <div className="flex items-center gap-3">
+                        <Loader2 className="h-6 w-6 animate-spin text-neutral-700" />
+                        <span className="font-medium text-neutral-900">Reading file...</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
                 <div className="flex items-center justify-between gap-4 px-2 pb-2">
                   <div className="flex items-center gap-2">
                     {/* Category Dropdown */}
@@ -196,7 +354,7 @@ export default function Home() {
                       <button
                         type="button"
                         onClick={() => setShowCategoryDropdown(!showCategoryDropdown)}
-                        disabled={isLoading || isGeneratingIdea}
+                        disabled={isLoading || isGeneratingIdea || isParsingFile}
                         className="text-sm text-neutral-500 hover:text-neutral-900 disabled:opacity-50 flex items-center gap-1 px-2 py-2 rounded-lg hover:bg-neutral-100 transition-colors border border-neutral-200"
                       >
                         <span>{IDEA_CATEGORIES.find(c => c.value === ideaCategory)?.emoji}</span>
@@ -227,7 +385,7 @@ export default function Home() {
                     <button
                       type="button"
                       onClick={handleFindIdea}
-                      disabled={isLoading || isGeneratingIdea}
+                      disabled={isLoading || isGeneratingIdea || isParsingFile}
                       className="text-sm text-neutral-500 hover:text-neutral-900 disabled:opacity-50 flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-neutral-100 transition-colors"
                     >
                       {isGeneratingIdea ? (
@@ -237,6 +395,18 @@ export default function Home() {
                       )}
                       {isGeneratingIdea ? 'Generating...' : 'Surprise me'}
                     </button>
+                    {/* Upload File Button */}
+                    <label className="text-sm text-neutral-500 hover:text-neutral-900 flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-neutral-100 transition-colors cursor-pointer">
+                      <Upload className="h-4 w-4" />
+                      <span className="hidden sm:inline">Upload file</span>
+                      <input
+                        type="file"
+                        accept=".txt,.md,.docx,.pdf"
+                        onChange={handleFileSelect}
+                        className="hidden"
+                        disabled={isLoading || isParsingFile}
+                      />
+                    </label>
                     <span className={`text-xs ${bookIdea.length >= 20 ? 'text-green-600' : 'text-neutral-400'}`}>
                       {bookIdea.length}/20 min
                     </span>
@@ -447,34 +617,34 @@ export default function Home() {
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-4xl md:text-5xl font-bold tracking-tight mb-4" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>
-              Three steps to{' '}
+              From idea to{' '}
               <span className="relative inline-block">
                 <span className="absolute -inset-x-1 -inset-y-1 bg-black -skew-y-2 translate-x-1 translate-y-1" aria-hidden="true" />
                 <span className={`absolute -inset-x-1 -inset-y-1 ${ACCENT.bg} -skew-y-2`} aria-hidden="true" />
-                <span className="relative text-neutral-900 px-2">your book</span>
+                <span className="relative text-neutral-900 px-2">creation</span>
               </span>
             </h2>
             <p className="text-lg text-neutral-600">
-              From idea to published manuscript in minutes
+              Novels, comics, screenplays - all in minutes
             </p>
           </div>
 
           <div className="grid md:grid-cols-3 gap-8">
             {[
               {
-                icon: Sparkles,
-                title: 'Describe',
-                description: 'Tell us your book idea in a few sentences. Genre, characters, plot - whatever you have.',
+                icon: BookOpen,
+                title: 'Choose your format',
+                description: 'Novel, comic book, children\'s picture book, screenplay, or non-fiction guide. Pick what fits your vision.',
               },
               {
-                icon: BookOpen,
-                title: 'Review',
-                description: 'Get a detailed chapter-by-chapter outline. Approve it or request changes.',
+                icon: Sparkles,
+                title: 'Share your idea',
+                description: 'Describe your concept in a few sentences, or upload an existing draft. The AI handles the rest.',
               },
               {
                 icon: Download,
-                title: 'Download',
-                description: 'Receive your complete EPUB manuscript, formatted and ready for publishing.',
+                title: 'Download & publish',
+                description: 'Get your complete work in EPUB, PDF, or TXT format. Ready for Amazon KDP or any platform.',
               },
             ].map((step, i) => (
               <div key={i} className="relative group">
@@ -762,22 +932,22 @@ export default function Home() {
       <section className="py-24 px-6 bg-neutral-900">
         <div className="max-w-4xl mx-auto text-center">
           <h2 className="text-4xl md:text-5xl font-bold tracking-tight mb-6 text-white" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>
-            Ready to write{' '}
+            Ready to{' '}
             <span className="relative inline-block">
               <span className="absolute -inset-x-1 -inset-y-1 bg-white/20 -skew-y-2 translate-x-1 translate-y-1" aria-hidden="true" />
               <span className={`absolute -inset-x-1 -inset-y-1 ${ACCENT.bg} -skew-y-2`} aria-hidden="true" />
-              <span className="relative text-neutral-900 px-2">your book</span>
+              <span className="relative text-neutral-900 px-2">create</span>
             </span>
             <span className="text-white">?</span>
           </h2>
           <p className="text-lg text-neutral-400 mb-10">
-            {session ? 'Your next masterpiece is just a few clicks away.' : 'Try a free sample. No credit card required.'}
+            {session ? 'Novels, comics, screenplays - your next masterpiece awaits.' : 'Try a free preview. No credit card required.'}
           </p>
           <button
             onClick={() => router.push(session ? '/create' : '/signup')}
             className="bg-lime-400 text-neutral-900 px-8 py-4 rounded-full text-base font-medium hover:bg-lime-300 transition-all hover:scale-105 inline-flex items-center gap-2"
           >
-            {session ? 'Create a book' : 'Try free sample'}
+            {session ? 'Start creating' : 'Try free preview'}
             <ArrowRight className="h-5 w-5" />
           </button>
         </div>

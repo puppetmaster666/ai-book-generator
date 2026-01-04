@@ -64,6 +64,7 @@ export default function CreateBook() {
   const { data: session } = useSession();
   const [step, setStep] = useState<'type' | 'idea' | 'style'>('type');
   const [selectedPreset, setSelectedPreset] = useState<BookPresetKey | null>(null);
+  const [selectingPreset, setSelectingPreset] = useState<BookPresetKey | null>(null);
   const [selectedArtStyle, setSelectedArtStyle] = useState<ArtStyleKey | null>(null);
   const [idea, setIdea] = useState('');
   const [hasIdeaFromHomepage, setHasIdeaFromHomepage] = useState(false);
@@ -77,7 +78,7 @@ export default function CreateBook() {
   const [isParsingFile, setIsParsingFile] = useState(false);
 
   // Questionnaire state - all default to 'auto' (Let AI Choose)
-  const [showCustomize, setShowCustomize] = useState(false);
+  const [showCustomize, setShowCustomize] = useState(true);
   const [lengthTier, setLengthTier] = useState<LengthTierKey | VisualLengthTierKey | ScreenplayLengthTierKey>('auto');
 
   // Get user ID from session if logged in
@@ -259,30 +260,29 @@ export default function CreateBook() {
   };
 
   const handleSelectPreset = (key: BookPresetKey) => {
-    setSelectedPreset(key);
-    const preset = BOOK_PRESETS[key];
+    // Show loading animation on the selected card
+    setSelectingPreset(key);
 
-    // Set default art style for illustrated books
-    if (preset.artStyle) {
-      setSelectedArtStyle(preset.artStyle as ArtStyleKey);
-    } else {
-      setSelectedArtStyle(null);
-    }
+    // Brief delay for visual feedback, then transition
+    setTimeout(() => {
+      setSelectedPreset(key);
+      const preset = BOOK_PRESETS[key];
 
-    // Reset length tier to auto when changing preset
-    setLengthTier('auto');
-
-    // If idea already exists from homepage, skip the idea step for text-only books
-    if (hasIdeaFromHomepage && idea.trim().length >= 20) {
-      const needsStyleStep = preset.format !== 'text_only' && preset.format !== 'screenplay';
-      if (needsStyleStep) {
-        setStep('style');
+      // Set default art style for illustrated books
+      if (preset.artStyle) {
+        setSelectedArtStyle(preset.artStyle as ArtStyleKey);
       } else {
-        setTimeout(() => handleSubmit(), 0);
+        setSelectedArtStyle(null);
       }
-    } else {
+
+      // Reset length tier to auto when changing preset
+      setLengthTier('auto');
+
+      // Always go to idea step so users can see customize options (book length, etc.)
+      // Even if they have an idea from homepage, they should be able to adjust settings
       setStep('idea');
-    }
+      setSelectingPreset(null);
+    }, 400);
   };
 
   // Get the appropriate length tiers based on book type
@@ -499,20 +499,37 @@ export default function CreateBook() {
                         <button
                           key={key}
                           onClick={() => handleSelectPreset(key)}
-                          className="group p-5 bg-white rounded-2xl border border-neutral-200 hover:border-neutral-400 hover:shadow-lg transition-all text-left"
+                          disabled={selectingPreset !== null}
+                          className={`group p-5 rounded-2xl border transition-all text-left ${
+                            selectingPreset === key
+                              ? 'bg-neutral-900 border-neutral-900 scale-[0.98]'
+                              : 'bg-white border-neutral-200 hover:border-neutral-400 hover:shadow-lg'
+                          } ${selectingPreset !== null && selectingPreset !== key ? 'opacity-50' : ''}`}
                         >
-                          <div className="w-10 h-10 bg-neutral-100 rounded-lg flex items-center justify-center mb-3 group-hover:bg-neutral-200 transition-colors">
-                            <IconComponent className="h-5 w-5 text-neutral-700" />
+                          <div className={`w-10 h-10 rounded-lg flex items-center justify-center mb-3 transition-colors ${
+                            selectingPreset === key
+                              ? 'bg-white/20'
+                              : 'bg-neutral-100 group-hover:bg-neutral-200'
+                          }`}>
+                            {selectingPreset === key ? (
+                              <Loader2 className="h-5 w-5 text-white animate-spin" />
+                            ) : (
+                              <IconComponent className={`h-5 w-5 ${selectingPreset === key ? 'text-white' : 'text-neutral-700'}`} />
+                            )}
                           </div>
-                          <h3 className="text-base font-semibold mb-1" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>
+                          <h3 className={`text-base font-semibold mb-1 ${selectingPreset === key ? 'text-white' : ''}`} style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>
                             {presetItem.label}
                           </h3>
-                          <p className="text-xs text-neutral-600 mb-3 line-clamp-2">
+                          <p className={`text-xs mb-3 line-clamp-2 ${selectingPreset === key ? 'text-neutral-300' : 'text-neutral-600'}`}>
                             {presetItem.description}
                           </p>
                           <div className="flex items-center justify-between">
-                            <span className="text-lg font-bold">{presetItem.priceDisplay}</span>
-                            <span className="text-xs bg-neutral-100 text-neutral-600 px-2 py-0.5 rounded-full">
+                            <span className={`text-lg font-bold ${selectingPreset === key ? 'text-white' : ''}`}>{presetItem.priceDisplay}</span>
+                            <span className={`text-xs px-2 py-0.5 rounded-full ${
+                              selectingPreset === key
+                                ? 'bg-white/20 text-white'
+                                : 'bg-neutral-100 text-neutral-600'
+                            }`}>
                               {presetItem.downloadFormat.toUpperCase()}
                             </span>
                           </div>
