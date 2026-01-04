@@ -5,7 +5,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import Header from '@/components/Header';
 import ToastModal from '@/components/ToastModal';
-import { Download, BookOpen, Loader2, Check, AlertCircle, ImageIcon, Mail, Palette, PenTool, Clock, Zap, AlertTriangle, Save, Trash2, RefreshCw, X, FileText, Film } from 'lucide-react';
+import { Download, BookOpen, Loader2, Check, AlertCircle, ImageIcon, Mail, Palette, PenTool, Clock, Zap, AlertTriangle, Save, Trash2, RefreshCw, X, FileText, Film, Megaphone } from 'lucide-react';
 import ScreenplayPreview from '@/components/ScreenplayPreview';
 import { useGeneratingBook } from '@/contexts/GeneratingBookContext';
 import Link from 'next/link';
@@ -61,6 +61,12 @@ interface Book {
       summary: string;
     }>;
   };
+  metadata?: {
+    logline?: string;
+    backCoverCopy?: string;
+    amazonKeywords?: string[];
+    includeBackCoverInPdf?: boolean;
+  } | null;
 }
 
 // Lightweight status for polling (no heavy content/images)
@@ -749,6 +755,10 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
     window.open(`/api/books/${id}/download?format=txt`, '_blank');
   };
 
+  const handleMarketingDownload = () => {
+    window.open(`/api/books/${id}/download?format=marketing`, '_blank');
+  };
+
   const handleCoverDownload = () => {
     if (book?.coverImageUrl) {
       const link = document.createElement('a');
@@ -1153,7 +1163,8 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
   const isPending = book.status === 'pending';
   const isFailed = book.status === 'failed' || !!book.errorMessage;
   // Treat ?success=true as payment completed for UI (webhook may be delayed)
-  const paymentCompleted = book.paymentStatus === 'completed' || success === 'true';
+  // Also treat free_preview as "payment completed" since they're eligible to generate (with limits)
+  const paymentCompleted = book.paymentStatus === 'completed' || book.paymentStatus === 'free_preview' || success === 'true';
   const isIllustrated = book.bookFormat !== 'text_only' && book.bookFormat !== 'screenplay';
   const isScreenplay = book.bookFormat === 'screenplay';
 
@@ -2080,6 +2091,16 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
                     className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-white text-neutral-900 border border-neutral-200 rounded-xl hover:bg-neutral-50 font-medium transition-colors"
                   >
                     <ImageIcon className="h-5 w-5" /> Download Cover Image
+                  </button>
+                )}
+
+                {/* Marketing/Pitch Materials - show for books and screenplays with metadata */}
+                {book.metadata && (
+                  <button
+                    onClick={handleMarketingDownload}
+                    className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-amber-50 text-amber-900 border border-amber-200 rounded-xl hover:bg-amber-100 font-medium transition-colors"
+                  >
+                    <Megaphone className="h-5 w-5" /> {isScreenplay ? 'Download Pitch Materials' : 'Download Amazon Materials'}
                   </button>
                 )}
               </div>

@@ -111,6 +111,59 @@ export function isSafetyBlockError(error: unknown): boolean {
     errorMsg.includes('content policy');
 }
 
+// ============================================================================
+// ANTI-AI WRITING SYSTEM
+// These functions help produce human-like prose by avoiding common AI patterns
+// ============================================================================
+
+/**
+ * Returns genre-specific tone and style instructions to produce human-like writing.
+ * Fiction gets visceral, sensory-driven guidance; Non-fiction gets authoritative, evidence-based guidance.
+ */
+function getDynamicWritingInstructions(genre: string, bookType: string): string {
+  if (bookType === 'non-fiction') {
+    return `
+=== NON-FICTION TONE & VOICE ===
+- VOICE: Authoritative but conversational. Avoid the "academic lecture" tone.
+- EVIDENCE: Use specific examples (e.g., "a 2019 Stanford study") over vague "research shows".
+- ACCURACY: Never fabricate statistics, studies, or citations. If uncertain, describe the principle without fake sources.
+- HOOKS: Rotate through surprising facts, anecdotes, bold claims. NEVER use "Have you ever..." to open.
+- NAMES: Case study names must be UNIQUE and culturally diverse. Never reuse Marcus, Sarah, David.
+- STRUCTURE: Lead with a concrete example, then the theory. Specific-to-general flow.`;
+  }
+
+  return `
+=== FICTION TONE & PACING ===
+- VOICE: Visceral and sensory-driven. Show emotions through actions ("hands trembled") not labels ("she was terrified").
+- PACING: Start "In Media Res" (in the middle of action). Jump directly into the scene.
+- NO RECAPS: Do NOT summarize previous chapters in the opening. The reader knows what happened.
+- DIALOGUE: Use subtext. Characters rarely say exactly what they mean. Add contractions and fragments.
+- RHYTHM: Prioritize DIRECT ACTION (Subject-Verb-Object). Limit participial phrases ("Walking to the door...") to once per page.
+- DESCRIPTIONS: Avoid "adjective stacking" (e.g., "the dark, gloomy, ominous shadows"). One modifier is enough.`;
+}
+
+/**
+ * Returns only the last N chapter summaries to prevent AI from doing recaps.
+ * A rolling context window keeps prompts lean and focused on immediate continuity.
+ */
+function getRollingContext(storySoFar: string, maxPreviousChapters: number = 3): string {
+  if (!storySoFar || storySoFar.trim() === '') {
+    return 'This is the beginning of the book.';
+  }
+
+  // Split by chapter summaries (usually separated by double newlines or "Chapter X:" patterns)
+  const summaries = storySoFar.split(/\n\n+/);
+
+  // Keep only the last N summaries
+  const recentSummaries = summaries.slice(-maxPreviousChapters);
+
+  if (recentSummaries.length === 0) {
+    return storySoFar; // Fallback to original if splitting failed
+  }
+
+  return recentSummaries.join('\n\n');
+}
+
 // Safety timeout: 240s per key (4 minutes) - prevents Vercel 300s hard kill
 // Vercel kills function at 300s, so we timeout at 240s to rotate keys before death
 const SAFETY_TIMEOUT_MS = 240000; // 4 minutes
@@ -2179,16 +2232,23 @@ OUTPUT: The chapter text only, starting with the chapter heading.`;
     // Get content rating instructions (defaults to general if not specified)
     const contentGuidelines = getContentRatingInstructions(data.contentRating || 'general');
 
+    // Get dynamic tone guide for human-like writing
+    const toneGuide = getDynamicWritingInstructions(data.genre, 'fiction');
+
+    // Use rolling context (last 3 chapters only) to prevent AI recaps
+    const rollingContext = getRollingContext(data.storySoFar);
+
     prompt = `You are a professional novelist writing publishable ${data.genre} fiction in ${data.writingStyle} style.
 ${languageInstruction ? `\n${languageInstruction}\n` : ''}
 BOOK: "${data.title}"
 ${contentGuidelines}
+${toneGuide}
 
 STORY OUTLINE:
 ${JSON.stringify(data.outline, null, 2)}
 
-STORY SO FAR:
-${data.storySoFar || 'This is chapter 1, the beginning of the story.'}
+=== CONTINUITY (FOR MEMORY ONLY - DO NOT RECAP) ===
+${rollingContext}
 
 CHARACTER STATES:
 ${JSON.stringify(data.characterStates || {}, null, 2)}
@@ -2198,6 +2258,12 @@ Plan: ${data.chapterPlan}
 ${data.chapterPov ? `POV: ${data.chapterPov}` : ''}
 
 ${formatInstruction}
+
+=== CRITICAL PACING RULES ===
+- START IN MEDIA RES: Jump DIRECTLY into action or dialogue for this chapter
+- NO RECAPS: Do NOT summarize or reference previous chapter events in your opening
+- The reader is already immersed. They know what happened. Begin with THIS chapter's first moment
+- If the previous chapter ended on a cliffhanger, resolve or continue it immediately
 
 === MANDATORY WRITING STANDARDS ===
 
@@ -2214,30 +2280,29 @@ PROSE QUALITY:
 - SHOW emotions through actions: "Her hands trembled" not "She was terrified"
 - Vary sentence length. Mix short punchy sentences with longer flowing ones
 - Be specific: "oak door" not "the door", "1967 Mustang" not "old car"
-- Avoid repeating distinctive words within 2-3 sentences
+- Use sensory details that aren't clichés: "metallic taste of adrenaline" not "heart pounded"
 
-SENTENCE VARIETY (CRITICAL - THIS IS MANDATORY):
+SENTENCE STRUCTURE (ELIMINATE AI RHYTHM):
+- PRIORITIZE Direct Action (Subject + Verb + Object). This is how humans naturally write
+- AVOID the "Participial Flourish" (e.g., "Sighing heavily, he sat down"). Use it MAX once per page
 - NEVER start more than 2 consecutive sentences with the same word
-- Vary sentence starters aggressively: use dependent clauses, participial phrases, prepositional phrases
-- BAD: "She walked in. She sat down. She opened her laptop. She began typing."
-- GOOD: "She walked in. After sitting down, she opened her laptop and began typing."
-- BAD: "The room was dark. The air was cold. The walls were bare."
-- GOOD: "The room was dark. Cold air seeped through the walls, bare and unwelcoming."
-- Limit "She/He/It/The" sentence starters to max 20% of sentences in any paragraph
-- Use action, setting, or dependent clauses to start sentences: "Crossing the room, she...", "Without warning, the...", "As the door opened, he..."
+- BAD: "She walked in. She sat down. She opened her laptop." (repetitive AI pattern)
+- GOOD: "She walked in and sat down. The laptop screen glowed as she opened it."
+- BAD: "Walking to the door, she reached for the handle. Turning the knob, she pushed it open."
+- GOOD: "She walked to the door. The handle was cold. She pushed it open."
+- Limit "She/He/It/The" sentence starters to max 20% of sentences
 
 PRONOUN USAGE:
 - After first mention in a scene, use "he/she/they" instead of character names
-- BUT vary sentence structure so you're not starting every sentence with pronouns
 - Embed pronouns mid-sentence: "The screen flickered as she scrolled down"
 - Character names should appear roughly once every 100-150 words for clarity
 
-AVOID THESE COMMON ERRORS:
-- Clichés: "heart pounded", "blood ran cold", "time stood still"
-- Repetitive patterns: "She looked", "She thought", "She reached", "It was"
-- Starting consecutive sentences with the same word
-- Excessive metaphors. One per paragraph maximum
+AVOID THESE AI PATTERNS:
+- Clichés: "heart pounded", "blood ran cold", "time stood still", "shoulders dropped"
+- Repetitive 2-word patterns: "She looked", "She thought", "She reached", "It was"
+- Participial phrase chains: "Seeing this, he... Knowing that, she... Feeling the..."
 - Adjective stacking: "the dark, gloomy, ominous shadows"
+- Clinical euphemisms in mature content: Use atmospheric descriptions instead
 
 STRUCTURE:
 - This is chapter ${data.chapterNumber} of ${(data.outline as { chapters?: unknown[] })?.chapters?.length || 20}. Do NOT resolve major plot threads
@@ -2640,11 +2705,38 @@ YOUR EDITING TASKS:
    - Vary transition phrases - not every chapter should end with "In the next chapter, we will..."
    - Fix truncated words: "legary"→"legendary", "surrer"→"surrender", "sp time"→"spend time", "Ninto"→"Nintendo"
 
-8. FIX PUNCTUATION:
+8. FIX "CHAPTER RESET SYNDROME" (CRITICAL FOR FICTION):
+   - If the chapter opening summarizes or recaps the previous chapter - REMOVE IT
+   - Examples to DELETE or rewrite:
+     * "After the events at the warehouse..." → Start with action instead
+     * "Sarah had just learned that..." → Jump to the next scene
+     * "Following their escape..." → Begin in the middle of the new scene
+   - The reader JUST read the previous chapter. They don't need a reminder.
+   - Start chapters "In Media Res" - in the middle of action, not with context
+
+9. FIX PARTICIPIAL PHRASE OVERUSE (CRITICAL):
+   - Count sentences starting with "-ing" phrases (participial phrases)
+   - If more than 2 per page (~250 words), REWRITE some to Subject-Verb-Object
+   - Examples to fix:
+     * "Walking to the door, she..." → "She walked to the door and..."
+     * "Feeling overwhelmed, he..." → "The weight of it hit him. He..."
+     * "Clutching the letter, Sarah..." → "Sarah clutched the letter."
+   - Participial phrases feel "writerly" and scream AI when overused
+   - Prioritize DIRECT ACTION: Subject first, then verb
+
+10. FIX DIRECT EMOTION STATEMENTS:
+   - Replace "She felt [emotion]" with physical/action descriptions
+   - Examples to fix:
+     * "She felt angry" → "Her jaw tightened"
+     * "He was nervous" → "His leg bounced under the table"
+     * "Sarah felt relieved" → "Sarah exhaled. Finally."
+   - SHOW emotions through the body and actions, don't TELL them
+
+11. FIX PUNCTUATION:
    - Replace any em dashes (—) or en dashes (–) with commas or periods
    - Ensure sentences end with proper punctuation
 
-${isOverLength ? `9. TRIM LENGTH:
+${isOverLength ? `12. TRIM LENGTH:
    - The chapter is ${currentWordCount - targetWords} words over target
    - Remove unnecessary adjectives and adverbs
    - Tighten wordy phrases
@@ -3714,6 +3806,7 @@ import {
   CharacterProfile,
   ScreenplayContext,
   SequenceSummary,
+  Subplot,
   SEQUENCE_TO_BEATS,
   SCREENPLAY_BANNED_PHRASES,
   SCREENPLAY_BANNED_ACTION_STARTS,
@@ -3757,6 +3850,12 @@ ALSO CREATE 3-5 main character profiles with:
 - Want: External goal they're pursuing
 - Need: Internal lesson they must learn
 - Flaw: Character flaw that creates conflict
+- Internal Conflict: The SECRET they're hiding (drives all subtext)
+- Dialogue Archetype: How they use language as a weapon:
+  * "The Evader" - deflects with humor, changes subject, never gives straight answers
+  * "The Steamroller" - bulldozes conversations, interrupts, dominates through volume
+  * "The Professor" - over-explains, lectures, uses precision to maintain control
+  * "The Reactor" - speaks in short bursts, responds emotionally, often monosyllabic
 - Brief backstory
 - Voice traits: vocabulary style, speech rhythm, verbal tics
 
@@ -3803,6 +3902,8 @@ Output ONLY valid JSON:
       "want": "External goal...",
       "need": "Internal lesson...",
       "flaw": "Character flaw...",
+      "internalConflict": "The secret they're hiding...",
+      "dialogueArchetype": "The Evader",
       "backstory": "Brief relevant history...",
       "voiceTraits": {
         "vocabulary": "blue-collar, direct, occasional profanity",
@@ -3841,6 +3942,7 @@ Output ONLY valid JSON:
 
 /**
  * Generate a single screenplay sequence (10-15 pages)
+ * Uses "Performance Mode" writing with subtext-driven dialogue
  */
 export async function generateScreenplaySequence(data: {
   beatSheet: BeatSheet;
@@ -3849,6 +3951,7 @@ export async function generateScreenplaySequence(data: {
   context: ScreenplayContext;
   genre: string;
   title: string;
+  activeSubplots?: Subplot[]; // Subplots active in this sequence
 }): Promise<{
   content: string;
   pageCount: number;
@@ -3858,10 +3961,16 @@ export async function generateScreenplaySequence(data: {
     throw new Error(`Invalid sequence number: ${data.sequenceNumber}`);
   }
 
-  // Build character voice reference
-  const characterVoices = data.characters.map(c =>
-    `${c.name} (${c.role}): Vocabulary: ${c.voiceTraits.vocabulary}. Rhythm: ${c.voiceTraits.rhythm}. Tics: ${c.voiceTraits.tics}`
-  ).join('\n');
+  // Build CHARACTER PSYCHOLOGY reference (the key to subtext)
+  const characterPsychology = data.characters.map(c => {
+    const archetype = c.dialogueArchetype || 'The Reactor';
+    const secret = c.internalConflict || 'Hiding their true feelings';
+    return `- ${c.name} (${c.role}):
+    OBJECTIVE: ${c.want}
+    SECRET: ${secret}
+    STRATEGY: ${archetype} - ${getArchetypeDescription(archetype)}
+    VOICE: ${c.voiceTraits.vocabulary}. ${c.voiceTraits.rhythm}. Tic: "${c.voiceTraits.tics}"`;
+  }).join('\n\n');
 
   // Get the specific beats for this sequence
   const beatsContent = sequenceInfo.beats.map(beat => {
@@ -3869,56 +3978,89 @@ export async function generateScreenplaySequence(data: {
     return `- ${beat}: ${beatData}`;
   }).join('\n');
 
-  // Build context from previous sequences
-  const previousContext = data.context.lastSequenceSummary
-    ? `\nPREVIOUS SEQUENCE SUMMARY:\n${data.context.lastSequenceSummary}\n\nCHARACTER STATES:\n${Object.entries(data.context.characterStates).map(([name, state]) => `- ${name}: ${state}`).join('\n')}\n\nESTABLISHED LOCATIONS: ${data.context.establishedLocations.join(', ') || 'None yet'}\n\nSETUPS TO PAY OFF: ${data.context.plantedSetups.filter(s => !data.context.resolvedPayoffs.includes(s)).join(', ') || 'None pending'}`
+  // Build subplot injection if any are active
+  const subplotSection = data.activeSubplots && data.activeSubplots.length > 0
+    ? `\nACTIVE SUBPLOTS TO WEAVE IN:\n${data.activeSubplots.map(s => `- ${s.name}: ${s.arc} (Characters: ${s.characters.join(', ')})`).join('\n')}`
     : '';
 
-  const prompt = `You are a professional Hollywood screenwriter writing SEQUENCE ${data.sequenceNumber} of 8 for a feature film.
+  // Build context from previous sequences
+  const previousContext = data.context.lastSequenceSummary
+    ? `\nPREVIOUS SEQUENCE SUMMARY:\n${data.context.lastSequenceSummary}\n\nCHARACTER STATES:\n${Object.entries(data.context.characterStates).map(([name, state]) => `- ${name}: ${state}`).join('\n')}\n\nSETUPS TO PAY OFF: ${data.context.plantedSetups.filter(s => !data.context.resolvedPayoffs.includes(s)).join(', ') || 'None pending'}`
+    : '';
+
+  // Genre-specific tone guidance
+  const genreTone = getGenreToneGuidance(data.genre);
+
+  const prompt = `You are an elite Hollywood screenwriter. Write SEQUENCE ${data.sequenceNumber} of 8.
 
 MOVIE: "${data.title}" (${data.genre})
 LOGLINE: ${data.beatSheet.logline}
 THEME: ${data.beatSheet.theme}
 
-THIS SEQUENCE COVERS:
-Act ${sequenceInfo.act}, Pages ${sequenceInfo.pageRange}
-Beats to hit:
+ACT ${sequenceInfo.act} | PAGES ${sequenceInfo.pageRange}
+BEATS TO HIT:
 ${beatsContent}
+${subplotSection}
 ${previousContext}
 
-CHARACTER VOICE PROFILES (CRITICAL - each character MUST speak differently):
-${characterVoices}
+=== CHARACTER PSYCHOLOGY (MANDATORY FOR EVERY LINE) ===
+${characterPsychology}
 
-SCREENPLAY FORMAT RULES - FOLLOW EXACTLY:
-1. Sluglines: "INT. LOCATION - DAY" or "EXT. LOCATION - NIGHT" (only these formats)
-2. Action lines: Present tense, MAX 4 lines per paragraph, then break
-3. Character names: ALL CAPS centered before dialogue
-4. Dialogue: Natural, distinct voices per character
-5. Parentheticals: Use sparingly ((beat), (O.S.), (V.O.) only when necessary)
-6. Transitions: CUT TO:, FADE OUT. - use sparingly
+=== THE SCREENWRITER'S MANIFESTO ===
 
-ANTI-AI DIALOGUE RULES - CRITICAL:
-- NEVER use: "I need you to understand", "Here's the thing", "Let me be clear", "With all due respect"
-- NEVER have characters explain their feelings directly ("I feel sad because...")
-- Characters interrupt, trail off, use incomplete sentences
-- Subtext: Characters rarely say exactly what they mean
-- Each character has DISTINCT vocabulary and rhythm
+1. NO ON-THE-NOSE DIALOGUE
+   Characters NEVER say what they feel. If sad, they talk about weather.
+   Every line has SURFACE meaning and TRUE meaning underneath.
 
-ANTI-AI ACTION RULES - CRITICAL:
-- NEVER start action lines with: "We see", "We hear", "We watch", "The camera"
-- Just describe what happens, not what the camera does
-- Be visual and specific, not generic
+2. SUBTEXT IS KING
+   Dialogue is a WEAPON used to hide the "SECRET" listed above.
+   What characters DON'T say matters more than what they DO say.
 
-Write approximately 12-15 pages of properly formatted screenplay.
-Start with a slugline. End at a natural story beat.
+3. VERTICAL WRITING
+   Action paragraphs: MAX 3 LINES. Then white space.
+   One image per paragraph. Fast. Punchy. Readable.
 
-OUTPUT: Write the screenplay sequence directly. No commentary or notes.`;
+4. IN MEDIA RES
+   Start MID-ACTION. DELETE any "establishing" throat-clearing.
+   Jump directly into conflict. No "Character walks in and sits down."
+
+5. SENSORY ACTION
+   Use verbs that imply SOUND or FEELING:
+   ✓ "The floorboards GROAN" / "Glass SHATTERS" / "She FLINCHES"
+   ✗ "He walks quietly" / "She enters the room"
+
+6. PHYSICAL BEATS OVER PARENTHETICALS
+   Instead of: (beat) or (pause)
+   Write: "He adjusts his tie." / "She traces the rim of her glass."
+   Allowed parentheticals: (O.S.), (V.O.), (CONT'D), (into phone)
+
+${genreTone}
+
+=== BANNED AI-ISMS (INSTANT FAILURE) ===
+DIALOGUE:
+- "I need you to understand" / "Here's the thing" / "Let me be clear"
+- "With all due respect" / "To be honest" / "The thing is"
+- Characters explaining feelings: "I feel X because Y"
+
+ACTION LINES:
+- "We see" / "We hear" / "We watch" / "The camera"
+- Starting with character names: "John walks to the door"
+  Instead: "The door SLAMS. John stands in the frame."
+
+=== FORMAT ===
+- Sluglines: INT./EXT. LOCATION - DAY/NIGHT
+- Character names: ALL CAPS before dialogue
+- Transitions: Use sparingly (CUT TO:, FADE OUT.)
+
+Write 12-15 pages. Start with a slugline. End on a BUTTON (sharp moment).
+
+OUTPUT: Industry-standard screenplay format ONLY. No commentary.`;
 
   const result = await withTimeout(
     () => getGeminiFlash().generateContent({
       contents: [{ role: 'user', parts: [{ text: prompt }] }],
       generationConfig: {
-        temperature: 0.85,
+        temperature: 0.9, // Slightly higher for more creative dialogue
         maxOutputTokens: 12000,
       },
       safetySettings: SAFETY_SETTINGS,
@@ -3931,6 +4073,67 @@ OUTPUT: Write the screenplay sequence directly. No commentary or notes.`;
   const pageCount = estimatePageCount(content);
 
   return { content, pageCount };
+}
+
+/**
+ * Helper: Get description for dialogue archetype
+ */
+function getArchetypeDescription(archetype: string): string {
+  const descriptions: Record<string, string> = {
+    'The Evader': 'deflects with humor, changes subject, never straight answers',
+    'The Steamroller': 'bulldozes, interrupts, dominates through volume',
+    'The Professor': 'over-explains, lectures, uses precision for control',
+    'The Reactor': 'short bursts, emotional, often monosyllabic',
+  };
+  return descriptions[archetype] || descriptions['The Reactor'];
+}
+
+/**
+ * Helper: Get genre-specific tone guidance
+ */
+function getGenreToneGuidance(genre: string): string {
+  const lowerGenre = genre.toLowerCase();
+
+  if (lowerGenre.includes('noir') || lowerGenre.includes('crime')) {
+    return `=== GENRE TONE: NOIR/CRIME ===
+- Deep shadows in description. Cynicism in dialogue.
+- Characters speak in clipped sentences. Trust no one.
+- Rain, smoke, neon. The city is a character.`;
+  }
+  if (lowerGenre.includes('action') || lowerGenre.includes('thriller')) {
+    return `=== GENRE TONE: ACTION/THRILLER ===
+- High kineticism. Fragmented sentences in action.
+- Dialogue during action: SHORT. Breathless. Interrupted.
+- Time pressure in every scene. Clock is always ticking.`;
+  }
+  if (lowerGenre.includes('comedy') || lowerGenre.includes('romcom')) {
+    return `=== GENRE TONE: COMEDY ===
+- Rhythm is everything. Set up → pause → punchline.
+- Dialogue overlaps. Characters talk past each other.
+- Physical comedy in action lines. Specificity is funny.`;
+  }
+  if (lowerGenre.includes('horror')) {
+    return `=== GENRE TONE: HORROR ===
+- Dread in the quiet moments. Less is more.
+- What we DON'T see is scarier. Imply, don't show.
+- Ordinary details made sinister. The familiar turned wrong.`;
+  }
+  if (lowerGenre.includes('drama')) {
+    return `=== GENRE TONE: DRAMA ===
+- Weight in silence. What's unsaid matters most.
+- Small gestures carry enormous meaning.
+- The conflict is internal, expressed externally.`;
+  }
+  if (lowerGenre.includes('romance')) {
+    return `=== GENRE TONE: ROMANCE ===
+- Tension in proximity. The space between characters.
+- Dialogue as foreplay. Every word a step closer or away.
+- Longing in looks. The almost-touch.`;
+  }
+
+  return `=== GENRE TONE: ${genre.toUpperCase()} ===
+- Match tone to genre expectations. Be authentic.
+- Subvert tropes intelligently, don't ignore them.`;
 }
 
 /**
@@ -3982,58 +4185,89 @@ Provide a JSON summary:
 }
 
 /**
- * Review and polish a screenplay sequence for AI patterns
- * Similar to reviewAndPolishChapter but for screenplay format
+ * Ruthless pacing editor - cuts 20% fluff from screenplay sequences
+ * ALWAYS runs (not just when AI patterns detected)
  */
 export async function reviewScreenplaySequence(
   sequenceContent: string,
-  characters: CharacterProfile[]
+  characters: CharacterProfile[],
+  sequenceNumber?: number
 ): Promise<string> {
-  // First, detect obvious AI patterns
+  // Build character psychology for maintaining distinct voices
+  const characterPsychology = characters.map(c => {
+    const archetype = c.dialogueArchetype || 'The Reactor';
+    return `${c.name} (${archetype}): ${c.voiceTraits.vocabulary}. ${c.voiceTraits.rhythm}`;
+  }).join('\n');
+
+  // Detect issues for targeted fixes
   const bannedDialogue = SCREENPLAY_BANNED_PHRASES.filter(phrase =>
     sequenceContent.toLowerCase().includes(phrase.toLowerCase())
   );
-
   const bannedActions = SCREENPLAY_BANNED_ACTION_STARTS.filter(start =>
     new RegExp(`(^|\\n)\\s*${start}`, 'i').test(sequenceContent)
   );
 
-  if (bannedDialogue.length === 0 && bannedActions.length === 0) {
-    // No obvious patterns, return as-is
-    return sequenceContent;
-  }
+  const issuesSection = (bannedDialogue.length > 0 || bannedActions.length > 0)
+    ? `\n=== DETECTED AI-ISMS TO FIX ===
+${bannedDialogue.length > 0 ? `Banned dialogue: ${bannedDialogue.join(', ')}` : ''}
+${bannedActions.length > 0 ? `Banned action starts: ${bannedActions.join(', ')}` : ''}`
+    : '';
 
-  // Build character voice reference
-  const characterVoices = characters.map(c =>
-    `${c.name}: ${c.voiceTraits.vocabulary}, ${c.voiceTraits.rhythm}`
-  ).join('\n');
+  const prompt = `You are a RUTHLESS Hollywood Script Doctor. Your job: CUT 20% OF THE FLUFF.
 
-  const prompt = `Review and fix this screenplay sequence. DO NOT change the story, just fix AI patterns.
-
-ISSUES DETECTED:
-${bannedDialogue.length > 0 ? `Dialogue phrases to remove/replace: ${bannedDialogue.join(', ')}` : ''}
-${bannedActions.length > 0 ? `Action line starts to fix: ${bannedActions.join(', ')}` : ''}
-
-CHARACTER VOICES (maintain distinct voices):
-${characterVoices}
-
-FIXES NEEDED:
-1. Replace AI dialogue patterns with natural speech
-2. Remove "We see/hear" from action lines - just describe what happens
-3. Ensure each character sounds different
-4. Add subtext where dialogue is too on-the-nose
-5. Limit parentheticals (beat), (sighs), (nods) to once per page max
-
-ORIGINAL SEQUENCE:
+SEQUENCE ${sequenceNumber || '?'} TO EDIT:
 ${sequenceContent}
 
-OUTPUT: The fixed screenplay sequence. Keep the same scenes and story beats.`;
+CHARACTER VOICES (PRESERVE THESE):
+${characterPsychology}
+${issuesSection}
+
+=== YOUR EDITING TASKS (DO ALL OF THEM) ===
+
+1. DIALOGUE COMPRESSION
+   - If a character speaks MORE THAN 3 LINES consecutively, BREAK IT UP or CUT IT
+   - Other characters should interrupt, react, or the speaker should pause for action
+   - Long speeches = amateur writing. Fix them.
+
+2. EXPOSITION REMOVAL
+   - DELETE any lines where characters explain the plot to each other
+   - "As you know..." = DELETE
+   - Characters explaining their own backstory = DELETE or convert to subtext
+
+3. BEAT CHECK
+   - First paragraph: Must be a VISUAL HOOK (action, not description)
+   - Last paragraph: Must be a BUTTON (sharp ending, not trailing off)
+   - If either is weak, REWRITE it
+
+4. RECAP PURGE
+   - If the FIRST PARAGRAPH summarizes the previous sequence, DELETE IT
+   - Start in the action, not in the setup
+
+5. PARENTHETICAL CLEANUP
+   - Replace EVERY (beat), (pause), (a moment) with a physical action
+   - Example: "(beat)" → "He cracks his knuckles."
+   - KEEP: (O.S.), (V.O.), (CONT'D), (into phone)
+
+6. VERTICAL WRITING CHECK
+   - NO action paragraph longer than 3 lines
+   - Break up any "wall of text" action descriptions
+
+7. AI-ISM PURGE
+   - "We see/hear/watch" → Just describe what happens
+   - "I need you to understand" → Character-specific alternative
+   - Clinical dialogue → Raw, genre-appropriate dialogue
+
+=== OUTPUT RULES ===
+- Return ONLY the polished screenplay sequence
+- Same scenes, same story beats
+- Just TIGHTER and MORE PROFESSIONAL
+- No commentary or notes`;
 
   const result = await withTimeout(
     () => getGeminiFlash().generateContent({
       contents: [{ role: 'user', parts: [{ text: prompt }] }],
       generationConfig: {
-        temperature: 0.5,
+        temperature: 0.4, // Lower temp for consistent editing
         maxOutputTokens: 12000,
       },
       safetySettings: SAFETY_SETTINGS,
@@ -4043,4 +4277,159 @@ OUTPUT: The fixed screenplay sequence. Keep the same scenes and story beats.`;
   );
 
   return result.response.text();
+}
+
+/**
+ * Generates professional marketing metadata for Amazon/publishing.
+ * Called after book generation completes.
+ * Returns logline, back cover copy, and Amazon keywords.
+ */
+export async function generateMetadataAndMarketing(data: {
+  title: string;
+  genre: string;
+  bookType: string;
+  bookFormat?: string; // 'text_only', 'screenplay', etc.
+  authorName: string;
+  chapterSummaries: string; // Concatenated chapter/sequence summaries
+  originalIdea: string;
+}): Promise<{
+  logline: string;
+  backCoverCopy: string; // For books: back cover blurb. For screenplays: synopsis/treatment
+  amazonKeywords: string[]; // For books: Amazon keywords. For screenplays: industry tags
+}> {
+  const isNonFiction = data.bookType === 'non-fiction';
+  const isScreenplay = data.bookFormat === 'screenplay';
+
+  // Use different prompt for screenplays vs books
+  const prompt = isScreenplay
+    ? `You are a professional Hollywood Script Consultant and Coverage Analyst.
+
+SCREENPLAY: "${data.title}"
+GENRE: ${data.genre}
+WRITER: ${data.authorName || 'Anonymous'}
+
+STORY SYNOPSIS:
+${data.chapterSummaries.substring(0, 4000)}
+
+ORIGINAL CONCEPT:
+${data.originalIdea?.substring(0, 500) || 'N/A'}
+
+YOUR TASK - CREATE PITCH MATERIALS:
+
+1. LOGLINE: A high-concept, one-sentence pitch under 30 words.
+   - Format: When [INCITING INCIDENT], a [SPECIFIC PROTAGONIST] must [GOAL] before [STAKES].
+   - Include the central irony or hook that makes this story unique.
+
+2. SYNOPSIS: Write a 150-200 word pitch treatment.
+   - Open with the HOOK - the most compelling visual or premise element
+   - Introduce protagonist with their defining trait and flaw
+   - Present the central conflict and antagonist
+   - Build to the "impossible choice" or dramatic question
+   - End with what's at stake - make it emotional AND high-concept
+   - Write in present tense, active voice
+
+3. INDUSTRY TAGS: Identify 7 specific tags for this screenplay.
+   - Include comparable films (e.g., "Meets: KNIVES OUT x GET OUT")
+   - Genre hybrids (e.g., "neo-noir thriller", "contained horror")
+   - Tone descriptors (e.g., "darkly comedic", "emotionally grounded")
+   - Market positioning (e.g., "festival circuit", "streaming original", "studio tentpole")
+
+ANTI-AI WRITING RULES:
+- NO "In a world..." or "When everything changes..."
+- NO "But little does he know..." or "Soon, they'll discover..."
+- Be SPECIFIC: Names, places, visceral details
+- Match the tone to genre (noir=cynical, horror=dread, comedy=ironic)
+
+Output ONLY valid JSON with no markdown:
+{"logline": "...", "backCoverCopy": "...", "amazonKeywords": ["tag1", "tag2", ...]}`
+    : `You are a professional Book Publicist and Amazon Marketing Expert.
+
+BOOK TITLE: "${data.title}"
+GENRE: ${data.genre}
+BOOK TYPE: ${data.bookType}
+AUTHOR: ${data.authorName || 'Anonymous'}
+
+BOOK SUMMARY:
+${data.chapterSummaries.substring(0, 4000)}
+
+ORIGINAL CONCEPT:
+${data.originalIdea?.substring(0, 500) || 'N/A'}
+
+YOUR MARKETING TASK:
+
+1. LOGLINE: Create a high-concept, one-sentence pitch under 30 words that captures the "Promise of the Premise".
+   - For fiction: Focus on the protagonist, their goal, and the central conflict
+   - For non-fiction: Focus on the transformation or outcome the reader will achieve
+
+2. BACK COVER COPY (The Blurb): Write a 150-200 word marketing description.
+   ${isNonFiction ? `
+   FOR NON-FICTION:
+   - Open with the PROBLEM the reader faces
+   - Present the book's unique VALUE PROPOSITION
+   - Use authoritative but accessible language
+   - End with a clear call-to-action or promise
+   - Use bullet points sparingly for key takeaways` : `
+   FOR FICTION:
+   - Open with atmosphere or an intriguing hook
+   - Introduce the protagonist and their world
+   - Present the inciting incident and stakes
+   - Build tension with "But when..." or "Until..."
+   - End on a question or cliffhanger that compels reading
+   - DO NOT reveal the ending`}
+
+3. AMAZON KEYWORDS: Identify 7 highly specific, search-optimized keywords/phrases.
+   - Use specific niche terms (e.g., "enemies-to-lovers fantasy romance" not just "romance")
+   - Include comparable author names if applicable (e.g., "fans of Brandon Sanderson")
+   - Mix broad category terms with specific sub-genre terms
+
+MANDATORY ANTI-AI STANDARDS:
+- NEVER start with "In a world..." or "Have you ever wondered..."
+- NEVER use "Dive into..." or "Embark on a journey..."
+- NEVER use "This book will change..." or "Discover the secrets..."
+- Use ACTIVE voice and SPECIFIC details
+- For mature content: Be suggestive and evocative, not clinical
+- Match the tone to the genre (thriller=tense, romance=emotional, etc.)
+
+Output ONLY valid JSON with no markdown formatting:
+{"logline": "...", "backCoverCopy": "...", "amazonKeywords": ["keyword1", "keyword2", ...]}`;
+
+  try {
+    const result = await withTimeout(
+      () => getGeminiFlash().generateContent({
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        generationConfig: {
+          temperature: 0.7,
+          maxOutputTokens: 2000,
+        },
+        safetySettings: SAFETY_SETTINGS,
+      }),
+      60000,
+      'generateMetadataAndMarketing'
+    );
+
+    const responseText = result.response.text().trim();
+
+    // Extract JSON from response (handle potential markdown wrapping)
+    let jsonStr = responseText;
+    const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      jsonStr = jsonMatch[0];
+    }
+
+    const parsed = JSON.parse(jsonStr);
+
+    return {
+      logline: parsed.logline || '',
+      backCoverCopy: parsed.backCoverCopy || '',
+      amazonKeywords: Array.isArray(parsed.amazonKeywords) ? parsed.amazonKeywords : [],
+    };
+  } catch (error) {
+    console.error('[Metadata] Failed to generate marketing metadata:', error);
+    // Return empty defaults if generation fails
+    return {
+      logline: '',
+      backCoverCopy: '',
+      amazonKeywords: [],
+    };
+  }
 }

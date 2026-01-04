@@ -9,6 +9,7 @@ import {
   generateScreenplaySequence,
   summarizeScreenplaySequence,
   reviewScreenplaySequence,
+  generateMetadataAndMarketing,
   type ContentRating,
 } from '@/lib/gemini';
 import { countWords } from '@/lib/epub';
@@ -257,6 +258,11 @@ export async function POST(
         }
       }
 
+      // Filter subplots active in this sequence
+      const activeSubplots = screenplayOutline.beatSheet.subplots?.filter(s =>
+        s.intersectionPoints.includes(nextChapterNum)
+      ) || [];
+
       // Generate the next sequence with timeout to prevent stale books
       let sequenceResult: { content: string; pageCount: number };
       try {
@@ -268,6 +274,7 @@ export async function POST(
             context: screenplayContext,
             genre: book.genre,
             title: book.title,
+            activeSubplots, // Inject active subplots for this sequence
           }),
           CHAPTER_TIMEOUT_MS,
           `Sequence ${nextChapterNum} generation`
@@ -287,13 +294,14 @@ export async function POST(
       let sequenceContent = sequenceResult.content;
       const pageCount = sequenceResult.pageCount;
 
-      // Review and polish for AI patterns
+      // Review and polish - ALWAYS runs (ruthless pacing editor)
       try {
         sequenceContent = await reviewScreenplaySequence(
           sequenceContent,
-          screenplayOutline.characters
+          screenplayOutline.characters,
+          nextChapterNum
         );
-        console.log(`Sequence ${nextChapterNum} reviewed for AI patterns`);
+        console.log(`Sequence ${nextChapterNum} polished by script doctor`);
       } catch (reviewError) {
         console.error(`Failed to review sequence ${nextChapterNum}:`, reviewError);
         // Continue with unreviewed content
@@ -595,6 +603,8 @@ ${chapterPlan.summary}
 async function finalizeBook(id: string, book: {
   title: string;
   genre: string;
+  bookType: string;
+  bookFormat: string;
   authorName: string;
   premise: string;
   characters: unknown;
@@ -610,7 +620,7 @@ async function finalizeBook(id: string, book: {
       const coverPrompt = await generateCoverPrompt({
         title: book.title,
         genre: book.genre,
-        bookType: 'novel', // Default for text books
+        bookType: book.bookType,
         premise: book.premise,
         authorName: book.authorName,
       });
@@ -630,6 +640,42 @@ async function finalizeBook(id: string, book: {
       console.error('Failed to generate cover:', coverError);
       // Continue without cover - not critical
     }
+  }
+
+  // Generate marketing metadata (back cover copy, logline, keywords)
+  try {
+    // Get all chapter summaries for context
+    const chapters = await prisma.chapter.findMany({
+      where: { bookId: id },
+      orderBy: { number: 'asc' },
+      select: { summary: true },
+    });
+    const chapterSummaries = chapters.map(c => c.summary).join('\n\n');
+
+    const metadata = await generateMetadataAndMarketing({
+      title: book.title,
+      genre: book.genre,
+      bookType: book.bookType,
+      bookFormat: book.bookFormat, // Pass format for screenplay-specific prompts
+      authorName: book.authorName,
+      chapterSummaries,
+      originalIdea: book.premise,
+    });
+
+    // Save metadata with default setting to include in PDF
+    await prisma.book.update({
+      where: { id },
+      data: {
+        metadata: {
+          ...metadata,
+          includeBackCoverInPdf: true, // Default: checked
+        },
+      },
+    });
+    console.log(`[Metadata] Generated marketing metadata for book ${id}`);
+  } catch (metadataError) {
+    console.error('Failed to generate marketing metadata:', metadataError);
+    // Continue - metadata is optional enhancement
   }
 
   // Mark as completed

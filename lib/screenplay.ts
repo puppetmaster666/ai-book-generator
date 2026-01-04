@@ -2,7 +2,17 @@
 // Industry-standard screenplay format with Save the Cat beat sheet structure
 
 /**
+ * Dialogue archetype - determines how a character uses language as a weapon
+ * - The Evader: Deflects with humor, changes subject, never gives straight answers
+ * - The Steamroller: Bulldozes conversations, interrupts, dominates through volume
+ * - The Professor: Over-explains, lectures, uses precision to maintain control
+ * - The Reactor: Speaks in short bursts, responds emotionally, often monosyllabic
+ */
+export type DialogueArchetype = 'The Evader' | 'The Steamroller' | 'The Professor' | 'The Reactor';
+
+/**
  * Character profile with voice traits for consistency
+ * Now includes psychological depth for subtext-driven dialogue
  */
 export interface CharacterProfile {
   name: string;
@@ -10,6 +20,8 @@ export interface CharacterProfile {
   want: string; // External goal - what they're trying to achieve
   need: string; // Internal arc - what they need to learn/become
   flaw: string; // Character flaw that creates conflict
+  internalConflict: string; // NEW: The secret they're hiding - drives subtext
+  dialogueArchetype: DialogueArchetype; // NEW: Their verbal strategy in conversations
   backstory: string; // Brief relevant history
   voiceTraits: {
     vocabulary: string; // e.g., "blue-collar, direct, occasional profanity"

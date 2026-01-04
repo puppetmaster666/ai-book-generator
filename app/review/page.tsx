@@ -4,10 +4,17 @@ import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
-import { ArrowLeft, ArrowRight, Loader2, BookOpen, Palette, FileText, Check, Users, Tag, X, Mail, Pencil, Gift, User, Save, Plus, Trash2, AlertCircle, Camera, ImageIcon, Sparkles } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Loader2, BookOpen, Palette, FileText, Check, Users, Tag, X, Mail, Pencil, Gift, User, Save, Plus, Trash2, AlertCircle, Camera, ImageIcon, Sparkles, Copy, CheckCircle2 } from 'lucide-react';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
 import { PRICING, BOOK_FORMATS, ART_STYLES } from '@/lib/constants';
+
+interface BookMetadata {
+  logline?: string;
+  backCoverCopy?: string;
+  amazonKeywords?: string[];
+  includeBackCoverInPdf?: boolean;
+}
 
 interface BookData {
   id: string;
@@ -29,6 +36,7 @@ interface BookData {
   protagonistPhoto?: string | null;
   protagonistStyled?: string | null;
   protagonistDescription?: string | null;
+  metadata?: BookMetadata;
   outline?: Array<{
     chapterNum: number;
     title: string;
@@ -97,6 +105,14 @@ function ReviewContent() {
   const [isStylizing, setIsStylizing] = useState(false);
   const [stylizeError, setStylizeError] = useState('');
 
+  // Marketing metadata state
+  const [backCoverCopy, setBackCoverCopy] = useState('');
+  const [amazonKeywords, setAmazonKeywords] = useState<string[]>([]);
+  const [includeBackCoverInPdf, setIncludeBackCoverInPdf] = useState(true);
+  const [isSavingMetadata, setIsSavingMetadata] = useState(false);
+  const [copiedKeywords, setCopiedKeywords] = useState(false);
+  const [copiedBlurb, setCopiedBlurb] = useState(false);
+
   useEffect(() => {
     if (!bookId) {
       router.push('/create');
@@ -120,6 +136,12 @@ function ReviewContent() {
           }
           if (data.book.protagonistStyled) {
             setProtagonistStyled(data.book.protagonistStyled);
+          }
+          // Load marketing metadata if available
+          if (data.book.metadata) {
+            setBackCoverCopy(data.book.metadata.backCoverCopy || '');
+            setAmazonKeywords(data.book.metadata.amazonKeywords || []);
+            setIncludeBackCoverInPdf(data.book.metadata.includeBackCoverInPdf !== false);
           }
         }
         setIsLoading(false);
@@ -444,6 +466,44 @@ function ReviewContent() {
     finalPrice = originalPrice * (1 - promoDiscount);
     discountLabel = promoDiscount === 1 ? 'FREE' : `${Math.round(promoDiscount * 100)}% off`;
   }
+
+  // Copy blurb to clipboard
+  const handleCopyBlurb = async () => {
+    await navigator.clipboard.writeText(backCoverCopy);
+    setCopiedBlurb(true);
+    setTimeout(() => setCopiedBlurb(false), 2000);
+  };
+
+  // Copy keywords to clipboard
+  const handleCopyKeywords = async () => {
+    await navigator.clipboard.writeText(amazonKeywords.join(', '));
+    setCopiedKeywords(true);
+    setTimeout(() => setCopiedKeywords(false), 2000);
+  };
+
+  // Save metadata changes
+  const handleSaveMetadata = async () => {
+    if (!bookId) return;
+    setIsSavingMetadata(true);
+    try {
+      await fetch(`/api/books/${bookId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          metadata: {
+            logline: book?.metadata?.logline || '',
+            backCoverCopy,
+            amazonKeywords,
+            includeBackCoverInPdf,
+          },
+        }),
+      });
+    } catch (err) {
+      console.error('Failed to save metadata:', err);
+    } finally {
+      setIsSavingMetadata(false);
+    }
+  };
 
   const handleContinueToCheckout = async () => {
     // Clear previous errors
@@ -1392,6 +1452,107 @@ function ReviewContent() {
               </div>
             </div>
           </div>
+
+          {/* Amazon Publishing Materials - Only show if metadata exists */}
+          {(backCoverCopy || amazonKeywords.length > 0) && (
+            <div className="bg-white rounded-2xl border border-neutral-200 p-6 mb-8">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-semibold text-lg">Amazon Publishing Materials</h3>
+                <span className="text-xs text-neutral-500 bg-neutral-100 px-2 py-1 rounded-full">Auto-generated</span>
+              </div>
+
+              {/* Back Cover Copy */}
+              {backCoverCopy && (
+                <div className="mb-6">
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="text-sm font-medium text-neutral-700">Book Description / Back Cover</label>
+                    <button
+                      onClick={handleCopyBlurb}
+                      className="flex items-center gap-1 text-xs text-neutral-500 hover:text-neutral-700 transition-colors"
+                    >
+                      {copiedBlurb ? (
+                        <>
+                          <CheckCircle2 className="h-3.5 w-3.5 text-green-600" />
+                          <span className="text-green-600">Copied!</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="h-3.5 w-3.5" />
+                          Copy
+                        </>
+                      )}
+                    </button>
+                  </div>
+                  <textarea
+                    value={backCoverCopy}
+                    onChange={(e) => setBackCoverCopy(e.target.value)}
+                    onBlur={handleSaveMetadata}
+                    rows={6}
+                    className="w-full px-4 py-3 border border-neutral-200 rounded-xl focus:border-neutral-900 focus:outline-none transition-colors text-sm resize-none"
+                    placeholder="Book description for Amazon..."
+                  />
+                  <p className="text-xs text-neutral-500 mt-1">
+                    Paste this into Amazon KDP&apos;s &quot;Book description&quot; field when publishing
+                  </p>
+                </div>
+              )}
+
+              {/* Amazon Keywords */}
+              {amazonKeywords.length > 0 && (
+                <div className="mb-6">
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="text-sm font-medium text-neutral-700">Amazon Keywords</label>
+                    <button
+                      onClick={handleCopyKeywords}
+                      className="flex items-center gap-1 text-xs text-neutral-500 hover:text-neutral-700 transition-colors"
+                    >
+                      {copiedKeywords ? (
+                        <>
+                          <CheckCircle2 className="h-3.5 w-3.5 text-green-600" />
+                          <span className="text-green-600">Copied!</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="h-3.5 w-3.5" />
+                          Copy all
+                        </>
+                      )}
+                    </button>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {amazonKeywords.map((keyword, index) => (
+                      <span
+                        key={index}
+                        className="px-3 py-1.5 bg-neutral-100 text-neutral-700 text-sm rounded-full"
+                      >
+                        {keyword}
+                      </span>
+                    ))}
+                  </div>
+                  <p className="text-xs text-neutral-500 mt-2">
+                    Use these in Amazon KDP&apos;s keyword fields to help readers find your book
+                  </p>
+                </div>
+              )}
+
+              {/* Include in PDF checkbox */}
+              <div className="flex items-center gap-3 pt-4 border-t border-neutral-100">
+                <input
+                  type="checkbox"
+                  id="includeBackCover"
+                  checked={includeBackCoverInPdf}
+                  onChange={(e) => {
+                    setIncludeBackCoverInPdf(e.target.checked);
+                    handleSaveMetadata();
+                  }}
+                  className="w-4 h-4 text-neutral-900 border-neutral-300 rounded focus:ring-neutral-500"
+                />
+                <label htmlFor="includeBackCover" className="text-sm text-neutral-700">
+                  Include back cover page in PDF download
+                </label>
+              </div>
+            </div>
+          )}
 
           {/* CTA */}
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-neutral-900 text-white rounded-2xl p-6">

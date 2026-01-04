@@ -96,6 +96,12 @@ export async function POST(
           ]),
     ]);
 
+    // Trigger book generation (same as free-order route)
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    fetch(`${appUrl}/api/books/${bookId}/generate`, {
+      method: 'POST',
+    }).catch(console.error);
+
     return NextResponse.json({
       success: true,
       message: useGiftedCredit

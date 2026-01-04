@@ -6,11 +6,17 @@ interface Chapter {
   content: string;
 }
 
+interface BookMetadata {
+  backCoverCopy?: string;
+  includeBackCoverInPdf?: boolean;
+}
+
 interface BookData {
   title: string;
   authorName: string;
   chapters: Chapter[];
   fontStyle?: string;
+  metadata?: BookMetadata;
 }
 
 /**
@@ -121,8 +127,6 @@ export async function generateTextPdf(bookData: BookData): Promise<Buffer> {
   const contentWidth = pageWidth - (margin * 2);
 
   // Font sizes
-  const titleSize = 28;
-  const chapterTitleSize = 18;
   const bodySize = 11;
   const lineHeight = bodySize * 1.5;
 
@@ -187,35 +191,103 @@ export async function generateTextPdf(bookData: BookData): Promise<Buffer> {
 
   // Create title page
   let page = addPage();
-  let y = pageHeight - 250; // Start lower for title page
 
-  // Draw title centered - wrap if too long
-  const titleText = sanitizedBookData.title.toUpperCase();
-  const titleLines = wrapText(titleText, titleFont, titleSize, contentWidth);
+  // Parse title for main title vs subtitle (split on colon)
+  const fullTitle = sanitizedBookData.title;
+  const colonIndex = fullTitle.indexOf(':');
+  let bookMainTitle: string;
+  let bookSubtitle: string | null = null;
 
-  for (const titleLine of titleLines) {
-    const lineWidth = titleFont.widthOfTextAtSize(titleLine, titleSize);
+  if (colonIndex > 0) {
+    bookMainTitle = fullTitle.substring(0, colonIndex).trim();
+    bookSubtitle = fullTitle.substring(colonIndex + 1).trim();
+  } else {
+    bookMainTitle = fullTitle;
+  }
+
+  // Title page layout - centered vertically
+  const mainTitleSize = 36; // Larger main title
+  const subtitleSize = 18; // Clearly smaller subtitle
+  const authorSize = 16;
+
+  // Calculate total height needed for title block
+  const mainTitleLines = wrapText(bookMainTitle.toUpperCase(), titleFont, mainTitleSize, contentWidth - 40);
+  let titleBlockHeight = mainTitleLines.length * (mainTitleSize * 1.3);
+
+  if (bookSubtitle) {
+    const subtitleLines = wrapText(bookSubtitle, italicFont, subtitleSize, contentWidth - 60);
+    titleBlockHeight += 30; // Gap between title and subtitle
+    titleBlockHeight += subtitleLines.length * (subtitleSize * 1.4);
+  }
+
+  if (sanitizedBookData.authorName && sanitizedBookData.authorName.trim()) {
+    titleBlockHeight += 60; // Gap before author
+    titleBlockHeight += authorSize * 1.3;
+  }
+
+  // Start position - center the title block vertically
+  let y = (pageHeight + titleBlockHeight) / 2;
+
+  // Draw decorative line above title
+  const lineWidth = 150;
+  page.drawLine({
+    start: { x: (pageWidth - lineWidth) / 2, y: y + 40 },
+    end: { x: (pageWidth + lineWidth) / 2, y: y + 40 },
+    thickness: 1.5,
+    color: rgb(0.3, 0.3, 0.3),
+  });
+
+  // Draw main title - large, bold, uppercase
+  for (const titleLine of mainTitleLines) {
+    const textWidth = titleFont.widthOfTextAtSize(titleLine, mainTitleSize);
     page.drawText(titleLine, {
-      x: (pageWidth - lineWidth) / 2,
+      x: (pageWidth - textWidth) / 2,
       y,
-      size: titleSize,
+      size: mainTitleSize,
       font: titleFont,
       color: textColor,
     });
-    y -= titleSize * 1.3; // Line height for title
+    y -= mainTitleSize * 1.3;
   }
+
+  // Draw subtitle if present - smaller, italic, different style
+  if (bookSubtitle) {
+    y -= 20; // Gap between main title and subtitle
+    const subtitleLines = wrapText(bookSubtitle, italicFont, subtitleSize, contentWidth - 60);
+
+    for (const line of subtitleLines) {
+      const textWidth = italicFont.widthOfTextAtSize(line, subtitleSize);
+      page.drawText(line, {
+        x: (pageWidth - textWidth) / 2,
+        y,
+        size: subtitleSize,
+        font: italicFont,
+        color: rgb(0.25, 0.25, 0.25), // Slightly lighter
+      });
+      y -= subtitleSize * 1.4;
+    }
+  }
+
+  // Draw decorative line below title/subtitle
+  y -= 20;
+  page.drawLine({
+    start: { x: (pageWidth - lineWidth) / 2, y },
+    end: { x: (pageWidth + lineWidth) / 2, y },
+    thickness: 1.5,
+    color: rgb(0.3, 0.3, 0.3),
+  });
 
   // Draw author name (only if provided)
   if (sanitizedBookData.authorName && sanitizedBookData.authorName.trim()) {
-    y -= 20; // Space after title
+    y -= 50; // Space after decorative line
     const byLine = `by ${sanitizedBookData.authorName}`;
-    const byLineWidth = italicFont.widthOfTextAtSize(byLine, 14);
+    const byLineWidth = italicFont.widthOfTextAtSize(byLine, authorSize);
     page.drawText(byLine, {
       x: (pageWidth - byLineWidth) / 2,
       y,
-      size: 14,
+      size: authorSize,
       font: italicFont,
-      color: textColor,
+      color: rgb(0.35, 0.35, 0.35),
     });
   }
 
@@ -223,56 +295,85 @@ export async function generateTextPdf(bookData: BookData): Promise<Buffer> {
   for (const chapter of sanitizedBookData.chapters) {
     // Start new page for each chapter
     page = addPage();
-    y = pageHeight - margin - 50;
 
-    // Chapter title - handle subtitles (text after second colon)
+    // Chapter title - handle subtitles (text after colon in title)
     // e.g., "Shadow Cities: Life at Bletchley Park" becomes:
-    //   "Chapter 4: Shadow Cities" (main)
-    //   "Life at Bletchley Park" (subtitle, smaller/italic)
-    const colonIndex = chapter.title.indexOf(':');
-    let mainTitle: string;
-    let subtitle: string | null = null;
+    //   "Chapter 4" (small, centered)
+    //   "Shadow Cities" (large, centered)
+    //   "Life at Bletchley Park" (smaller italic, centered)
+    const chapterColonIndex = chapter.title.indexOf(':');
+    let chapterMainTitle: string;
+    let chapterSubtitle: string | null = null;
 
-    if (colonIndex > 0) {
-      mainTitle = chapter.title.substring(0, colonIndex).trim();
-      subtitle = chapter.title.substring(colonIndex + 1).trim();
+    if (chapterColonIndex > 0) {
+      chapterMainTitle = chapter.title.substring(0, chapterColonIndex).trim();
+      chapterSubtitle = chapter.title.substring(chapterColonIndex + 1).trim();
     } else {
-      mainTitle = chapter.title;
+      chapterMainTitle = chapter.title;
     }
 
-    // Draw main chapter title
-    const chapterMainTitle = `Chapter ${chapter.number}: ${mainTitle}`;
-    const mainTitleLines = wrapText(chapterMainTitle, titleFont, chapterTitleSize, contentWidth);
+    // Chapter page layout - title block starts 1/3 down the page
+    y = pageHeight - 200;
 
-    for (const line of mainTitleLines) {
+    // Draw "Chapter X" - smaller, centered, all caps
+    const chapterNumText = `CHAPTER ${chapter.number}`;
+    const chapterNumSize = 12;
+    const chapterNumWidth = bodyFont.widthOfTextAtSize(chapterNumText, chapterNumSize);
+    page.drawText(chapterNumText, {
+      x: (pageWidth - chapterNumWidth) / 2,
+      y,
+      size: chapterNumSize,
+      font: bodyFont,
+      color: rgb(0.4, 0.4, 0.4), // Gray
+    });
+    y -= 30;
+
+    // Draw decorative line
+    const chapterLineWidth = 60;
+    page.drawLine({
+      start: { x: (pageWidth - chapterLineWidth) / 2, y: y + 5 },
+      end: { x: (pageWidth + chapterLineWidth) / 2, y: y + 5 },
+      thickness: 1,
+      color: rgb(0.5, 0.5, 0.5),
+    });
+    y -= 25;
+
+    // Draw main chapter title - large, bold, centered
+    const chapterTitleFontSize = 24;
+    const chapterTitleLines = wrapText(chapterMainTitle, titleFont, chapterTitleFontSize, contentWidth - 40);
+
+    for (const line of chapterTitleLines) {
+      const textWidth = titleFont.widthOfTextAtSize(line, chapterTitleFontSize);
       page.drawText(line, {
-        x: margin,
+        x: (pageWidth - textWidth) / 2,
         y,
-        size: chapterTitleSize,
+        size: chapterTitleFontSize,
         font: titleFont,
         color: textColor,
       });
-      y -= chapterTitleSize * 1.3;
+      y -= chapterTitleFontSize * 1.4;
     }
 
-    // Draw subtitle if present (smaller, italic)
-    if (subtitle) {
-      const subtitleSize = 14;
-      const subtitleLines = wrapText(subtitle, italicFont, subtitleSize, contentWidth);
+    // Draw subtitle if present (smaller, italic, centered)
+    if (chapterSubtitle) {
+      y -= 8; // Small gap
+      const chapterSubtitleSize = 14;
+      const chapterSubtitleLines = wrapText(chapterSubtitle, italicFont, chapterSubtitleSize, contentWidth - 60);
 
-      for (const line of subtitleLines) {
+      for (const line of chapterSubtitleLines) {
+        const textWidth = italicFont.widthOfTextAtSize(line, chapterSubtitleSize);
         page.drawText(line, {
-          x: margin,
+          x: (pageWidth - textWidth) / 2,
           y,
-          size: subtitleSize,
+          size: chapterSubtitleSize,
           font: italicFont,
-          color: textColor,
+          color: rgb(0.3, 0.3, 0.3),
         });
-        y -= subtitleSize * 1.3;
+        y -= chapterSubtitleSize * 1.4;
       }
     }
 
-    y -= 20; // Space after chapter title
+    y -= 50; // Space after chapter title block before content
 
     // Strip duplicate chapter heading and "The End" from content
     let cleanedContent = stripChapterHeading(chapter.content, chapter.number);
@@ -339,17 +440,100 @@ export async function generateTextPdf(bookData: BookData): Promise<Buffer> {
     });
   }
 
-  // Add final page with "The End" centered
+  // Add final page with "The End" centered with decorative lines
   page = addPage();
+  const endY = pageHeight / 2;
+  const endLineWidth = 80;
+
+  // Decorative line above
+  page.drawLine({
+    start: { x: (pageWidth - endLineWidth) / 2, y: endY + 35 },
+    end: { x: (pageWidth + endLineWidth) / 2, y: endY + 35 },
+    thickness: 1,
+    color: rgb(0.4, 0.4, 0.4),
+  });
+
+  // "The End" text
   const endText = 'The End';
-  const endWidth = italicFont.widthOfTextAtSize(endText, 24);
+  const endWidth = italicFont.widthOfTextAtSize(endText, 28);
   page.drawText(endText, {
     x: (pageWidth - endWidth) / 2,
-    y: pageHeight / 2,
-    size: 24,
+    y: endY,
+    size: 28,
     font: italicFont,
-    color: textColor,
+    color: rgb(0.2, 0.2, 0.2),
   });
+
+  // Decorative line below
+  page.drawLine({
+    start: { x: (pageWidth - endLineWidth) / 2, y: endY - 25 },
+    end: { x: (pageWidth + endLineWidth) / 2, y: endY - 25 },
+    thickness: 1,
+    color: rgb(0.4, 0.4, 0.4),
+  });
+
+  // Add back cover page if enabled and available
+  if (sanitizedBookData.metadata?.includeBackCoverInPdf && sanitizedBookData.metadata?.backCoverCopy) {
+    page = addPage();
+
+    // Back cover layout
+    const backCoverY = pageHeight - margin - 80;
+    let backY = backCoverY;
+
+    // "About This Book" header
+    const aboutHeader = 'About This Book';
+    const aboutHeaderSize = 18;
+    const aboutHeaderWidth = titleFont.widthOfTextAtSize(aboutHeader, aboutHeaderSize);
+    page.drawText(aboutHeader, {
+      x: (pageWidth - aboutHeaderWidth) / 2,
+      y: backY,
+      size: aboutHeaderSize,
+      font: titleFont,
+      color: textColor,
+    });
+    backY -= 30;
+
+    // Decorative line under header
+    const backLineWidth = 60;
+    page.drawLine({
+      start: { x: (pageWidth - backLineWidth) / 2, y: backY + 5 },
+      end: { x: (pageWidth + backLineWidth) / 2, y: backY + 5 },
+      thickness: 1,
+      color: rgb(0.5, 0.5, 0.5),
+    });
+    backY -= 35;
+
+    // Back cover copy text
+    const backCoverText = sanitizedBookData.metadata.backCoverCopy;
+    const backCoverSize = 11;
+    const backCoverLineHeight = backCoverSize * 1.6;
+
+    // Split into paragraphs
+    const backParagraphs = backCoverText.split(/\n\n+|\n/).filter((p: string) => p.trim());
+
+    for (const paragraph of backParagraphs) {
+      const wrappedLines = wrapText(paragraph.trim(), italicFont, backCoverSize, contentWidth - 40);
+
+      for (const line of wrappedLines) {
+        if (backY < margin + 80) {
+          // Would overflow, stop here
+          break;
+        }
+        // Center the text for a more elegant back cover look
+        const lineWidth = italicFont.widthOfTextAtSize(line, backCoverSize);
+        page.drawText(line, {
+          x: (pageWidth - lineWidth) / 2,
+          y: backY,
+          size: backCoverSize,
+          font: italicFont,
+          color: rgb(0.25, 0.25, 0.25),
+        });
+        backY -= backCoverLineHeight;
+      }
+
+      backY -= 8; // Paragraph spacing
+    }
+  }
 
   // Generate PDF bytes
   const pdfBytes = await pdfDoc.save();

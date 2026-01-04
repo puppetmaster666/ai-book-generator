@@ -124,6 +124,9 @@ model Book {
   // Screenplay-specific context (for movie scripts)
   screenplayContext    Json?  // Running context for screenplay continuity (character states, setups, payoffs)
 
+  // Marketing metadata (generated after book completes)
+  metadata             Json?  // { logline, backCoverCopy, amazonKeywords[], includeBackCoverInPdf }
+
   // Protagonist image (for illustrated books - user uploads their photo)
   protagonistPhoto     String?   @db.Text  // Original uploaded photo (base64)
   protagonistStyled    String?   @db.Text  // Stylized version in book's art style (base64)

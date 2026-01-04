@@ -41,6 +41,7 @@ yarn-error.log*
 
 # personal/test files
 public/PM/
+public/sample books/
 
 # typescript
 *.tsbuildinfo
