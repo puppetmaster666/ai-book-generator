@@ -7,7 +7,7 @@ export async function POST(request: NextRequest) {
     let category: IdeaCategory = 'random';
     try {
       const body = await request.json();
-      if (body.category && ['novel', 'childrens', 'comic', 'nonfiction', 'adult_comic', 'random'].includes(body.category)) {
+      if (body.category && ['novel', 'childrens', 'comic', 'nonfiction', 'screenplay', 'adult_comic', 'random'].includes(body.category)) {
         category = body.category;
       }
     } catch {

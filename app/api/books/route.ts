@@ -174,8 +174,10 @@ export async function POST(request: NextRequest) {
         writingStyle: writingStyle || 'literary',
         chapterFormat: chapterFormat || 'both',
         fontStyle: fontStyle || 'classic',
-        targetWords: targetWords || genreConfig?.targetWords || 60000,
-        targetChapters: targetChapters || genreConfig?.chapters || 20,
+        targetWords: targetWords || (genreConfig && 'targetWords' in genreConfig ? genreConfig.targetWords :
+                     genreConfig && 'targetPages' in genreConfig ? genreConfig.targetPages * 250 : 60000),
+        targetChapters: targetChapters || (genreConfig && 'chapters' in genreConfig ? genreConfig.chapters :
+                        genreConfig && 'sequences' in genreConfig ? genreConfig.sequences : 20),
         email: email || null,
         userId: userId || null,
         ipAddress, // Track IP for rate limiting

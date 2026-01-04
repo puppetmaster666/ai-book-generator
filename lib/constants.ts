@@ -21,6 +21,13 @@ export const PRICING = {
   },
 } as const;
 
+// Free tier limits - hard stop at these limits for unpaid users
+export const FREE_TIER_LIMITS = {
+  text_only: { chapters: 1, description: '1 chapter preview' },
+  picture_book: { panels: 5, description: '5 panels preview' },
+  screenplay: { pages: 5, description: '5 pages preview' },
+} as const;
+
 // Book Formats (illustration level)
 export const BOOK_FORMATS = {
   text_only: {
@@ -34,6 +41,12 @@ export const BOOK_FORMATS = {
     description: 'Full-page illustrations throughout',
     illustrationsPerChapter: 1,
     priceKey: 'VISUAL',
+  },
+  screenplay: {
+    label: 'Screenplay',
+    description: 'Industry-standard movie script format',
+    illustrationsPerChapter: 0,
+    priceKey: 'ONE_TIME',
   },
 } as const;
 
@@ -189,6 +202,20 @@ export const BOOK_PRESETS = {
     downloadFormat: 'epub',
     contentRating: 'general',
   },
+  screenplay: {
+    label: 'Movie Script',
+    description: 'Feature film screenplay (90-120 pages), PDF download',
+    icon: 'Film',
+    format: 'screenplay',
+    artStyle: null,
+    dialogueStyle: null,
+    defaultGenre: 'thriller_film',
+    targetPages: 100, // Screenplays use pages, not words (1 page ≈ 1 minute)
+    sequences: 8, // 8 sequences across 3 acts (Save the Cat structure)
+    priceDisplay: '$9.99',
+    downloadFormat: 'pdf',
+    contentRating: 'mature',
+  },
 } as const;
 
 export type BookPresetKey = keyof typeof BOOK_PRESETS;
@@ -246,6 +273,15 @@ export const GENRES = {
   biography: { label: 'Biography', type: 'non-fiction', targetWords: 70000, chapters: 20 },
   educational: { label: 'Educational', type: 'non-fiction', targetWords: 45000, chapters: 14 },
   documentary: { label: 'Documentary', type: 'non-fiction', targetWords: 55000, chapters: 16 },
+  // Screenplay/Film genres (pages not words, sequences not chapters)
+  action_film: { label: 'Action', type: 'screenplay', targetPages: 110, sequences: 8 },
+  thriller_film: { label: 'Thriller', type: 'screenplay', targetPages: 100, sequences: 8 },
+  drama_film: { label: 'Drama', type: 'screenplay', targetPages: 120, sequences: 8 },
+  comedy_film: { label: 'Comedy', type: 'screenplay', targetPages: 95, sequences: 8 },
+  scifi_film: { label: 'Sci-Fi', type: 'screenplay', targetPages: 115, sequences: 8 },
+  horror_film: { label: 'Horror', type: 'screenplay', targetPages: 90, sequences: 8 },
+  romcom_film: { label: 'Romantic Comedy', type: 'screenplay', targetPages: 100, sequences: 8 },
+  crime_film: { label: 'Crime/Heist', type: 'screenplay', targetPages: 105, sequences: 8 },
 } as const;
 
 export type GenreKey = keyof typeof GENRES;

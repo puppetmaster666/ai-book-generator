@@ -2,10 +2,11 @@
 
 import { useState, useEffect, useCallback, Suspense, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import Link from 'next/link';
 import Image from 'next/image';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
-import { Loader2, Check, X, Download, AlertCircle, RefreshCw, StopCircle, Clock, ShieldAlert } from 'lucide-react';
+import { Loader2, Check, X, Download, AlertCircle, RefreshCw, StopCircle, Clock, ShieldAlert, Zap, BookOpen } from 'lucide-react';
 
 // Format elapsed time as MM:SS
 function formatTime(seconds: number): string {
@@ -278,8 +279,16 @@ function GenerateComicContent() {
         method: 'POST',
       });
 
+      const data = await res.json();
+
       if (!res.ok) {
-        throw new Error('Failed to start generation');
+        // Handle preview limit reached
+        if (data.error === 'preview_limit') {
+          setError(`preview_limit:${data.panelsGenerated}:${data.limit}`);
+          setIsGenerating(false);
+          return;
+        }
+        throw new Error(data.error || 'Failed to start generation');
       }
 
       // We don't await the whole process, just the kickoff.
@@ -452,6 +461,54 @@ function GenerateComicContent() {
             <p className="text-sm text-neutral-500">
               This usually takes 15-30 seconds. Please don&apos;t close this page.
             </p>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  // Check for preview_limit error
+  const isPreviewLimit = error.startsWith('preview_limit:');
+  const previewLimitParts = isPreviewLimit ? error.split(':') : [];
+  const panelsGenerated = isPreviewLimit ? parseInt(previewLimitParts[1]) : 0;
+  const panelLimit = isPreviewLimit ? parseInt(previewLimitParts[2]) : 5;
+
+  if (isPreviewLimit && bookId) {
+    return (
+      <div className="min-h-screen bg-white">
+        <Header />
+        <main className="py-20 px-6">
+          <div className="max-w-lg mx-auto">
+            <div className="bg-gradient-to-br from-neutral-900 to-neutral-800 rounded-2xl p-8 text-white text-center">
+              <div className="w-16 h-16 mx-auto mb-4 bg-white/10 rounded-full flex items-center justify-center">
+                <BookOpen className="h-8 w-8" />
+              </div>
+              <h1 className="text-2xl font-bold mb-2">Your Preview is Ready!</h1>
+              <p className="text-neutral-300 mb-2">
+                You've generated {panelsGenerated} panel{panelsGenerated > 1 ? 's' : ''}
+              </p>
+              <p className="text-neutral-400 text-sm mb-6">
+                Unlock the full illustrated book for just $9.99
+              </p>
+              <Link
+                href={`/review?bookId=${bookId}`}
+                className="inline-flex items-center gap-2 px-8 py-4 bg-white text-neutral-900 rounded-full hover:bg-neutral-100 font-medium transition-colors text-lg"
+              >
+                <Zap className="h-5 w-5" />
+                Unlock Full Book - $9.99
+              </Link>
+              <p className="text-xs text-neutral-500 mt-4">
+                30-day money-back guarantee
+              </p>
+            </div>
+            <div className="mt-6 text-center">
+              <Link
+                href={`/book/${bookId}`}
+                className="text-neutral-600 hover:text-neutral-900 underline text-sm"
+              >
+                View your preview panels
+              </Link>
+            </div>
           </div>
         </main>
       </div>

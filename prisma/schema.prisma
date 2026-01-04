@@ -121,6 +121,9 @@ model Book {
   visualStyleGuide     Json?  // Style guide for maintaining illustration consistency
   characterPortraits   Json?  // Array of {characterName, facePortrait, fullBodyPortrait} - canonical reference images
 
+  // Screenplay-specific context (for movie scripts)
+  screenplayContext    Json?  // Running context for screenplay continuity (character states, setups, payoffs)
+
   // Protagonist image (for illustrated books - user uploads their photo)
   protagonistPhoto     String?   @db.Text  // Original uploaded photo (base64)
   protagonistStyled    String?   @db.Text  // Stylized version in book's art style (base64)

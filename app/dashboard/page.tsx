@@ -131,7 +131,7 @@ export default function Dashboard() {
                   href="/create"
                   className="px-3 py-1.5 bg-lime-100 border border-lime-200 rounded-lg hover:bg-lime-200 transition-colors font-medium text-lime-800"
                 >
-                  First book free
+                  Free sample
                 </Link>
               )}
               {userInfo.totalCredits > 0 && (

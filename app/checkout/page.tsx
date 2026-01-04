@@ -396,17 +396,17 @@ function CheckoutContent() {
                     </div>
                     <div className="flex-1">
                       <h3 className="font-bold text-lg text-neutral-900 mb-1" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>
-                        First Book FREE!
+                        Try Free Sample!
                       </h3>
                       <p className="text-sm text-neutral-600 mb-4">
-                        Sign up now and get this book completely free. No credit card required.
+                        Sign up now to preview your book. No credit card required.
                       </p>
                       <Link
                         href={`/signup?bookId=${bookId}&free=true`}
                         className="inline-flex items-center gap-2 px-5 py-3 bg-neutral-900 text-white rounded-full font-medium hover:bg-neutral-800 transition-colors"
                       >
                         <User className="h-4 w-4" />
-                        Sign Up & Get Free Book
+                        Sign Up & Try Sample
                         <ArrowRight className="h-4 w-4" />
                       </Link>
                     </div>

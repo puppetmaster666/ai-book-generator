@@ -13,7 +13,7 @@ import {
     type ContentRating,
 } from '@/lib/gemini';
 import { getBookReadyEmail, sendEmail } from '@/lib/email';
-import { BOOK_PRESETS, type BookPresetKey } from '@/lib/constants';
+import { BOOK_PRESETS, FREE_TIER_LIMITS, type BookPresetKey } from '@/lib/constants';
 import { generateIllustrationWithRetry } from '@/lib/illustration-utils';
 
 // Set max duration for this background task (5 minutes is Vercel Pro limit)
@@ -42,7 +42,11 @@ export async function POST(
         // 1. Verify book and status
         const book = await prisma.book.findUnique({
             where: { id },
-            include: { chapters: true, illustrations: true },
+            include: {
+                chapters: true,
+                illustrations: true,
+                user: { select: { plan: true } },
+            },
         });
 
         if (!book) {
@@ -59,6 +63,27 @@ export async function POST(
 
         if (book.status === 'completed') {
             return NextResponse.json({ message: 'Book already completed' });
+        }
+
+        // Check payment status and free tier limits
+        const isPaid = book.paymentStatus === 'completed';
+        const hasSubscription = book.user?.plan === 'monthly';
+        const canGenerate = isPaid || hasSubscription;
+
+        if (!canGenerate) {
+            // Check free tier limits for unpaid users
+            const panelsGenerated = book.illustrations.length;
+            const limit = FREE_TIER_LIMITS.picture_book.panels;
+
+            if (panelsGenerated >= limit) {
+                return NextResponse.json({
+                    error: 'preview_limit',
+                    message: `Preview limit reached. You've generated ${panelsGenerated} panels. Upgrade to unlock the full book!`,
+                    panelsGenerated,
+                    limit,
+                    upgradeUrl: `/book/${id}?upgrade=true`,
+                }, { status: 402 });
+            }
         }
 
         // 2. Get the outline which contains the scenes
@@ -80,7 +105,12 @@ export async function POST(
         // We will start the generation loop here.
         // Note: This endpoint should be called *once* after outline is ready.
 
-        const maxIllustrations = (bookFormat === 'comic_book' || bookFormat === 'comic' || book.dialogueStyle === 'bubbles' || book.bookPreset === 'comic_story') ? 24 : 20;
+        let maxIllustrations = (bookFormat === 'comic_book' || bookFormat === 'comic' || book.dialogueStyle === 'bubbles' || book.bookPreset === 'comic_story') ? 24 : 20;
+
+        // For free tier users, limit to 5 panels
+        if (!canGenerate) {
+            maxIllustrations = FREE_TIER_LIMITS.picture_book.panels;
+        }
 
         // Filter chapters to target constraint
         const targetChapters = outline.chapters.slice(0, maxIllustrations);

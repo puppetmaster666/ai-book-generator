@@ -22,7 +22,7 @@ export const metadata: Metadata = {
       { url: '/images/favicon.png', sizes: '180x180', type: 'image/png' },
     ],
   },
-  description: "Free AI book generator that creates complete novels, children's books, comics, and picture books in minutes. Type one idea, get a full illustrated book with AI-generated cover. Download EPUB ready for Amazon KDP publishing. First book free!",
+  description: "AI book generator that creates complete novels, children's books, comics, and picture books in minutes. Type one idea, get a full illustrated book with AI-generated cover. Download EPUB ready for Amazon KDP publishing. Try a free sample!",
   keywords: [
     // Primary keywords
     "AI book generator",
@@ -76,7 +76,7 @@ export const metadata: Metadata = {
     url: "https://draftmybook.com",
     siteName: "DraftMyBook",
     title: "AI Book Generator - Create Complete Books in Minutes | DraftMyBook",
-    description: "Turn any idea into a professionally written book with AI. Create novels, children's books, comics with illustrations and covers. First book free. Ready for Amazon KDP.",
+    description: "Turn any idea into a professionally written book with AI. Create novels, children's books, comics with illustrations and covers. Try a free sample. Ready for Amazon KDP.",
     images: [
       {
         url: "/images/og-image.png",
@@ -89,7 +89,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "AI Book Generator - Create Books in Minutes | DraftMyBook",
-    description: "Turn any idea into a complete book with AI. Novels, comics, picture books with illustrations. First book free!",
+    description: "Turn any idea into a complete book with AI. Novels, comics, picture books with illustrations. Try a free sample!",
     images: ["/images/og-image.png"],
     creator: "@draftmybook",
   },
@@ -198,10 +198,10 @@ const jsonLdFAQ = {
     },
     {
       '@type': 'Question',
-      name: 'Is the first book really free?',
+      name: 'Can I try it for free?',
       acceptedAnswer: {
         '@type': 'Answer',
-        text: 'Yes, your first complete book is 100% free with no credit card required. This includes the full book, cover art, and illustrations.',
+        text: 'Yes! You can try a free sample with no credit card required. This includes 1 chapter for text books or 5 panels for visual books, so you can experience the quality before upgrading.',
       },
     },
     {

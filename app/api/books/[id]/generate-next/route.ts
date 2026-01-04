@@ -6,10 +6,21 @@ import {
   updateCharacterStates,
   generateCoverPrompt,
   generateCoverImage,
+  generateScreenplaySequence,
+  summarizeScreenplaySequence,
+  reviewScreenplaySequence,
   type ContentRating,
 } from '@/lib/gemini';
 import { countWords } from '@/lib/epub';
 import { sendEmail, getBookReadyEmail } from '@/lib/email';
+import { FREE_TIER_LIMITS } from '@/lib/constants';
+import {
+  type BeatSheet,
+  type CharacterProfile,
+  type ScreenplayContext,
+  estimatePageCount,
+  createInitialContext,
+} from '@/lib/screenplay';
 
 // Allow up to 5 minutes for chapter generation (Vercel Pro plan max: 300s)
 export const maxDuration = 300;
@@ -33,13 +44,16 @@ export async function POST(
 
   try {
 
-    // Fetch book with current state
+    // Fetch book with current state and user info
     const book = await prisma.book.findUnique({
       where: { id },
       include: {
         chapters: {
           orderBy: { number: 'asc' },
           select: { number: true },
+        },
+        user: {
+          select: { plan: true },
         },
       },
     });
@@ -58,9 +72,31 @@ export async function POST(
       });
     }
 
-    // Check if payment is complete
-    if (book.paymentStatus !== 'completed') {
-      return NextResponse.json({ error: 'Payment not completed' }, { status: 402 });
+    // Check payment status and free tier limits
+    const isPaid = book.paymentStatus === 'completed';
+    const hasSubscription = book.user?.plan === 'monthly';
+    const canGenerate = isPaid || hasSubscription;
+
+    if (!canGenerate) {
+      // Check free tier limits for unpaid users
+      const bookFormat = book.bookFormat || 'text_only';
+      const formatKey = bookFormat as keyof typeof FREE_TIER_LIMITS;
+      const limit = FREE_TIER_LIMITS[formatKey] || FREE_TIER_LIMITS.text_only;
+
+      // For text books, limit is number of chapters
+      if ('chapters' in limit) {
+        const chaptersGenerated = book.chapters.length;
+        if (chaptersGenerated >= limit.chapters) {
+          return NextResponse.json({
+            error: 'preview_limit',
+            message: `Preview limit reached. You've generated ${chaptersGenerated} chapter(s). Upgrade to unlock the full book!`,
+            chaptersGenerated,
+            limit: limit.chapters,
+            upgradeUrl: `/book/${id}?upgrade=true`,
+          }, { status: 402 });
+        }
+      }
+      // For screenplays, limit is number of pages (handled separately)
     }
 
     const outline = book.outline as {
@@ -158,6 +194,179 @@ export async function POST(
 
     console.log(`Generating chapter ${nextChapterNum}/${totalChapters} for book ${id}`);
 
+    // SCREENPLAY GENERATION FLOW
+    if (book.bookFormat === 'screenplay') {
+      console.log(`Generating screenplay sequence ${nextChapterNum}/8 for book ${id}`);
+
+      // Get outline with beat sheet and characters
+      const screenplayOutline = outline as {
+        chapters: Array<{ number: number; title: string; summary: string; targetWords: number }>;
+        beatSheet?: BeatSheet;
+        characters?: CharacterProfile[];
+      };
+
+      if (!screenplayOutline.beatSheet || !screenplayOutline.characters) {
+        return NextResponse.json({
+          error: 'Screenplay missing beat sheet or characters. Regenerate the outline.',
+          needsOutline: true,
+        }, { status: 400 });
+      }
+
+      // Get or initialize screenplay context
+      let screenplayContext = (book.screenplayContext as unknown as ScreenplayContext) || createInitialContext(100);
+
+      // Check free tier limit for screenplays (5 pages)
+      if (!canGenerate) {
+        const limit = FREE_TIER_LIMITS.screenplay.pages;
+        if (screenplayContext.totalPagesGenerated >= limit) {
+          return NextResponse.json({
+            error: 'preview_limit',
+            message: `Preview limit reached. You've generated ${screenplayContext.totalPagesGenerated} pages. Upgrade to unlock the full screenplay!`,
+            pagesGenerated: screenplayContext.totalPagesGenerated,
+            limit,
+            upgradeUrl: `/book/${id}?upgrade=true`,
+          }, { status: 402 });
+        }
+      }
+
+      // Generate the next sequence
+      const sequenceResult = await generateScreenplaySequence({
+        beatSheet: screenplayOutline.beatSheet,
+        characters: screenplayOutline.characters,
+        sequenceNumber: nextChapterNum,
+        context: screenplayContext,
+        genre: book.genre,
+        title: book.title,
+      });
+
+      let sequenceContent = sequenceResult.content;
+      const pageCount = sequenceResult.pageCount;
+
+      // Review and polish for AI patterns
+      try {
+        sequenceContent = await reviewScreenplaySequence(
+          sequenceContent,
+          screenplayOutline.characters
+        );
+        console.log(`Sequence ${nextChapterNum} reviewed for AI patterns`);
+      } catch (reviewError) {
+        console.error(`Failed to review sequence ${nextChapterNum}:`, reviewError);
+        // Continue with unreviewed content
+      }
+
+      // Summarize the sequence for context continuity
+      let sequenceSummary;
+      try {
+        sequenceSummary = await summarizeScreenplaySequence({
+          sequenceContent,
+          sequenceNumber: nextChapterNum,
+          characters: screenplayOutline.characters,
+        });
+
+        // Update context
+        screenplayContext.currentSequence = nextChapterNum + 1;
+        screenplayContext.totalPagesGenerated += pageCount;
+        screenplayContext.lastSequenceSummary = sequenceSummary.summary;
+        screenplayContext.characterStates = {
+          ...screenplayContext.characterStates,
+          ...sequenceSummary.characterStates,
+        };
+        screenplayContext.plantedSetups = [
+          ...screenplayContext.plantedSetups,
+          ...sequenceSummary.plantedSetups,
+        ];
+        screenplayContext.resolvedPayoffs = [
+          ...screenplayContext.resolvedPayoffs,
+          ...sequenceSummary.resolvedPayoffs,
+        ];
+        screenplayContext.sequenceSummaries.push(sequenceSummary);
+      } catch (summaryError) {
+        console.error(`Failed to summarize sequence ${nextChapterNum}:`, summaryError);
+        // Use simple fallback
+        screenplayContext.currentSequence = nextChapterNum + 1;
+        screenplayContext.totalPagesGenerated += pageCount;
+        screenplayContext.lastSequenceSummary = `Sequence ${nextChapterNum} completed.`;
+      }
+
+      // Verify book still exists
+      const bookStillExists = await prisma.book.findUnique({
+        where: { id },
+        select: { id: true },
+      });
+
+      if (!bookStillExists) {
+        console.log(`Book ${id} was deleted during generation, aborting`);
+        return NextResponse.json({
+          error: 'Book was deleted during generation',
+          aborted: true,
+        }, { status: 404 });
+      }
+
+      // Save sequence as a chapter
+      const wordCount = countWords(sequenceContent);
+      totalWords += wordCount;
+
+      let savedChapter;
+      try {
+        savedChapter = await prisma.chapter.create({
+          data: {
+            bookId: id,
+            number: nextChapterNum,
+            title: chapterPlan.title,
+            content: sequenceContent,
+            summary: screenplayContext.lastSequenceSummary,
+            wordCount,
+          },
+        });
+        console.log(`Sequence ${nextChapterNum} saved. Page count: ~${pageCount}`);
+      } catch (createError: unknown) {
+        if (createError && typeof createError === 'object' && 'code' in createError && createError.code === 'P2002') {
+          console.log(`Sequence ${nextChapterNum} already exists (race condition), skipping save`);
+          await prisma.book.update({
+            where: { id },
+            data: { currentChapter: nextChapterNum },
+          });
+          return NextResponse.json({
+            done: false,
+            currentChapter: nextChapterNum,
+            totalChapters,
+            totalWords: book.totalWords,
+            message: `Sequence ${nextChapterNum} already exists. Continuing...`,
+            skipped: true,
+          });
+        }
+        throw createError;
+      }
+
+      // Update book progress with screenplay context
+      await prisma.book.update({
+        where: { id },
+        data: {
+          currentChapter: nextChapterNum,
+          totalChapters,
+          totalWords,
+          screenplayContext: screenplayContext as object,
+          errorMessage: null,
+        },
+      });
+
+      // Check if this was the last sequence
+      if (nextChapterNum >= totalChapters) {
+        return await finalizeBook(id, book);
+      }
+
+      // More sequences to generate
+      return NextResponse.json({
+        done: false,
+        currentChapter: nextChapterNum,
+        totalChapters,
+        totalWords,
+        pagesGenerated: screenplayContext.totalPagesGenerated,
+        message: `Sequence ${nextChapterNum} complete (~${pageCount} pages). ${totalChapters - nextChapterNum} remaining.`,
+      });
+    }
+
+    // STANDARD CHAPTER GENERATION FLOW
     // Generate chapter content
     const chapterContent = await generateChapter({
       title: book.title,

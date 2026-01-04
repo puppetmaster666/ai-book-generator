@@ -13,7 +13,7 @@ import Testimonials from '@/components/Testimonials';
 import FAQ from '@/components/FAQ';
 
 // Idea categories for the Surprise Me feature
-type IdeaCategory = 'random' | 'novel' | 'childrens' | 'comic' | 'nonfiction' | 'adult_comic';
+type IdeaCategory = 'random' | 'novel' | 'childrens' | 'comic' | 'nonfiction' | 'screenplay' | 'adult_comic';
 
 const IDEA_CATEGORIES: { value: IdeaCategory; label: string; emoji: string }[] = [
   { value: 'random', label: 'Any Type', emoji: '🎲' },
@@ -21,6 +21,7 @@ const IDEA_CATEGORIES: { value: IdeaCategory; label: string; emoji: string }[] =
   { value: 'childrens', label: "Children's", emoji: '🧸' },
   { value: 'comic', label: 'Comic', emoji: '💥' },
   { value: 'nonfiction', label: 'Non-Fiction', emoji: '📖' },
+  { value: 'screenplay', label: 'Movie Script', emoji: '🎬' },
   { value: 'adult_comic', label: 'Adult Comic (18+)', emoji: '🔥' },
 ];
 
@@ -103,23 +104,23 @@ export default function Home() {
     <div className="min-h-screen bg-white">
       <Header variant="transparent" />
 
-      {/* Sticky CTA Banner - appears after scrolling */}
+      {/* Sticky CTA Banner - appears after scrolling, positioned below header on mobile */}
       {showStickyBanner && !stickyBannerDismissed && (
-        <div className="fixed top-0 left-0 right-0 z-50 bg-neutral-900/95 backdrop-blur-sm border-b border-neutral-800 animate-in slide-in-from-top duration-300">
-          <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
+        <div className="fixed top-14 sm:top-0 left-0 right-0 z-40 bg-neutral-900/95 backdrop-blur-sm border-b border-neutral-800 animate-in slide-in-from-top duration-300">
+          <div className="max-w-6xl mx-auto px-4 py-2.5 flex items-center justify-between gap-4">
             <p className="text-white text-sm hidden sm:block">
               <span className="font-medium">Ready to create your book?</span>
-              <span className="text-neutral-400 ml-2">First book free, no credit card required</span>
+              <span className="text-neutral-400 ml-2">Try a free sample, no credit card needed</span>
             </p>
             <p className="text-white text-sm sm:hidden">
-              First book free!
+              Free sample!
             </p>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3">
               <button
                 onClick={() => document.getElementById('hero-form')?.scrollIntoView({ behavior: 'smooth' })}
-                className="bg-lime-400 text-neutral-900 px-4 py-2 rounded-lg text-sm font-medium hover:bg-lime-300 transition-colors flex items-center gap-2"
+                className="bg-lime-400 text-neutral-900 px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg text-sm font-medium hover:bg-lime-300 transition-colors flex items-center gap-2 whitespace-nowrap"
               >
-                Create Your Free Book
+                Try Free Sample
                 <ArrowRight className="h-4 w-4" />
               </button>
               <button
@@ -155,7 +156,7 @@ export default function Home() {
             {/* Badge */}
             <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-md px-5 py-2.5 rounded-full text-sm text-white mb-8 border border-white/20 shadow-lg">
               <Zap className={`h-4 w-4 ${ACCENT.text} animate-pulse`} />
-              <span className="font-medium">First book free - 50,000+ words in under an hour</span>
+              <span className="font-medium">Try free sample - 50,000+ word books in under an hour</span>
             </div>
 
             {/* Headline */}
@@ -168,12 +169,14 @@ export default function Home() {
                 {/* Colored rectangle */}
                 <span className={`absolute -inset-x-1 -inset-y-1 ${ACCENT.bg} -skew-y-2`} aria-hidden="true" />
                 {/* Text */}
-                <span className="relative text-neutral-900 px-2">a complete book</span>
+                <span className="relative text-neutral-900 px-2">
+                  a book, comic, or screenplay
+                </span>
               </span>
             </h1>
 
             <p className="text-xl text-white/80 max-w-2xl mx-auto mb-12">
-              Create novels, comics, or picture books from a simple description. Professionally formatted and ready to publish.
+              Create novels, comics, picture books, or movie scripts from a simple description. Professionally formatted and ready to publish.
             </p>
 
             {/* Form */}
@@ -250,7 +253,7 @@ export default function Home() {
                       </>
                     ) : (
                       <>
-                        Create Your Free Book
+                        Try Free Sample
                         <ArrowRight className="h-4 w-4" />
                       </>
                     )}
@@ -733,13 +736,13 @@ export default function Home() {
             <span className="text-white">?</span>
           </h2>
           <p className="text-lg text-neutral-400 mb-10">
-            {session ? 'Your next masterpiece is just a few clicks away.' : 'Start with a free book. No credit card required.'}
+            {session ? 'Your next masterpiece is just a few clicks away.' : 'Try a free sample. No credit card required.'}
           </p>
           <button
             onClick={() => router.push(session ? '/create' : '/signup')}
             className="bg-lime-400 text-neutral-900 px-8 py-4 rounded-full text-base font-medium hover:bg-lime-300 transition-all hover:scale-105 inline-flex items-center gap-2"
           >
-            {session ? 'Create a book' : 'Get your free book'}
+            {session ? 'Create a book' : 'Try free sample'}
             <ArrowRight className="h-5 w-5" />
           </button>
         </div>

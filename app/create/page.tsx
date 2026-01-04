@@ -6,17 +6,18 @@ import { useSession } from 'next-auth/react';
 import Image from 'next/image';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
-import { ArrowLeft, ArrowRight, Sparkles, Loader2, BookOpen, Palette, Layers, ChevronDown, GraduationCap } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Sparkles, Loader2, BookOpen, Palette, Layers, ChevronDown, GraduationCap, Film } from 'lucide-react';
 import { BOOK_PRESETS, ART_STYLES, GENRES, type BookPresetKey, type ArtStyleKey } from '@/lib/constants';
 
 // Idea categories for the Surprise Me feature
-type IdeaCategory = 'random' | 'novel' | 'childrens' | 'comic' | 'nonfiction' | 'adult_comic';
+type IdeaCategory = 'random' | 'novel' | 'childrens' | 'comic' | 'nonfiction' | 'adult_comic' | 'screenplay';
 
 const IDEA_CATEGORIES: { value: IdeaCategory; label: string; emoji: string }[] = [
   { value: 'random', label: 'Surprise Me', emoji: '🎲' },
   { value: 'novel', label: 'Novel', emoji: '📖' },
   { value: 'childrens', label: "Children's", emoji: '🧒' },
   { value: 'comic', label: 'Comic', emoji: '💥' },
+  { value: 'screenplay', label: 'Movie Script', emoji: '🎬' },
   { value: 'nonfiction', label: 'Non-Fiction', emoji: '📚' },
   { value: 'adult_comic', label: 'Adult Comic (18+)', emoji: '🔥' },
 ];
@@ -27,6 +28,7 @@ const PRESET_ICONS = {
   childrens_picture: Palette,
   comic_story: Layers,
   nonfiction: GraduationCap,
+  screenplay: Film,
 };
 
 // Art style images
@@ -143,7 +145,9 @@ export default function CreateBook() {
 
     // If idea already exists from homepage, skip the idea step
     if (hasIdeaFromHomepage && idea.trim().length >= 20) {
-      if (preset.format !== 'text_only') {
+      // Text-only books and screenplays skip the style step
+      const needsStyleStep = preset.format !== 'text_only' && preset.format !== 'screenplay';
+      if (needsStyleStep) {
         setStep('style');
       } else {
         setTimeout(() => handleSubmitWithPreset(key), 0);
@@ -164,11 +168,15 @@ export default function CreateBook() {
       const genre = GENRES[preset.defaultGenre as keyof typeof GENRES];
 
       // Determine book type based on preset
-      // Children's picture books are still fiction type
       let bookType = genre?.type || 'fiction';
       if (presetKey === 'nonfiction') {
         bookType = 'non-fiction';
+      } else if (presetKey === 'screenplay') {
+        bookType = 'fiction';
       }
+
+      // Check if this is an illustrated book (screenplays are not illustrated)
+      const isIllustrated = preset.format !== 'text_only' && preset.format !== 'screenplay';
 
       const expandResponse = await fetch('/api/expand-idea', {
         method: 'POST',
@@ -176,12 +184,23 @@ export default function CreateBook() {
         body: JSON.stringify({
           idea,
           bookType,
-          isIllustrated: preset.format !== 'text_only',
+          isIllustrated,
+          isScreenplay: preset.format === 'screenplay',
         }),
       });
 
       if (!expandResponse.ok) throw new Error('Failed to expand idea');
       const bookPlan = await expandResponse.json();
+
+      // For screenplays, use targetPages converted to equivalent words (250 words/page)
+      // and sequences instead of chapters
+      const isScreenplay = preset.format === 'screenplay';
+      const targetWords = isScreenplay
+        ? ('targetPages' in preset ? (preset.targetPages as number) * 250 : 25000)
+        : ('targetWords' in preset ? preset.targetWords : 50000);
+      const targetChapters = isScreenplay
+        ? ('sequences' in preset ? preset.sequences as number : 8)
+        : ('chapters' in preset ? preset.chapters : 20);
 
       const response = await fetch('/api/books', {
         method: 'POST',
@@ -192,8 +211,8 @@ export default function CreateBook() {
           bookFormat: preset.format,
           artStyle: preset.artStyle,
           dialogueStyle: preset.dialogueStyle || null,
-          targetWords: preset.targetWords,
-          targetChapters: preset.chapters,
+          targetWords,
+          targetChapters,
           userId,
         }),
       });
@@ -216,7 +235,9 @@ export default function CreateBook() {
     if (!selectedPreset) return;
     const preset = BOOK_PRESETS[selectedPreset];
 
-    if (preset.format !== 'text_only' && step === 'idea') {
+    // Text-only books and screenplays skip the style step
+    const needsStyleStep = preset.format !== 'text_only' && preset.format !== 'screenplay';
+    if (needsStyleStep && step === 'idea') {
       setStep('style');
     } else {
       handleSubmit();
@@ -237,7 +258,13 @@ export default function CreateBook() {
       let bookType = genre?.type || 'fiction';
       if (selectedPreset === 'nonfiction') {
         bookType = 'non-fiction';
+      } else if (selectedPreset === 'screenplay') {
+        // Screenplays are fiction for categorization purposes
+        bookType = 'fiction';
       }
+
+      // Check if this is an illustrated book (screenplays are not illustrated)
+      const isIllustrated = preset.format !== 'text_only' && preset.format !== 'screenplay';
 
       const expandResponse = await fetch('/api/expand-idea', {
         method: 'POST',
@@ -245,12 +272,23 @@ export default function CreateBook() {
         body: JSON.stringify({
           idea,
           bookType,
-          isIllustrated: preset.format !== 'text_only',
+          isIllustrated,
+          isScreenplay: preset.format === 'screenplay',
         }),
       });
 
       if (!expandResponse.ok) throw new Error('Failed to expand idea');
       const bookPlan = await expandResponse.json();
+
+      // For screenplays, use targetPages converted to equivalent words (250 words/page)
+      // and sequences instead of chapters
+      const isScreenplay = preset.format === 'screenplay';
+      const targetWords = isScreenplay
+        ? ('targetPages' in preset ? (preset.targetPages as number) * 250 : 25000)
+        : ('targetWords' in preset ? preset.targetWords : 50000);
+      const targetChapters = isScreenplay
+        ? ('sequences' in preset ? preset.sequences as number : 8)
+        : ('chapters' in preset ? preset.chapters : 20);
 
       const response = await fetch('/api/books', {
         method: 'POST',
@@ -261,8 +299,8 @@ export default function CreateBook() {
           bookFormat: preset.format,
           artStyle: selectedArtStyle,
           dialogueStyle: preset.dialogueStyle,
-          targetWords: preset.targetWords,
-          targetChapters: preset.chapters,
+          targetWords,
+          targetChapters,
           userId,
         }),
       });

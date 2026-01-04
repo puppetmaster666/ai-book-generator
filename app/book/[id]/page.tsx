@@ -461,6 +461,19 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
               orchestrationRef.current = false;
               break;
             }
+            // Handle free tier preview limit
+            if (data.error === 'preview_limit') {
+              console.log(`[Session ${currentSession}] Preview limit reached - stopping orchestration`);
+              orchestrationRef.current = false;
+              // Update book state to show preview limit UI
+              const fullRes = await fetch(`/api/books/${id}`);
+              if (fullRes.ok) {
+                const fullData = await fullRes.json();
+                setBook(fullData.book);
+                lastKnownChapterCountRef.current = fullData.book?.chapters?.length || 0;
+              }
+              break;
+            }
             throw new Error(data.error || 'Generation failed');
           }
 
@@ -1302,6 +1315,36 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
               </div>
             </div>
           </div>
+
+          {/* Preview Limit Reached - Upgrade CTA */}
+          {!isPending && !isGenerating && book.status !== 'completed' && book.status !== 'failed' && book.paymentStatus !== 'completed' && book.chapters.length > 0 && (
+            <div className="bg-gradient-to-br from-neutral-900 to-neutral-800 rounded-2xl p-6 sm:p-8 mb-6 text-white">
+              <div className="text-center">
+                <div className="w-16 h-16 mx-auto mb-4 bg-white/10 rounded-full flex items-center justify-center">
+                  <BookOpen className="h-8 w-8" />
+                </div>
+                <h2 className="text-2xl font-bold mb-2">
+                  Your Preview is Ready!
+                </h2>
+                <p className="text-neutral-300 mb-2">
+                  You've generated {book.chapters.length} chapter{book.chapters.length > 1 ? 's' : ''} ({book.totalWords.toLocaleString()} words)
+                </p>
+                <p className="text-neutral-400 text-sm mb-6">
+                  Unlock the full {book.totalChapters}-chapter book for just $9.99
+                </p>
+                <Link
+                  href={`/review?bookId=${id}`}
+                  className="inline-flex items-center gap-2 px-8 py-4 bg-white text-neutral-900 rounded-full hover:bg-neutral-100 font-medium transition-colors text-lg"
+                >
+                  <Zap className="h-5 w-5" />
+                  Unlock Full Book - $9.99
+                </Link>
+                <p className="text-xs text-neutral-500 mt-4">
+                  30-day money-back guarantee
+                </p>
+              </div>
+            </div>
+          )}
 
           {/* Pending - Waiting for Generation */}
           {isPending && (

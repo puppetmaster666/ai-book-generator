@@ -739,7 +739,7 @@ function isCompleteSentence(text: string): boolean {
 }
 
 // Category types for idea generation
-export type IdeaCategory = 'novel' | 'childrens' | 'comic' | 'nonfiction' | 'adult_comic' | 'random';
+export type IdeaCategory = 'novel' | 'childrens' | 'comic' | 'nonfiction' | 'screenplay' | 'adult_comic' | 'random';
 
 // Example pools for different categories - randomly selected to avoid repetition
 // Each category has 8+ example pairs for maximum variety
@@ -893,6 +893,40 @@ const IDEA_EXAMPLES: Record<Exclude<IdeaCategory, 'random'>, string[][]> = {
       "A practical guide to negotiation for people who hate negotiating, offering simple scripts and strategies for everything from salary negotiations and car purchases to difficult conversations with family members. This book proves that effective negotiation is a learnable skill, not an innate talent.",
     ],
   ],
+  screenplay: [
+    [
+      "A burned out homicide detective discovers that her missing daughter has been hiding in plain sight as a member of the very cult she has been investigating for three years. Now she must go undercover inside the compound to extract her, but the cult's charismatic leader seems to know exactly who she is and has been waiting for her arrival.",
+      "When a devastating earthquake traps two hundred passengers in a collapsed subway tunnel beneath Manhattan, a disgraced former EMT with a secret past and a claustrophobic corporate lawyer must put aside their bitter personal history to lead the survivors to safety. Above ground, the city's response is failing, and they have six hours before the water rises.",
+    ],
+    [
+      "A Silicon Valley whistleblower goes on the run after discovering her company's AI has been secretly influencing elections worldwide, but the only person she can trust is a washed up journalist who faked a source a decade ago and has been blacklisted ever since. As tech assassins close in and the AI begins predicting their every move, they must find a way to expose the truth without any proof the machine cannot erase.",
+      "On the eve of the biggest trial of her career, a ruthless defense attorney receives evidence that her client, a billionaire accused of murder, is guilty and has killed before. She has 48 hours to decide whether to bury the evidence and win or destroy her own career by doing the right thing, all while the victim's family watches from the gallery.",
+    ],
+    [
+      "A retired CIA interrogator living quietly in rural Montana discovers that her new neighbor is one of the terrorists she waterboarded twenty years ago, now a free man seeking answers about what she did to him. Over a tense weekend, both must confront what they have become and whether redemption is possible for either of them.",
+      "During a hostage situation at the Federal Reserve, a brilliant but socially awkward economist realizes she is the only one who understands what the robbers are actually after. It is not the money in the vault but something far more dangerous, and the FBI negotiator outside has no idea the real threat is already loose in the financial system.",
+    ],
+    [
+      "A Black ops pilot presumed dead for seven years returns home to discover her husband remarried, her daughter does not remember her, and the government that abandoned her is now hunting her for what she learned in captivity. She has 72 hours to reunite with her family and disappear before they silence her permanently.",
+      "When an Alzheimer's research scientist begins losing her own memories, she races against her own deteriorating mind to finish the cure that could save millions, including herself. Her estranged son, a failed musician, returns home to care for her, and together they must confront the painful past she is desperately trying to remember and he has spent years trying to forget.",
+    ],
+    [
+      "A presidential debate moderator discovers minutes before going live that both candidates have been compromised by the same foreign power, and she must decide in real time whether to expose the conspiracy on national television or protect the illusion of democracy.",
+      "After a plane crash in the Andes, the twelve survivors include a famous surgeon, a convicted murderer being transported to prison, and the guard who was escorting him. As rescue fails to come and food runs out, the moral compromises they make to survive will determine who they are when they finally return to civilization.",
+    ],
+    [
+      "A veteran 911 dispatcher receives a call from a kidnapped woman who can only communicate in code because her captor is listening, and over four increasingly tense hours, the dispatcher must decode the clues to find her before midnight. What she does not know is that the caller is someone from her own past, and this is not a random crime.",
+      "When Earth receives an unmistakable signal from an alien civilization, the linguist tasked with decoding it realizes the message is not a greeting but a warning about something already here. With world governments fighting over how to respond and religious leaders calling it a hoax, she has days to convince humanity to listen before it is too late.",
+    ],
+    [
+      "A Supreme Court justice receives incontrovertible proof that a man she sentenced to death twenty years ago was innocent, but revealing the evidence will destroy the career of her mentor, expose her own complicity, and potentially bring down the entire court. With the execution scheduled for Friday, she must choose between justice and everything she has built.",
+      "A combat photographer returns from a war zone with footage of an American war crime, but before she can publish it, her editor is murdered and the military begins systematically erasing everyone who has seen the images. Now underground with a paranoid hacktivist as her only ally, she must get the truth out while the most powerful institution in the country hunts her down.",
+    ],
+    [
+      "When his billionaire father dies under suspicious circumstances, the estranged heir returns for the reading of the will only to discover he must spend one week locked in the family mansion with his three siblings, all of whom have motive and opportunity. By the time the will is read, one of them will be dead, and the inheritance depends on who survives.",
+      "A trauma surgeon working her final shift before retirement treats a gunshot victim who turns out to be the drunk driver who killed her family fifteen years ago. She has the skills to save him and the power to let him die, and no one would ever know the difference. Eight hours in the OR to make a choice she has to live with forever.",
+    ],
+  ],
   adult_comic: [
     [
       "Vampiress Selene runs a late night underground club where supernatural beings gather to unwind, and her regulars include a handsome incubus bartender, a flirtatious shapeshifter bouncer, and a mysterious warlock who keeps buying her drinks. When a mortal stumbles through her doors seeking protection from demon hunters, Selene must decide whether to risk her neutral territory or let an innocent die. The attraction between them is undeniable, but protecting him means making enemies of both the hunters and the demons who want him silenced.",
@@ -955,6 +989,12 @@ const GENRE_HINTS: Record<Exclude<IdeaCategory, 'random'>, string[]> = {
     'health and wellness', 'psychology', 'science explained', 'true crime', 'investigative',
     'technology', 'philosophy', 'education', 'parenting', 'relationships', 'travel'
   ],
+  screenplay: [
+    'thriller', 'action', 'drama', 'crime', 'sci-fi', 'horror', 'mystery', 'legal thriller',
+    'disaster', 'psychological thriller', 'political thriller', 'heist', 'survival',
+    'conspiracy thriller', 'hostage drama', 'courtroom drama', 'espionage', 'war drama',
+    'family drama', 'medical drama', 'noir', 'revenge thriller', 'home invasion'
+  ],
   adult_comic: [
     'supernatural romance', 'dark fantasy', 'urban fantasy noir', 'enemies to lovers',
     'paranormal thriller', 'cyberpunk romance', 'forbidden love', 'vampire romance',
@@ -999,6 +1039,23 @@ VARIETY IS ESSENTIAL - Create something fresh and different:
       break;
     case 'nonfiction':
       categoryInstruction = `Generate a compelling ${randomGenre} non-fiction book idea that promises to teach readers something valuable, share untold stories, or provide practical guidance they can apply to their lives. Focus on what makes this book unique and why readers would want to buy it.`;
+      break;
+    case 'screenplay':
+      categoryInstruction = `Generate a compelling ${randomGenre} movie script idea with high concept hooks, strong visual storytelling potential, and characters under pressure who must make impossible choices.
+
+SCREENPLAY ESSENTIALS:
+- High stakes with a ticking clock or urgent deadline
+- Strong protagonist with a clear goal and flaws that get in their way
+- Antagonist or opposing force that creates escalating conflict
+- Visual set pieces that would look incredible on screen
+- Moral dilemmas and impossible choices
+- Twists that reframe everything the audience thought they knew
+
+VARIETY IS ESSENTIAL:
+- Vary protagonist types: detectives, doctors, lawyers, journalists, soldiers, scientists, ordinary people in extraordinary circumstances
+- Different scales: intimate two character dramas, ensemble thrillers, epic disasters
+- Settings: courtrooms, hospitals, war zones, corporate boardrooms, isolated locations, major cities
+- Time pressure: 24 hours, one week, real time, race against an event`;
       break;
     case 'adult_comic':
       categoryInstruction = `Generate a ${randomGenre} adult comic or graphic novel idea for mature readers (18+). Create a story with intense romantic tension, dangerous situations, and complex characters who are drawn to each other despite obstacles.
@@ -1278,8 +1335,99 @@ export interface VisualChapter {
   panelLayout?: PanelLayout; // For comics: how many panels on this page
 }
 
+// Step 1: Generate a complete narrative story FIRST
+// This ensures the story is coherent before breaking into pages
+async function generateVisualStoryNarrative(bookData: {
+  title: string;
+  genre: string;
+  bookType: string;
+  premise: string;
+  originalIdea?: string;
+  characters: { name: string; description: string }[];
+  beginning: string;
+  middle: string;
+  ending: string;
+  writingStyle: string;
+  targetChapters: number;
+  dialogueStyle: 'prose' | 'bubbles';
+  contentRating?: ContentRating;
+}): Promise<string> {
+  const isComicStyle = bookData.dialogueStyle === 'bubbles';
+  const targetWords = bookData.targetChapters * (isComicStyle ? 30 : 50); // Shorter for comics
+
+  // Get content rating instructions
+  const contentGuidelines = getContentRatingInstructions(bookData.contentRating || (isComicStyle ? 'general' : 'childrens'));
+
+  // Detect language from title and premise
+  const languageInstruction = detectLanguageInstruction(bookData.title + ' ' + bookData.premise);
+
+  const characterList = bookData.characters.map(c => `- ${c.name}: ${c.description}`).join('\n');
+
+  const originalIdeaSection = bookData.originalIdea
+    ? `\nORIGINAL AUTHOR VISION (incorporate these specific details):\n${bookData.originalIdea}\n`
+    : '';
+
+  const prompt = `You are a master storyteller. Write a complete, engaging ${isComicStyle ? 'action-packed' : 'heartwarming'} short story.
+${languageInstruction ? `\n${languageInstruction}\n` : ''}
+${contentGuidelines}
+${originalIdeaSection}
+
+STORY REQUIREMENTS:
+Title: "${bookData.title}"
+Genre: ${bookData.genre}
+Premise: ${bookData.premise}
+
+CHARACTERS:
+${characterList}
+
+STORY STRUCTURE (follow this arc):
+- Beginning: ${bookData.beginning}
+- Middle: ${bookData.middle}
+- Ending: ${bookData.ending}
+
+CRITICAL WRITING GUIDELINES:
+1. Write a COMPLETE story with a clear beginning, middle, climax, and resolution
+2. Show character growth and emotional moments
+3. Include specific dialogue exchanges between characters (at least 5-8 distinct dialogue moments)
+4. Create VISUAL action scenes that can be illustrated (describe what characters DO, not just think)
+5. Vary the locations/settings throughout the story (at least 3-4 different places)
+6. Build tension and release it satisfyingly
+7. Make each scene distinct and memorable
+8. NO repetitive phrases or descriptions
+9. Every paragraph should move the story forward
+10. Include sensory details (sights, sounds, feelings)
+
+${isComicStyle ? `
+COMIC-STYLE REQUIREMENTS:
+- More action, less internal monologue
+- Snappy, punchy dialogue (each line under 15 words)
+- Visual comedy and dramatic moments
+- Clear action beats that translate to panels
+- Sound effects where appropriate (CRASH! WHOOSH! etc.)
+` : `
+PICTURE BOOK REQUIREMENTS:
+- Gentle, flowing prose suitable for reading aloud
+- Rhythmic language when appropriate
+- Clear emotional beats for young readers
+- Wonder and discovery moments
+- Satisfying, affirming ending
+`}
+
+TARGET LENGTH: ${targetWords}-${targetWords + 200} words (this will be broken into ${bookData.targetChapters} pages)
+
+Write the complete story now. Make it engaging, unique, and memorable. Include actual dialogue with quotation marks.`;
+
+  const result = await getGeminiPro().generateContent(prompt);
+  const story = result.response.text().trim();
+
+  console.log(`Generated narrative story: ${story.split(/\s+/).length} words`);
+  return story;
+}
+
 // Generate outline for visual books (picture books, comics)
-// Returns detailed scene descriptions upfront so text and images can generate in parallel
+// Uses a TWO-STEP approach:
+// 1. First generates a complete narrative story
+// 2. Then breaks that story into pages with scenes and dialogue
 export async function generateIllustratedOutline(bookData: {
   title: string;
   genre: string;
@@ -1306,6 +1454,36 @@ export async function generateIllustratedOutline(bookData: {
 }): Promise<{
   chapters: VisualChapter[];
 }> {
+  // STEP 1: Generate a complete narrative story FIRST
+  // This ensures the story is coherent, engaging, and well-structured
+  console.log('[IllustratedOutline] Step 1: Generating complete narrative story...');
+  let narrativeStory: string;
+  try {
+    narrativeStory = await generateVisualStoryNarrative({
+      title: bookData.title,
+      genre: bookData.genre,
+      bookType: bookData.bookType,
+      premise: bookData.premise,
+      originalIdea: bookData.originalIdea,
+      characters: bookData.characters,
+      beginning: bookData.beginning,
+      middle: bookData.middle,
+      ending: bookData.ending,
+      writingStyle: bookData.writingStyle,
+      targetChapters: bookData.targetChapters,
+      dialogueStyle: bookData.dialogueStyle,
+      contentRating: bookData.contentRating,
+    });
+    console.log('[IllustratedOutline] Step 1 complete - story generated');
+  } catch (storyError) {
+    console.error('[IllustratedOutline] Failed to generate narrative story:', storyError);
+    // Fall back to old behavior if story generation fails
+    narrativeStory = '';
+  }
+
+  // STEP 2: Break the story into pages with scenes and dialogue
+  console.log('[IllustratedOutline] Step 2: Breaking story into pages with scenes...');
+
   // Detect language from title and premise
   const languageInstruction = detectLanguageInstruction(bookData.title + ' ' + bookData.premise);
 
@@ -1404,46 +1582,50 @@ Keep text short and age-appropriate (${wordsPerPage} words average per page).
         ).join('\n')
         : sanitizedBookData.characters.map(c => `${c.name}: ${c.description}`).join('\n');
 
-      const originalIdeaSectionSanitized = sanitizedBookData.originalIdea
-        ? `\nORIGINAL AUTHOR VISION (preserve these specific details, story elements, and visual ideas):\n${sanitizedBookData.originalIdea}\n`
+      // Include the narrative story if available
+      const narrativeSection = narrativeStory
+        ? `
+THE COMPLETE STORY (break this into ${sanitizedBookData.targetChapters} pages):
+---
+${narrativeStory}
+---
+
+YOUR TASK: Break the above story into exactly ${sanitizedBookData.targetChapters} pages. Each page should:
+1. Cover a portion of the story above - preserve the dialogue and action from the story
+2. The "text" field should contain that page's portion of the narrative (for prose) or narration (for comics)
+3. The "dialogue" field should use the actual dialogue from the story
+4. Scene descriptions should match what's happening in that part of the story
+
+CRITICAL: Do NOT invent new story content. Break down and adapt the story above into pages.
+`
         : '';
 
-      let currentPrompt = `You are creating a detailed page-by-page outline for an illustrated ${isComicStyle ? 'comic/graphic story' : 'picture book'}.
+      let currentPrompt = `You are breaking a story into page-by-page format for an illustrated ${isComicStyle ? 'comic/graphic story' : 'picture book'}.
 ${languageInstruction ? `\n${languageInstruction}\n` : ''}
 ${contentGuidelines}
-${originalIdeaSectionSanitized}
+${narrativeSection}
+
 BOOK DETAILS:
 - Title: "${sanitizedBookData.title}"
 - Genre: ${sanitizedBookData.genre}
+- Total pages: ${sanitizedBookData.targetChapters}
+${!narrativeStory ? `
 - Premise: ${sanitizedBookData.premise}
 - Beginning: ${sanitizedBookData.beginning}
 - Middle: ${sanitizedBookData.middle}
 - Ending: ${sanitizedBookData.ending}
-- Style: ${sanitizedBookData.writingStyle}
-- Total pages: ${sanitizedBookData.targetChapters}
-- Total words: ~${sanitizedBookData.targetWords}
+` : ''}
 
-CHARACTERS (use these EXACT descriptions for consistency):
+CHARACTERS (use these EXACT visual descriptions for consistency):
 ${characterRefSanitized}
 
 ⚠️ COPYRIGHT PROTECTION - CHARACTER NAMES:
-CRITICAL: If ANY character names match famous characters from existing media, YOU MUST RENAME THEM to completely original names in your outline.
-Check these character names against this list of prohibited names:
-- Superheroes: Superman, Batman, Spider-Man, Iron Man, Captain America, Wonder Woman, The Flash, Green Lantern, Aquaman, Thor, Hulk, Black Widow, Wolverine, Deadpool, etc.
-- Cartoon/Animation: Velma, Daphne, Fred, Shaggy, Scooby, Mickey, Minnie, Donald, Goofy, SpongeBob, Patrick, Squidward, Homer, Bart, Lisa, Marge, Peter Griffin, etc.
-- Anime: Naruto, Sasuke, Goku, Vegeta, Luffy, Pikachu, etc.
-- Other famous characters: Harry Potter, Hermione, Ron, Frodo, Gandalf, Darth Vader, Luke Skywalker, etc.
+CRITICAL: If ANY character names match famous characters from existing media, YOU MUST RENAME THEM to completely original names.
+Prohibited names include: Superman, Batman, Spider-Man, Velma, Scooby, Mickey, SpongeBob, Naruto, Harry Potter, etc.
+If found, rename to original names (e.g., "Velma" → "Sarah Martinez").
 
-If you detect ANY of these names or similar famous character names:
-1. Replace them with COMPLETELY ORIGINAL names
-2. Keep the character descriptions but use the new name throughout the entire outline
-3. Document the name change at the start of your response
-
-Example: If you see "Superman" → rename to "Marcus Stone", "Velma" → rename to "Sarah Martinez", etc.
-
-Create EXACTLY ${sanitizedBookData.targetChapters} pages. Each page needs BOTH the text/dialogue AND a detailed scene description for illustration.
-
-IMPORTANT: If an "Original Author Vision" is provided above, ensure the story incorporates all the specific details, character traits, plot elements, and unique ideas from it. The author's original vision takes priority.
+Create EXACTLY ${sanitizedBookData.targetChapters} pages. Each page needs BOTH the text/dialogue AND a scene description.
+${narrativeStory ? '\nPRESERVE the story, dialogue, and emotional beats from the narrative above.' : ''}
 
 ${dialogueInstructions}
 
@@ -3437,4 +3619,344 @@ Output ONLY valid JSON:
       ],
     };
   }
+}
+
+// =====================================================
+// SCREENPLAY GENERATION FUNCTIONS
+// =====================================================
+
+import {
+  BeatSheet,
+  CharacterProfile,
+  ScreenplayContext,
+  SequenceSummary,
+  SEQUENCE_TO_BEATS,
+  SCREENPLAY_BANNED_PHRASES,
+  SCREENPLAY_BANNED_ACTION_STARTS,
+  estimatePageCount,
+} from './screenplay';
+
+/**
+ * Generate a complete beat sheet (outline) for a screenplay
+ * Uses Save the Cat 15-beat structure
+ */
+export async function generateScreenplayOutline(data: {
+  idea: string;
+  genre: string;
+  title: string;
+  targetPages?: number;
+}): Promise<{
+  beatSheet: BeatSheet;
+  characters: CharacterProfile[];
+  estimatedPages: number;
+}> {
+  const targetPages = data.targetPages || 100;
+
+  const prompt = `You are a Hollywood screenwriter creating a feature film beat sheet using the Save the Cat structure.
+
+MOVIE CONCEPT:
+Title: "${data.title}"
+Genre: ${data.genre}
+Premise: ${data.idea}
+Target Length: ${targetPages} pages (approximately ${targetPages} minutes)
+
+Create a detailed beat sheet with the 15 Save the Cat beats. Each beat should be specific and detailed, not generic.
+
+BEAT SHEET REQUIREMENTS:
+- Logline: One sentence pitch under 30 words
+- Theme: The thematic question/statement the movie explores
+- All 15 beats with specific plot points (not generic descriptions)
+- 1-2 subplots that intersect with the main plot
+
+ALSO CREATE 3-5 main character profiles with:
+- Name and role (protagonist/antagonist/supporting)
+- Want: External goal they're pursuing
+- Need: Internal lesson they must learn
+- Flaw: Character flaw that creates conflict
+- Brief backstory
+- Voice traits: vocabulary style, speech rhythm, verbal tics
+
+CRITICAL FORMAT RULES:
+- Be SPECIFIC. "Jack discovers his wife is having an affair" not "Protagonist faces a challenge"
+- Each beat should be 2-3 sentences describing the actual scene/moment
+- Characters should be named, not described generically
+
+Output ONLY valid JSON:
+{
+  "beatSheet": {
+    "logline": "One sentence pitch...",
+    "theme": "The thematic statement...",
+    "beats": {
+      "openingImage": "Page 1 visual that sets tone...",
+      "themeStated": "Page 5 - Someone states the theme...",
+      "setup": "Pages 1-10 - Establish world and character...",
+      "catalyst": "Page 12 - The inciting incident...",
+      "debate": "Pages 12-25 - Protagonist resists...",
+      "breakIntoTwo": "Page 25 - Active choice to enter new world...",
+      "bStory": "Page 30 - B-story introduction...",
+      "funAndGames": "Pages 30-55 - Promise of the premise...",
+      "midpoint": "Page 55 - False victory or defeat...",
+      "badGuysCloseIn": "Pages 55-75 - Things get harder...",
+      "allIsLost": "Page 75 - Lowest point...",
+      "darkNightOfSoul": "Pages 75-85 - Processing loss...",
+      "breakIntoThree": "Page 85 - A and B stories combine...",
+      "finale": "Pages 85-110 - Confrontation and resolution...",
+      "finalImage": "Page 110 - Visual mirror of opening..."
+    },
+    "subplots": [
+      {
+        "name": "B-Story: Romance/Mentorship",
+        "characters": ["Character1", "Character2"],
+        "arc": "Brief description of subplot arc...",
+        "intersectionPoints": [3, 4, 6, 7]
+      }
+    ]
+  },
+  "characters": [
+    {
+      "name": "CHARACTER NAME",
+      "role": "protagonist",
+      "want": "External goal...",
+      "need": "Internal lesson...",
+      "flaw": "Character flaw...",
+      "backstory": "Brief relevant history...",
+      "voiceTraits": {
+        "vocabulary": "blue-collar, direct, occasional profanity",
+        "rhythm": "short sentences, interrupts others",
+        "tics": "says 'look' to start sentences"
+      }
+    }
+  ]
+}`;
+
+  const result = await withTimeout(
+    () => getGeminiFlash().generateContent({
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      generationConfig: {
+        temperature: 0.8,
+        maxOutputTokens: 8192,
+      },
+      safetySettings: SAFETY_SETTINGS,
+    }),
+    120000,
+    'generateScreenplayOutline'
+  );
+
+  const response = result.response.text();
+  const parsed = parseJSONFromResponse(response) as {
+    beatSheet: BeatSheet;
+    characters: CharacterProfile[];
+  };
+
+  return {
+    beatSheet: parsed.beatSheet,
+    characters: parsed.characters,
+    estimatedPages: targetPages,
+  };
+}
+
+/**
+ * Generate a single screenplay sequence (10-15 pages)
+ */
+export async function generateScreenplaySequence(data: {
+  beatSheet: BeatSheet;
+  characters: CharacterProfile[];
+  sequenceNumber: number;
+  context: ScreenplayContext;
+  genre: string;
+  title: string;
+}): Promise<{
+  content: string;
+  pageCount: number;
+}> {
+  const sequenceInfo = SEQUENCE_TO_BEATS[data.sequenceNumber];
+  if (!sequenceInfo) {
+    throw new Error(`Invalid sequence number: ${data.sequenceNumber}`);
+  }
+
+  // Build character voice reference
+  const characterVoices = data.characters.map(c =>
+    `${c.name} (${c.role}): Vocabulary: ${c.voiceTraits.vocabulary}. Rhythm: ${c.voiceTraits.rhythm}. Tics: ${c.voiceTraits.tics}`
+  ).join('\n');
+
+  // Get the specific beats for this sequence
+  const beatsContent = sequenceInfo.beats.map(beat => {
+    const beatData = data.beatSheet.beats[beat as keyof typeof data.beatSheet.beats];
+    return `- ${beat}: ${beatData}`;
+  }).join('\n');
+
+  // Build context from previous sequences
+  const previousContext = data.context.lastSequenceSummary
+    ? `\nPREVIOUS SEQUENCE SUMMARY:\n${data.context.lastSequenceSummary}\n\nCHARACTER STATES:\n${Object.entries(data.context.characterStates).map(([name, state]) => `- ${name}: ${state}`).join('\n')}\n\nESTABLISHED LOCATIONS: ${data.context.establishedLocations.join(', ') || 'None yet'}\n\nSETUPS TO PAY OFF: ${data.context.plantedSetups.filter(s => !data.context.resolvedPayoffs.includes(s)).join(', ') || 'None pending'}`
+    : '';
+
+  const prompt = `You are a professional Hollywood screenwriter writing SEQUENCE ${data.sequenceNumber} of 8 for a feature film.
+
+MOVIE: "${data.title}" (${data.genre})
+LOGLINE: ${data.beatSheet.logline}
+THEME: ${data.beatSheet.theme}
+
+THIS SEQUENCE COVERS:
+Act ${sequenceInfo.act}, Pages ${sequenceInfo.pageRange}
+Beats to hit:
+${beatsContent}
+${previousContext}
+
+CHARACTER VOICE PROFILES (CRITICAL - each character MUST speak differently):
+${characterVoices}
+
+SCREENPLAY FORMAT RULES - FOLLOW EXACTLY:
+1. Sluglines: "INT. LOCATION - DAY" or "EXT. LOCATION - NIGHT" (only these formats)
+2. Action lines: Present tense, MAX 4 lines per paragraph, then break
+3. Character names: ALL CAPS centered before dialogue
+4. Dialogue: Natural, distinct voices per character
+5. Parentheticals: Use sparingly ((beat), (O.S.), (V.O.) only when necessary)
+6. Transitions: CUT TO:, FADE OUT. - use sparingly
+
+ANTI-AI DIALOGUE RULES - CRITICAL:
+- NEVER use: "I need you to understand", "Here's the thing", "Let me be clear", "With all due respect"
+- NEVER have characters explain their feelings directly ("I feel sad because...")
+- Characters interrupt, trail off, use incomplete sentences
+- Subtext: Characters rarely say exactly what they mean
+- Each character has DISTINCT vocabulary and rhythm
+
+ANTI-AI ACTION RULES - CRITICAL:
+- NEVER start action lines with: "We see", "We hear", "We watch", "The camera"
+- Just describe what happens, not what the camera does
+- Be visual and specific, not generic
+
+Write approximately 12-15 pages of properly formatted screenplay.
+Start with a slugline. End at a natural story beat.
+
+OUTPUT: Write the screenplay sequence directly. No commentary or notes.`;
+
+  const result = await withTimeout(
+    () => getGeminiFlash().generateContent({
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      generationConfig: {
+        temperature: 0.85,
+        maxOutputTokens: 12000,
+      },
+      safetySettings: SAFETY_SETTINGS,
+    }),
+    180000,
+    `generateScreenplaySequence_${data.sequenceNumber}`
+  );
+
+  const content = result.response.text();
+  const pageCount = estimatePageCount(content);
+
+  return { content, pageCount };
+}
+
+/**
+ * Summarize a screenplay sequence for context continuity
+ */
+export async function summarizeScreenplaySequence(data: {
+  sequenceContent: string;
+  sequenceNumber: number;
+  characters: CharacterProfile[];
+}): Promise<SequenceSummary> {
+  const sequenceInfo = SEQUENCE_TO_BEATS[data.sequenceNumber];
+
+  const prompt = `Summarize this screenplay sequence for continuity tracking.
+
+SEQUENCE ${data.sequenceNumber} CONTENT:
+${data.sequenceContent.substring(0, 8000)}
+
+CHARACTERS TO TRACK: ${data.characters.map(c => c.name).join(', ')}
+
+Provide a JSON summary:
+{
+  "sequenceNumber": ${data.sequenceNumber},
+  "pageRange": "${sequenceInfo?.pageRange || 'unknown'}",
+  "actNumber": ${sequenceInfo?.act || 2},
+  "beatsCovered": ${JSON.stringify(sequenceInfo?.beats || [])},
+  "summary": "200-word summary of key plot events...",
+  "characterStates": {
+    "CHARACTER_NAME": "Where they are emotionally and physically at end of sequence"
+  },
+  "plantedSetups": ["Things introduced that need payoff later (Chekhov's guns)"],
+  "resolvedPayoffs": ["Setups from earlier sequences that were paid off here"]
+}`;
+
+  const result = await withTimeout(
+    () => getGeminiFlash().generateContent({
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      generationConfig: {
+        temperature: 0.3,
+        maxOutputTokens: 2000,
+      },
+      safetySettings: SAFETY_SETTINGS,
+    }),
+    60000,
+    'summarizeScreenplaySequence'
+  );
+
+  const response = result.response.text();
+  return parseJSONFromResponse(response) as SequenceSummary;
+}
+
+/**
+ * Review and polish a screenplay sequence for AI patterns
+ * Similar to reviewAndPolishChapter but for screenplay format
+ */
+export async function reviewScreenplaySequence(
+  sequenceContent: string,
+  characters: CharacterProfile[]
+): Promise<string> {
+  // First, detect obvious AI patterns
+  const bannedDialogue = SCREENPLAY_BANNED_PHRASES.filter(phrase =>
+    sequenceContent.toLowerCase().includes(phrase.toLowerCase())
+  );
+
+  const bannedActions = SCREENPLAY_BANNED_ACTION_STARTS.filter(start =>
+    new RegExp(`(^|\\n)\\s*${start}`, 'i').test(sequenceContent)
+  );
+
+  if (bannedDialogue.length === 0 && bannedActions.length === 0) {
+    // No obvious patterns, return as-is
+    return sequenceContent;
+  }
+
+  // Build character voice reference
+  const characterVoices = characters.map(c =>
+    `${c.name}: ${c.voiceTraits.vocabulary}, ${c.voiceTraits.rhythm}`
+  ).join('\n');
+
+  const prompt = `Review and fix this screenplay sequence. DO NOT change the story, just fix AI patterns.
+
+ISSUES DETECTED:
+${bannedDialogue.length > 0 ? `Dialogue phrases to remove/replace: ${bannedDialogue.join(', ')}` : ''}
+${bannedActions.length > 0 ? `Action line starts to fix: ${bannedActions.join(', ')}` : ''}
+
+CHARACTER VOICES (maintain distinct voices):
+${characterVoices}
+
+FIXES NEEDED:
+1. Replace AI dialogue patterns with natural speech
+2. Remove "We see/hear" from action lines - just describe what happens
+3. Ensure each character sounds different
+4. Add subtext where dialogue is too on-the-nose
+5. Limit parentheticals (beat), (sighs), (nods) to once per page max
+
+ORIGINAL SEQUENCE:
+${sequenceContent}
+
+OUTPUT: The fixed screenplay sequence. Keep the same scenes and story beats.`;
+
+  const result = await withTimeout(
+    () => getGeminiFlash().generateContent({
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      generationConfig: {
+        temperature: 0.5,
+        maxOutputTokens: 12000,
+      },
+      safetySettings: SAFETY_SETTINGS,
+    }),
+    120000,
+    'reviewScreenplaySequence'
+  );
+
+  return result.response.text();
 }

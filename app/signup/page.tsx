@@ -172,11 +172,11 @@ function SignupContent() {
         <div className="max-w-md mx-auto">
           <div className="text-center mb-8">
             <h1 className="text-3xl font-bold tracking-tight mb-2" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>
-              {isFreeBook ? 'Get Your Free Book' : 'Create Account'}
+              {isFreeBook ? 'Try Free Sample' : 'Create Account'}
             </h1>
             {isFreeBook ? (
               <p className="text-neutral-600">
-                Sign up to claim your book - completely free, no credit card required
+                Sign up to preview your book - no credit card required
               </p>
             ) : plan ? (
               <p className="text-neutral-600">
@@ -193,8 +193,8 @@ function SignupContent() {
                   <span className="text-xl">🎁</span>
                 </div>
                 <div>
-                  <p className="font-medium text-neutral-900">First book is on us!</p>
-                  <p className="text-sm text-neutral-600">Create your account and your book will start generating immediately.</p>
+                  <p className="font-medium text-neutral-900">Free sample waiting for you!</p>
+                  <p className="text-sm text-neutral-600">Create your account to preview your book. Upgrade anytime for the full version.</p>
                 </div>
               </div>
             </div>
@@ -252,7 +252,7 @@ function SignupContent() {
                 {isLoading ? (
                   <><Loader2 className="h-5 w-5 animate-spin" /> Creating account...</>
                 ) : isFreeBook ? (
-                  'Create Account & Get Free Book'
+                  'Create Account & Try Sample'
                 ) : (
                   'Create Account'
                 )}

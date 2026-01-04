@@ -30,9 +30,9 @@ const faqItems: FAQItem[] = [
       'After downloading your book, simply upload the EPUB file to Amazon KDP (kdp.amazon.com). Our output is formatted to meet KDP requirements. For cover images, we generate a KDP-ready cover that you can upload separately.',
   },
   {
-    question: "What's included in the free book?",
+    question: "What's included in the free sample?",
     answer:
-      'Your first book is completely free with no credit card required. You get a full-length novel (50,000+ words) or illustrated book with all features included - the same quality as paid books.',
+      'Your free sample includes 1 chapter for text books or 5 panels for visual books - no credit card required. This lets you experience the quality before upgrading to unlock the full book.',
   },
   {
     question: 'Do I own the rights to my generated book?',

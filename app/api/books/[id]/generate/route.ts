@@ -16,12 +16,14 @@ import {
   generateCharacterVisualGuide,
   generateVisualStyleGuide,
   generateCharacterPortraits,
+  generateScreenplayOutline,
   type VisualChapter,
   type SceneDescription,
   type DialogueEntry,
   type PanelLayout,
   type ContentRating,
 } from '@/lib/gemini';
+import { createInitialContext, type BeatSheet, type CharacterProfile } from '@/lib/screenplay';
 import { countWords } from '@/lib/epub';
 import { BOOK_FORMATS, ART_STYLES, ILLUSTRATION_DIMENSIONS, BOOK_PRESETS, type BookFormatKey, type ArtStyleKey, type BookPresetKey } from '@/lib/constants';
 import { sendEmail, getBookReadyEmail } from '@/lib/email';
@@ -665,7 +667,57 @@ export async function POST(
     } | null;
 
     if (!outline) {
-      if (useVisualFlow && dialogueStyle) {
+      // Check if this is a screenplay
+      if (bookFormat === 'screenplay') {
+        // Use screenplay outline with beat sheet structure
+        console.log('Generating screenplay beat sheet outline...');
+        const screenplayResult = await generateScreenplayOutline({
+          idea: book.premise,
+          genre: book.genre,
+          title: book.title,
+          targetPages: 100, // Feature film standard
+        });
+
+        // Store beat sheet and characters in outline
+        outline = {
+          chapters: [], // Will be populated with 8 sequences
+          beatSheet: screenplayResult.beatSheet,
+          characters: screenplayResult.characters,
+        } as { chapters: Array<{ number: number; title: string; summary: string; pov?: string; targetWords: number }>; beatSheet?: BeatSheet; characters?: CharacterProfile[] };
+
+        // Create 8 sequence placeholders based on beat sheet
+        const sequenceNames = [
+          'Opening & Setup',
+          'Catalyst & Debate',
+          'B-Story & Fun and Games (Part 1)',
+          'Fun and Games (Part 2) & Midpoint',
+          'Bad Guys Close In',
+          'All Is Lost & Dark Night',
+          'Break Into Three & Finale (Part 1)',
+          'Finale (Part 2) & Final Image',
+        ];
+
+        for (let i = 1; i <= 8; i++) {
+          outline.chapters.push({
+            number: i,
+            title: `Sequence ${i}: ${sequenceNames[i - 1]}`,
+            summary: `Act ${i <= 2 ? 1 : i <= 6 ? 2 : 3} - ${sequenceNames[i - 1]}`,
+            targetWords: 3000, // ~12 pages per sequence
+          });
+        }
+
+        // Initialize screenplay context
+        const screenplayContext = createInitialContext(100);
+        await prisma.book.update({
+          where: { id },
+          data: {
+            outline: outline as object,
+            totalChapters: 8,
+            status: 'generating',
+            screenplayContext: screenplayContext as object,
+          },
+        });
+      } else if (useVisualFlow && dialogueStyle) {
         // Use enhanced illustrated outline for visual books
         console.log('Generating illustrated outline with scene descriptions...');
         const visualOutline = await generateIllustratedOutline({
