@@ -262,7 +262,7 @@ export const BOOK_PRESETS = {
     estimatedTime: '~25 min',
   },
 
-  // === SCREENPLAYS ===
+  // === SCREENPLAYS - FILM ===
   short_screenplay: {
     label: 'Short Film Script',
     description: '30-45 pages (~30-45 min runtime), PDF download',
@@ -307,6 +307,53 @@ export const BOOK_PRESETS = {
     downloadFormat: 'pdf',
     contentRating: 'mature',
     estimatedTime: '~50 min',
+  },
+
+  // === SCREENPLAYS - TV ===
+  tv_pilot_comedy: {
+    label: 'TV Pilot (Comedy)',
+    description: '25-35 pages, half-hour sitcom/comedy pilot',
+    icon: 'Film',
+    format: 'screenplay',
+    artStyle: null,
+    dialogueStyle: null,
+    defaultGenre: 'comedy_film',
+    targetPages: 30,
+    sequences: 3, // 3-act structure for half-hour
+    priceDisplay: '$9.99',
+    downloadFormat: 'pdf',
+    contentRating: 'general',
+    estimatedTime: '~12 min',
+  },
+  tv_pilot_drama: {
+    label: 'TV Pilot (Drama)',
+    description: '55-65 pages, hour-long drama pilot',
+    icon: 'Film',
+    format: 'screenplay',
+    artStyle: null,
+    dialogueStyle: null,
+    defaultGenre: 'drama_film',
+    targetPages: 60,
+    sequences: 5, // 5-act structure for hour-long drama
+    priceDisplay: '$9.99',
+    downloadFormat: 'pdf',
+    contentRating: 'mature',
+    estimatedTime: '~25 min',
+  },
+  tv_episode: {
+    label: 'TV Episode',
+    description: '45-55 pages, series episode (drama format)',
+    icon: 'Film',
+    format: 'screenplay',
+    artStyle: null,
+    dialogueStyle: null,
+    defaultGenre: 'drama_film',
+    targetPages: 50,
+    sequences: 5,
+    priceDisplay: '$9.99',
+    downloadFormat: 'pdf',
+    contentRating: 'mature',
+    estimatedTime: '~20 min',
   },
 } as const;
 

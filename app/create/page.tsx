@@ -41,6 +41,9 @@ const PRESET_ICONS: Record<string, React.ComponentType<{ className?: string }>> 
   short_screenplay: Film,
   screenplay: Film,
   epic_screenplay: Film,
+  tv_pilot_comedy: Film,
+  tv_pilot_drama: Film,
+  tv_episode: Film,
 };
 
 // Art style images
