@@ -698,7 +698,10 @@ export async function POST(
         });
       } else if (useVisualFlow && dialogueStyle) {
         // Use enhanced illustrated outline for visual books
-        console.log('Generating illustrated outline with scene descriptions...');
+        // Use the user's selected panel count from targetChapters (set from VISUAL_LENGTH_TIERS)
+        const targetPanelCount = book.targetChapters;
+        console.log(`Generating illustrated outline with ${targetPanelCount} panels...`);
+
         const visualOutline = await generateIllustratedOutline({
           title: book.title,
           genre: book.genre,
@@ -711,19 +714,63 @@ export async function POST(
           ending: book.ending,
           writingStyle: book.writingStyle,
           targetWords: book.targetWords,
-          targetChapters: Math.min(book.targetChapters, (book.bookFormat === 'comic_book' || book.bookFormat === 'comic' || dialogueStyle === 'bubbles' || book.bookPreset === 'comic_story') ? 24 : 20),
+          targetChapters: targetPanelCount,
           dialogueStyle: dialogueStyle,
           characterVisualGuide: book.characterVisualGuide as CharacterVisualGuide | undefined,
           contentRating: (book.contentRating || 'general') as ContentRating,
         });
         outline = visualOutline;
 
-        // ENFORCE maximum chapter count - AI sometimes ignores "Create EXACTLY X" instruction
-        const maxChapters = (book.bookFormat === 'comic_book' || book.bookFormat === 'comic' || dialogueStyle === 'bubbles' || book.bookPreset === 'comic_story') ? 24 : 20;
-        if (outline.chapters.length > maxChapters) {
-          console.warn(`AI generated ${outline.chapters.length} chapters, trimming to ${maxChapters}`);
-          outline.chapters = outline.chapters.slice(0, maxChapters);
+        // ENFORCE exact panel count - AI sometimes ignores "Create EXACTLY X" instruction
+        const generatedCount = outline.chapters.length;
+        if (generatedCount !== targetPanelCount) {
+          console.warn(`Panel count mismatch: AI generated ${generatedCount}, target was ${targetPanelCount}`);
+
+          if (generatedCount > targetPanelCount) {
+            // Trim excess panels
+            console.log(`Trimming ${generatedCount - targetPanelCount} excess panels`);
+            outline.chapters = outline.chapters.slice(0, targetPanelCount);
+          } else if (generatedCount < targetPanelCount) {
+            // AI generated too few panels - extend the story
+            console.log(`Adding ${targetPanelCount - generatedCount} missing panels to reach target`);
+            const lastChapter = outline.chapters[outline.chapters.length - 1];
+            const lastScene = lastChapter.scene || {
+              location: 'continuation',
+              description: 'The story continues',
+              characters: [],
+              characterActions: {},
+              background: 'same setting',
+              mood: 'continuation',
+              cameraAngle: 'medium shot',
+            };
+            for (let i = generatedCount + 1; i <= targetPanelCount; i++) {
+              // Clone last chapter structure with incremented number
+              outline.chapters.push({
+                ...lastChapter,
+                number: i,
+                title: `Page ${i}`,
+                text: lastChapter.text || 'The story continues...',
+                scene: {
+                  location: lastScene.location || 'same location',
+                  description: `Continuation of the story - Panel ${i}`,
+                  characters: lastScene.characters || [],
+                  characterActions: lastScene.characterActions || {},
+                  background: lastScene.background || 'continuation',
+                  mood: lastScene.mood || 'same',
+                  cameraAngle: lastScene.cameraAngle || 'medium shot',
+                },
+              });
+            }
+          }
         }
+
+        console.log(`Final panel count: ${outline.chapters.length}`);
+
+        // Renumber chapters to ensure sequential numbering
+        outline.chapters = outline.chapters.map((ch, idx) => ({
+          ...ch,
+          number: idx + 1,
+        }));
       } else if (book.bookType === 'non-fiction') {
         // Use non-fiction outline for non-fiction books
         console.log('Generating non-fiction outline with topic structure...');

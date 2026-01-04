@@ -1664,7 +1664,14 @@ CRITICAL: If ANY character names match famous characters from existing media, YO
 Prohibited names include: Superman, Batman, Spider-Man, Velma, Scooby, Mickey, SpongeBob, Naruto, Harry Potter, etc.
 If found, rename to original names (e.g., "Velma" → "Sarah Martinez").
 
-Create EXACTLY ${sanitizedBookData.targetChapters} pages. Each page needs BOTH the text/dialogue AND a scene description.
+⚠️ CRITICAL PAGE COUNT REQUIREMENT ⚠️
+You MUST create EXACTLY ${sanitizedBookData.targetChapters} pages - no more, no less.
+- Do NOT create ${sanitizedBookData.targetChapters - 1} pages
+- Do NOT create ${sanitizedBookData.targetChapters + 1} pages
+- Create PRECISELY ${sanitizedBookData.targetChapters} pages
+
+The output MUST have exactly ${sanitizedBookData.targetChapters} items in the "chapters" array.
+Each page needs BOTH the text/dialogue AND a scene description.
 ${narrativeStory ? '\nPRESERVE the story, dialogue, and emotional beats from the narrative above.' : ''}
 
 ${dialogueInstructions}
@@ -1718,8 +1725,9 @@ CRITICAL - CONCISE OUTPUT:
 20. Background: MAX 15 words
 21. Do NOT pad with unnecessary words - be direct and specific
 22. Complete the ENTIRE JSON structure - do not stop mid-response
+23. Your "chapters" array MUST contain EXACTLY ${sanitizedBookData.targetChapters} objects
 
-Output ONLY valid JSON:
+Output ONLY valid JSON with EXACTLY ${sanitizedBookData.targetChapters} chapters:
 {
   "chapters": [
     {
