@@ -122,8 +122,20 @@ export default function CreateBook() {
         if (state.selectedCategory) setSelectedCategory(state.selectedCategory);
         if (state.selectedPreset) setSelectedPreset(state.selectedPreset);
         if (state.selectedArtStyle) setSelectedArtStyle(state.selectedArtStyle);
-        if (state.step) setStep(state.step);
         if (state.ideaCategory) setIdeaCategory(state.ideaCategory);
+
+        // Only restore step if the required state for that step exists
+        // This prevents blank pages when state is incomplete
+        if (state.step) {
+          if (state.step === 'subtype' && state.selectedCategory) {
+            setStep('subtype');
+          } else if (state.step === 'idea' && state.selectedPreset) {
+            setStep('idea');
+          } else if (state.step === 'style' && state.selectedPreset) {
+            setStep('style');
+          }
+          // Otherwise stay on 'category' (the default)
+        }
       } catch (e) {
         console.error('Failed to restore form state:', e);
       }
@@ -731,8 +743,9 @@ export default function CreateBook() {
                     </div>
 
                     {/* File upload link */}
-                    <label className="text-xs text-neutral-400 hover:text-neutral-600 cursor-pointer">
-                      or upload file
+                    <label className="text-xs text-neutral-400 hover:text-neutral-600 cursor-pointer flex items-center gap-1">
+                      <Upload className="h-3 w-3" />
+                      upload (.pdf/.txt, up to 120k chars)
                       <input
                         type="file"
                         accept=".txt,.md,.docx,.pdf"
