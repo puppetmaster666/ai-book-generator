@@ -51,7 +51,7 @@ function sanitizeForWinAnsi(text: string): string {
     'ư': 'u', 'Ư': 'U',
     // Smart quotes and dashes (convert to ASCII equivalents)
     '"': '"', '"': '"',
-    ''': "'", ''': "'",
+    "\u2018": "'", "\u2019": "'",
     '–': '-', '—': '-',
     '…': '...',
     // Other common characters
