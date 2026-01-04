@@ -737,6 +737,14 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
     window.open(`/api/books/${id}/download`, '_blank');
   };
 
+  const handleEpubDownload = () => {
+    window.open(`/api/books/${id}/download?format=epub`, '_blank');
+  };
+
+  const handlePdfDownload = () => {
+    window.open(`/api/books/${id}/download?format=pdf`, '_blank');
+  };
+
   const handleTxtDownload = () => {
     window.open(`/api/books/${id}/download?format=txt`, '_blank');
   };
@@ -2014,21 +2022,56 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
               )}
 
               <div className="space-y-3">
-                <button
-                  onClick={handleDownload}
-                  className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-neutral-900 text-white rounded-xl hover:bg-black font-medium transition-colors"
-                >
-                  <Download className="h-5 w-5" /> Download {isIllustrated || isScreenplay ? 'PDF' : 'EPUB'}
-                </button>
+                {/* Text-only books get all 3 formats */}
+                {!isIllustrated && !isScreenplay && (
+                  <>
+                    <button
+                      onClick={handleEpubDownload}
+                      className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-neutral-900 text-white rounded-xl hover:bg-black font-medium transition-colors"
+                    >
+                      <BookOpen className="h-5 w-5" /> Download EPUB
+                    </button>
+                    <button
+                      onClick={handlePdfDownload}
+                      className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-white text-neutral-900 border border-neutral-200 rounded-xl hover:bg-neutral-50 font-medium transition-colors"
+                    >
+                      <Download className="h-5 w-5" /> Download PDF
+                    </button>
+                    <button
+                      onClick={handleTxtDownload}
+                      className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-white text-neutral-900 border border-neutral-200 rounded-xl hover:bg-neutral-50 font-medium transition-colors"
+                    >
+                      <FileText className="h-5 w-5" /> Download TXT
+                    </button>
+                  </>
+                )}
 
-                {/* TXT download for easy copy-paste - for text books and screenplays */}
-                {(!isIllustrated || isScreenplay) && (
+                {/* Visual books (comics, picture books) get PDF only */}
+                {isIllustrated && !isScreenplay && (
                   <button
-                    onClick={handleTxtDownload}
-                    className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-white text-neutral-900 border border-neutral-200 rounded-xl hover:bg-neutral-50 font-medium transition-colors"
+                    onClick={handleDownload}
+                    className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-neutral-900 text-white rounded-xl hover:bg-black font-medium transition-colors"
                   >
-                    <FileText className="h-5 w-5" /> Download TXT (for copy-paste)
+                    <Download className="h-5 w-5" /> Download PDF
                   </button>
+                )}
+
+                {/* Screenplays get PDF and TXT */}
+                {isScreenplay && (
+                  <>
+                    <button
+                      onClick={handleDownload}
+                      className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-neutral-900 text-white rounded-xl hover:bg-black font-medium transition-colors"
+                    >
+                      <Film className="h-5 w-5" /> Download PDF
+                    </button>
+                    <button
+                      onClick={handleTxtDownload}
+                      className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-white text-neutral-900 border border-neutral-200 rounded-xl hover:bg-neutral-50 font-medium transition-colors"
+                    >
+                      <FileText className="h-5 w-5" /> Download TXT
+                    </button>
+                  </>
                 )}
 
                 {book.coverImageUrl && (

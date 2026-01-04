@@ -6,8 +6,20 @@ import { useSession } from 'next-auth/react';
 import Image from 'next/image';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
-import { ArrowLeft, ArrowRight, Sparkles, Loader2, BookOpen, Palette, Layers, ChevronDown, GraduationCap, Film, Upload, FileText, X } from 'lucide-react';
-import { BOOK_PRESETS, ART_STYLES, GENRES, type BookPresetKey, type ArtStyleKey } from '@/lib/constants';
+import { ArrowLeft, ArrowRight, Sparkles, Loader2, BookOpen, Palette, Layers, ChevronDown, ChevronUp, GraduationCap, Film, Upload, FileText, X, Clock, Skull } from 'lucide-react';
+import {
+  BOOK_PRESETS,
+  ART_STYLES,
+  GENRES,
+  LENGTH_TIERS,
+  VISUAL_LENGTH_TIERS,
+  SCREENPLAY_LENGTH_TIERS,
+  type BookPresetKey,
+  type ArtStyleKey,
+  type LengthTierKey,
+  type VisualLengthTierKey,
+  type ScreenplayLengthTierKey,
+} from '@/lib/constants';
 
 // Idea categories for the Surprise Me feature
 type IdeaCategory = 'random' | 'novel' | 'childrens' | 'comic' | 'nonfiction' | 'adult_comic' | 'screenplay';
@@ -23,11 +35,13 @@ const IDEA_CATEGORIES: { value: IdeaCategory; label: string; emoji: string }[] =
 ];
 
 // Icons for book types
-const PRESET_ICONS = {
+const PRESET_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   novel: BookOpen,
   childrens_picture: Palette,
   comic_story: Layers,
+  adult_comic: Skull,
   nonfiction: GraduationCap,
+  lead_magnet: FileText,
   screenplay: Film,
 };
 
@@ -62,6 +76,10 @@ export default function CreateBook() {
   const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
   const [isParsingFile, setIsParsingFile] = useState(false);
 
+  // Questionnaire state - all default to 'auto' (Let AI Choose)
+  const [showCustomize, setShowCustomize] = useState(false);
+  const [lengthTier, setLengthTier] = useState<LengthTierKey | VisualLengthTierKey | ScreenplayLengthTierKey>('auto');
+
   // Get user ID from session if logged in
   const userId = (session?.user as { id?: string })?.id;
 
@@ -88,6 +106,7 @@ export default function CreateBook() {
         if (state.selectedArtStyle) setSelectedArtStyle(state.selectedArtStyle);
         if (state.step) setStep(state.step);
         if (state.ideaCategory) setIdeaCategory(state.ideaCategory);
+        if (state.lengthTier) setLengthTier(state.lengthTier);
       } catch (e) {
         console.error('Failed to restore form state:', e);
       }
@@ -104,10 +123,11 @@ export default function CreateBook() {
         selectedArtStyle,
         step,
         ideaCategory,
+        lengthTier,
       };
       sessionStorage.setItem(FORM_STATE_KEY, JSON.stringify(state));
     }
-  }, [idea, selectedPreset, selectedArtStyle, step, ideaCategory]);
+  }, [idea, selectedPreset, selectedArtStyle, step, ideaCategory, lengthTier]);
 
   // Clear form state when navigating away after successful submission
   const clearFormState = () => {
@@ -144,7 +164,6 @@ export default function CreateBook() {
     }
 
     if (extension === 'docx') {
-      // Use mammoth.js for DOCX parsing (loaded dynamically)
       try {
         const mammoth = await import('mammoth');
         const arrayBuffer = await file.arrayBuffer();
@@ -156,7 +175,6 @@ export default function CreateBook() {
     }
 
     if (extension === 'pdf') {
-      // For PDF, we'll just extract text (basic support)
       try {
         const pdfjs = await import('pdfjs-dist');
         pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
@@ -199,12 +217,10 @@ export default function CreateBook() {
 
     const file = files[0];
     await processFile(file);
-    // Reset the input so the same file can be selected again
     e.target.value = '';
   };
 
   const processFile = async (file: File) => {
-    // Validate file size (max 5MB)
     if (file.size > 5 * 1024 * 1024) {
       setError('File too large. Maximum size is 5MB.');
       return;
@@ -215,10 +231,7 @@ export default function CreateBook() {
 
     try {
       const content = await parseFileContent(file);
-
-      // Limit content to reasonable size (first 50,000 characters ~ 8000 words)
-      const trimmedContent = content.slice(0, 50000);
-
+      const trimmedContent = content.slice(0, 120000);
       setIdea(trimmedContent);
       setUploadedFileName(file.name);
     } catch (err) {
@@ -256,92 +269,80 @@ export default function CreateBook() {
       setSelectedArtStyle(null);
     }
 
-    // If idea already exists from homepage, skip the idea step
+    // Reset length tier to auto when changing preset
+    setLengthTier('auto');
+
+    // If idea already exists from homepage, skip the idea step for text-only books
     if (hasIdeaFromHomepage && idea.trim().length >= 20) {
-      // Text-only books and screenplays skip the style step
       const needsStyleStep = preset.format !== 'text_only' && preset.format !== 'screenplay';
       if (needsStyleStep) {
         setStep('style');
       } else {
-        setTimeout(() => handleSubmitWithPreset(key), 0);
+        setTimeout(() => handleSubmit(), 0);
       }
     } else {
       setStep('idea');
     }
   };
 
-  const handleSubmitWithPreset = async (presetKey: BookPresetKey) => {
-    if (!idea.trim()) return;
+  // Get the appropriate length tiers based on book type
+  const getLengthTiers = () => {
+    if (!selectedPreset) return Object.entries(LENGTH_TIERS);
+    const preset = BOOK_PRESETS[selectedPreset];
 
-    setIsSubmitting(true);
-    setError('');
-
-    try {
-      const preset = BOOK_PRESETS[presetKey];
-      const genre = GENRES[preset.defaultGenre as keyof typeof GENRES];
-
-      // Determine book type based on preset
-      let bookType = genre?.type || 'fiction';
-      if (presetKey === 'nonfiction') {
-        bookType = 'non-fiction';
-      } else if (presetKey === 'screenplay') {
-        bookType = 'fiction';
-      }
-
-      // Check if this is an illustrated book (screenplays are not illustrated)
-      const isIllustrated = preset.format !== 'text_only' && preset.format !== 'screenplay';
-
-      const expandResponse = await fetch('/api/expand-idea', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          idea,
-          bookType,
-          isIllustrated,
-          isScreenplay: preset.format === 'screenplay',
-        }),
-      });
-
-      if (!expandResponse.ok) throw new Error('Failed to expand idea');
-      const bookPlan = await expandResponse.json();
-
-      // For screenplays, use targetPages converted to equivalent words (250 words/page)
-      // and sequences instead of chapters
-      const isScreenplay = preset.format === 'screenplay';
-      const targetWords = isScreenplay
-        ? ('targetPages' in preset ? (preset.targetPages as number) * 250 : 25000)
-        : ('targetWords' in preset ? preset.targetWords : 50000);
-      const targetChapters = isScreenplay
-        ? ('sequences' in preset ? preset.sequences as number : 8)
-        : ('chapters' in preset ? preset.chapters : 20);
-
-      const response = await fetch('/api/books', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...bookPlan,
-          bookPreset: presetKey,
-          bookFormat: preset.format,
-          artStyle: preset.artStyle,
-          dialogueStyle: preset.dialogueStyle || null,
-          targetWords,
-          targetChapters,
-          userId,
-        }),
-      });
-
-      if (!response.ok) throw new Error('Failed to create book');
-
-      const { bookId } = await response.json();
-      clearFormState();
-      router.push(`/review?bookId=${bookId}`);
-    } catch (err) {
-      console.error('Error:', err);
-      setError('Something went wrong. Please try again.');
-      setStep('idea');
-    } finally {
-      setIsSubmitting(false);
+    if (preset.format === 'screenplay') {
+      return Object.entries(SCREENPLAY_LENGTH_TIERS);
+    } else if (preset.format === 'picture_book') {
+      return Object.entries(VISUAL_LENGTH_TIERS);
+    } else {
+      return Object.entries(LENGTH_TIERS);
     }
+  };
+
+  // Calculate target words and chapters based on length tier
+  const getTargetFromLengthTier = () => {
+    if (!selectedPreset) return { targetWords: 60000, targetChapters: 20 };
+
+    const preset = BOOK_PRESETS[selectedPreset];
+    const isScreenplay = preset.format === 'screenplay';
+    const isVisual = preset.format === 'picture_book';
+
+    // If "auto" selected, use preset defaults
+    if (lengthTier === 'auto') {
+      if (isScreenplay) {
+        const pages = 'targetPages' in preset ? (preset.targetPages as number) : 100;
+        return { targetWords: pages * 250, targetChapters: 8 };
+      } else if (isVisual) {
+        return { targetWords: preset.targetWords, targetChapters: preset.chapters };
+      } else {
+        return { targetWords: preset.targetWords, targetChapters: preset.chapters };
+      }
+    }
+
+    // Use the selected tier
+    if (isScreenplay) {
+      const tier = SCREENPLAY_LENGTH_TIERS[lengthTier as ScreenplayLengthTierKey];
+      if (tier && tier.pages) {
+        return { targetWords: tier.pages * 250, targetChapters: tier.sequences || 8 };
+      }
+    } else if (isVisual) {
+      const tier = VISUAL_LENGTH_TIERS[lengthTier as VisualLengthTierKey];
+      if (tier && tier.panels) {
+        return { targetWords: tier.panels * 50, targetChapters: tier.panels };
+      }
+    } else {
+      const tier = LENGTH_TIERS[lengthTier as LengthTierKey];
+      if (tier && tier.words) {
+        return { targetWords: tier.words, targetChapters: tier.chapters || 20 };
+      }
+    }
+
+    // Fallback to preset defaults
+    if ('targetPages' in preset) {
+      // Screenplay preset
+      return { targetWords: (preset.targetPages as number) * 250, targetChapters: preset.sequences as number };
+    }
+    return { targetWords: preset.targetWords as number, targetChapters: preset.chapters as number };
   };
 
   const handleContinue = () => {
@@ -369,14 +370,13 @@ export default function CreateBook() {
 
       // Determine book type based on preset
       let bookType = genre?.type || 'fiction';
-      if (selectedPreset === 'nonfiction') {
+      if (selectedPreset === 'nonfiction' || selectedPreset === 'lead_magnet') {
         bookType = 'non-fiction';
       } else if (selectedPreset === 'screenplay') {
-        // Screenplays are fiction for categorization purposes
         bookType = 'fiction';
       }
 
-      // Check if this is an illustrated book (screenplays are not illustrated)
+      // Check if this is an illustrated book
       const isIllustrated = preset.format !== 'text_only' && preset.format !== 'screenplay';
 
       const expandResponse = await fetch('/api/expand-idea', {
@@ -393,15 +393,8 @@ export default function CreateBook() {
       if (!expandResponse.ok) throw new Error('Failed to expand idea');
       const bookPlan = await expandResponse.json();
 
-      // For screenplays, use targetPages converted to equivalent words (250 words/page)
-      // and sequences instead of chapters
-      const isScreenplay = preset.format === 'screenplay';
-      const targetWords = isScreenplay
-        ? ('targetPages' in preset ? (preset.targetPages as number) * 250 : 25000)
-        : ('targetWords' in preset ? preset.targetWords : 50000);
-      const targetChapters = isScreenplay
-        ? ('sequences' in preset ? preset.sequences as number : 8)
-        : ('chapters' in preset ? preset.chapters : 20);
+      // Get target words and chapters from length tier
+      const { targetWords, targetChapters } = getTargetFromLengthTier();
 
       const response = await fetch('/api/books', {
         method: 'POST',
@@ -411,7 +404,7 @@ export default function CreateBook() {
           bookPreset: selectedPreset,
           bookFormat: preset.format,
           artStyle: selectedArtStyle,
-          dialogueStyle: preset.dialogueStyle,
+          dialogueStyle: preset.dialogueStyle || null,
           targetWords,
           targetChapters,
           userId,
@@ -444,6 +437,35 @@ export default function CreateBook() {
       .filter(([, style]) => style.category === category);
   };
 
+  // Get estimated time for current settings
+  const getEstimatedTime = () => {
+    if (!selectedPreset) return null;
+    const preset = BOOK_PRESETS[selectedPreset];
+
+    if (lengthTier !== 'auto') {
+      if (preset.format === 'screenplay') {
+        const tier = SCREENPLAY_LENGTH_TIERS[lengthTier as ScreenplayLengthTierKey];
+        if (tier && tier.pages) {
+          const mins = Math.round(tier.pages * 0.4);
+          return `~${mins} min`;
+        }
+      } else if (preset.format === 'picture_book') {
+        const tier = VISUAL_LENGTH_TIERS[lengthTier as VisualLengthTierKey];
+        if (tier && tier.panels) {
+          const mins = Math.round(tier.panels * 0.5);
+          return `~${mins} min`;
+        }
+      } else {
+        const tier = LENGTH_TIERS[lengthTier as LengthTierKey];
+        if (tier && tier.estimatedTime) {
+          return tier.estimatedTime;
+        }
+      }
+    }
+
+    return null;
+  };
+
   return (
     <div className="min-h-screen bg-white">
       <Header />
@@ -472,7 +494,7 @@ export default function CreateBook() {
 
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     {(Object.entries(BOOK_PRESETS) as [BookPresetKey, typeof BOOK_PRESETS[BookPresetKey]][]).map(([key, presetItem]) => {
-                      const IconComponent = PRESET_ICONS[key as keyof typeof PRESET_ICONS] || BookOpen;
+                      const IconComponent = PRESET_ICONS[key] || BookOpen;
                       return (
                         <button
                           key={key}
@@ -503,7 +525,7 @@ export default function CreateBook() {
             </>
           )}
 
-          {/* Step 2: Write Your Idea */}
+          {/* Step 2: Write Your Idea + Questionnaire */}
           {step === 'idea' && preset && (
             <>
               <button
@@ -520,13 +542,15 @@ export default function CreateBook() {
                   <span className="font-semibold">{preset.priceDisplay}</span>
                 </div>
                 <h1 className="text-3xl md:text-4xl font-bold tracking-tight mb-4" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>
-                  Describe your {preset.format === 'picture_book' ? 'story' : 'book'} idea
+                  Describe your {preset.format === 'picture_book' ? 'story' : preset.format === 'screenplay' ? 'movie' : 'book'} idea
                 </h1>
                 <p className="text-lg text-neutral-600">
-                  {selectedPreset === 'comic_story'
+                  {selectedPreset === 'comic_story' || selectedPreset === 'adult_comic'
                     ? "Tell us about your comic story - the characters, action, and setting"
-                    : selectedPreset === 'nonfiction'
+                    : selectedPreset === 'nonfiction' || selectedPreset === 'lead_magnet'
                     ? "Tell us what you want to teach - the main topic, key lessons, and target audience"
+                    : selectedPreset === 'screenplay'
+                    ? "Tell us about your movie - the premise, main characters, and genre"
                     : preset.format === 'picture_book'
                     ? "Tell us about your children's story - the characters, setting, and message"
                     : "Share your concept and we'll expand it into a full outline"}
@@ -566,10 +590,12 @@ export default function CreateBook() {
                       if (uploadedFileName) setUploadedFileName(null);
                     }}
                     placeholder={
-                      selectedPreset === 'comic_story'
+                      selectedPreset === 'comic_story' || selectedPreset === 'adult_comic'
                         ? "A noir detective story set in a rainy city where a private eye investigates a series of mysterious disappearances..."
-                        : selectedPreset === 'nonfiction'
+                        : selectedPreset === 'nonfiction' || selectedPreset === 'lead_magnet'
                         ? "A comprehensive guide to becoming a successful screenwriter, covering everything from story structure to pitching your scripts to studios..."
+                        : selectedPreset === 'screenplay'
+                        ? "A psychological thriller about a detective who discovers her own name in a cold case file from 1985, leading her down a rabbit hole of conspiracy..."
                         : preset.format === 'picture_book'
                         ? "A curious little fox named Pip who discovers that the stars in the sky are actually sleeping fireflies..."
                         : "A mystery novel about a detective who discovers her own name in a cold case file from 1985..."
@@ -602,22 +628,7 @@ export default function CreateBook() {
                   )}
                 </div>
 
-                {/* Helper text for drag and drop */}
-                <p className="text-xs text-neutral-400 mt-2 text-center">
-                  Have an existing draft? Drag and drop a file here or{' '}
-                  <label className="text-neutral-600 hover:text-neutral-900 cursor-pointer underline">
-                    browse
-                    <input
-                      type="file"
-                      accept=".txt,.md,.docx,.pdf"
-                      onChange={handleFileSelect}
-                      className="hidden"
-                      disabled={isSubmitting || isParsingFile}
-                    />
-                  </label>
-                  {' '}(.txt, .md, .docx, .pdf)
-                </p>
-
+                {/* Helper text and surprise me button */}
                 <div className="flex items-center justify-between mt-4">
                   <div className="flex items-center gap-2">
                     <button
@@ -665,11 +676,84 @@ export default function CreateBook() {
                         </div>
                       )}
                     </div>
+
+                    {/* File upload link */}
+                    <label className="text-xs text-neutral-400 hover:text-neutral-600 cursor-pointer">
+                      or upload file
+                      <input
+                        type="file"
+                        accept=".txt,.md,.docx,.pdf"
+                        onChange={handleFileSelect}
+                        className="hidden"
+                        disabled={isSubmitting || isParsingFile}
+                      />
+                    </label>
                   </div>
 
                   <span className={`text-sm ${idea.trim().split(/\s+/).filter(w => w).length > 1000 ? 'text-amber-600' : 'text-neutral-500'}`}>
                     {idea.trim() ? idea.trim().split(/\s+/).filter(w => w).length : 0} words
                   </span>
+                </div>
+
+                {/* Customize Settings Accordion */}
+                <div className="mt-6 border-t border-neutral-200 pt-6">
+                  <button
+                    type="button"
+                    onClick={() => setShowCustomize(!showCustomize)}
+                    className="flex items-center justify-between w-full text-left"
+                  >
+                    <span className="text-sm font-medium text-neutral-700">
+                      Customize settings
+                      {lengthTier !== 'auto' && (
+                        <span className="ml-2 text-neutral-500 font-normal">
+                          ({getLengthTiers().find(([k]) => k === lengthTier)?.[1]?.label})
+                        </span>
+                      )}
+                    </span>
+                    {showCustomize ? (
+                      <ChevronUp className="h-4 w-4 text-neutral-500" />
+                    ) : (
+                      <ChevronDown className="h-4 w-4 text-neutral-500" />
+                    )}
+                  </button>
+
+                  {showCustomize && (
+                    <div className="mt-4 space-y-4">
+                      {/* Length Tier Selection */}
+                      <div>
+                        <label className="block text-sm font-medium text-neutral-700 mb-2">
+                          Book Length
+                        </label>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
+                          {getLengthTiers().map(([key, tier]) => (
+                            <button
+                              key={key}
+                              type="button"
+                              onClick={() => setLengthTier(key as LengthTierKey)}
+                              className={`p-3 rounded-lg border text-left transition-all ${
+                                lengthTier === key
+                                  ? 'border-neutral-900 bg-neutral-900 text-white'
+                                  : 'border-neutral-200 hover:border-neutral-400 bg-white'
+                              }`}
+                            >
+                              <div className="font-medium text-sm">{tier.label}</div>
+                              <div className={`text-xs mt-0.5 ${lengthTier === key ? 'text-neutral-300' : 'text-neutral-500'}`}>
+                                {tier.description}
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Estimated time display */}
+                      {getEstimatedTime() && (
+                        <div className="flex items-center gap-2 text-sm text-neutral-500">
+                          <Clock className="h-4 w-4" />
+                          <span>Estimated generation time: {getEstimatedTime()}</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 {error && (
@@ -687,7 +771,7 @@ export default function CreateBook() {
                         <Loader2 className="h-5 w-5 animate-spin" />
                         Creating your book...
                       </>
-                    ) : preset.format !== 'text_only' ? (
+                    ) : preset.format !== 'text_only' && preset.format !== 'screenplay' ? (
                       <>
                         Choose Art Style <ArrowRight className="h-5 w-5" />
                       </>
@@ -717,7 +801,7 @@ export default function CreateBook() {
                   Choose your art style
                 </h1>
                 <p className="text-lg text-neutral-600">
-                  {selectedPreset === 'comic_story'
+                  {selectedPreset === 'comic_story' || selectedPreset === 'adult_comic'
                     ? "Select the visual style for your comic panels"
                     : "This style will be used for all illustrations"}
                 </p>

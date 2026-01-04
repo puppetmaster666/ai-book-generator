@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { generateEpub } from '@/lib/epub';
 import { generatePdf } from '@/lib/pdf';
+import { generateTextPdf } from '@/lib/pdf-text';
 import { generateScreenplayPdf } from '@/lib/screenplay-pdf';
 import { FontStyleKey } from '@/lib/constants';
 
@@ -161,17 +162,25 @@ export async function GET(
     const safeFilename = book.title.replace(/[^a-z0-9]/gi, '_');
 
     // Determine download format
-    // Screenplays always use PDF (default) or TXT, never EPUB
-    // If explicitly requested, use that format; otherwise auto-detect
+    // All book types support TXT, EPUB, and PDF downloads
+    // Screenplays default to PDF, visual books default to PDF, text books default to EPUB
     let downloadFormat: 'txt' | 'epub' | 'pdf';
     if (requestedFormat === 'txt') {
       downloadFormat = 'txt';
-    } else if (isScreenplay) {
-      // Screenplays default to PDF, can also be TXT (already handled above)
+    } else if (requestedFormat === 'pdf') {
+      // Explicit PDF request - supported for all book types
       downloadFormat = 'pdf';
-    } else if (requestedFormat === 'pdf' || (isVisualBook && !isTextOnly && requestedFormat !== 'epub')) {
+    } else if (requestedFormat === 'epub') {
+      // Explicit EPUB request - supported for all book types (though screenplays may look odd)
+      downloadFormat = 'epub';
+    } else if (isScreenplay) {
+      // Screenplays default to PDF
+      downloadFormat = 'pdf';
+    } else if (isVisualBook && !isTextOnly) {
+      // Visual books default to PDF
       downloadFormat = 'pdf';
     } else {
+      // Text-only books default to EPUB
       downloadFormat = 'epub';
     }
 
@@ -224,6 +233,26 @@ export async function GET(
         });
       }
 
+      // Use text PDF generator for text-only books (novels, non-fiction, lead magnets)
+      if (isTextOnly) {
+        console.log(`Generating text PDF for book ${id}: format=${book.bookFormat}`);
+
+        const pdfBuffer = await generateTextPdf({
+          title: bookData.title,
+          authorName: bookData.authorName,
+          chapters: bookData.chapters,
+          fontStyle: bookData.fontStyle,
+        });
+
+        return new NextResponse(new Uint8Array(pdfBuffer), {
+          headers: {
+            'Content-Type': 'application/pdf',
+            'Content-Disposition': `attachment; filename="${safeFilename}.pdf"`,
+          },
+        });
+      }
+
+      // Use visual PDF generator for picture books and comics
       console.log(`Generating PDF for visual book ${id}: format=${book.bookFormat}, dialogueStyle=${book.dialogueStyle}`);
 
       const pdfBuffer = await generatePdf(bookData);

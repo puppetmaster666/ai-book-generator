@@ -28,6 +28,108 @@ export const FREE_TIER_LIMITS = {
   screenplay: { pages: 5, description: '5 pages preview' },
 } as const;
 
+// Length tiers for text-only books (novels, non-fiction)
+export const LENGTH_TIERS = {
+  auto: {
+    label: 'Let AI Choose',
+    description: 'AI picks the best length for your story',
+    pages: null, // AI decides based on content
+    words: null,
+    chapters: null,
+    estimatedTime: null,
+  },
+  quick: {
+    label: 'Quick Guide',
+    description: '20-30 pages, perfect for lead magnets',
+    pages: '20-30',
+    words: 7500,
+    chapters: 5,
+    estimatedTime: '~5 min',
+  },
+  standard: {
+    label: 'Standard',
+    description: '80-120 pages, solid book length',
+    pages: '80-120',
+    words: 25000,
+    chapters: 12,
+    estimatedTime: '~15 min',
+  },
+  novel: {
+    label: 'Novel',
+    description: '200-250 pages, full novel length',
+    pages: '200-250',
+    words: 60000,
+    chapters: 20,
+    estimatedTime: '~30 min',
+  },
+  epic: {
+    label: 'Epic',
+    description: '350-450 pages, epic saga',
+    pages: '350-450',
+    words: 100000,
+    chapters: 32,
+    estimatedTime: '~60 min',
+  },
+} as const;
+
+export type LengthTierKey = keyof typeof LENGTH_TIERS;
+
+// Length tiers for visual books (picture books, comics)
+export const VISUAL_LENGTH_TIERS = {
+  auto: {
+    label: 'Let AI Choose',
+    description: 'AI picks the best length',
+    panels: null,
+  },
+  short: {
+    label: 'Short',
+    description: '12 panels/pages',
+    panels: 12,
+  },
+  standard: {
+    label: 'Standard',
+    description: '24 panels/pages',
+    panels: 24,
+  },
+  long: {
+    label: 'Extended',
+    description: '36 panels/pages',
+    panels: 36,
+  },
+} as const;
+
+export type VisualLengthTierKey = keyof typeof VISUAL_LENGTH_TIERS;
+
+// Length tiers for screenplays
+export const SCREENPLAY_LENGTH_TIERS = {
+  auto: {
+    label: 'Let AI Choose',
+    description: 'AI picks based on story complexity',
+    pages: null,
+    sequences: null,
+  },
+  short: {
+    label: 'Short Film',
+    description: '30-45 pages (~30-45 min)',
+    pages: 40,
+    sequences: 4,
+  },
+  standard: {
+    label: 'Feature Film',
+    description: '90-110 pages (~90-110 min)',
+    pages: 100,
+    sequences: 8,
+  },
+  long: {
+    label: 'Epic Film',
+    description: '120-150 pages (~2-2.5 hrs)',
+    pages: 135,
+    sequences: 10,
+  },
+} as const;
+
+export type ScreenplayLengthTierKey = keyof typeof SCREENPLAY_LENGTH_TIERS;
+
 // Book Formats (illustration level)
 export const BOOK_FORMATS = {
   text_only: {
@@ -198,6 +300,20 @@ export const BOOK_PRESETS = {
     defaultGenre: 'selfhelp',
     targetWords: 50000,
     chapters: 15,
+    priceDisplay: '$9.99',
+    downloadFormat: 'epub',
+    contentRating: 'general',
+  },
+  lead_magnet: {
+    label: 'Short Guide / Lead Magnet',
+    description: '20-30 pages, perfect for lead magnets & quick guides',
+    icon: 'FileText',
+    format: 'text_only',
+    artStyle: null,
+    dialogueStyle: null,
+    defaultGenre: 'howto',
+    targetWords: 7500, // ~25-30 pages at 250 words/page
+    chapters: 5,
     priceDisplay: '$9.99',
     downloadFormat: 'epub',
     contentRating: 'general',
