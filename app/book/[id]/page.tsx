@@ -1748,6 +1748,7 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
                         const ill = illMap.get(num);
                         const isFailed = ill?.status === 'failed';
                         const isCompleted = ill?.status === 'completed' || (!ill?.status && ill?.imageUrl);
+                        const isMissing = !ill; // No record at all (old books or never attempted)
                         const isRetryingThis = ill?.id && retryingPanels.has(ill.id);
                         const canRetry = isFailed && !isRetryingThis && (ill?.retryCount ?? 0) < 5;
                         const maxRetriesReached = isFailed && (ill?.retryCount ?? 0) >= 5;
@@ -1763,6 +1764,7 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
                               isCompleted ? 'border-neutral-900' :
                               isFailed ? 'border-red-400 bg-red-50' :
                               isRetryingThis ? 'border-amber-400 bg-amber-50' :
+                              isMissing && !isGenerating ? 'border-amber-300 bg-amber-50/50' :
                               'border-neutral-200'
                             }`}
                           >
@@ -1795,6 +1797,13 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
                                     )}
                                   </>
                                 )}
+                              </div>
+                            ) : isMissing && !isGenerating ? (
+                              // Missing panel (no record) - shows for old books or never attempted panels
+                              <div className="w-full h-full flex flex-col items-center justify-center p-2 text-center">
+                                <ImageIcon className="h-5 w-5 text-amber-500 mb-1" />
+                                <span className="text-[10px] font-medium text-amber-700">Missing</span>
+                                <span className="text-[9px] text-amber-600 mt-0.5">Use Retry All</span>
                               </div>
                             ) : (
                               <div className="w-full h-full flex flex-col items-center justify-center p-2 text-center">
