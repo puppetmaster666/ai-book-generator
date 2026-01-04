@@ -30,6 +30,25 @@ function isBase64DataUrl(url: string): boolean {
   return url.startsWith('data:image/');
 }
 
+// Helper to strip duplicate chapter heading from content (since EPUB shows title in TOC)
+function stripChapterHeading(content: string, chapterNum: number): string {
+  const lines = content.split('\n');
+  const chapterPattern = new RegExp(`^\\s*(CHAPTER\\s+${chapterNum}|Chapter\\s+${chapterNum})\\s*[:.]?.*$`, 'i');
+
+  let startIndex = 0;
+  for (let i = 0; i < Math.min(lines.length, 5); i++) {
+    if (chapterPattern.test(lines[i].trim())) {
+      startIndex = i + 1;
+      while (startIndex < lines.length && lines[startIndex].trim() === '') {
+        startIndex++;
+      }
+      break;
+    }
+  }
+
+  return lines.slice(startIndex).join('\n');
+}
+
 // Compress base64 image by reducing quality (simple approach)
 // For large comics, this helps prevent memory issues
 function processImageForEpub(imageUrl: string, maxSizeKb: number = 500): string {
@@ -241,8 +260,10 @@ export async function generateEpub(bookData: BookData): Promise<Buffer> {
   // Build chapters array
   const chapterContents = bookData.chapters.map((chapter, index) => {
     const isLastChapter = index === bookData.chapters.length - 1;
+    // Strip duplicate chapter heading from content (since EPUB shows title in TOC/header)
+    const cleanedContent = stripChapterHeading(chapter.content, chapter.number);
     let content = formatChapterContent(
-      chapter.content,
+      cleanedContent,
       bookData.fontStyle,
       chapter.illustrations,
       effectiveFormat

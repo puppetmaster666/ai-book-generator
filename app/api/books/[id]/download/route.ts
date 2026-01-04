@@ -9,6 +9,30 @@ import { FontStyleKey } from '@/lib/constants';
 /**
  * Generate a plain text version of the book for easy copy-paste
  */
+// Helper to strip chapter heading from content (since we add our own header)
+function stripChapterHeading(content: string, chapterNum: number): string {
+  const lines = content.split('\n');
+  const chapterPattern = new RegExp(`^\\s*(CHAPTER\\s+${chapterNum}|Chapter\\s+${chapterNum})\\s*[:.]?.*$`, 'i');
+
+  let startIndex = 0;
+  for (let i = 0; i < Math.min(lines.length, 5); i++) {
+    if (chapterPattern.test(lines[i].trim())) {
+      startIndex = i + 1;
+      while (startIndex < lines.length && lines[startIndex].trim() === '') {
+        startIndex++;
+      }
+      break;
+    }
+  }
+
+  return lines.slice(startIndex).join('\n');
+}
+
+// Check if content ends with "The End"
+function contentHasTheEnd(content: string): boolean {
+  return /\b(The\s+End|THE\s+END)\s*$/i.test(content.trim());
+}
+
 function generateTxt(bookData: {
   title: string;
   authorName: string;
@@ -24,20 +48,30 @@ function generateTxt(bookData: {
   lines.push('─'.repeat(50));
   lines.push('');
 
+  let hasTheEndInContent = false;
+
   // Chapters
   for (const chapter of bookData.chapters) {
     lines.push('');
     lines.push(`CHAPTER ${chapter.number}: ${chapter.title.toUpperCase()}`);
     lines.push('');
-    lines.push(chapter.content);
+    // Strip duplicate chapter heading from content
+    const cleanedContent = stripChapterHeading(chapter.content, chapter.number);
+    lines.push(cleanedContent);
     lines.push('');
     lines.push('─'.repeat(50));
+
+    if (contentHasTheEnd(cleanedContent)) {
+      hasTheEndInContent = true;
+    }
   }
 
-  // End
-  lines.push('');
-  lines.push('THE END');
-  lines.push('');
+  // Only add THE END if content doesn't already have it
+  if (!hasTheEndInContent) {
+    lines.push('');
+    lines.push('THE END');
+    lines.push('');
+  }
 
   return lines.join('\n');
 }
@@ -69,19 +103,27 @@ function generateScreenplayTxt(bookData: {
   lines.push('');
   lines.push('');
 
+  let hasTheEndInContent = false;
+
   // Sequences (chapters in screenplay terms)
   for (const chapter of bookData.chapters) {
     // Add sequence content directly - it should already be in screenplay format
     lines.push(chapter.content);
     lines.push('');
+
+    if (contentHasTheEnd(chapter.content)) {
+      hasTheEndInContent = true;
+    }
   }
 
-  // End
-  lines.push('');
-  lines.push('FADE OUT.');
-  lines.push('');
-  lines.push('THE END');
-  lines.push('');
+  // Only add ending if content doesn't already have it
+  if (!hasTheEndInContent) {
+    lines.push('');
+    lines.push('FADE OUT.');
+    lines.push('');
+    lines.push('THE END');
+    lines.push('');
+  }
 
   return lines.join('\n');
 }

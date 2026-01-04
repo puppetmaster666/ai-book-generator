@@ -8,9 +8,11 @@ export async function GET(request: NextRequest) {
     const booksPage = parseInt(searchParams.get('booksPage') || '1');
     const booksLimit = parseInt(searchParams.get('booksLimit') || '50');
     const booksOffset = (booksPage - 1) * booksLimit;
+    const booksSearch = searchParams.get('booksSearch') || '';
     const usersPage = parseInt(searchParams.get('usersPage') || '1');
     const usersLimit = parseInt(searchParams.get('usersLimit') || '50');
     const usersOffset = (usersPage - 1) * usersLimit;
+    const usersSearch = searchParams.get('usersSearch') || '';
     // Check if user is authenticated and is admin
     const session = await auth();
     if (!session?.user) {
@@ -90,14 +92,21 @@ export async function GET(request: NextRequest) {
           createdAt: true,
         },
       }),
-      // Paginated users
+      // Paginated users with search
       prisma.user.findMany({
+        where: usersSearch ? {
+          OR: [
+            { email: { contains: usersSearch, mode: 'insensitive' } },
+            { name: { contains: usersSearch, mode: 'insensitive' } },
+          ],
+        } : undefined,
         skip: usersOffset,
         take: usersLimit,
         orderBy: { createdAt: 'desc' },
         select: {
           id: true,
           email: true,
+          emailVerified: true,
           name: true,
           plan: true,
           freeBookUsed: true,
@@ -107,8 +116,15 @@ export async function GET(request: NextRequest) {
           _count: { select: { books: true } },
         },
       }),
-      // Paginated books
+      // Paginated books with search
       prisma.book.findMany({
+        where: booksSearch ? {
+          OR: [
+            { title: { contains: booksSearch, mode: 'insensitive' } },
+            { email: { contains: booksSearch, mode: 'insensitive' } },
+            { authorName: { contains: booksSearch, mode: 'insensitive' } },
+          ],
+        } : undefined,
         skip: booksOffset,
         take: booksLimit,
         orderBy: { createdAt: 'desc' },
@@ -220,6 +236,7 @@ export async function GET(request: NextRequest) {
         createdAt: u.createdAt,
         booksCount: u._count.books,
         authMethod: u.passwordHash ? 'email' : 'google', // Determine based on password presence
+        emailVerified: u.emailVerified,
       })),
       usersPagination: {
         page: usersPage,

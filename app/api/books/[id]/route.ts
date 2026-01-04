@@ -55,6 +55,8 @@ export async function GET(
 
     // Check if user is eligible for free book or has credits
     let freeBookEligible = false;
+    let canClaimFreePreview = false; // Free sample (limited preview)
+    let hasGiftedCredits = false; // Admin gifted credits (full book access)
     let hasCredits = false;
     let userCredits = 0;
     let userPlan = 'free';
@@ -65,8 +67,11 @@ export async function GET(
         select: { freeBookUsed: true, freeCredits: true, credits: true, plan: true },
       });
       if (user) {
-        // User is eligible for free book if they haven't used their first free book OR have credits
-        freeBookEligible = !user.freeBookUsed || user.freeCredits > 0;
+        // Separate free preview (limited) from gifted credits (full access)
+        canClaimFreePreview = !user.freeBookUsed;
+        hasGiftedCredits = user.freeCredits > 0;
+        // User is eligible for free claim if they have either option
+        freeBookEligible = canClaimFreePreview || hasGiftedCredits;
         hasCredits = user.freeCredits > 0 || user.credits > 0;
         userCredits = user.freeCredits + user.credits;
         userPlan = user.plan;
@@ -103,6 +108,8 @@ export async function GET(
     return NextResponse.json({
       book: transformedBook,
       freeBookEligible,
+      canClaimFreePreview, // Limited preview (free sample)
+      hasGiftedCredits, // Full access via admin-gifted credits
       hasCredits,
       userCredits,
       userPlan,

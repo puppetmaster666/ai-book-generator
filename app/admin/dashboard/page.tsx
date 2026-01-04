@@ -58,6 +58,7 @@ interface AdminStats {
     createdAt: string;
     booksCount: number;
     authMethod: 'email' | 'google';
+    emailVerified: string | null;
   }>;
   usersPagination: {
     page: number;
@@ -186,6 +187,10 @@ export default function AdminDashboard() {
   const [anonymousIncludeCredit, setAnonymousIncludeCredit] = useState(false);
   const [anonymousCreditAmount, setAnonymousCreditAmount] = useState(1);
 
+  // Search state
+  const [booksSearch, setBooksSearch] = useState('');
+  const [usersSearch, setUsersSearch] = useState('');
+
   // Email logs state
   const [emailLogs, setEmailLogs] = useState<Array<{
     id: string;
@@ -207,10 +212,18 @@ export default function AdminDashboard() {
   const [trafficWarningEnabled, setTrafficWarningEnabled] = useState(false);
   const [isTogglingTrafficWarning, setIsTogglingTrafficWarning] = useState(false);
 
-  const fetchStats = async (showRefresh = false, booksPg = booksPage, usersPg = usersPage) => {
+  const fetchStats = async (showRefresh = false, booksPg = booksPage, usersPg = usersPage, booksSearchQuery = booksSearch, usersSearchQuery = usersSearch) => {
     if (showRefresh) setIsRefreshing(true);
     try {
-      const response = await fetch(`/api/admin/stats?booksPage=${booksPg}&booksLimit=50&usersPage=${usersPg}&usersLimit=50`);
+      const params = new URLSearchParams({
+        booksPage: booksPg.toString(),
+        booksLimit: '50',
+        usersPage: usersPg.toString(),
+        usersLimit: '50',
+      });
+      if (booksSearchQuery) params.set('booksSearch', booksSearchQuery);
+      if (usersSearchQuery) params.set('usersSearch', usersSearchQuery);
+      const response = await fetch(`/api/admin/stats?${params.toString()}`);
       const data = await response.json();
 
       if (!response.ok) {
@@ -855,13 +868,50 @@ export default function AdminDashboard() {
               )}
               {isLoadingBooks && <Loader2 className="h-4 w-4 animate-spin text-neutral-400" />}
             </div>
-            {selectedBooks.size > 0 && (
-              <div className="flex items-center gap-3">
-                <span className="text-sm text-neutral-600">
-                  {selectedBooks.size} selected
-                </span>
-                <button
-                  onClick={handleBulkDelete}
+            <div className="flex items-center gap-3">
+              {/* Search Bar */}
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="Search books..."
+                  value={booksSearch}
+                  onChange={(e) => {
+                    setBooksSearch(e.target.value);
+                    setBooksPage(1);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      fetchStats(false, 1, usersPage, booksSearch, usersSearch);
+                    }
+                  }}
+                  className="w-48 px-3 py-1.5 text-sm border border-neutral-300 rounded-lg focus:ring-2 focus:ring-neutral-500 focus:border-transparent"
+                />
+                {booksSearch && (
+                  <button
+                    onClick={() => {
+                      setBooksSearch('');
+                      setBooksPage(1);
+                      fetchStats(false, 1, usersPage, '', usersSearch);
+                    }}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600"
+                  >
+                    <XCircle className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
+              <button
+                onClick={() => fetchStats(false, 1, usersPage, booksSearch, usersSearch)}
+                className="px-3 py-1.5 text-sm bg-neutral-900 text-white rounded-lg hover:bg-neutral-800 transition-colors"
+              >
+                Search
+              </button>
+              {selectedBooks.size > 0 && (
+                <>
+                  <span className="text-sm text-neutral-600">
+                    {selectedBooks.size} selected
+                  </span>
+                  <button
+                    onClick={handleBulkDelete}
                   disabled={isDeleting}
                   className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 disabled:opacity-50 transition-colors"
                 >
@@ -876,9 +926,10 @@ export default function AdminDashboard() {
                       Delete Selected
                     </>
                   )}
-                </button>
-              </div>
-            )}
+                  </button>
+                </>
+              )}
+            </div>
           </div>
           {deleteError && (
             <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
@@ -1156,11 +1207,49 @@ export default function AdminDashboard() {
               )}
               {isLoadingUsers && <Loader2 className="h-4 w-4 animate-spin text-neutral-400" />}
             </div>
-            {selectedUsers.size > 0 && (
-              <span className="text-sm text-neutral-600">
-                {selectedUsers.size} selected
-              </span>
-            )}
+            <div className="flex items-center gap-3">
+              {/* Search Bar */}
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="Search users..."
+                  value={usersSearch}
+                  onChange={(e) => {
+                    setUsersSearch(e.target.value);
+                    setUsersPage(1);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      fetchStats(false, booksPage, 1, booksSearch, usersSearch);
+                    }
+                  }}
+                  className="w-48 px-3 py-1.5 text-sm border border-neutral-300 rounded-lg focus:ring-2 focus:ring-neutral-500 focus:border-transparent"
+                />
+                {usersSearch && (
+                  <button
+                    onClick={() => {
+                      setUsersSearch('');
+                      setUsersPage(1);
+                      fetchStats(false, booksPage, 1, booksSearch, '');
+                    }}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600"
+                  >
+                    <XCircle className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
+              <button
+                onClick={() => fetchStats(false, booksPage, 1, booksSearch, usersSearch)}
+                className="px-3 py-1.5 text-sm bg-neutral-900 text-white rounded-lg hover:bg-neutral-800 transition-colors"
+              >
+                Search
+              </button>
+              {selectedUsers.size > 0 && (
+                <span className="text-sm text-neutral-600">
+                  {selectedUsers.size} selected
+                </span>
+              )}
+            </div>
           </div>
 
           {/* Email Action Panel */}
@@ -1321,6 +1410,7 @@ export default function AdminDashboard() {
                     <th className="text-left py-3 px-2 font-medium text-neutral-500">Email</th>
                     <th className="text-left py-3 px-2 font-medium text-neutral-500">Name</th>
                     <th className="text-left py-3 px-2 font-medium text-neutral-500">Auth</th>
+                    <th className="text-left py-3 px-2 font-medium text-neutral-500">Verified</th>
                     <th className="text-left py-3 px-2 font-medium text-neutral-500">Plan</th>
                     <th className="text-left py-3 px-2 font-medium text-neutral-500">Free Used</th>
                     <th className="text-left py-3 px-2 font-medium text-neutral-500">Credits</th>
@@ -1354,21 +1444,15 @@ export default function AdminDashboard() {
                             ? 'bg-neutral-800 text-white'
                             : 'bg-neutral-100 text-neutral-700'
                         }`}>
-                          {user.authMethod === 'google' ? (
-                            <span className="flex items-center gap-1">
-                              <svg className="h-3 w-3" viewBox="0 0 24 24">
-                                <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                                <path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                              </svg>
-                              Google
-                            </span>
-                          ) : (
-                            <span className="flex items-center gap-1">
-                              <Mail className="h-3 w-3" />
-                              Email
-                            </span>
-                          )}
+                          {user.authMethod === 'google' ? 'G' : 'E'}
                         </span>
+                      </td>
+                      <td className="py-3 px-2">
+                        {user.emailVerified ? (
+                          <CheckCircle className="h-4 w-4 text-green-500" />
+                        ) : (
+                          <span className="text-neutral-400">-</span>
+                        )}
                       </td>
                       <td className="py-3 px-2">
                         <span className={`px-2 py-1 rounded-full text-xs font-medium ${

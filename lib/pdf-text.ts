@@ -75,22 +75,54 @@ export async function generateTextPdf(bookData: BookData): Promise<Buffer> {
     return lines;
   }
 
+  // Helper to strip duplicate chapter headings from content (since we add our own header)
+  function stripChapterHeading(content: string, chapterNum: number): string {
+    const lines = content.split('\n');
+    // Look for chapter heading in first 5 lines
+    const chapterPattern = new RegExp(`^\\s*(CHAPTER\\s+${chapterNum}|Chapter\\s+${chapterNum})\\s*[:.]?.*$`, 'i');
+
+    let startIndex = 0;
+    for (let i = 0; i < Math.min(lines.length, 5); i++) {
+      if (chapterPattern.test(lines[i].trim())) {
+        startIndex = i + 1;
+        // Skip any empty lines after the heading
+        while (startIndex < lines.length && lines[startIndex].trim() === '') {
+          startIndex++;
+        }
+        break;
+      }
+    }
+
+    return lines.slice(startIndex).join('\n');
+  }
+
+  // Helper to check if content ends with "The End"
+  function contentHasTheEnd(content: string): boolean {
+    return /\b(The\s+End|THE\s+END)\s*$/i.test(content.trim());
+  }
+
   // Create title page
   let page = addPage();
   let y = pageHeight - 250; // Start lower for title page
 
-  // Draw title centered
-  const titleWidth = titleFont.widthOfTextAtSize(bookData.title.toUpperCase(), titleSize);
-  page.drawText(bookData.title.toUpperCase(), {
-    x: (pageWidth - titleWidth) / 2,
-    y,
-    size: titleSize,
-    font: titleFont,
-    color: textColor,
-  });
+  // Draw title centered - wrap if too long
+  const titleText = bookData.title.toUpperCase();
+  const titleLines = wrapText(titleText, titleFont, titleSize, contentWidth);
+
+  for (const titleLine of titleLines) {
+    const lineWidth = titleFont.widthOfTextAtSize(titleLine, titleSize);
+    page.drawText(titleLine, {
+      x: (pageWidth - lineWidth) / 2,
+      y,
+      size: titleSize,
+      font: titleFont,
+      color: textColor,
+    });
+    y -= titleSize * 1.3; // Line height for title
+  }
 
   // Draw author name
-  y -= 50;
+  y -= 20; // Space after title
   const byLine = `by ${bookData.authorName}`;
   const byLineWidth = italicFont.widthOfTextAtSize(byLine, 14);
   page.drawText(byLine, {
@@ -101,16 +133,8 @@ export async function generateTextPdf(bookData: BookData): Promise<Buffer> {
     color: textColor,
   });
 
-  // Draw footer
-  const footerText = 'Created with DraftMyBook.com';
-  const footerWidth = italicFont.widthOfTextAtSize(footerText, 10);
-  page.drawText(footerText, {
-    x: (pageWidth - footerWidth) / 2,
-    y: margin + 20,
-    size: 10,
-    font: italicFont,
-    color: rgb(0.5, 0.5, 0.5),
-  });
+  // Track if any chapter content has "The End" already
+  let hasTheEndInContent = false;
 
   // Add each chapter
   for (const chapter of bookData.chapters) {
@@ -130,9 +154,17 @@ export async function generateTextPdf(bookData: BookData): Promise<Buffer> {
 
     y -= 40; // Space after chapter title
 
+    // Strip duplicate chapter heading from content (since we add our own header above)
+    const cleanedContent = stripChapterHeading(chapter.content, chapter.number);
+
+    // Check if this chapter has "The End"
+    if (contentHasTheEnd(cleanedContent)) {
+      hasTheEndInContent = true;
+    }
+
     // Process chapter content
     // Split by paragraphs (double newline or single newline)
-    const paragraphs = chapter.content.split(/\n\n+|\n/).filter(p => p.trim());
+    const paragraphs = cleanedContent.split(/\n\n+|\n/).filter(p => p.trim());
 
     for (const paragraph of paragraphs) {
       const trimmedParagraph = paragraph.trim();
@@ -191,19 +223,21 @@ export async function generateTextPdf(bookData: BookData): Promise<Buffer> {
     });
   }
 
-  // Add final page with "The End"
-  page = addPage();
-  y = pageHeight / 2;
+  // Add final page with "The End" ONLY if content doesn't already have it
+  if (!hasTheEndInContent) {
+    page = addPage();
+    y = pageHeight / 2;
 
-  const endText = 'The End';
-  const endWidth = italicFont.widthOfTextAtSize(endText, 24);
-  page.drawText(endText, {
-    x: (pageWidth - endWidth) / 2,
-    y,
-    size: 24,
-    font: italicFont,
-    color: textColor,
-  });
+    const endText = 'The End';
+    const endWidth = italicFont.widthOfTextAtSize(endText, 24);
+    page.drawText(endText, {
+      x: (pageWidth - endWidth) / 2,
+      y,
+      size: 24,
+      font: italicFont,
+      color: textColor,
+    });
+  }
 
   // Generate PDF bytes
   const pdfBytes = await pdfDoc.save();

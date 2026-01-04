@@ -60,20 +60,24 @@ export async function POST(
     }
 
     // Determine which credit to use
-    const useFreeCredit = user.freeCredits > 0;
+    // Priority: gifted credits (freeCredits) give FULL access, free sample (freeBookUsed) gives LIMITED preview
+    const useGiftedCredit = user.freeCredits > 0;
 
-    // Claim the book: associate with user, mark as paid, use free credit
+    // Claim the book: associate with user, set appropriate payment status
+    // - Gifted credits (freeCredits): paymentStatus='completed', paymentMethod='free_credit' → FULL book access
+    // - Free sample (freeBookUsed): paymentStatus='free_preview', paymentMethod='free_book' → LIMITED preview only
     await prisma.$transaction([
-      // Update book
+      // Update book with appropriate payment status
       prisma.book.update({
         where: { id: bookId },
         data: {
           userId: session.user.id,
-          paymentStatus: 'completed',
+          paymentStatus: useGiftedCredit ? 'completed' : 'free_preview',
+          paymentMethod: useGiftedCredit ? 'free_credit' : 'free_book',
         },
       }),
-      // Update user - use freeCredits if available, otherwise mark freeBookUsed
-      ...(useFreeCredit
+      // Update user - decrement freeCredits if using gifted credit, otherwise mark freeBookUsed
+      ...(useGiftedCredit
         ? [
             prisma.user.update({
               where: { id: session.user.id },
@@ -94,10 +98,11 @@ export async function POST(
 
     return NextResponse.json({
       success: true,
-      message: useFreeCredit
-        ? 'Book claimed using free credit'
-        : 'Book claimed using first-book-free offer',
+      message: useGiftedCredit
+        ? 'Book claimed using gifted credit - full book access!'
+        : 'Book claimed as free preview - upgrade to unlock full book',
       bookId,
+      isFullAccess: useGiftedCredit,
     });
   } catch (error) {
     console.error('Error claiming free book:', error);
