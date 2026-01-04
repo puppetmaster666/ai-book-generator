@@ -792,7 +792,7 @@ function isCompleteSentence(text: string): boolean {
 }
 
 // Category types for idea generation
-export type IdeaCategory = 'novel' | 'childrens' | 'comic' | 'nonfiction' | 'screenplay' | 'adult_comic' | 'random';
+export type IdeaCategory = 'novel' | 'childrens' | 'comic' | 'nonfiction' | 'screenplay' | 'adult_comic' | 'tv_series' | 'short_story' | 'random';
 
 // Example pools for different categories - randomly selected to avoid repetition
 // Each category has 8+ example pairs for maximum variety
@@ -1014,6 +1014,74 @@ const IDEA_EXAMPLES: Record<Exclude<IdeaCategory, 'random'>, string[][]> = {
       "Fallen angel Raziel is assigned to guard a mortal woman named Eve who holds the key to preventing the apocalypse, but heaven did not warn him she would challenge everything he believed about humans. She is fierce, funny, and frustratingly unimpressed by his celestial nature, treating him like any other man despite his wings. As demons hunt them across the globe, he begins to understand why his kind was forbidden from loving mortals, and why so many broke that rule.",
     ],
   ],
+  tv_series: [
+    [
+      "A group of estranged siblings inherits their eccentric grandmother's crumbling Victorian mansion, but the will requires all five of them to live there together for one year or forfeit the entire fortune. Each sibling has secrets they have been hiding from the family, and the house itself seems to be revealing them one by one. By the end of the first season, at least one of them will wish they had never come home.",
+      "When the small town of Millbrook experiences a series of impossible events, a skeptical journalist teams up with a true believer podcaster to investigate what the locals call the Convergence. Every seven years, the boundaries between worlds thin, and this time something has come through that does not want to go back. The first season follows them uncovering the town's dark history while something watches from the shadows.",
+    ],
+    [
+      "A brilliant but disgraced surgeon takes a job as the only doctor in a remote Alaskan fishing village, expecting to hide from her past in peace. Instead she finds a tight knit community with generations of secrets, a mysterious illness affecting the local Indigenous population, and a handsome rival who runs the competing clinic on a converted fishing boat. Each season unravels another layer of the town's mysteries while she slowly earns their trust.",
+      "Five strangers wake up in luxurious rooms with no memory of how they arrived at the exclusive resort, told only that they have been selected to compete for a prize worth fifty million dollars. As challenges test their morals, alliances, and sanity, they begin to realize the games are designed around their deepest secrets. Someone is watching everything, and the losers do not simply go home.",
+    ],
+    [
+      "A former CIA operative turned suburban soccer mom thinks she has left her deadly past behind until a chance encounter at the grocery store reveals that another parent from her daughter's school is actually a Russian sleeper agent. Now she must protect her family while uncovering a network of spies hidden in the perfect facades of American suburbia. The question is whether she can do it without her husband finding out who she really was.",
+      "In an alternate 1920s Chicago where magic is real and strictly regulated by the government, a young Black woman discovers she has illegal powers and joins an underground speakeasy that serves as a front for magical resistance. The series follows her rise through the ranks of this hidden world while federal agents close in and a war brews between magical factions. Jazz, glamour, and supernatural noir collide in every episode.",
+    ],
+    [
+      "A true crime podcast host becomes obsessed with a cold case from her own hometown, only to discover that investigating the thirty year old murder is awakening something the town desperately wanted to stay buried. Each season tackles a different unsolved case, but all of them connect to a conspiracy that reaches the highest levels of local power. The host becomes increasingly compromised as she realizes she cannot trust anyone.",
+      "When humanity receives its first confirmed message from an alien civilization, the world changes overnight. The series follows multiple storylines across the globe, from the scientists decoding the message to the cult that forms around it, from the politicians trying to control the narrative to ordinary people whose lives are upended by the revelation. Each season covers one year of humanity's transformation.",
+    ],
+    [
+      "A group of therapists share an office building and meet weekly to discuss their most challenging cases, but each of them is hiding the fact that they desperately need therapy themselves. The dark comedy follows their professional triumphs and personal disasters as they help others while barely holding their own lives together. Boundaries blur, ethics bend, and the question of who is helping whom becomes increasingly complicated.",
+      "After a devastating betrayal ends her marriage, a fifty year old woman moves back to her tiny hometown planning to hide and heal, only to discover that her high school sweetheart is now the widowed sheriff and still looks unfairly good. Surrounded by meddling old friends, impossible family dynamics, and small town drama, she must figure out who she wants to be in this unexpected second act. Heartwarming, funny, and full of complicated relationships.",
+    ],
+    [
+      "A prestigious law firm hires its first AI legal assistant, but the algorithm quickly proves too good at its job, uncovering evidence of corruption that partners have spent decades burying. The young associate who manages the AI must decide whether to blow the whistle or protect her career, all while the AI itself begins exhibiting increasingly strange behavior. Legal thriller meets tech paranoia in a battle for the soul of justice.",
+      "Three generations of women run a struggling funeral home in a rapidly gentrifying Brooklyn neighborhood, dealing with grief, death, and family drama while developers circle like vultures. The grandmother clings to tradition, the mother wants to modernize, and the granddaughter wants to escape entirely. Death brings people together in unexpected ways, and the funeral home becomes a sanctuary for the neighborhood's marginalized and forgotten.",
+    ],
+    [
+      "An anthology series where each season follows a different viral internet mystery, from true crime to conspiracy theories to unexplained phenomena. The first season investigates a series of cryptic videos that appeared on a dead man's YouTube channel months after his death. Each season is self contained but shares a connective thread that suggests something larger is at work behind all of these digital mysteries.",
+      "When a respected high school teacher is accused of an inappropriate relationship with a student, the small town divides into those who believe her and those who believe him. The limited series examines memory, perception, and the impossibility of knowing the truth, told from multiple perspectives that each seem equally credible. The audience must decide for themselves what really happened.",
+    ],
+    [
+      "A washed up rock star from the nineties is forced to teach music at an underfunded public school to fulfill community service, expecting to hate every minute. Instead she finds purpose in nurturing young talent while confronting the demons that derailed her career. The series balances humor and heart as she clashes with administration, bonds with unlikely students, and considers whether a comeback is possible or even desirable.",
+      "In a world where death is no longer permanent thanks to resurrection technology, a detective specializes in cases involving the newly revived. Murder still happens, but now the victim can testify, making her job both easier and infinitely more complicated. The series explores questions of identity, trauma, and what it means to die when death is temporary, all wrapped in a noir procedural format.",
+    ],
+  ],
+  short_story: [
+    [
+      "A woman discovers that her elderly neighbor, who recently passed away, left her a box containing thousands of unsent letters addressed to someone named Elizabeth. As she reads through decades of correspondence, she realizes the letters tell the story of a forbidden love affair that began during World War II and never truly ended. The final letter, dated just days before his death, contains a revelation that changes everything she thought she knew about love and loss.",
+      "Every morning at exactly seven fifteen, the same man sits across from her on the subway, and every morning she imagines an entire life with him. Today, on her last day before moving across the country, she finally decides to speak to him. But when she opens her mouth, he speaks first, and what he says is impossible.",
+    ],
+    [
+      "A chef who has lost her sense of taste after a car accident must prepare the most important meal of her career for a restaurant critic who destroyed her mentor's career twenty years ago. She has one chance to create perfection using only memory and instinct, cooking blind in every sense that matters. What happens in that kitchen will determine not just her future but whether the ghosts of the past can finally be laid to rest.",
+      "On the night before his execution, a death row inmate is granted one final visitor, but the woman who walks through the door is not his lawyer, his family, or a priest. She claims to be from the future, sent back to tell him something crucial about the crime he was convicted of. He has twelve hours to decide if she is telling the truth and what, if anything, he can do about it from inside a cell.",
+    ],
+    [
+      "A lighthouse keeper on a remote island receives an impossible radio transmission from a ship that sank fifty years ago, and the voice on the other end is begging for help. Over the course of one stormy night, he must piece together what happened to the vessel and why he, of all people, is the one receiving this message across time. By dawn, he will understand that some debts can only be paid by the living.",
+      "Two strangers shelter in the same abandoned cabin during a blizzard, each fleeing something they refuse to name. As the storm rages for three days, they slowly reveal their secrets to each other, finding unexpected connection in their shared brokenness. But when the snow clears and they must return to the world, they face an impossible choice about what comes next.",
+    ],
+    [
+      "A woman who can see exactly how and when people will die has spent her life avoiding attachment, knowing that loving anyone means watching their death approach like a slow motion train. When she meets a man with no death date above his head, just an empty space where his fate should be, she must decide whether this is a miracle or something far more terrifying.",
+      "An antique dealer purchases a mirror at an estate sale and discovers it shows not reflections but memories, replaying moments from the lives of everyone who has ever looked into it. As she becomes obsessed with watching these private glimpses into strangers' pasts, she starts to notice her own memories appearing, moments she never remembered living, and a face that appears in all of them.",
+    ],
+    [
+      "A letter carrier on her last day before retirement delivers a package she has been carrying in her bag for forty years, waiting for the right moment. The recipient is a woman she has watched grow from a child to a grandmother, and the package contains something that will rewrite her entire family history. Some secrets are too heavy to carry forever, and some truths are too important to die with their keeper.",
+      "A man who has spent his entire life preparing for the apocalypse finally gets his wish when the world ends, only to discover that surviving alone is nothing like he imagined. When he finds another survivor, a woman who laughed her way through the catastrophe with no preparation at all, he must confront the possibility that he wasted his life being afraid of something he did not understand at all.",
+    ],
+    [
+      "Two estranged sisters meet at their childhood home to clean it out after their mother's death and discover a room they never knew existed, hidden behind a false wall in the basement. Inside are artifacts from a life their mother never mentioned, evidence of a person she was before she became their mother. By the time they finish exploring, they will have to decide whether to honor her secrets or finally tell the truth.",
+      "A photographer develops his last roll of film from a trip to Iceland and finds photos he does not remember taking, images of a woman in landscapes he never visited. Each photo brings fragmented memories of a life he might have lived, days that feel more real than his actual existence. He has to find out who she is, even if it means accepting that the life he is living might not be the right one.",
+    ],
+    [
+      "On the anniversary of her daughter's disappearance, a mother receives a postcard with no return address, containing just four words in her daughter's handwriting. The message leads her on a journey across three states, following clues that seem designed specifically for her, requiring knowledge only she would have. At the end of the trail, she finds something that is neither the closure she wanted nor the reunion she dreamed of.",
+      "A man who has been in a coma for twenty years wakes up to a world that has moved on without him. His wife remarried, his children are grown strangers, and everything he knew is gone. But he also wakes up with memories of a life he lived while sleeping, a parallel existence that feels more real than the hospital bed he is lying in. He has to decide which life to mourn and which one to embrace.",
+    ],
+    [
+      "A pianist who has not played in decades sits down at her old instrument after her husband's funeral and finds a piece of sheet music she does not recognize tucked inside the bench. As she plays the unfamiliar composition, memories surface that she buried long ago, a story of passion and betrayal that explains why she stopped playing and why her husband kept this music hidden for fifty years.",
+      "Every year on the same date, a man receives a birthday card from his father, who died when he was twelve. The cards started arriving on his eighteenth birthday and have continued without fail for thirty years, each one containing advice that proves eerily relevant to whatever crisis he is facing. This year's card arrives with a warning, and for the first time, he must decide whether to follow his father's guidance or finally let go.",
+    ],
+  ],
 };
 
 // Genre variations for each category - expanded for more variety
@@ -1055,13 +1123,25 @@ const GENRE_HINTS: Record<Exclude<IdeaCategory, 'random'>, string[]> = {
     'mafia romance', 'demon romance', 'spy thriller romance', 'bounty hunter romance',
     'dragon shifter', 'angel and demon', 'second chance romance', 'bodyguard romance'
   ],
+  tv_series: [
+    'prestige drama', 'limited series', 'thriller', 'mystery', 'dark comedy', 'family drama',
+    'supernatural', 'crime procedural', 'period piece', 'sci-fi', 'anthology', 'workplace drama',
+    'small town mystery', 'legal drama', 'medical drama', 'spy thriller', 'dystopian',
+    'coming of age', 'ensemble drama', 'true crime inspired', 'romantic drama', 'horror'
+  ],
+  short_story: [
+    'literary fiction', 'magical realism', 'twist ending', 'ghost story', 'love story',
+    'family drama', 'psychological', 'speculative fiction', 'slice of life', 'mystery',
+    'redemption story', 'loss and grief', 'chance encounter', 'supernatural', 'suspense',
+    'memory and identity', 'second chances', 'moral dilemma', 'quiet horror', 'bittersweet'
+  ],
 };
 
 // Generate a random book idea with category support
 export async function generateBookIdea(category: IdeaCategory = 'random'): Promise<string> {
-  // If random, pick a category (excluding nonfiction from random)
+  // If random, pick a category (including tv_series and short_story now)
   const actualCategory: Exclude<IdeaCategory, 'random'> = category === 'random'
-    ? (['novel', 'childrens', 'comic'] as const)[Math.floor(Math.random() * 3)]
+    ? (['novel', 'childrens', 'comic', 'screenplay', 'tv_series', 'short_story'] as const)[Math.floor(Math.random() * 6)]
     : category;
 
   // Pick random examples from the pool
@@ -1127,6 +1207,39 @@ VARIETY IS ESSENTIAL:
 - Power dynamics: rivals, enemies, captor and captive, forbidden affairs, dangerous obsessions
 - Visual drama: blood, shadows, intimate moments, violent confrontations`;
       break;
+    case 'tv_series':
+      categoryInstruction = `Generate a compelling ${randomGenre} TV series concept that would captivate audiences over multiple seasons. Create a show with rich world building, complex characters with secrets, and storylines that can evolve and deepen over time.
+
+TV SERIES ESSENTIALS:
+- A hook or premise that can sustain multiple seasons of storytelling
+- An ensemble of characters with their own arcs, secrets, and relationships
+- Central mystery, conflict, or goal that drives the overall narrative
+- Episode to episode tension with larger seasonal arcs
+- Setting and world that audiences will want to return to week after week
+- Potential for shocking twists and cliffhangers
+
+VARIETY IS ESSENTIAL:
+- Formats: prestige drama, limited series, procedural with mythology, anthology, streaming binge
+- Ensemble types: family dynasties, workplace teams, friend groups, strangers thrown together
+- Settings: small towns, big cities, historical periods, near future, alternate realities
+- Tones: dark and gritty, heartwarming comedy, supernatural thriller, satirical`;
+      break;
+    case 'short_story':
+      categoryInstruction = `Generate a compelling ${randomGenre} short story idea that can be told in a single sitting but leaves a lasting emotional impact. Focus on a powerful central moment, revelation, or transformation.
+
+SHORT STORY ESSENTIALS:
+- A single powerful idea, moment, or transformation at the heart
+- Intimacy and focus that novels cannot achieve
+- An ending that reframes or elevates everything that came before
+- Emotional resonance that lingers after reading
+- Economy of storytelling where every detail matters
+
+VARIETY IS ESSENTIAL:
+- Timeframes: a single moment, one evening, a week, decades in glimpses
+- Perspectives: first person confessional, intimate third person, unreliable narrator
+- Structures: linear, circular, fragmented memories, twist revelation
+- Tones: melancholic, hopeful, unsettling, bittersweet, quietly devastating`;
+      break;
   }
 
   const prompt = `${categoryInstruction}
@@ -1151,7 +1264,7 @@ Example of the quality and length expected (but create something COMPLETELY DIFF
 Another example (create something TOTALLY DIFFERENT from both examples):
 "${randomExamples[1]}"
 
-Now write your unique ${actualCategory === 'childrens' ? "children's book" : actualCategory === 'nonfiction' ? 'non-fiction book' : actualCategory} idea (3-4 detailed sentences, no dashes, end with period):`;
+Now write your unique ${actualCategory === 'childrens' ? "children's book" : actualCategory === 'nonfiction' ? 'non-fiction book' : actualCategory === 'tv_series' ? 'TV series' : actualCategory === 'short_story' ? 'short story' : actualCategory === 'adult_comic' ? 'adult comic' : actualCategory} idea (3-4 detailed sentences, no dashes, end with period):`;
 
   const maxRetries = 2; // Reduced retries for faster response
 
