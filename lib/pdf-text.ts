@@ -180,9 +180,9 @@ export async function generateTextPdf(bookData: BookData): Promise<Buffer> {
     return lines.slice(startIndex).join('\n');
   }
 
-  // Helper to check if content ends with "The End"
-  function contentHasTheEnd(content: string): boolean {
-    return /\b(The\s+End|THE\s+END)\s*$/i.test(content.trim());
+  // Helper to strip "The End" from content (we add it ourselves on a dedicated page)
+  function stripTheEnd(content: string): string {
+    return content.replace(/\s*\b(The\s+End|THE\s+END)\s*$/i, '').trim();
   }
 
   // Create title page
@@ -219,34 +219,32 @@ export async function generateTextPdf(bookData: BookData): Promise<Buffer> {
     });
   }
 
-  // Track if any chapter content has "The End" already
-  let hasTheEndInContent = false;
-
   // Add each chapter
   for (const chapter of sanitizedBookData.chapters) {
     // Start new page for each chapter
     page = addPage();
     y = pageHeight - margin - 50;
 
-    // Chapter title
+    // Chapter title - wrap if too long
     const chapterTitle = `Chapter ${chapter.number}: ${chapter.title}`;
-    page.drawText(chapterTitle, {
-      x: margin,
-      y,
-      size: chapterTitleSize,
-      font: titleFont,
-      color: textColor,
-    });
+    const chapterTitleLines = wrapText(chapterTitle, titleFont, chapterTitleSize, contentWidth);
 
-    y -= 40; // Space after chapter title
-
-    // Strip duplicate chapter heading from content (since we add our own header above)
-    const cleanedContent = stripChapterHeading(chapter.content, chapter.number);
-
-    // Check if this chapter has "The End"
-    if (contentHasTheEnd(cleanedContent)) {
-      hasTheEndInContent = true;
+    for (const chapterTitleLine of chapterTitleLines) {
+      page.drawText(chapterTitleLine, {
+        x: margin,
+        y,
+        size: chapterTitleSize,
+        font: titleFont,
+        color: textColor,
+      });
+      y -= chapterTitleSize * 1.3;
     }
+
+    y -= 20; // Space after chapter title
+
+    // Strip duplicate chapter heading and "The End" from content
+    let cleanedContent = stripChapterHeading(chapter.content, chapter.number);
+    cleanedContent = stripTheEnd(cleanedContent);
 
     // Process chapter content
     // Split by paragraphs (double newline or single newline)
@@ -309,21 +307,17 @@ export async function generateTextPdf(bookData: BookData): Promise<Buffer> {
     });
   }
 
-  // Add final page with "The End" ONLY if content doesn't already have it
-  if (!hasTheEndInContent) {
-    page = addPage();
-    y = pageHeight / 2;
-
-    const endText = 'The End';
-    const endWidth = italicFont.widthOfTextAtSize(endText, 24);
-    page.drawText(endText, {
-      x: (pageWidth - endWidth) / 2,
-      y,
-      size: 24,
-      font: italicFont,
-      color: textColor,
-    });
-  }
+  // Add final page with "The End" centered
+  page = addPage();
+  const endText = 'The End';
+  const endWidth = italicFont.widthOfTextAtSize(endText, 24);
+  page.drawText(endText, {
+    x: (pageWidth - endWidth) / 2,
+    y: pageHeight / 2,
+    size: 24,
+    font: italicFont,
+    color: textColor,
+  });
 
   // Generate PDF bytes
   const pdfBytes = await pdfDoc.save();
