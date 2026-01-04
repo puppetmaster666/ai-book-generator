@@ -202,13 +202,16 @@ export async function generateEpub(bookData: BookData): Promise<Buffer> {
   const fonts = FONT_STYLES[bookData.fontStyle];
   const isComic = bookData.dialogueStyle === 'bubbles' || bookData.bookFormat === 'comic_book';
 
-  // Create title page HTML
+  // Create title page HTML (only show author if provided)
+  const hasAuthor = bookData.authorName && bookData.authorName.trim();
   const titlePageHtml = `
     <div style="text-align: center; margin-top: 30%; font-family: '${fonts.heading}', Georgia, serif;">
       <h1 style="font-size: 2.5em; margin-bottom: 0.5em; font-weight: bold;">${bookData.title}</h1>
       <p style="font-size: 1.2em; margin-top: 2em; font-style: italic;">${isComic ? 'A Comic Story' : 'A Novel'}</p>
+      ${hasAuthor ? `
       <p style="font-size: 1.5em; margin-top: 3em;">by</p>
       <p style="font-size: 1.8em; margin-top: 0.5em; font-weight: bold;">${bookData.authorName}</p>
+      ` : ''}
     </div>
   `;
 

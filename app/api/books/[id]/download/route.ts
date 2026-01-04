@@ -43,8 +43,11 @@ function generateTxt(bookData: {
   // Title page
   lines.push(bookData.title.toUpperCase());
   lines.push('');
-  lines.push(`by ${bookData.authorName}`);
-  lines.push('');
+  // Only show author if provided
+  if (bookData.authorName && bookData.authorName.trim()) {
+    lines.push(`by ${bookData.authorName}`);
+    lines.push('');
+  }
   lines.push('─'.repeat(50));
   lines.push('');
 
@@ -94,10 +97,13 @@ function generateScreenplayTxt(bookData: {
   lines.push(bookData.title.toUpperCase());
   lines.push('');
   lines.push('');
-  lines.push('Written by');
-  lines.push('');
-  lines.push(bookData.authorName);
-  lines.push('');
+  // Only show author if provided
+  if (bookData.authorName && bookData.authorName.trim()) {
+    lines.push('Written by');
+    lines.push('');
+    lines.push(bookData.authorName);
+    lines.push('');
+  }
   lines.push('');
   lines.push('═'.repeat(60));
   lines.push('');

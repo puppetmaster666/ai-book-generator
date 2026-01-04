@@ -121,17 +121,19 @@ export async function generateTextPdf(bookData: BookData): Promise<Buffer> {
     y -= titleSize * 1.3; // Line height for title
   }
 
-  // Draw author name
-  y -= 20; // Space after title
-  const byLine = `by ${bookData.authorName}`;
-  const byLineWidth = italicFont.widthOfTextAtSize(byLine, 14);
-  page.drawText(byLine, {
-    x: (pageWidth - byLineWidth) / 2,
-    y,
-    size: 14,
-    font: italicFont,
-    color: textColor,
-  });
+  // Draw author name (only if provided)
+  if (bookData.authorName && bookData.authorName.trim()) {
+    y -= 20; // Space after title
+    const byLine = `by ${bookData.authorName}`;
+    const byLineWidth = italicFont.widthOfTextAtSize(byLine, 14);
+    page.drawText(byLine, {
+      x: (pageWidth - byLineWidth) / 2,
+      y,
+      size: 14,
+      font: italicFont,
+      color: textColor,
+    });
+  }
 
   // Track if any chapter content has "The End" already
   let hasTheEndInContent = false;

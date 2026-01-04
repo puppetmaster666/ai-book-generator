@@ -95,28 +95,30 @@ async function addTitlePage(
     color: rgb(0, 0, 0),
   });
 
-  // "Written by" - centered below title
-  const writtenByY = titleY - LINE_HEIGHT * 4;
-  const writtenByText = 'Written by';
-  const writtenByWidth = font.widthOfTextAtSize(writtenByText, FONT_SIZE);
-  page.drawText(writtenByText, {
-    x: (PAGE_WIDTH - writtenByWidth) / 2,
-    y: writtenByY,
-    size: FONT_SIZE,
-    font,
-    color: rgb(0, 0, 0),
-  });
+  // "Written by" and author name - only if author is provided
+  if (authorName && authorName.trim()) {
+    const writtenByY = titleY - LINE_HEIGHT * 4;
+    const writtenByText = 'Written by';
+    const writtenByWidth = font.widthOfTextAtSize(writtenByText, FONT_SIZE);
+    page.drawText(writtenByText, {
+      x: (PAGE_WIDTH - writtenByWidth) / 2,
+      y: writtenByY,
+      size: FONT_SIZE,
+      font,
+      color: rgb(0, 0, 0),
+    });
 
-  // Author name - centered below "Written by"
-  const authorY = writtenByY - LINE_HEIGHT * 2;
-  const authorWidth = font.widthOfTextAtSize(authorName, FONT_SIZE);
-  page.drawText(authorName, {
-    x: (PAGE_WIDTH - authorWidth) / 2,
-    y: authorY,
-    size: FONT_SIZE,
-    font,
-    color: rgb(0, 0, 0),
-  });
+    // Author name - centered below "Written by"
+    const authorY = writtenByY - LINE_HEIGHT * 2;
+    const authorWidth = font.widthOfTextAtSize(authorName, FONT_SIZE);
+    page.drawText(authorName, {
+      x: (PAGE_WIDTH - authorWidth) / 2,
+      y: authorY,
+      size: FONT_SIZE,
+      font,
+      color: rgb(0, 0, 0),
+    });
+  }
 }
 
 /**
