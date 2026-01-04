@@ -6,7 +6,7 @@ import { useSession } from 'next-auth/react';
 import Image from 'next/image';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
-import { ArrowLeft, ArrowRight, Sparkles, Loader2, BookOpen, Palette, Layers, ChevronDown, GraduationCap, Film, Upload, FileText, X, Clock, Skull } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Sparkles, Loader2, BookOpen, Palette, Layers, ChevronDown, GraduationCap, Film, Upload, FileText, X, Clock, Skull, Tv, Check } from 'lucide-react';
 import {
   BOOK_PRESETS,
   ART_STYLES,
@@ -14,6 +14,23 @@ import {
   type BookPresetKey,
   type ArtStyleKey,
 } from '@/lib/constants';
+
+// Main category types
+type CategoryType = 'text' | 'image' | 'screenplay';
+
+// Category definitions
+const CATEGORIES: { value: CategoryType; label: string; description: string; icon: React.ComponentType<{ className?: string }> }[] = [
+  { value: 'text', label: 'Text Book', description: 'Novels, non-fiction, guides', icon: BookOpen },
+  { value: 'image', label: 'Image Book', description: 'Comics, picture books', icon: Palette },
+  { value: 'screenplay', label: 'Screenplay', description: 'Movies, TV pilots, episodes', icon: Film },
+];
+
+// Presets grouped by category
+const CATEGORY_PRESETS: Record<CategoryType, BookPresetKey[]> = {
+  text: ['short_novel', 'novel', 'epic_novel', 'lead_magnet', 'nonfiction'],
+  image: ['childrens_picture', 'comic_story', 'adult_comic'],
+  screenplay: ['short_screenplay', 'screenplay', 'epic_screenplay', 'tv_pilot_comedy', 'tv_pilot_drama', 'tv_episode'],
+};
 
 // Idea categories for the Surprise Me feature
 type IdeaCategory = 'random' | 'novel' | 'childrens' | 'comic' | 'nonfiction' | 'adult_comic' | 'screenplay';
@@ -41,9 +58,9 @@ const PRESET_ICONS: Record<string, React.ComponentType<{ className?: string }>> 
   short_screenplay: Film,
   screenplay: Film,
   epic_screenplay: Film,
-  tv_pilot_comedy: Film,
-  tv_pilot_drama: Film,
-  tv_episode: Film,
+  tv_pilot_comedy: Tv,
+  tv_pilot_drama: Tv,
+  tv_episode: Tv,
 };
 
 // Art style images
@@ -63,8 +80,10 @@ const ART_STYLE_IMAGES: Partial<Record<ArtStyleKey, string>> = {
 export default function CreateBook() {
   const router = useRouter();
   const { data: session } = useSession();
-  const [step, setStep] = useState<'type' | 'idea' | 'style'>('type');
+  const [step, setStep] = useState<'category' | 'subtype' | 'idea' | 'style'>('category');
+  const [selectedCategory, setSelectedCategory] = useState<CategoryType | null>(null);
   const [selectedPreset, setSelectedPreset] = useState<BookPresetKey | null>(null);
+  const [selectingCategory, setSelectingCategory] = useState<CategoryType | null>(null);
   const [selectingPreset, setSelectingPreset] = useState<BookPresetKey | null>(null);
   const [selectedArtStyle, setSelectedArtStyle] = useState<ArtStyleKey | null>(null);
   const [idea, setIdea] = useState('');
@@ -77,9 +96,6 @@ export default function CreateBook() {
   const [isDragging, setIsDragging] = useState(false);
   const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
   const [isParsingFile, setIsParsingFile] = useState(false);
-
-  // Book length is now determined by the preset selected (e.g., short_novel, novel, epic_novel)
-  // Users can adjust word count/chapters in the book review page if needed
 
   // Get user ID from session if logged in
   const userId = (session?.user as { id?: string })?.id;
@@ -103,6 +119,7 @@ export default function CreateBook() {
       try {
         const state = JSON.parse(savedState);
         if (state.idea) setIdea(state.idea);
+        if (state.selectedCategory) setSelectedCategory(state.selectedCategory);
         if (state.selectedPreset) setSelectedPreset(state.selectedPreset);
         if (state.selectedArtStyle) setSelectedArtStyle(state.selectedArtStyle);
         if (state.step) setStep(state.step);
@@ -116,9 +133,10 @@ export default function CreateBook() {
   // Save form state when values change
   useEffect(() => {
     // Only save if we have meaningful state
-    if (idea || selectedPreset || selectedArtStyle) {
+    if (idea || selectedCategory || selectedPreset || selectedArtStyle) {
       const state = {
         idea,
+        selectedCategory,
         selectedPreset,
         selectedArtStyle,
         step,
@@ -126,7 +144,7 @@ export default function CreateBook() {
       };
       sessionStorage.setItem(FORM_STATE_KEY, JSON.stringify(state));
     }
-  }, [idea, selectedPreset, selectedArtStyle, step, ideaCategory]);
+  }, [idea, selectedCategory, selectedPreset, selectedArtStyle, step, ideaCategory]);
 
   // Clear form state when navigating away after successful submission
   const clearFormState = () => {
@@ -257,11 +275,19 @@ export default function CreateBook() {
     setIdea('');
   };
 
+  const handleSelectCategory = (category: CategoryType) => {
+    setSelectingCategory(category);
+
+    setTimeout(() => {
+      setSelectedCategory(category);
+      setStep('subtype');
+      setSelectingCategory(null);
+    }, 300);
+  };
+
   const handleSelectPreset = (key: BookPresetKey) => {
-    // Show loading animation on the selected card
     setSelectingPreset(key);
 
-    // Brief delay for visual feedback, then transition
     setTimeout(() => {
       setSelectedPreset(key);
       const preset = BOOK_PRESETS[key];
@@ -279,7 +305,7 @@ export default function CreateBook() {
     }, 400);
   };
 
-  // Get target words and chapters from the preset (length is now built into preset selection)
+  // Get target words and chapters from the preset
   const getTargetFromPreset = () => {
     if (!selectedPreset) return { targetWords: 60000, targetChapters: 20 };
 
@@ -300,8 +326,8 @@ export default function CreateBook() {
     if (!selectedPreset) return;
     const preset = BOOK_PRESETS[selectedPreset];
 
-    // Text-only books and screenplays skip the style step
-    const needsStyleStep = preset.format !== 'text_only' && preset.format !== 'screenplay';
+    // Only image books need the style step
+    const needsStyleStep = selectedCategory === 'image';
     if (needsStyleStep && step === 'idea') {
       setStep('style');
     } else {
@@ -344,7 +370,7 @@ export default function CreateBook() {
       if (!expandResponse.ok) throw new Error('Failed to expand idea');
       const bookPlan = await expandResponse.json();
 
-      // Get target words and chapters from preset (length is built into preset selection)
+      // Get target words and chapters from preset
       const { targetWords, targetChapters } = getTargetFromPreset();
 
       const response = await fetch('/api/books', {
@@ -388,11 +414,17 @@ export default function CreateBook() {
       .filter(([, style]) => style.category === category);
   };
 
-  // Get estimated time from preset (now built into each preset)
+  // Get estimated time from preset
   const getEstimatedTime = () => {
     if (!selectedPreset) return null;
     const preset = BOOK_PRESETS[selectedPreset];
     return 'estimatedTime' in preset ? (preset.estimatedTime as string) : null;
+  };
+
+  // Get category label
+  const getCategoryLabel = () => {
+    if (!selectedCategory) return '';
+    return CATEGORIES.find(c => c.value === selectedCategory)?.label || '';
   };
 
   return (
@@ -401,8 +433,8 @@ export default function CreateBook() {
 
       <main className="py-16 px-6">
         <div className="max-w-4xl mx-auto">
-          {/* Step 1: Choose Book Type */}
-          {step === 'type' && (
+          {/* Step 1: Choose Category */}
+          {step === 'category' && (
             <>
               {isSubmitting ? (
                 <div className="text-center py-20">
@@ -421,47 +453,38 @@ export default function CreateBook() {
                     </p>
                   </div>
 
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    {(Object.entries(BOOK_PRESETS) as [BookPresetKey, typeof BOOK_PRESETS[BookPresetKey]][]).map(([key, presetItem]) => {
-                      const IconComponent = PRESET_ICONS[key] || BookOpen;
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    {CATEGORIES.map((category) => {
+                      const IconComponent = category.icon;
+                      const isSelecting = selectingCategory === category.value;
                       return (
                         <button
-                          key={key}
-                          onClick={() => handleSelectPreset(key)}
-                          disabled={selectingPreset !== null}
-                          className={`group p-5 rounded-2xl border transition-all text-left ${
-                            selectingPreset === key
+                          key={category.value}
+                          onClick={() => handleSelectCategory(category.value)}
+                          disabled={selectingCategory !== null}
+                          className={`group p-8 rounded-2xl border-2 transition-all text-center ${
+                            isSelecting
                               ? 'bg-neutral-900 border-neutral-900 scale-[0.98]'
-                              : 'bg-white border-neutral-200 hover:border-neutral-400 hover:shadow-lg'
-                          } ${selectingPreset !== null && selectingPreset !== key ? 'opacity-50' : ''}`}
+                              : 'bg-white border-neutral-200 hover:border-neutral-400 hover:shadow-xl'
+                          } ${selectingCategory !== null && !isSelecting ? 'opacity-50' : ''}`}
                         >
-                          <div className={`w-10 h-10 rounded-lg flex items-center justify-center mb-3 transition-colors ${
-                            selectingPreset === key
+                          <div className={`w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 transition-colors ${
+                            isSelecting
                               ? 'bg-white/20'
                               : 'bg-neutral-100 group-hover:bg-neutral-200'
                           }`}>
-                            {selectingPreset === key ? (
-                              <Loader2 className="h-5 w-5 text-white animate-spin" />
+                            {isSelecting ? (
+                              <Loader2 className="h-8 w-8 text-white animate-spin" />
                             ) : (
-                              <IconComponent className={`h-5 w-5 ${selectingPreset === key ? 'text-white' : 'text-neutral-700'}`} />
+                              <IconComponent className={`h-8 w-8 ${isSelecting ? 'text-white' : 'text-neutral-700'}`} />
                             )}
                           </div>
-                          <h3 className={`text-base font-semibold mb-1 ${selectingPreset === key ? 'text-white' : ''}`} style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>
-                            {presetItem.label}
+                          <h3 className={`text-xl font-semibold mb-2 ${isSelecting ? 'text-white' : ''}`} style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>
+                            {category.label}
                           </h3>
-                          <p className={`text-xs mb-3 line-clamp-2 ${selectingPreset === key ? 'text-neutral-300' : 'text-neutral-600'}`}>
-                            {presetItem.description}
+                          <p className={`text-sm ${isSelecting ? 'text-neutral-300' : 'text-neutral-600'}`}>
+                            {category.description}
                           </p>
-                          <div className="flex items-center justify-between">
-                            <span className={`text-lg font-bold ${selectingPreset === key ? 'text-white' : ''}`}>{presetItem.priceDisplay}</span>
-                            <span className={`text-xs px-2 py-0.5 rounded-full ${
-                              selectingPreset === key
-                                ? 'bg-white/20 text-white'
-                                : 'bg-neutral-100 text-neutral-600'
-                            }`}>
-                              {presetItem.downloadFormat.toUpperCase()}
-                            </span>
-                          </div>
                         </button>
                       );
                     })}
@@ -471,14 +494,98 @@ export default function CreateBook() {
             </>
           )}
 
-          {/* Step 2: Write Your Idea + Questionnaire */}
+          {/* Step 2: Choose Specific Type */}
+          {step === 'subtype' && selectedCategory && (
+            <>
+              <button
+                onClick={() => {
+                  setStep('category');
+                  setSelectedCategory(null);
+                }}
+                className="flex items-center gap-2 text-neutral-600 hover:text-neutral-900 mb-8 transition-colors"
+              >
+                <ArrowLeft className="h-5 w-5" /> Back
+              </button>
+
+              <div className="text-center mb-12">
+                <h1 className="text-3xl md:text-4xl font-bold tracking-tight mb-4" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>
+                  {selectedCategory === 'text' && 'Choose your book type'}
+                  {selectedCategory === 'image' && 'Choose your visual style'}
+                  {selectedCategory === 'screenplay' && 'Choose your format'}
+                </h1>
+                <p className="text-lg text-neutral-600">
+                  {selectedCategory === 'text' && 'Select the length and type of book you want to create'}
+                  {selectedCategory === 'image' && 'Select the type of illustrated book'}
+                  {selectedCategory === 'screenplay' && 'Film, TV pilot, or series episode'}
+                </p>
+              </div>
+
+              <div className={`grid gap-4 ${
+                selectedCategory === 'text' ? 'grid-cols-2 md:grid-cols-3 lg:grid-cols-5' :
+                selectedCategory === 'image' ? 'grid-cols-1 md:grid-cols-3' :
+                'grid-cols-2 md:grid-cols-3'
+              }`}>
+                {CATEGORY_PRESETS[selectedCategory].map((key) => {
+                  const presetItem = BOOK_PRESETS[key];
+                  const IconComponent = PRESET_ICONS[key] || BookOpen;
+                  const isSelecting = selectingPreset === key;
+
+                  return (
+                    <button
+                      key={key}
+                      onClick={() => handleSelectPreset(key)}
+                      disabled={selectingPreset !== null}
+                      className={`group p-5 rounded-2xl border transition-all text-left ${
+                        isSelecting
+                          ? 'bg-neutral-900 border-neutral-900 scale-[0.98]'
+                          : 'bg-white border-neutral-200 hover:border-neutral-400 hover:shadow-lg'
+                      } ${selectingPreset !== null && !isSelecting ? 'opacity-50' : ''}`}
+                    >
+                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center mb-3 transition-colors ${
+                        isSelecting
+                          ? 'bg-white/20'
+                          : 'bg-neutral-100 group-hover:bg-neutral-200'
+                      }`}>
+                        {isSelecting ? (
+                          <Loader2 className="h-5 w-5 text-white animate-spin" />
+                        ) : (
+                          <IconComponent className={`h-5 w-5 ${isSelecting ? 'text-white' : 'text-neutral-700'}`} />
+                        )}
+                      </div>
+                      <h3 className={`text-base font-semibold mb-1 ${isSelecting ? 'text-white' : ''}`} style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>
+                        {presetItem.label}
+                      </h3>
+                      <p className={`text-xs mb-3 line-clamp-2 ${isSelecting ? 'text-neutral-300' : 'text-neutral-600'}`}>
+                        {presetItem.description}
+                      </p>
+                      <div className="flex items-center justify-between">
+                        <span className={`text-lg font-bold ${isSelecting ? 'text-white' : ''}`}>{presetItem.priceDisplay}</span>
+                        <span className={`text-xs px-2 py-0.5 rounded-full ${
+                          isSelecting
+                            ? 'bg-white/20 text-white'
+                            : 'bg-neutral-100 text-neutral-600'
+                        }`}>
+                          {presetItem.downloadFormat.toUpperCase()}
+                        </span>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </>
+          )}
+
+          {/* Step 3: Write Your Idea */}
           {step === 'idea' && preset && (
             <>
               <button
-                onClick={() => setStep('type')}
+                onClick={() => {
+                  setStep('subtype');
+                  setSelectedPreset(null);
+                }}
                 className="flex items-center gap-2 text-neutral-600 hover:text-neutral-900 mb-8 transition-colors"
               >
-                <ArrowLeft className="h-5 w-5" /> Back to book types
+                <ArrowLeft className="h-5 w-5" /> Back to {getCategoryLabel().toLowerCase()} options
               </button>
 
               <div className="text-center mb-8">
@@ -495,8 +602,8 @@ export default function CreateBook() {
                     ? "Tell us about your comic story - the characters, action, and setting"
                     : selectedPreset === 'nonfiction' || selectedPreset === 'lead_magnet'
                     ? "Tell us what you want to teach - the main topic, key lessons, and target audience"
-                    : selectedPreset === 'screenplay'
-                    ? "Tell us about your movie - the premise, main characters, and genre"
+                    : preset.format === 'screenplay'
+                    ? "Tell us about your story - the premise, main characters, and genre"
                     : preset.format === 'picture_book'
                     ? "Tell us about your children's story - the characters, setting, and message"
                     : "Share your concept and we'll expand it into a full outline"}
@@ -540,7 +647,7 @@ export default function CreateBook() {
                         ? "A noir detective story set in a rainy city where a private eye investigates a series of mysterious disappearances..."
                         : selectedPreset === 'nonfiction' || selectedPreset === 'lead_magnet'
                         ? "A comprehensive guide to becoming a successful screenwriter, covering everything from story structure to pitching your scripts to studios..."
-                        : selectedPreset === 'screenplay'
+                        : preset.format === 'screenplay'
                         ? "A psychological thriller about a detective who discovers her own name in a cold case file from 1985, leading her down a rabbit hole of conspiracy..."
                         : preset.format === 'picture_book'
                         ? "A curious little fox named Pip who discovers that the stars in the sky are actually sleeping fireflies..."
@@ -664,7 +771,7 @@ export default function CreateBook() {
                         <Loader2 className="h-5 w-5 animate-spin" />
                         Creating your book...
                       </>
-                    ) : preset.format !== 'text_only' && preset.format !== 'screenplay' ? (
+                    ) : selectedCategory === 'image' ? (
                       <>
                         Choose Art Style <ArrowRight className="h-5 w-5" />
                       </>
@@ -679,14 +786,14 @@ export default function CreateBook() {
             </>
           )}
 
-          {/* Step 3: Art Style (for illustrated books) */}
+          {/* Step 4: Art Style (for image books only) */}
           {step === 'style' && preset && (
             <>
               <button
-                onClick={() => setStep(hasIdeaFromHomepage ? 'type' : 'idea')}
+                onClick={() => setStep('idea')}
                 className="flex items-center gap-2 text-neutral-600 hover:text-neutral-900 mb-8 transition-colors"
               >
-                <ArrowLeft className="h-5 w-5" /> {hasIdeaFromHomepage ? 'Back to book types' : 'Back to idea'}
+                <ArrowLeft className="h-5 w-5" /> Back to idea
               </button>
 
               <div className="text-center mb-8">
@@ -725,7 +832,11 @@ export default function CreateBook() {
                         </div>
                       )}
                       {selectedArtStyle === key && (
-                        <div className="absolute inset-0 bg-neutral-900/10" />
+                        <div className="absolute inset-0 bg-neutral-900/10 flex items-center justify-center">
+                          <div className="bg-neutral-900 rounded-full p-2">
+                            <Check className="h-5 w-5 text-white" />
+                          </div>
+                        </div>
                       )}
                     </div>
                     <div className="p-3 bg-white text-left">

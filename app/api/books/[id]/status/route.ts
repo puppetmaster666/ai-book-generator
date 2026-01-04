@@ -8,14 +8,17 @@ import { prisma } from '@/lib/db';
  * Full book fetch: ~6MB (with illustrations)
  * This endpoint: ~2KB
  *
- * Also detects stale generations - if a book has been "generating" for 10+ minutes
+ * Also detects stale generations - if a book has been "generating" for 7+ minutes
  * without progress, automatically marks it as failed (handles Vercel timeout cases).
+ *
+ * Note: Chapter generation has a 4-minute timeout, Vercel has a 5-minute max.
+ * 7 minutes gives buffer for network delays and client retries.
  */
 
-// Stale generation threshold: 15 minutes without progress
+// Stale generation threshold: 7 minutes without progress
 // Each chapter generation updates the book timestamp as a "heartbeat"
-// so this should only trigger on genuine failures
-const STALE_GENERATION_MS = 15 * 60 * 1000;
+// With our 4-minute chapter timeout, this should only trigger on genuine failures
+const STALE_GENERATION_MS = 7 * 60 * 1000;
 
 export async function GET(
   request: NextRequest,

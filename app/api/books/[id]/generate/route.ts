@@ -31,6 +31,33 @@ import { sendEmail, getBookReadyEmail } from '@/lib/email';
 // Allow up to 5 minutes for outline generation (Vercel Pro plan max: 300s)
 export const maxDuration = 300;
 
+// Outline generation timeout (4 minutes - leave 1 minute buffer for cleanup)
+const OUTLINE_TIMEOUT_MS = 240000;
+
+/**
+ * Wraps a promise with a timeout. If the promise doesn't resolve within the timeout,
+ * it rejects with a timeout error. This allows us to gracefully handle long-running
+ * generations before Vercel's 5-minute timeout kills the function.
+ */
+async function withTimeout<T>(promise: Promise<T>, timeoutMs: number, operation: string): Promise<T> {
+  let timeoutId: NodeJS.Timeout;
+
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timeoutId = setTimeout(() => {
+      reject(new Error(`${operation} timed out after ${timeoutMs / 1000} seconds`));
+    }, timeoutMs);
+  });
+
+  try {
+    const result = await Promise.race([promise, timeoutPromise]);
+    clearTimeout(timeoutId!);
+    return result;
+  } catch (error) {
+    clearTimeout(timeoutId!);
+    throw error;
+  }
+}
+
 // Admin emails - admins can bypass all generation limits
 const ADMIN_EMAILS = ['lhllparis@gmail.com'];
 
@@ -650,12 +677,16 @@ export async function POST(
       if (bookFormat === 'screenplay') {
         // Use screenplay outline with beat sheet structure
         console.log('Generating screenplay beat sheet outline...');
-        const screenplayResult = await generateScreenplayOutline({
-          idea: book.premise,
-          genre: book.genre,
-          title: book.title,
-          targetPages: 100, // Feature film standard
-        });
+        const screenplayResult = await withTimeout(
+          generateScreenplayOutline({
+            idea: book.premise,
+            genre: book.genre,
+            title: book.title,
+            targetPages: 100, // Feature film standard
+          }),
+          OUTLINE_TIMEOUT_MS,
+          'Screenplay outline generation'
+        );
 
         // Store beat sheet and characters in outline
         outline = {
@@ -702,23 +733,27 @@ export async function POST(
         const targetPanelCount = book.targetChapters;
         console.log(`Generating illustrated outline with ${targetPanelCount} panels...`);
 
-        const visualOutline = await generateIllustratedOutline({
-          title: book.title,
-          genre: book.genre,
-          bookType: book.bookType,
-          premise: book.premise,
-          originalIdea: book.originalIdea || undefined,
-          characters: book.characters as { name: string; description: string }[],
-          beginning: book.beginning,
-          middle: book.middle,
-          ending: book.ending,
-          writingStyle: book.writingStyle,
-          targetWords: book.targetWords,
-          targetChapters: targetPanelCount,
-          dialogueStyle: dialogueStyle,
-          characterVisualGuide: book.characterVisualGuide as CharacterVisualGuide | undefined,
-          contentRating: (book.contentRating || 'general') as ContentRating,
-        });
+        const visualOutline = await withTimeout(
+          generateIllustratedOutline({
+            title: book.title,
+            genre: book.genre,
+            bookType: book.bookType,
+            premise: book.premise,
+            originalIdea: book.originalIdea || undefined,
+            characters: book.characters as { name: string; description: string }[],
+            beginning: book.beginning,
+            middle: book.middle,
+            ending: book.ending,
+            writingStyle: book.writingStyle,
+            targetWords: book.targetWords,
+            targetChapters: targetPanelCount,
+            dialogueStyle: dialogueStyle,
+            characterVisualGuide: book.characterVisualGuide as CharacterVisualGuide | undefined,
+            contentRating: (book.contentRating || 'general') as ContentRating,
+          }),
+          OUTLINE_TIMEOUT_MS,
+          'Visual book outline generation'
+        );
         outline = visualOutline;
 
         // ENFORCE exact panel count - AI sometimes ignores "Create EXACTLY X" instruction
@@ -774,19 +809,23 @@ export async function POST(
       } else if (book.bookType === 'non-fiction') {
         // Use non-fiction outline for non-fiction books
         console.log('Generating non-fiction outline with topic structure...');
-        const nfOutline = await generateNonFictionOutline({
-          title: book.title,
-          genre: book.genre,
-          bookType: book.bookType,
-          premise: book.premise,
-          originalIdea: book.originalIdea || undefined,
-          beginning: book.beginning,
-          middle: book.middle,
-          ending: book.ending,
-          writingStyle: book.writingStyle,
-          targetWords: book.targetWords,
-          targetChapters: book.targetChapters,
-        });
+        const nfOutline = await withTimeout(
+          generateNonFictionOutline({
+            title: book.title,
+            genre: book.genre,
+            bookType: book.bookType,
+            premise: book.premise,
+            originalIdea: book.originalIdea || undefined,
+            beginning: book.beginning,
+            middle: book.middle,
+            ending: book.ending,
+            writingStyle: book.writingStyle,
+            targetWords: book.targetWords,
+            targetChapters: book.targetChapters,
+          }),
+          OUTLINE_TIMEOUT_MS,
+          'Non-fiction outline generation'
+        );
         // Map non-fiction outline to standard format (keyPoints → summary for compatibility)
         outline = {
           chapters: nfOutline.chapters.map(ch => ({
@@ -797,20 +836,24 @@ export async function POST(
         };
       } else {
         // Use standard outline for fiction text-based books
-        outline = await generateOutline({
-          title: book.title,
-          genre: book.genre,
-          bookType: book.bookType,
-          premise: book.premise,
-          originalIdea: book.originalIdea || undefined,
-          characters: book.characters as { name: string; description: string }[],
-          beginning: book.beginning,
-          middle: book.middle,
-          ending: book.ending,
-          writingStyle: book.writingStyle,
-          targetWords: book.targetWords,
-          targetChapters: book.targetChapters,
-        });
+        outline = await withTimeout(
+          generateOutline({
+            title: book.title,
+            genre: book.genre,
+            bookType: book.bookType,
+            premise: book.premise,
+            originalIdea: book.originalIdea || undefined,
+            characters: book.characters as { name: string; description: string }[],
+            beginning: book.beginning,
+            middle: book.middle,
+            ending: book.ending,
+            writingStyle: book.writingStyle,
+            targetWords: book.targetWords,
+            targetChapters: book.targetChapters,
+          }),
+          OUTLINE_TIMEOUT_MS,
+          'Fiction outline generation'
+        );
       }
 
       await prisma.book.update({

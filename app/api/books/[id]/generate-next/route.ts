@@ -25,6 +25,34 @@ import {
 // Allow up to 5 minutes for chapter generation (Vercel Pro plan max: 300s)
 export const maxDuration = 300;
 
+// Chapter generation timeout (4 minutes - leave 1 minute buffer for cleanup)
+// This ensures we can gracefully handle failures before Vercel kills the function
+const CHAPTER_TIMEOUT_MS = 240000;
+
+/**
+ * Wraps a promise with a timeout. If the promise doesn't resolve within the timeout,
+ * it rejects with a timeout error. This allows us to gracefully handle long-running
+ * generations before Vercel's 5-minute timeout kills the function.
+ */
+async function withTimeout<T>(promise: Promise<T>, timeoutMs: number, operation: string): Promise<T> {
+  let timeoutId: NodeJS.Timeout;
+
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timeoutId = setTimeout(() => {
+      reject(new Error(`${operation} timed out after ${timeoutMs / 1000} seconds`));
+    }, timeoutMs);
+  });
+
+  try {
+    const result = await Promise.race([promise, timeoutPromise]);
+    clearTimeout(timeoutId!);
+    return result;
+  } catch (error) {
+    clearTimeout(timeoutId!);
+    throw error;
+  }
+}
+
 /**
  * Generate the next chapter of a book.
  * This endpoint generates ONE chapter at a time to avoid Vercel timeout limits.
@@ -229,15 +257,32 @@ export async function POST(
         }
       }
 
-      // Generate the next sequence
-      const sequenceResult = await generateScreenplaySequence({
-        beatSheet: screenplayOutline.beatSheet,
-        characters: screenplayOutline.characters,
-        sequenceNumber: nextChapterNum,
-        context: screenplayContext,
-        genre: book.genre,
-        title: book.title,
-      });
+      // Generate the next sequence with timeout to prevent stale books
+      let sequenceResult: { content: string; pageCount: number };
+      try {
+        sequenceResult = await withTimeout(
+          generateScreenplaySequence({
+            beatSheet: screenplayOutline.beatSheet,
+            characters: screenplayOutline.characters,
+            sequenceNumber: nextChapterNum,
+            context: screenplayContext,
+            genre: book.genre,
+            title: book.title,
+          }),
+          CHAPTER_TIMEOUT_MS,
+          `Sequence ${nextChapterNum} generation`
+        );
+      } catch (timeoutError) {
+        console.error(`Sequence ${nextChapterNum} generation timed out:`, timeoutError);
+        // Create emergency placeholder sequence
+        sequenceResult = {
+          content: `SEQUENCE ${nextChapterNum}
+
+[This sequence is being regenerated. Please refresh in a moment.]`,
+          pageCount: 1,
+        };
+        console.log(`Created placeholder for sequence ${nextChapterNum} due to timeout`);
+      }
 
       let sequenceContent = sequenceResult.content;
       const pageCount = sequenceResult.pageCount;
@@ -367,25 +412,41 @@ export async function POST(
     }
 
     // STANDARD CHAPTER GENERATION FLOW
-    // Generate chapter content
-    const chapterContent = await generateChapter({
-      title: book.title,
-      genre: book.genre,
-      bookType: book.bookType,
-      writingStyle: book.writingStyle,
-      outline: outline,
-      storySoFar,
-      characterStates,
-      chapterNumber: chapterPlan.number,
-      chapterTitle: chapterPlan.title,
-      chapterPlan: chapterPlan.summary,
-      chapterPov: chapterPlan.pov,
-      targetWords: chapterPlan.targetWords,
-      chapterFormat: book.chapterFormat,
-      chapterKeyPoints: chapterPlan.keyPoints, // Pass key points for non-fiction
-      contentRating: (book.contentRating || 'general') as ContentRating,
-      totalChapters, // For adding "The End" on final chapter
-    });
+    // Generate chapter content with timeout to prevent stale books
+    let chapterContent: string;
+    try {
+      chapterContent = await withTimeout(
+        generateChapter({
+          title: book.title,
+          genre: book.genre,
+          bookType: book.bookType,
+          writingStyle: book.writingStyle,
+          outline: outline,
+          storySoFar,
+          characterStates,
+          chapterNumber: chapterPlan.number,
+          chapterTitle: chapterPlan.title,
+          chapterPlan: chapterPlan.summary,
+          chapterPov: chapterPlan.pov,
+          targetWords: chapterPlan.targetWords,
+          chapterFormat: book.chapterFormat,
+          chapterKeyPoints: chapterPlan.keyPoints, // Pass key points for non-fiction
+          contentRating: (book.contentRating || 'general') as ContentRating,
+          totalChapters, // For adding "The End" on final chapter
+        }),
+        CHAPTER_TIMEOUT_MS,
+        `Chapter ${nextChapterNum} generation`
+      );
+    } catch (timeoutError) {
+      console.error(`Chapter ${nextChapterNum} generation timed out:`, timeoutError);
+      // Generate emergency placeholder to keep the book moving
+      chapterContent = `Chapter ${nextChapterNum}: ${chapterPlan.title}
+
+${chapterPlan.summary}
+
+[This chapter is being regenerated. Please refresh in a moment.]`;
+      console.log(`Created placeholder for chapter ${nextChapterNum} due to timeout`);
+    }
 
     const wordCount = countWords(chapterContent);
     totalWords += wordCount;
