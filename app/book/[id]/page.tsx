@@ -5,7 +5,8 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import Header from '@/components/Header';
 import ToastModal from '@/components/ToastModal';
-import { Download, BookOpen, Loader2, Check, AlertCircle, ImageIcon, Mail, Palette, PenTool, Clock, Zap, AlertTriangle, Save, Trash2, RefreshCw, X, FileText } from 'lucide-react';
+import { Download, BookOpen, Loader2, Check, AlertCircle, ImageIcon, Mail, Palette, PenTool, Clock, Zap, AlertTriangle, Save, Trash2, RefreshCw, X, FileText, Film } from 'lucide-react';
+import ScreenplayPreview from '@/components/ScreenplayPreview';
 import { useGeneratingBook } from '@/contexts/GeneratingBookContext';
 import Link from 'next/link';
 import FirstBookDiscountPopup from '@/components/FirstBookDiscountPopup';
@@ -1081,7 +1082,8 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
   const isFailed = book.status === 'failed' || !!book.errorMessage;
   // Treat ?success=true as payment completed for UI (webhook may be delayed)
   const paymentCompleted = book.paymentStatus === 'completed' || success === 'true';
-  const isIllustrated = book.bookFormat !== 'text_only';
+  const isIllustrated = book.bookFormat !== 'text_only' && book.bookFormat !== 'screenplay';
+  const isScreenplay = book.bookFormat === 'screenplay';
 
   // Show restart option for failed books or admins
   const canRestart = isAdminUser || isFailed;
@@ -1475,6 +1477,39 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
 
           {/* Progress Section */}
           {isGenerating && (
+            isScreenplay ? (
+              <div className="mb-6">
+                <ScreenplayPreview
+                  title={book.title}
+                  currentSequence={book.currentChapter}
+                  totalSequences={book.totalChapters}
+                  pagesGenerated={Math.round(book.totalWords / 250)}
+                  targetPages={100}
+                  elapsedTime={formatElapsedTime(elapsedTime)}
+                  isGenerating={true}
+                />
+                {/* Cancel Generation Button */}
+                <div className="mt-6">
+                  <button
+                    onClick={handleCancelGeneration}
+                    disabled={cancelling}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-3 text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100 border border-neutral-200 rounded-xl font-medium transition-colors disabled:opacity-50"
+                  >
+                    {cancelling ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Cancelling...
+                      </>
+                    ) : (
+                      'Cancel Generation'
+                    )}
+                  </button>
+                  <p className="text-xs text-neutral-400 text-center mt-2">
+                    Progress will be saved. You can retry later.
+                  </p>
+                </div>
+              </div>
+            ) : (
             <div className="bg-white rounded-2xl border border-neutral-200 p-6 sm:p-8 mb-6">
               {/* Header with Timer */}
               <div className="flex items-center justify-between mb-6">
@@ -1801,6 +1836,7 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
                 </div>
               )}
             </div>
+            )
           )}
 
           {/* Completed Section */}
