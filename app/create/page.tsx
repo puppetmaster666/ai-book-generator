@@ -6,7 +6,7 @@ import { useSession } from 'next-auth/react';
 import Image from 'next/image';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
-import { ArrowLeft, ArrowRight, Sparkles, Loader2, BookOpen, Palette, Layers, ChevronDown, GraduationCap, Film } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Sparkles, Loader2, BookOpen, Palette, Layers, ChevronDown, GraduationCap, Film, Upload, FileText, X } from 'lucide-react';
 import { BOOK_PRESETS, ART_STYLES, GENRES, type BookPresetKey, type ArtStyleKey } from '@/lib/constants';
 
 // Idea categories for the Surprise Me feature
@@ -58,6 +58,9 @@ export default function CreateBook() {
   const [error, setError] = useState('');
   const [ideaCategory, setIdeaCategory] = useState<IdeaCategory>('random');
   const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
+  const [isParsingFile, setIsParsingFile] = useState(false);
 
   // Get user ID from session if logged in
   const userId = (session?.user as { id?: string })?.id;
@@ -130,6 +133,116 @@ export default function CreateBook() {
     } finally {
       setIsGeneratingIdea(false);
     }
+  };
+
+  // File parsing for drag and drop / upload
+  const parseFileContent = async (file: File): Promise<string> => {
+    const extension = file.name.split('.').pop()?.toLowerCase();
+
+    if (extension === 'txt' || extension === 'md') {
+      return await file.text();
+    }
+
+    if (extension === 'docx') {
+      // Use mammoth.js for DOCX parsing (loaded dynamically)
+      try {
+        const mammoth = await import('mammoth');
+        const arrayBuffer = await file.arrayBuffer();
+        const result = await mammoth.extractRawText({ arrayBuffer });
+        return result.value;
+      } catch {
+        throw new Error('Could not parse DOCX file. Please try copying the text directly.');
+      }
+    }
+
+    if (extension === 'pdf') {
+      // For PDF, we'll just extract text (basic support)
+      try {
+        const pdfjs = await import('pdfjs-dist');
+        pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
+        const arrayBuffer = await file.arrayBuffer();
+        const pdf = await pdfjs.getDocument({ data: arrayBuffer }).promise;
+        let fullText = '';
+        for (let i = 1; i <= pdf.numPages; i++) {
+          const page = await pdf.getPage(i);
+          const textContent = await page.getTextContent();
+          const pageText = textContent.items
+            .map((item) => ('str' in item ? (item as { str: string }).str : ''))
+            .filter(Boolean)
+            .join(' ');
+          fullText += pageText + '\n\n';
+        }
+        return fullText.trim();
+      } catch {
+        throw new Error('Could not parse PDF file. Please try copying the text directly.');
+      }
+    }
+
+    throw new Error(`Unsupported file type: .${extension}. Please use .txt, .md, .docx, or .pdf`);
+  };
+
+  const handleFileDrop = async (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+
+    const files = e.dataTransfer.files;
+    if (files.length === 0) return;
+
+    const file = files[0];
+    await processFile(file);
+  };
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    const file = files[0];
+    await processFile(file);
+    // Reset the input so the same file can be selected again
+    e.target.value = '';
+  };
+
+  const processFile = async (file: File) => {
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      setError('File too large. Maximum size is 5MB.');
+      return;
+    }
+
+    setIsParsingFile(true);
+    setError('');
+
+    try {
+      const content = await parseFileContent(file);
+
+      // Limit content to reasonable size (first 50,000 characters ~ 8000 words)
+      const trimmedContent = content.slice(0, 50000);
+
+      setIdea(trimmedContent);
+      setUploadedFileName(file.name);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to parse file');
+    } finally {
+      setIsParsingFile(false);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const clearUploadedFile = () => {
+    setUploadedFileName(null);
+    setIdea('');
   };
 
   const handleSelectPreset = (key: BookPresetKey) => {
@@ -421,22 +534,89 @@ export default function CreateBook() {
               </div>
 
               <div className="bg-white rounded-2xl border border-neutral-200 p-6 md:p-8">
-                <textarea
-                  value={idea}
-                  onChange={(e) => setIdea(e.target.value)}
-                  placeholder={
-                    selectedPreset === 'comic_story'
-                      ? "A noir detective story set in a rainy city where a private eye investigates a series of mysterious disappearances..."
-                      : selectedPreset === 'nonfiction'
-                      ? "A comprehensive guide to becoming a successful screenwriter, covering everything from story structure to pitching your scripts to studios..."
-                      : preset.format === 'picture_book'
-                      ? "A curious little fox named Pip who discovers that the stars in the sky are actually sleeping fireflies..."
-                      : "A mystery novel about a detective who discovers her own name in a cold case file from 1985..."
-                  }
-                  rows={6}
-                  className="w-full px-4 py-4 text-lg bg-neutral-50 border border-neutral-200 rounded-xl focus:border-neutral-900 focus:outline-none resize-none transition-colors"
-                  disabled={isSubmitting}
-                />
+                {/* Uploaded file indicator */}
+                {uploadedFileName && (
+                  <div className="flex items-center justify-between bg-neutral-100 px-4 py-2 rounded-lg mb-4">
+                    <div className="flex items-center gap-2 text-sm text-neutral-700">
+                      <FileText className="h-4 w-4" />
+                      <span className="font-medium">{uploadedFileName}</span>
+                      <span className="text-neutral-500">uploaded</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={clearUploadedFile}
+                      className="text-neutral-400 hover:text-neutral-600 transition-colors"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                )}
+
+                {/* Drag and drop zone */}
+                <div
+                  className="relative"
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleFileDrop}
+                >
+                  <textarea
+                    value={idea}
+                    onChange={(e) => {
+                      setIdea(e.target.value);
+                      if (uploadedFileName) setUploadedFileName(null);
+                    }}
+                    placeholder={
+                      selectedPreset === 'comic_story'
+                        ? "A noir detective story set in a rainy city where a private eye investigates a series of mysterious disappearances..."
+                        : selectedPreset === 'nonfiction'
+                        ? "A comprehensive guide to becoming a successful screenwriter, covering everything from story structure to pitching your scripts to studios..."
+                        : preset.format === 'picture_book'
+                        ? "A curious little fox named Pip who discovers that the stars in the sky are actually sleeping fireflies..."
+                        : "A mystery novel about a detective who discovers her own name in a cold case file from 1985..."
+                    }
+                    rows={8}
+                    className={`w-full px-4 py-4 text-lg bg-neutral-50 border rounded-xl focus:border-neutral-900 focus:outline-none resize-none transition-colors ${
+                      isDragging ? 'border-neutral-900 bg-neutral-100' : 'border-neutral-200'
+                    }`}
+                    disabled={isSubmitting || isParsingFile}
+                  />
+
+                  {/* Drag overlay */}
+                  {isDragging && (
+                    <div className="absolute inset-0 bg-neutral-900/10 rounded-xl flex items-center justify-center border-2 border-dashed border-neutral-900 pointer-events-none">
+                      <div className="bg-white px-6 py-4 rounded-xl shadow-lg flex items-center gap-3">
+                        <Upload className="h-6 w-6 text-neutral-700" />
+                        <span className="font-medium text-neutral-900">Drop your file here</span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Parsing overlay */}
+                  {isParsingFile && (
+                    <div className="absolute inset-0 bg-white/80 rounded-xl flex items-center justify-center">
+                      <div className="flex items-center gap-3">
+                        <Loader2 className="h-6 w-6 animate-spin text-neutral-700" />
+                        <span className="font-medium text-neutral-900">Reading file...</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Helper text for drag and drop */}
+                <p className="text-xs text-neutral-400 mt-2 text-center">
+                  Have an existing draft? Drag and drop a file here or{' '}
+                  <label className="text-neutral-600 hover:text-neutral-900 cursor-pointer underline">
+                    browse
+                    <input
+                      type="file"
+                      accept=".txt,.md,.docx,.pdf"
+                      onChange={handleFileSelect}
+                      className="hidden"
+                      disabled={isSubmitting || isParsingFile}
+                    />
+                  </label>
+                  {' '}(.txt, .md, .docx, .pdf)
+                </p>
 
                 <div className="flex items-center justify-between mt-4">
                   <div className="flex items-center gap-2">
@@ -488,7 +668,7 @@ export default function CreateBook() {
                   </div>
 
                   <span className={`text-sm ${idea.trim().split(/\s+/).filter(w => w).length > 1000 ? 'text-amber-600' : 'text-neutral-500'}`}>
-                    {idea.trim() ? idea.trim().split(/\s+/).filter(w => w).length : 0} / 1,000 words
+                    {idea.trim() ? idea.trim().split(/\s+/).filter(w => w).length : 0} words
                   </span>
                 </div>
 
