@@ -2260,28 +2260,52 @@ This is the FINAL chapter. End the book with "The End" on its own line at the ve
 OUTPUT: The chapter text only, starting with the chapter heading.`;
   }
 
-  // Try with original content first, then with sanitized content if blocked
-  const maxAttempts = 2;
+  // Try with progressively more aggressive sanitization (4 attempts)
+  // Attempt 1: Original content
+  // Attempt 2: Sanitized content with mature note
+  // Attempt 3: Ultra-sanitized with family-friendly note
+  // Attempt 4: Fallback - generate a safe bridge chapter from summary only
+  const maxAttempts = 4;
   let lastError: Error | null = null;
 
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
-    const useSanitized = attempt > 0;
-
-    // Sanitize the prompt content on retry
     let currentPrompt = prompt;
-    if (useSanitized) {
-      console.log(`[Chapter ${data.chapterNumber}] Retrying with sanitized content after safety block...`);
+
+    if (attempt === 1) {
+      // First retry: Basic sanitization
+      console.log(`[Chapter ${data.chapterNumber}] Attempt 2: Retrying with sanitized content...`);
       currentPrompt = sanitizeContentForSafety(prompt);
-      // Add safety note for the model
       currentPrompt += '\n\nIMPORTANT: Write a tasteful, mature story that focuses on emotional connections and character development. Use euphemisms and implications rather than explicit descriptions. Keep all content suitable for a mature but not explicit audience.';
+    } else if (attempt === 2) {
+      // Second retry: Ultra-sanitized, family-friendly
+      console.log(`[Chapter ${data.chapterNumber}] Attempt 3: Ultra-sanitized family-friendly mode...`);
+      currentPrompt = sanitizeContentForSafety(sanitizeContentForSafety(prompt)); // Double sanitize
+      currentPrompt += '\n\nCRITICAL SAFETY OVERRIDE: The previous attempts were blocked. You MUST write completely family-friendly content suitable for all ages. NO violence, NO romance beyond hand-holding, NO conflict descriptions. Focus purely on dialogue, character emotions, and plot advancement. If the scene requires mature content, summarize it as "time passed" and skip to the next safe scene.';
+    } else if (attempt === 3) {
+      // Final fallback: Generate a minimal bridge chapter from just the summary
+      console.log(`[Chapter ${data.chapterNumber}] Attempt 4: Generating safe bridge chapter from summary only...`);
+      currentPrompt = `Write a brief, family-friendly chapter for a ${data.genre} story.
+
+Chapter ${data.chapterNumber}: ${data.chapterTitle}
+
+Summary of what happens: ${data.chapterPlan}
+
+Requirements:
+- Write approximately ${Math.min(data.targetWords, 1500)} words
+- Focus on dialogue and character emotions only
+- NO violence, NO mature themes, NO conflict descriptions
+- Keep it simple and safe for all audiences
+- Start with "Chapter ${data.chapterNumber}: ${data.chapterTitle}" as the heading
+- This is a bridge chapter - just move the plot forward simply
+
+Write the chapter now:`;
     }
 
     try {
-      // PASS 1: Generate the chapter (with timeout to prevent hanging)
       const result = await withTimeout(
         () => getGeminiPro().generateContent(currentPrompt),
         CHAPTER_GENERATION_TIMEOUT,
-        `Chapter ${data.chapterNumber} generation`
+        `Chapter ${data.chapterNumber} generation (attempt ${attempt + 1})`
       );
       let content = result.response.text();
 
@@ -2312,20 +2336,32 @@ OUTPUT: The chapter text only, starting with the chapter heading.`;
         .trim();
 
       // Remove duplicate chapter titles (AI sometimes outputs title twice - ALL CAPS then Title Case)
-      // Pattern: "CHAPTER N: TITLE\n\nChapter N: Title" -> keep only the properly formatted one
       content = removeDuplicateChapterHeading(content, data.chapterNumber, data.chapterTitle);
 
       // Handle "The End" for final chapter
       content = normalizeTheEnd(content, isLastChapter || false);
 
-      // Review/polish now happens separately in generate-next after chapter is saved
-      // This allows the chapter to be saved immediately and review to fail independently
+      if (attempt > 0) {
+        console.log(`[Chapter ${data.chapterNumber}] Successfully generated on attempt ${attempt + 1}`);
+      }
+
       return content;
     } catch (error) {
       lastError = error as Error;
       if (isSafetyBlockError(error) && attempt < maxAttempts - 1) {
-        console.log(`[Chapter ${data.chapterNumber}] Safety block detected, will retry with sanitized content`);
+        console.log(`[Chapter ${data.chapterNumber}] Safety block on attempt ${attempt + 1}, trying next fallback...`);
         continue;
+      }
+      // If this is the last attempt and still failing, generate a placeholder
+      if (attempt === maxAttempts - 1) {
+        console.error(`[Chapter ${data.chapterNumber}] All ${maxAttempts} attempts failed. Generating emergency placeholder.`);
+        // Return a minimal placeholder chapter so the book can complete
+        const placeholder = `Chapter ${data.chapterNumber}: ${data.chapterTitle}
+
+${data.chapterPlan}
+
+[Note: This chapter was condensed due to content processing. The story continues in the next chapter.]`;
+        return placeholder;
       }
       throw error;
     }
