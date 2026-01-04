@@ -698,7 +698,7 @@ export async function POST(
         });
       } else if (useVisualFlow && dialogueStyle) {
         // Use enhanced illustrated outline for visual books
-        // Use the user's selected panel count from targetChapters (set from VISUAL_LENGTH_TIERS)
+        // Use the preset's panel count from targetChapters (20 for picture books, 24 for comics)
         const targetPanelCount = book.targetChapters;
         console.log(`Generating illustrated outline with ${targetPanelCount} panels...`);
 

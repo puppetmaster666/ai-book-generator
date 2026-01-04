@@ -74,31 +74,11 @@ export const LENGTH_TIERS = {
 
 export type LengthTierKey = keyof typeof LENGTH_TIERS;
 
-// Length tiers for visual books (picture books, comics)
-export const VISUAL_LENGTH_TIERS = {
-  auto: {
-    label: 'Let AI Choose',
-    description: 'AI picks the best length',
-    panels: null,
-  },
-  short: {
-    label: 'Short',
-    description: '12 panels/pages',
-    panels: 12,
-  },
-  standard: {
-    label: 'Standard',
-    description: '24 panels/pages',
-    panels: 24,
-  },
-  long: {
-    label: 'Extended',
-    description: '36 panels/pages',
-    panels: 36,
-  },
-} as const;
-
-export type VisualLengthTierKey = keyof typeof VISUAL_LENGTH_TIERS;
+// Visual books don't have length tiers - they use preset defaults:
+// - Children's Picture Book: 20 panels
+// - Comic Book: 24 panels
+// - Adult Comic: 24 panels
+// The panel count is fixed per preset type, not user-selectable.
 
 // Length tiers for screenplays
 export const SCREENPLAY_LENGTH_TIERS = {
