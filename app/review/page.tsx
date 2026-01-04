@@ -622,7 +622,7 @@ function ReviewContent() {
           {/* Header */}
           <div className="text-center mb-10">
             <h1 className="text-3xl md:text-4xl font-bold tracking-tight mb-3" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>
-              Review Your Book
+              Review Your Idea
             </h1>
             <p className="text-lg text-neutral-600">
               Here&apos;s what we&apos;ll create based on your idea
