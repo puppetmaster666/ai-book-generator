@@ -6,17 +6,13 @@ import { useSession } from 'next-auth/react';
 import Image from 'next/image';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
-import { ArrowLeft, ArrowRight, Sparkles, Loader2, BookOpen, Palette, Layers, ChevronDown, ChevronUp, GraduationCap, Film, Upload, FileText, X, Clock, Skull } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Sparkles, Loader2, BookOpen, Palette, Layers, ChevronDown, GraduationCap, Film, Upload, FileText, X, Clock, Skull } from 'lucide-react';
 import {
   BOOK_PRESETS,
   ART_STYLES,
   GENRES,
-  LENGTH_TIERS,
-  SCREENPLAY_LENGTH_TIERS,
   type BookPresetKey,
   type ArtStyleKey,
-  type LengthTierKey,
-  type ScreenplayLengthTierKey,
 } from '@/lib/constants';
 
 // Idea categories for the Surprise Me feature
@@ -34,13 +30,17 @@ const IDEA_CATEGORIES: { value: IdeaCategory; label: string; emoji: string }[] =
 
 // Icons for book types
 const PRESET_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
+  short_novel: BookOpen,
   novel: BookOpen,
+  epic_novel: BookOpen,
   childrens_picture: Palette,
   comic_story: Layers,
   adult_comic: Skull,
-  nonfiction: GraduationCap,
   lead_magnet: FileText,
+  nonfiction: GraduationCap,
+  short_screenplay: Film,
   screenplay: Film,
+  epic_screenplay: Film,
 };
 
 // Art style images
@@ -75,10 +75,8 @@ export default function CreateBook() {
   const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
   const [isParsingFile, setIsParsingFile] = useState(false);
 
-  // Questionnaire state - all default to 'auto' (Let AI Choose)
-  // Note: Visual books don't have length tiers - they use preset panel counts (20 or 24)
-  const [showCustomize, setShowCustomize] = useState(true);
-  const [lengthTier, setLengthTier] = useState<LengthTierKey | ScreenplayLengthTierKey>('auto');
+  // Book length is now determined by the preset selected (e.g., short_novel, novel, epic_novel)
+  // Users can adjust word count/chapters in the book review page if needed
 
   // Get user ID from session if logged in
   const userId = (session?.user as { id?: string })?.id;
@@ -106,7 +104,6 @@ export default function CreateBook() {
         if (state.selectedArtStyle) setSelectedArtStyle(state.selectedArtStyle);
         if (state.step) setStep(state.step);
         if (state.ideaCategory) setIdeaCategory(state.ideaCategory);
-        if (state.lengthTier) setLengthTier(state.lengthTier);
       } catch (e) {
         console.error('Failed to restore form state:', e);
       }
@@ -123,11 +120,10 @@ export default function CreateBook() {
         selectedArtStyle,
         step,
         ideaCategory,
-        lengthTier,
       };
       sessionStorage.setItem(FORM_STATE_KEY, JSON.stringify(state));
     }
-  }, [idea, selectedPreset, selectedArtStyle, step, ideaCategory, lengthTier]);
+  }, [idea, selectedPreset, selectedArtStyle, step, ideaCategory]);
 
   // Clear form state when navigating away after successful submission
   const clearFormState = () => {
@@ -274,74 +270,27 @@ export default function CreateBook() {
         setSelectedArtStyle(null);
       }
 
-      // Reset length tier to auto when changing preset
-      setLengthTier('auto');
-
-      // Always go to idea step so users can see customize options (book length, etc.)
-      // Even if they have an idea from homepage, they should be able to adjust settings
+      // Go to idea step
       setStep('idea');
       setSelectingPreset(null);
     }, 400);
   };
 
-  // Get the appropriate length tiers based on book type
-  // Visual books (picture books, comics) don't have length tiers - they use preset panel counts
-  const getLengthTiers = () => {
-    if (!selectedPreset) return Object.entries(LENGTH_TIERS);
-    const preset = BOOK_PRESETS[selectedPreset];
-
-    if (preset.format === 'screenplay') {
-      return Object.entries(SCREENPLAY_LENGTH_TIERS);
-    } else if (preset.format === 'picture_book') {
-      // Visual books don't have length tiers - panel count is fixed per preset
-      return null;
-    } else {
-      return Object.entries(LENGTH_TIERS);
-    }
-  };
-
-  // Calculate target words and chapters/panels based on book type and length tier
-  const getTargetFromLengthTier = () => {
+  // Get target words and chapters from the preset (length is now built into preset selection)
+  const getTargetFromPreset = () => {
     if (!selectedPreset) return { targetWords: 60000, targetChapters: 20 };
 
     const preset = BOOK_PRESETS[selectedPreset];
-    const isScreenplay = preset.format === 'screenplay';
-    const isVisual = preset.format === 'picture_book';
 
-    // Visual books always use preset panel count (20 for picture books, 24 for comics)
-    // No user-selectable length tiers for visual books
-    if (isVisual) {
-      return { targetWords: preset.targetWords, targetChapters: preset.chapters };
+    // Screenplays use targetPages and sequences
+    if (preset.format === 'screenplay') {
+      const pages = 'targetPages' in preset ? (preset.targetPages as number) : 100;
+      const sequences = 'sequences' in preset ? (preset.sequences as number) : 8;
+      return { targetWords: pages * 250, targetChapters: sequences };
     }
 
-    // Screenplays
-    if (isScreenplay) {
-      if (lengthTier === 'auto') {
-        const pages = 'targetPages' in preset ? (preset.targetPages as number) : 100;
-        return { targetWords: pages * 250, targetChapters: 8 };
-      }
-      const tier = SCREENPLAY_LENGTH_TIERS[lengthTier as ScreenplayLengthTierKey];
-      if (tier && tier.pages) {
-        return { targetWords: tier.pages * 250, targetChapters: tier.sequences || 8 };
-      }
-      // Fallback for screenplay
-      return { targetWords: 25000, targetChapters: 8 };
-    }
-
-    // Text books (novels, non-fiction, lead magnets)
-    // At this point, preset is guaranteed to be a text book with targetWords and chapters
-    if (lengthTier === 'auto') {
-      const textPreset = preset as { targetWords: number; chapters: number };
-      return { targetWords: textPreset.targetWords, targetChapters: textPreset.chapters };
-    }
-    const tier = LENGTH_TIERS[lengthTier as LengthTierKey];
-    if (tier && tier.words) {
-      return { targetWords: tier.words, targetChapters: tier.chapters || 20 };
-    }
-
-    // Fallback to preset defaults for text books
-    const textPreset = preset as { targetWords: number; chapters: number };
-    return { targetWords: textPreset.targetWords, targetChapters: textPreset.chapters };
+    // Text and visual books use targetWords and chapters
+    return { targetWords: preset.targetWords as number, targetChapters: preset.chapters as number };
   };
 
   const handleContinue = () => {
@@ -367,11 +316,11 @@ export default function CreateBook() {
       const preset = BOOK_PRESETS[selectedPreset];
       const genre = GENRES[preset.defaultGenre as keyof typeof GENRES];
 
-      // Determine book type based on preset
+      // Determine book type based on preset format
       let bookType = genre?.type || 'fiction';
       if (selectedPreset === 'nonfiction' || selectedPreset === 'lead_magnet') {
         bookType = 'non-fiction';
-      } else if (selectedPreset === 'screenplay') {
+      } else if (preset.format === 'screenplay') {
         bookType = 'fiction';
       }
 
@@ -392,8 +341,8 @@ export default function CreateBook() {
       if (!expandResponse.ok) throw new Error('Failed to expand idea');
       const bookPlan = await expandResponse.json();
 
-      // Get target words and chapters from length tier
-      const { targetWords, targetChapters } = getTargetFromLengthTier();
+      // Get target words and chapters from preset (length is built into preset selection)
+      const { targetWords, targetChapters } = getTargetFromPreset();
 
       const response = await fetch('/api/books', {
         method: 'POST',
@@ -436,33 +385,11 @@ export default function CreateBook() {
       .filter(([, style]) => style.category === category);
   };
 
-  // Get estimated time for current settings
+  // Get estimated time from preset (now built into each preset)
   const getEstimatedTime = () => {
     if (!selectedPreset) return null;
     const preset = BOOK_PRESETS[selectedPreset];
-
-    // Visual books use fixed panel count from preset
-    if (preset.format === 'picture_book') {
-      const mins = Math.round(preset.chapters * 0.5);
-      return `~${mins} min`;
-    }
-
-    if (lengthTier !== 'auto') {
-      if (preset.format === 'screenplay') {
-        const tier = SCREENPLAY_LENGTH_TIERS[lengthTier as ScreenplayLengthTierKey];
-        if (tier && tier.pages) {
-          const mins = Math.round(tier.pages * 0.4);
-          return `~${mins} min`;
-        }
-      } else {
-        const tier = LENGTH_TIERS[lengthTier as LengthTierKey];
-        if (tier && tier.estimatedTime) {
-          return tier.estimatedTime;
-        }
-      }
-    }
-
-    return null;
+    return 'estimatedTime' in preset ? (preset.estimatedTime as string) : null;
   };
 
   return (
@@ -711,76 +638,13 @@ export default function CreateBook() {
                   </span>
                 </div>
 
-                {/* Customize Settings Accordion */}
-                <div className="mt-6 border-t border-neutral-200 pt-6">
-                  <button
-                    type="button"
-                    onClick={() => setShowCustomize(!showCustomize)}
-                    className="flex items-center justify-between w-full text-left"
-                  >
-                    <span className="text-sm font-medium text-neutral-700">
-                      Customize settings
-                      {lengthTier !== 'auto' && getLengthTiers() && (
-                        <span className="ml-2 text-neutral-500 font-normal">
-                          ({getLengthTiers()?.find(([k]) => k === lengthTier)?.[1]?.label})
-                        </span>
-                      )}
-                    </span>
-                    {showCustomize ? (
-                      <ChevronUp className="h-4 w-4 text-neutral-500" />
-                    ) : (
-                      <ChevronDown className="h-4 w-4 text-neutral-500" />
-                    )}
-                  </button>
-
-                  {showCustomize && (
-                    <div className="mt-4 space-y-4">
-                      {/* Length Tier Selection - only for text books and screenplays, not visual books */}
-                      {getLengthTiers() && (
-                        <div>
-                          <label className="block text-sm font-medium text-neutral-700 mb-2">
-                            Book Length
-                          </label>
-                          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
-                            {getLengthTiers()!.map(([key, tier]) => (
-                              <button
-                                key={key}
-                                type="button"
-                                onClick={() => setLengthTier(key as LengthTierKey)}
-                                className={`p-3 rounded-lg border text-left transition-all ${
-                                  lengthTier === key
-                                    ? 'border-neutral-900 bg-neutral-900 text-white'
-                                    : 'border-neutral-200 hover:border-neutral-400 bg-white'
-                                }`}
-                              >
-                                <div className="font-medium text-sm">{tier.label}</div>
-                                <div className={`text-xs mt-0.5 ${lengthTier === key ? 'text-neutral-300' : 'text-neutral-500'}`}>
-                                  {tier.description}
-                                </div>
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Panel count info for visual books */}
-                      {selectedPreset && BOOK_PRESETS[selectedPreset].format === 'picture_book' && (
-                        <div className="text-sm text-neutral-600 bg-neutral-50 px-4 py-3 rounded-lg">
-                          <span className="font-medium">{BOOK_PRESETS[selectedPreset].chapters} panels</span>
-                          {' '}will be generated for this {BOOK_PRESETS[selectedPreset].dialogueStyle === 'bubbles' ? 'comic' : 'picture book'}
-                        </div>
-                      )}
-
-                      {/* Estimated time display */}
-                      {getEstimatedTime() && (
-                        <div className="flex items-center gap-2 text-sm text-neutral-500">
-                          <Clock className="h-4 w-4" />
-                          <span>Estimated generation time: {getEstimatedTime()}</span>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
+                {/* Estimated time display */}
+                {getEstimatedTime() && (
+                  <div className="mt-4 flex items-center gap-2 text-sm text-neutral-500">
+                    <Clock className="h-4 w-4" />
+                    <span>Estimated generation time: {getEstimatedTime()}</span>
+                  </div>
+                )}
 
                 {error && (
                   <p className="text-red-600 text-sm mt-4 bg-red-50 px-4 py-2 rounded-lg">{error}</p>

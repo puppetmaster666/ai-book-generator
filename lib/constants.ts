@@ -28,87 +28,9 @@ export const FREE_TIER_LIMITS = {
   screenplay: { pages: 5, description: '5 pages preview' },
 } as const;
 
-// Length tiers for text-only books (novels, non-fiction)
-export const LENGTH_TIERS = {
-  auto: {
-    label: 'Let AI Choose',
-    description: 'AI picks the best length for your story',
-    pages: null, // AI decides based on content
-    words: null,
-    chapters: null,
-    estimatedTime: null,
-  },
-  quick: {
-    label: 'Quick Guide',
-    description: '20-30 pages, perfect for lead magnets',
-    pages: '20-30',
-    words: 7500,
-    chapters: 5,
-    estimatedTime: '~5 min',
-  },
-  standard: {
-    label: 'Standard',
-    description: '80-120 pages, solid book length',
-    pages: '80-120',
-    words: 25000,
-    chapters: 12,
-    estimatedTime: '~15 min',
-  },
-  novel: {
-    label: 'Novel',
-    description: '200-250 pages, full novel length',
-    pages: '200-250',
-    words: 60000,
-    chapters: 20,
-    estimatedTime: '~30 min',
-  },
-  epic: {
-    label: 'Epic',
-    description: '350-450 pages, epic saga',
-    pages: '350-450',
-    words: 100000,
-    chapters: 32,
-    estimatedTime: '~60 min',
-  },
-} as const;
-
-export type LengthTierKey = keyof typeof LENGTH_TIERS;
-
-// Visual books don't have length tiers - they use preset defaults:
-// - Children's Picture Book: 20 panels
-// - Comic Book: 24 panels
-// - Adult Comic: 24 panels
-// The panel count is fixed per preset type, not user-selectable.
-
-// Length tiers for screenplays
-export const SCREENPLAY_LENGTH_TIERS = {
-  auto: {
-    label: 'Let AI Choose',
-    description: 'AI picks based on story complexity',
-    pages: null,
-    sequences: null,
-  },
-  short: {
-    label: 'Short Film',
-    description: '30-45 pages (~30-45 min)',
-    pages: 40,
-    sequences: 4,
-  },
-  standard: {
-    label: 'Feature Film',
-    description: '90-110 pages (~90-110 min)',
-    pages: 100,
-    sequences: 8,
-  },
-  long: {
-    label: 'Epic Film',
-    description: '120-150 pages (~2-2.5 hrs)',
-    pages: 135,
-    sequences: 10,
-  },
-} as const;
-
-export type ScreenplayLengthTierKey = keyof typeof SCREENPLAY_LENGTH_TIERS;
+// Note: Length tiers have been replaced with expanded BOOK_PRESETS.
+// Users now select the specific book type with built-in length (e.g., short_novel, novel, epic_novel).
+// Word count/chapters can be adjusted in the book review page if needed.
 
 // Book Formats (illustration level)
 export const BOOK_FORMATS = {
@@ -212,11 +134,27 @@ export const DIALOGUE_STYLES = {
 
 export type DialogueStyleKey = keyof typeof DIALOGUE_STYLES;
 
-// Book Presets
+// Book Presets - includes length variants so users pick everything upfront
 export const BOOK_PRESETS = {
+  // === NOVELS ===
+  short_novel: {
+    label: 'Short Novel',
+    description: '80-120 pages (~25,000 words), EPUB download',
+    icon: 'BookOpen',
+    format: 'text_only',
+    artStyle: null,
+    dialogueStyle: null,
+    defaultGenre: 'literary',
+    targetWords: 25000,
+    chapters: 12,
+    priceDisplay: '$9.99',
+    downloadFormat: 'epub',
+    contentRating: 'general',
+    estimatedTime: '~15 min',
+  },
   novel: {
     label: 'Novel',
-    description: '50,000+ words, text only, EPUB download',
+    description: '200-250 pages (~60,000 words), EPUB download',
     icon: 'BookOpen',
     format: 'text_only',
     artStyle: null,
@@ -227,38 +165,58 @@ export const BOOK_PRESETS = {
     priceDisplay: '$9.99',
     downloadFormat: 'epub',
     contentRating: 'general',
+    estimatedTime: '~30 min',
   },
+  epic_novel: {
+    label: 'Epic Novel',
+    description: '350-450 pages (~100,000 words), EPUB download',
+    icon: 'BookOpen',
+    format: 'text_only',
+    artStyle: null,
+    dialogueStyle: null,
+    defaultGenre: 'literary',
+    targetWords: 100000,
+    chapters: 32,
+    priceDisplay: '$9.99',
+    downloadFormat: 'epub',
+    contentRating: 'general',
+    estimatedTime: '~60 min',
+  },
+
+  // === VISUAL BOOKS ===
   childrens_picture: {
     label: "Children's Picture Book",
-    description: '300-500 words with illustrations, PDF download',
+    description: '20 illustrated pages, PDF download',
     icon: 'Palette',
     format: 'picture_book',
     artStyle: 'storybook',
     dialogueStyle: 'prose',
     defaultGenre: 'childrens',
     targetWords: 500,
-    chapters: 20, // Standard picture books have 24-32 pages
+    chapters: 20,
     priceDisplay: '$9.99',
     downloadFormat: 'pdf',
     contentRating: 'childrens',
+    estimatedTime: '~10 min',
   },
   comic_story: {
     label: 'Comic Book',
-    description: 'Visual story with speech bubbles, PDF download',
+    description: '24 panels with speech bubbles, PDF download',
     icon: 'Layers',
     format: 'picture_book',
     artStyle: 'noir',
     dialogueStyle: 'bubbles',
     defaultGenre: 'ya',
     targetWords: 1000,
-    chapters: 24, // Standard comic issues have 22-24 pages
+    chapters: 24,
     priceDisplay: '$9.99',
     downloadFormat: 'pdf',
     contentRating: 'general',
+    estimatedTime: '~12 min',
   },
   adult_comic: {
     label: 'Adult Comic',
-    description: 'Mature themes, dark humor, edgy content, PDF download',
+    description: '24 panels, mature themes, PDF download',
     icon: 'Skull',
     format: 'picture_book',
     artStyle: 'noir',
@@ -269,10 +227,28 @@ export const BOOK_PRESETS = {
     priceDisplay: '$9.99',
     downloadFormat: 'pdf',
     contentRating: 'mature',
+    estimatedTime: '~12 min',
+  },
+
+  // === NON-FICTION ===
+  lead_magnet: {
+    label: 'Short Guide',
+    description: '20-30 pages, perfect for lead magnets',
+    icon: 'FileText',
+    format: 'text_only',
+    artStyle: null,
+    dialogueStyle: null,
+    defaultGenre: 'howto',
+    targetWords: 7500,
+    chapters: 5,
+    priceDisplay: '$9.99',
+    downloadFormat: 'epub',
+    contentRating: 'general',
+    estimatedTime: '~5 min',
   },
   nonfiction: {
     label: 'Non-Fiction Book',
-    description: 'Self-help, how-to, history, business guides, EPUB download',
+    description: '150-200 pages, self-help/how-to/business',
     icon: 'GraduationCap',
     format: 'text_only',
     artStyle: null,
@@ -283,34 +259,54 @@ export const BOOK_PRESETS = {
     priceDisplay: '$9.99',
     downloadFormat: 'epub',
     contentRating: 'general',
+    estimatedTime: '~25 min',
   },
-  lead_magnet: {
-    label: 'Short Guide / Lead Magnet',
-    description: '20-30 pages, perfect for lead magnets & quick guides',
-    icon: 'FileText',
-    format: 'text_only',
-    artStyle: null,
-    dialogueStyle: null,
-    defaultGenre: 'howto',
-    targetWords: 7500, // ~25-30 pages at 250 words/page
-    chapters: 5,
-    priceDisplay: '$9.99',
-    downloadFormat: 'epub',
-    contentRating: 'general',
-  },
-  screenplay: {
-    label: 'Movie Script',
-    description: 'Feature film screenplay (90-120 pages), PDF download',
+
+  // === SCREENPLAYS ===
+  short_screenplay: {
+    label: 'Short Film Script',
+    description: '30-45 pages (~30-45 min runtime), PDF download',
     icon: 'Film',
     format: 'screenplay',
     artStyle: null,
     dialogueStyle: null,
     defaultGenre: 'thriller_film',
-    targetPages: 100, // Screenplays use pages, not words (1 page ≈ 1 minute)
-    sequences: 8, // 8 sequences across 3 acts (Save the Cat structure)
+    targetPages: 40,
+    sequences: 4,
     priceDisplay: '$9.99',
     downloadFormat: 'pdf',
     contentRating: 'mature',
+    estimatedTime: '~15 min',
+  },
+  screenplay: {
+    label: 'Feature Film Script',
+    description: '90-110 pages (~90-110 min runtime), PDF download',
+    icon: 'Film',
+    format: 'screenplay',
+    artStyle: null,
+    dialogueStyle: null,
+    defaultGenre: 'thriller_film',
+    targetPages: 100,
+    sequences: 8,
+    priceDisplay: '$9.99',
+    downloadFormat: 'pdf',
+    contentRating: 'mature',
+    estimatedTime: '~35 min',
+  },
+  epic_screenplay: {
+    label: 'Epic Film Script',
+    description: '120-150 pages (~2-2.5 hr runtime), PDF download',
+    icon: 'Film',
+    format: 'screenplay',
+    artStyle: null,
+    dialogueStyle: null,
+    defaultGenre: 'thriller_film',
+    targetPages: 135,
+    sequences: 10,
+    priceDisplay: '$9.99',
+    downloadFormat: 'pdf',
+    contentRating: 'mature',
+    estimatedTime: '~50 min',
   },
 } as const;
 
