@@ -1,6 +1,49 @@
 import { PDFDocument, StandardFonts, rgb, PDFFont, PDFPage } from 'pdf-lib';
 import { parseScreenplayElements, ParsedElement } from './screenplay';
 
+/**
+ * Sanitize text for WinAnsi encoding (used by standard PDF fonts)
+ * Replaces non-WinAnsi characters with ASCII equivalents
+ */
+function sanitizeForWinAnsi(text: string): string {
+  const charMap: Record<string, string> = {
+    // Polish characters
+    'ł': 'l', 'Ł': 'L', 'ą': 'a', 'Ą': 'A', 'ę': 'e', 'Ę': 'E',
+    'ć': 'c', 'Ć': 'C', 'ń': 'n', 'Ń': 'N', 'ś': 's', 'Ś': 'S',
+    'ź': 'z', 'Ź': 'Z', 'ż': 'z', 'Ż': 'Z', 'ó': 'o', 'Ó': 'O',
+    // Czech/Slovak/Turkish/Romanian
+    'ř': 'r', 'Ř': 'R', 'ě': 'e', 'Ě': 'E', 'ů': 'u', 'Ů': 'U',
+    'ď': 'd', 'Ď': 'D', 'ť': 't', 'Ť': 'T', 'ň': 'n', 'Ň': 'N',
+    'ğ': 'g', 'Ğ': 'G', 'ş': 's', 'Ş': 'S', 'ı': 'i', 'İ': 'I',
+    'ț': 't', 'Ț': 'T', 'ș': 's', 'Ș': 'S', 'ă': 'a', 'Ă': 'A',
+    'đ': 'd', 'Đ': 'D', 'ơ': 'o', 'Ơ': 'O', 'ư': 'u', 'Ư': 'U',
+    // Smart quotes and dashes
+    '"': '"', '"': '"', ''': "'", ''': "'",
+    '–': '-', '—': '-', '…': '...', '×': 'x', '÷': '/',
+    '•': '*', '′': "'", '″': '"',
+  };
+
+  let result = '';
+  for (const char of text) {
+    if (charMap[char]) {
+      result += charMap[char];
+    } else {
+      const code = char.charCodeAt(0);
+      if (code <= 255) {
+        result += char;
+      } else {
+        const normalized = char.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        if (normalized && normalized.charCodeAt(0) <= 127) {
+          result += normalized;
+        } else {
+          result += '?';
+        }
+      }
+    }
+  }
+  return result;
+}
+
 // Industry-standard screenplay page dimensions (US Letter)
 const PAGE_WIDTH = 612; // 8.5 inches at 72 DPI
 const PAGE_HEIGHT = 792; // 11 inches at 72 DPI
@@ -143,22 +186,30 @@ function addPageNumber(page: PDFPage, font: PDFFont, pageNumber: number): void {
  * Generate a properly formatted screenplay PDF
  */
 export async function generateScreenplayPdf(data: ScreenplayPdfData): Promise<Buffer> {
+  // Sanitize all text content for WinAnsi encoding
+  const sanitizedData = {
+    ...data,
+    title: sanitizeForWinAnsi(data.title),
+    authorName: sanitizeForWinAnsi(data.authorName),
+    content: sanitizeForWinAnsi(data.content),
+  };
+
   const pdfDoc = await PDFDocument.create();
 
   // Use Courier (industry standard for screenplays)
   const font = await pdfDoc.embedFont(StandardFonts.Courier);
 
   // Set document metadata
-  pdfDoc.setTitle(data.title);
-  pdfDoc.setAuthor(data.authorName);
+  pdfDoc.setTitle(sanitizedData.title);
+  pdfDoc.setAuthor(sanitizedData.authorName);
   pdfDoc.setCreator('Draft My Book');
   pdfDoc.setSubject('Screenplay');
 
   // Add title page
-  await addTitlePage(pdfDoc, font, data.title, data.authorName);
+  await addTitlePage(pdfDoc, font, sanitizedData.title, sanitizedData.authorName);
 
   // Parse screenplay elements
-  const elements = parseScreenplayElements(data.content);
+  const elements = parseScreenplayElements(sanitizedData.content);
 
   // Track current position
   let currentPage: PDFPage | null = null;

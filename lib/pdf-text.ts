@@ -14,15 +14,99 @@ interface BookData {
 }
 
 /**
+ * Sanitize text for WinAnsi encoding (used by standard PDF fonts)
+ * Replaces non-WinAnsi characters with ASCII equivalents
+ */
+function sanitizeForWinAnsi(text: string): string {
+  // Map of non-WinAnsi characters to their ASCII equivalents
+  const charMap: Record<string, string> = {
+    // Polish characters
+    'ł': 'l', 'Ł': 'L',
+    'ą': 'a', 'Ą': 'A',
+    'ę': 'e', 'Ę': 'E',
+    'ć': 'c', 'Ć': 'C',
+    'ń': 'n', 'Ń': 'N',
+    'ś': 's', 'Ś': 'S',
+    'ź': 'z', 'Ź': 'Z',
+    'ż': 'z', 'Ż': 'Z',
+    'ó': 'o', 'Ó': 'O',
+    // Czech/Slovak characters
+    'ř': 'r', 'Ř': 'R',
+    'ě': 'e', 'Ě': 'E',
+    'ů': 'u', 'Ů': 'U',
+    'ď': 'd', 'Ď': 'D',
+    'ť': 't', 'Ť': 'T',
+    'ň': 'n', 'Ň': 'N',
+    // Turkish characters
+    'ğ': 'g', 'Ğ': 'G',
+    'ş': 's', 'Ş': 'S',
+    'ı': 'i', 'İ': 'I',
+    // Romanian characters
+    'ț': 't', 'Ț': 'T',
+    'ș': 's', 'Ș': 'S',
+    'ă': 'a', 'Ă': 'A',
+    // Vietnamese/other diacritics (common ones)
+    'đ': 'd', 'Đ': 'D',
+    'ơ': 'o', 'Ơ': 'O',
+    'ư': 'u', 'Ư': 'U',
+    // Smart quotes and dashes (convert to ASCII equivalents)
+    '"': '"', '"': '"',
+    ''': "'", ''': "'",
+    '–': '-', '—': '-',
+    '…': '...',
+    // Other common characters
+    '×': 'x',
+    '÷': '/',
+    '•': '*',
+    '′': "'",
+    '″': '"',
+  };
+
+  let result = '';
+  for (const char of text) {
+    if (charMap[char]) {
+      result += charMap[char];
+    } else {
+      // Check if character is in WinAnsi range (basic Latin + Latin-1 Supplement)
+      const code = char.charCodeAt(0);
+      if (code <= 255) {
+        result += char;
+      } else {
+        // For other non-WinAnsi characters, try to normalize or skip
+        const normalized = char.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        if (normalized && normalized.charCodeAt(0) <= 127) {
+          result += normalized;
+        } else {
+          // Skip characters that can't be represented
+          result += '?';
+        }
+      }
+    }
+  }
+  return result;
+}
+
+/**
  * Generate a PDF for text-only books (novels, non-fiction, lead magnets)
  * Uses standard PDF fonts for maximum compatibility
  */
 export async function generateTextPdf(bookData: BookData): Promise<Buffer> {
+  // Sanitize all text content for WinAnsi encoding
+  const sanitizedBookData = {
+    ...bookData,
+    title: sanitizeForWinAnsi(bookData.title),
+    authorName: sanitizeForWinAnsi(bookData.authorName),
+    chapters: bookData.chapters.map(ch => ({
+      ...ch,
+      title: sanitizeForWinAnsi(ch.title),
+      content: sanitizeForWinAnsi(ch.content),
+    })),
+  };
   const pdfDoc = await PDFDocument.create();
 
   // Set document metadata
-  pdfDoc.setTitle(bookData.title);
-  pdfDoc.setAuthor(bookData.authorName);
+  pdfDoc.setTitle(sanitizedBookData.title);
+  pdfDoc.setAuthor(sanitizedBookData.authorName);
   pdfDoc.setCreator('Draft My Book');
 
   // Embed fonts
@@ -106,7 +190,7 @@ export async function generateTextPdf(bookData: BookData): Promise<Buffer> {
   let y = pageHeight - 250; // Start lower for title page
 
   // Draw title centered - wrap if too long
-  const titleText = bookData.title.toUpperCase();
+  const titleText = sanitizedBookData.title.toUpperCase();
   const titleLines = wrapText(titleText, titleFont, titleSize, contentWidth);
 
   for (const titleLine of titleLines) {
@@ -122,9 +206,9 @@ export async function generateTextPdf(bookData: BookData): Promise<Buffer> {
   }
 
   // Draw author name (only if provided)
-  if (bookData.authorName && bookData.authorName.trim()) {
+  if (sanitizedBookData.authorName && sanitizedBookData.authorName.trim()) {
     y -= 20; // Space after title
-    const byLine = `by ${bookData.authorName}`;
+    const byLine = `by ${sanitizedBookData.authorName}`;
     const byLineWidth = italicFont.widthOfTextAtSize(byLine, 14);
     page.drawText(byLine, {
       x: (pageWidth - byLineWidth) / 2,
@@ -139,7 +223,7 @@ export async function generateTextPdf(bookData: BookData): Promise<Buffer> {
   let hasTheEndInContent = false;
 
   // Add each chapter
-  for (const chapter of bookData.chapters) {
+  for (const chapter of sanitizedBookData.chapters) {
     // Start new page for each chapter
     page = addPage();
     y = pageHeight - margin - 50;
