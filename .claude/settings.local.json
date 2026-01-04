@@ -46,7 +46,8 @@
       "Bash(node scripts/sync-stripe-payments.js:*)",
       "Bash(base64,...\" },\n  { characterName: \"Bob\", imageData: \"data:image/png)",
       "Bash(base64,...\" }\n]\n\nThis solves the \"Velma looks different on every page\" problem!\n\n🤖 Generated with [Claude Code]\\(https://claude.com/claude-code\\)\n\nCo-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
-      "Bash(npx prisma migrate:*)"
+      "Bash(npx prisma migrate:*)",
+      "Bash(Bletchley Park\"\\), split into:\n- Main title: \"Chapter 4: Shadow Cities\" \\(bold, 18pt\\)  \n- Subtitle: \"Life at Bletchley Park\" \\(italic, 14pt\\)\n\n🤖 Generated with [Claude Code]\\(https://claude.com/claude-code\\)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")"
     ]
   }
 }

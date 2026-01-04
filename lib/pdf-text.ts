@@ -225,12 +225,27 @@ export async function generateTextPdf(bookData: BookData): Promise<Buffer> {
     page = addPage();
     y = pageHeight - margin - 50;
 
-    // Chapter title - wrap if too long
-    const chapterTitle = `Chapter ${chapter.number}: ${chapter.title}`;
-    const chapterTitleLines = wrapText(chapterTitle, titleFont, chapterTitleSize, contentWidth);
+    // Chapter title - handle subtitles (text after second colon)
+    // e.g., "Shadow Cities: Life at Bletchley Park" becomes:
+    //   "Chapter 4: Shadow Cities" (main)
+    //   "Life at Bletchley Park" (subtitle, smaller/italic)
+    const colonIndex = chapter.title.indexOf(':');
+    let mainTitle: string;
+    let subtitle: string | null = null;
 
-    for (const chapterTitleLine of chapterTitleLines) {
-      page.drawText(chapterTitleLine, {
+    if (colonIndex > 0) {
+      mainTitle = chapter.title.substring(0, colonIndex).trim();
+      subtitle = chapter.title.substring(colonIndex + 1).trim();
+    } else {
+      mainTitle = chapter.title;
+    }
+
+    // Draw main chapter title
+    const chapterMainTitle = `Chapter ${chapter.number}: ${mainTitle}`;
+    const mainTitleLines = wrapText(chapterMainTitle, titleFont, chapterTitleSize, contentWidth);
+
+    for (const line of mainTitleLines) {
+      page.drawText(line, {
         x: margin,
         y,
         size: chapterTitleSize,
@@ -238,6 +253,23 @@ export async function generateTextPdf(bookData: BookData): Promise<Buffer> {
         color: textColor,
       });
       y -= chapterTitleSize * 1.3;
+    }
+
+    // Draw subtitle if present (smaller, italic)
+    if (subtitle) {
+      const subtitleSize = 14;
+      const subtitleLines = wrapText(subtitle, italicFont, subtitleSize, contentWidth);
+
+      for (const line of subtitleLines) {
+        page.drawText(line, {
+          x: margin,
+          y,
+          size: subtitleSize,
+          font: italicFont,
+          color: textColor,
+        });
+        y -= subtitleSize * 1.3;
+      }
     }
 
     y -= 20; // Space after chapter title
