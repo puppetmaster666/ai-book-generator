@@ -1,13 +1,22 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, X } from 'lucide-react';
+
+const DISMISS_KEY = 'trafficWarningDismissed';
 
 export default function TrafficWarning() {
   const [isEnabled, setIsEnabled] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [isDismissed, setIsDismissed] = useState(false);
 
   useEffect(() => {
+    // Check if user has dismissed this warning in current session
+    const dismissed = sessionStorage.getItem(DISMISS_KEY);
+    if (dismissed === 'true') {
+      setIsDismissed(true);
+    }
+
     const fetchSettings = async () => {
       try {
         const res = await fetch('/api/site-settings');
@@ -29,10 +38,15 @@ export default function TrafficWarning() {
     return () => clearInterval(interval);
   }, []);
 
-  if (isLoading || !isEnabled) return null;
+  const handleDismiss = () => {
+    setIsDismissed(true);
+    sessionStorage.setItem(DISMISS_KEY, 'true');
+  };
+
+  if (isLoading || !isEnabled || isDismissed) return null;
 
   return (
-    <div className="fixed top-4 right-4 z-[100] animate-in slide-in-from-right duration-500">
+    <div className="fixed top-4 left-4 z-[100] animate-in slide-in-from-left duration-500">
       <div className="relative">
         {/* Glow effect */}
         <div className="absolute inset-0 bg-red-500/40 rounded-xl blur-lg animate-pulse" />
@@ -63,6 +77,15 @@ export default function TrafficWarning() {
                 Generations may fail. If yours does, we will re-credit you.
               </p>
             </div>
+
+            {/* Dismiss button */}
+            <button
+              onClick={handleDismiss}
+              className="flex-shrink-0 ml-1 p-1 rounded-full hover:bg-red-500/50 transition-colors"
+              aria-label="Dismiss warning"
+            >
+              <X className="h-4 w-4 text-yellow-200" />
+            </button>
           </div>
         </div>
       </div>
