@@ -610,7 +610,7 @@ export default function Home() {
           </div>
 
           {/* All pricing options */}
-          <div className="grid md:grid-cols-4 gap-5">
+          <div className="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto">
             {/* Free Tier */}
             <button
               onClick={() => router.push(session ? '/create' : '/signup')}
@@ -629,15 +629,15 @@ export default function Home() {
               <ul className="space-y-2 text-sm text-neutral-600 mb-6">
                 <li className="flex items-center gap-2">
                   <Check className="h-4 w-4 text-lime-600 flex-shrink-0" />
-                  1 complete book
+                  Free sample preview
                 </li>
                 <li className="flex items-center gap-2">
                   <Check className="h-4 w-4 text-lime-600 flex-shrink-0" />
-                  Any book type
+                  1 chapter or 5 panels
                 </li>
                 <li className="flex items-center gap-2">
                   <Check className="h-4 w-4 text-lime-600 flex-shrink-0" />
-                  Full EPUB download
+                  Upgrade to unlock full book
                 </li>
               </ul>
               <div className="w-full bg-lime-400 text-neutral-900 py-3 rounded-xl text-sm font-medium text-center group-hover:bg-lime-500 transition-colors">
