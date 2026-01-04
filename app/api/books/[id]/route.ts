@@ -21,6 +21,9 @@ export async function GET(
                 altText: true,
                 position: true,
                 createdAt: true,
+                status: true,
+                errorMessage: true,
+                retryCount: true,
                 // Don't include imageUrl (base64) - use API endpoint instead
               },
             },
@@ -34,6 +37,9 @@ export async function GET(
             altText: true,
             position: true,
             createdAt: true,
+            status: true,
+            errorMessage: true,
+            retryCount: true,
             // Don't include imageUrl (base64) - use API endpoint instead
           },
         },

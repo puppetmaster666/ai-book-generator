@@ -23,10 +23,13 @@ interface Chapter {
 interface Illustration {
   id: string;
   chapterId: string;
-  imageUrl: string;
+  imageUrl: string | null;
   altText: string;
   position: number;
   createdAt: string;
+  status?: 'pending' | 'generating' | 'completed' | 'failed';
+  errorMessage?: string;
+  retryCount?: number;
 }
 
 interface Book {
@@ -147,6 +150,7 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
   const [elapsedTime, setElapsedTime] = useState(0);
   const [retrying, setRetrying] = useState(false);
   const [retryElapsed, setRetryElapsed] = useState(0);
+  const [retryingPanels, setRetryingPanels] = useState<Set<string>>(new Set()); // Track which panels are being retried
   const [bookClaimed, setBookClaimed] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -916,6 +920,66 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
     }
   };
 
+  // Retry a single failed panel
+  const handleRetrySinglePanel = async (illustrationId: string) => {
+    if (!book || retryingPanels.has(illustrationId)) return;
+
+    // Mark this panel as retrying
+    setRetryingPanels(prev => new Set(prev).add(illustrationId));
+
+    try {
+      const res = await fetch(`/api/books/${id}/retry-illustration/${illustrationId}`, { method: 'POST' });
+      const data = await res.json();
+
+      if (!res.ok) {
+        setToast({
+          title: 'Retry Failed',
+          message: data.error || 'Failed to retry panel',
+          type: 'error',
+        });
+        return;
+      }
+
+      // Show success toast
+      if (data.success) {
+        setToast({
+          title: 'Panel Generated',
+          message: `Panel ${data.panelNumber} regenerated successfully!`,
+          type: 'success',
+        });
+      } else {
+        setToast({
+          title: 'Retry Failed',
+          message: data.message || 'Panel still failed after retry',
+          type: 'warning',
+        });
+      }
+
+      // Refresh book data to get updated illustration
+      const bookRes = await fetch(`/api/books/${id}`);
+      if (bookRes.ok) {
+        const bookData = await bookRes.json();
+        setBook(bookData.book);
+        lastKnownChapterCountRef.current = bookData.book?.chapters?.length || 0;
+        lastKnownIllustrationCountRef.current = bookData.book?.illustrations?.length || 0;
+      }
+    } catch (err) {
+      console.error('Retry single panel error:', err);
+      setToast({
+        title: 'Retry Error',
+        message: err instanceof Error ? err.message : 'Failed to retry panel',
+        type: 'error',
+      });
+    } finally {
+      // Remove from retrying set
+      setRetryingPanels(prev => {
+        const next = new Set(prev);
+        next.delete(illustrationId);
+        return next;
+      });
+    }
+  };
+
   const handleCancelGeneration = async () => {
     if (!book || cancelling) return;
 
@@ -1621,42 +1685,51 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
               {/* Panel Grid - Illustrated Books */}
               {isIllustrated && (
                 <div className="mb-6">
-                  {/* Retry Failed Panels Button */}
+                  {/* Summary of failed panels with bulk retry option */}
                   {(() => {
                     const totalPanels = (book.bookFormat === 'comic_book' || book.bookFormat === 'comic' || book.dialogueStyle === 'bubbles' || book.bookPreset === 'comic_story') ? 24 : 20;
-                    const generatedCount = book.illustrations?.length || 0;
-                    const failedCount = totalPanels - generatedCount;
-                    const showRetryButton = failedCount > 0 && !isGenerating && book.status !== 'completed';
+                    // Count actual failed illustrations (status='failed')
+                    const failedIllustrations = book.illustrations?.filter((ill: Illustration) => ill.status === 'failed') || [];
+                    const completedCount = book.illustrations?.filter((ill: Illustration) => ill.status === 'completed' || (!ill.status && ill.imageUrl)) .length || 0;
+                    const missingCount = totalPanels - (book.illustrations?.length || 0);
+                    const failedCount = failedIllustrations.length;
+                    const totalProblems = failedCount + missingCount;
+                    const showRetryButton = totalProblems > 0 && !isGenerating && book.status !== 'completed';
 
                     if (!showRetryButton) return null;
 
                     return (
-                      <div className="mb-4 flex items-center gap-3 p-3 bg-amber-50 border border-amber-200 rounded-xl">
-                        <div className="flex-1">
-                          <p className="text-sm font-medium text-amber-900">
-                            {failedCount} {failedCount === 1 ? 'panel' : 'panels'} failed to generate
-                          </p>
-                          <p className="text-xs text-amber-700 mt-0.5">
-                            Click retry to regenerate missing panels
-                          </p>
+                      <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-xl">
+                        <div className="flex items-center gap-3">
+                          <AlertTriangle className="h-5 w-5 text-amber-600 flex-shrink-0" />
+                          <div className="flex-1">
+                            <p className="text-sm font-medium text-amber-900">
+                              {failedCount > 0 && `${failedCount} ${failedCount === 1 ? 'panel' : 'panels'} failed`}
+                              {failedCount > 0 && missingCount > 0 && ', '}
+                              {missingCount > 0 && `${missingCount} not generated`}
+                            </p>
+                            <p className="text-xs text-amber-700 mt-0.5">
+                              Retry individual panels below or retry all at once
+                            </p>
+                          </div>
+                          <button
+                            onClick={handleRetryPanels}
+                            disabled={retrying || retryingPanels.size > 0}
+                            className="px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 whitespace-nowrap"
+                          >
+                            {retrying ? (
+                              <>
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                                Retrying all...
+                              </>
+                            ) : (
+                              <>
+                                <RefreshCw className="h-4 w-4" />
+                                Retry All
+                              </>
+                            )}
+                          </button>
                         </div>
-                        <button
-                          onClick={handleRetryPanels}
-                          disabled={retrying}
-                          className="px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 whitespace-nowrap"
-                        >
-                          {retrying ? (
-                            <>
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                              Retrying...
-                            </>
-                          ) : (
-                            <>
-                              <RefreshCw className="h-4 w-4" />
-                              Retry {failedCount} {failedCount === 1 ? 'panel' : 'panels'}
-                            </>
-                          )}
-                        </button>
                       </div>
                     );
                   })()}
@@ -1665,34 +1738,67 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
                     {(() => {
                       const totalPanels = (book.bookFormat === 'comic_book' || book.bookFormat === 'comic' || book.dialogueStyle === 'bubbles' || book.bookPreset === 'comic_story') ? 24 : 20;
                       const panels = Array.from({ length: totalPanels }, (_, k) => k + 1);
-                      // Map of existing illustrations by position (or chapterId? standardizing on position)
-                      const illMap = new Map();
-                      // Sort illustrations to be safe? 
-                      book.illustrations?.forEach((ill: any) => {
-                        // Try position first, then match chapter order if possible. 
-                        // The backend sets position = chapter.number now.
+                      // Map of existing illustrations by position
+                      const illMap = new Map<number, Illustration>();
+                      book.illustrations?.forEach((ill: Illustration) => {
                         illMap.set(ill.position || 0, ill);
                       });
 
                       return panels.map(num => {
                         const ill = illMap.get(num);
-                        // Assuming sequential generation for status
-                        const isDone = !!ill;
-                        const isNext = !isDone && !illMap.get(num - 1) && num === 1 || (!isDone && illMap.get(num - 1));
-                        // Actually if it's background gen, we can just say if not done and it's <= current count + 1?
-                        // Simple logic: if done -> image. if not done -> check if it's the *next* one.
-                        // Better: just fill grid.
+                        const isFailed = ill?.status === 'failed';
+                        const isCompleted = ill?.status === 'completed' || (!ill?.status && ill?.imageUrl);
+                        const isRetryingThis = ill?.id && retryingPanels.has(ill.id);
+                        const canRetry = isFailed && !isRetryingThis && (ill?.retryCount ?? 0) < 5;
+                        const maxRetriesReached = isFailed && (ill?.retryCount ?? 0) >= 5;
+
+                        // Determine if this is the next panel to generate (for pending state)
+                        const prevIll = illMap.get(num - 1);
+                        const isNextToGenerate = !ill && (num === 1 || (prevIll && (prevIll.status === 'completed' || prevIll.imageUrl)));
 
                         return (
-                          <div key={num} className={`relative aspect-square rounded-xl overflow-hidden bg-neutral-100 border ${isDone ? 'border-neutral-900' : 'border-neutral-200'}`}>
-                            {isDone ? (
+                          <div
+                            key={num}
+                            className={`relative aspect-square rounded-xl overflow-hidden bg-neutral-100 border transition-all ${
+                              isCompleted ? 'border-neutral-900' :
+                              isFailed ? 'border-red-400 bg-red-50' :
+                              isRetryingThis ? 'border-amber-400 bg-amber-50' :
+                              'border-neutral-200'
+                            }`}
+                          >
+                            {isCompleted && ill?.imageUrl ? (
                               <img src={ill.imageUrl} alt={`Panel ${num}`} className="w-full h-full object-cover" />
+                            ) : isFailed ? (
+                              <div className="w-full h-full flex flex-col items-center justify-center p-2 text-center">
+                                {isRetryingThis ? (
+                                  <>
+                                    <Loader2 className="h-6 w-6 text-amber-600 animate-spin mb-2" />
+                                    <span className="text-xs font-medium text-amber-700">Retrying...</span>
+                                  </>
+                                ) : maxRetriesReached ? (
+                                  <>
+                                    <X className="h-6 w-6 text-red-400 mb-1" />
+                                    <span className="text-[10px] font-medium text-red-600">Max retries</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <AlertCircle className="h-5 w-5 text-red-500 mb-1" />
+                                    <span className="text-[10px] font-medium text-red-600 mb-1">Failed</span>
+                                    {canRetry && ill?.id && (
+                                      <button
+                                        onClick={() => handleRetrySinglePanel(ill.id)}
+                                        className="px-2 py-1 bg-red-500 text-white text-[10px] rounded-md hover:bg-red-600 transition-colors flex items-center gap-1"
+                                      >
+                                        <RefreshCw className="h-3 w-3" />
+                                        Retry
+                                      </button>
+                                    )}
+                                  </>
+                                )}
+                              </div>
                             ) : (
                               <div className="w-full h-full flex flex-col items-center justify-center p-2 text-center">
-                                {/* We can't easily know exactly which one is "generating" without precise state, 
-                                                but we know the first non-done is likely the one.
-                                            */}
-                                {!illMap.get(num) && illMap.get(num - 1) || (num === 1 && !illMap.get(1) && isGenerating) ? (
+                                {isNextToGenerate && isGenerating ? (
                                   <>
                                     <Loader2 className="h-6 w-6 text-neutral-900 animate-spin mb-2" />
                                     <span className="text-xs font-medium text-neutral-600">Generating...</span>
@@ -1702,9 +1808,14 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
                                 )}
                               </div>
                             )}
-                            {isDone && (
+                            {isCompleted && (
                               <div className="absolute bottom-1 right-1 bg-black/60 text-white text-[10px] px-1.5 py-0.5 rounded-full backdrop-blur-sm">
                                 #{num}
+                              </div>
+                            )}
+                            {isFailed && !isRetryingThis && !maxRetriesReached && (
+                              <div className="absolute top-1 right-1 bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full">
+                                {ill?.retryCount || 0}/5
                               </div>
                             )}
                           </div>
@@ -1967,28 +2078,39 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
           {/* Illustration Gallery - Illustrated Books (show even if not completed, for admin viewing) */}
           {!isGenerating && isIllustrated && book.illustrations && book.illustrations.length > 0 && (
             <div className="bg-white rounded-2xl border border-neutral-200 p-6 sm:p-8 mb-6">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold text-neutral-900 flex items-center gap-2">
-                  <Palette className="h-5 w-5 text-neutral-600" />
-                  Illustrations
-                </h2>
-                <span className="text-sm text-neutral-500">{book.illustrations.length} images</span>
-              </div>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                {book.illustrations.map((illustration, index) => (
-                  <div
-                    key={illustration.id}
-                    className="aspect-square rounded-xl overflow-hidden bg-neutral-100 border border-neutral-200 hover:border-neutral-400 transition-colors cursor-pointer group"
-                    onClick={() => router.push(`/book/${id}/image/${illustration.id}`)}
-                  >
-                    <img
-                      src={illustration.imageUrl}
-                      alt={illustration.altText || `Illustration ${index + 1}`}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    />
-                  </div>
-                ))}
-              </div>
+              {(() => {
+                // Filter to only show completed illustrations with valid imageUrls
+                const completedIllustrations = book.illustrations.filter(
+                  (ill: Illustration) => (ill.status === 'completed' || !ill.status) && ill.imageUrl
+                );
+                if (completedIllustrations.length === 0) return null;
+                return (
+                  <>
+                    <div className="flex items-center justify-between mb-4">
+                      <h2 className="text-lg font-semibold text-neutral-900 flex items-center gap-2">
+                        <Palette className="h-5 w-5 text-neutral-600" />
+                        Illustrations
+                      </h2>
+                      <span className="text-sm text-neutral-500">{completedIllustrations.length} images</span>
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                      {completedIllustrations.map((illustration, index) => (
+                        <div
+                          key={illustration.id}
+                          className="aspect-square rounded-xl overflow-hidden bg-neutral-100 border border-neutral-200 hover:border-neutral-400 transition-colors cursor-pointer group"
+                          onClick={() => router.push(`/book/${id}/image/${illustration.id}`)}
+                        >
+                          <img
+                            src={illustration.imageUrl!}
+                            alt={illustration.altText || `Illustration ${index + 1}`}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                );
+              })()}
               <p className="text-xs text-neutral-400 mt-3 text-center">Click any image to view full size</p>
             </div>
           )}
