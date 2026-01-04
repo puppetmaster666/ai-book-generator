@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import Image from 'next/image';
-import { ArrowRight, Loader2, Sparkles, X, Check, ChevronRight, Zap, BookOpen, Download, ExternalLink, ChevronDown, Play } from 'lucide-react';
+import { ArrowRight, Loader2, Sparkles, X, Check, ChevronRight, Zap, BookOpen, Download, ExternalLink, ChevronDown, Play, Crown } from 'lucide-react';
 import Footer from '@/components/Footer';
 import NewYearPopup from '@/components/NewYearPopup';
 import TrafficWarning from '@/components/TrafficWarning';
@@ -610,7 +610,7 @@ export default function Home() {
           </div>
 
           {/* All pricing options */}
-          <div className="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto">
+          <div className="grid md:grid-cols-4 gap-5">
             {/* Free Tier */}
             <button
               onClick={() => router.push(session ? '/create' : '/signup')}
@@ -714,6 +714,41 @@ export default function Home() {
               </ul>
               <div className="w-full bg-white text-neutral-900 py-3 rounded-xl text-sm font-medium text-center group-hover:bg-neutral-100 transition-colors">
                 Subscribe
+              </div>
+            </button>
+
+            {/* Yearly Plan */}
+            <button
+              onClick={() => router.push(session ? '/checkout?plan=yearly' : '/signup?plan=yearly')}
+              className="group bg-white rounded-2xl p-6 border-2 border-neutral-200 hover:border-neutral-900 card-hover text-left cursor-pointer"
+            >
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 bg-neutral-100 rounded-lg flex items-center justify-center group-hover:bg-neutral-900 transition-colors">
+                  <Crown className="h-5 w-5 text-neutral-700 group-hover:text-white transition-colors" />
+                </div>
+              </div>
+              <h3 className="text-xl font-semibold mb-1" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>Yearly Plan</h3>
+              <div className="flex items-baseline gap-1 mb-2">
+                <span className="text-4xl font-bold">$299</span>
+                <span className="text-neutral-400 text-sm">/yr</span>
+              </div>
+              <p className="text-sm text-neutral-500 mb-4">50 books per year</p>
+              <ul className="space-y-2 text-sm text-neutral-600 mb-6">
+                <li className="flex items-center gap-2">
+                  <Check className="h-4 w-4 text-neutral-400 flex-shrink-0" />
+                  $5.98 per book
+                </li>
+                <li className="flex items-center gap-2">
+                  <Check className="h-4 w-4 text-neutral-400 flex-shrink-0" />
+                  Use anytime within year
+                </li>
+                <li className="flex items-center gap-2">
+                  <Check className="h-4 w-4 text-neutral-400 flex-shrink-0" />
+                  Best for power users
+                </li>
+              </ul>
+              <div className="w-full bg-neutral-900 text-white py-3 rounded-xl text-sm font-medium text-center group-hover:bg-neutral-800 transition-colors">
+                Get Yearly
               </div>
             </button>
           </div>
