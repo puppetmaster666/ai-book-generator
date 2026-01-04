@@ -14,10 +14,14 @@ import {
 } from '@/lib/gemini';
 import { getBookReadyEmail, sendEmail } from '@/lib/email';
 import { BOOK_PRESETS, FREE_TIER_LIMITS, type BookPresetKey } from '@/lib/constants';
-import { generateIllustrationWithRetry } from '@/lib/illustration-utils';
+import { generateIllustrationWithRetry, type IllustrationAttemptResult } from '@/lib/illustration-utils';
 
 // Set max duration for this background task (5 minutes is Vercel Pro limit)
 export const maxDuration = 300;
+
+// Safety margin before Vercel timeout - stop accepting new work 30s before timeout
+const TIMEOUT_SAFETY_MARGIN_MS = 30000;
+const MAX_GENERATION_TIME_MS = (maxDuration * 1000) - TIMEOUT_SAFETY_MARGIN_MS; // 270 seconds
 
 // Re-use the generation logic, but adapted for single-panel execution to check status
 // We need to import the generation helper or duplicate the core logic briefly
@@ -120,7 +124,8 @@ export async function POST(
         const CONCURRENCY = 3;
         let activeGenerations = 0;
 
-        // Track what we've already done to skip
+        // Track what we've already done to skip - include both completed AND failed illustrations
+        // Failed illustrations should not be retried in the main generation flow (they have a separate retry endpoint)
         const existingPanelNumbers = new Set(
             book.illustrations.map(i => i.position || 0)
         );
@@ -176,13 +181,22 @@ export async function POST(
         // until `maxDuration` (5 mins). 
         // 5 mins is usually enough for 20 images if done in parallel batches of 3-4.
 
-        console.log(`Starting background generation for book ${id}. Pening: ${pendingChapters.length}`);
+        console.log(`Starting background generation for book ${id}. Pending: ${pendingChapters.length}`);
+
+        // Track generation start time for timeout protection
+        const generationStartTime = Date.now();
 
         // Update status to generating
         await prisma.book.update({
             where: { id },
             data: { status: 'generating' }
         });
+
+        // Helper to check if we're approaching timeout
+        const isApproachingTimeout = () => {
+            const elapsed = Date.now() - generationStartTime;
+            return elapsed > MAX_GENERATION_TIME_MS;
+        };
 
         // We accept the request and process "in background" (by not awaiting the full promise if we could, 
         // but Vercel freezes execution if we return. So we MUST await, but we can return a "Processing" status 
@@ -196,10 +210,19 @@ export async function POST(
         // Let's implement the loop.
         const results = [];
 
-        // Helper to generate one panel
-        const generateOne = async (chapter: VisualChapter) => {
+        // Helper to generate one panel - returns panel number on success, null on failure
+        // On failure, creates a failed illustration record for later retry
+        const generateOne = async (chapter: VisualChapter): Promise<{ success: boolean; panelNumber: number; error?: string }> => {
             try {
-                if (!chapter.scene) return null;
+                if (!chapter.scene) {
+                    return { success: false, panelNumber: chapter.number, error: 'No scene data' };
+                }
+
+                // Check timeout before starting expensive generation
+                if (isApproachingTimeout()) {
+                    console.log(`[Visual Gen] Timeout approaching, skipping panel ${chapter.number}`);
+                    return { success: false, panelNumber: chapter.number, error: 'timeout_approaching' };
+                }
 
                 // Determine if we need text baked into the image
                 const hasDialogue = book.dialogueStyle === 'bubbles' && chapter.dialogue && chapter.dialogue.length > 0;
@@ -311,56 +334,52 @@ export async function POST(
                     };
                 })() : null;
 
-                if (genData?.image) {
-                    // Ensure Chapter exists to link to
-                    // For visual books, chapters are often created on the fly or might not exist yet if only outline exists.
-                    // We typically want to create the chapter record to hold the text/summary too.
-                    let chapterId = null;
+                // Ensure Chapter exists to link to (do this regardless of success/failure)
+                let chapterId = null;
+                const existingChapter = await prisma.chapter.findUnique({
+                    where: {
+                        bookId_number: {
+                            bookId: id,
+                            number: chapter.number
+                        }
+                    }
+                });
 
-                    // Try to find or create chapter
-                    const existingChapter = await prisma.chapter.findUnique({
-                        where: {
-                            bookId_number: {
-                                bookId: id,
-                                number: chapter.number
-                            }
+                if (existingChapter) {
+                    chapterId = existingChapter.id;
+                } else {
+                    const newChapter = await prisma.chapter.create({
+                        data: {
+                            bookId: id,
+                            number: chapter.number,
+                            title: chapter.title || `Panel ${chapter.number}`,
+                            content: chapter.text || '',
+                            summary: chapter.scene.description,
+                            wordCount: (chapter.text || '').split(/\s+/).length,
+                            sceneDescription: chapter.scene as any,
+                            dialogue: chapter.dialogue as any,
                         }
                     });
+                    chapterId = newChapter.id;
+                }
 
-                    if (existingChapter) {
-                        chapterId = existingChapter.id;
-                    } else {
-                        const newChapter = await prisma.chapter.create({
-                            data: {
-                                bookId: id,
-                                number: chapter.number,
-                                title: chapter.title || `Panel ${chapter.number}`,
-                                content: chapter.text || '',
-                                summary: chapter.scene.description,
-                                wordCount: (chapter.text || '').split(/\s+/).length,
-                                sceneDescription: chapter.scene as any,
-                                dialogue: chapter.dialogue as any,
-                            }
-                        });
-                        chapterId = newChapter.id;
-                    }
-
-                    // Save to DB
-                    // Note: illustration model uses 'position' and 'chapterId'
+                if (genData?.image) {
+                    // Save successful illustration to DB
                     const imageUrl = `data:${genData.image.mimeType};base64,${genData.image.base64}`;
                     await prisma.illustration.create({
                         data: {
                             bookId: id,
                             chapterId: chapterId,
-                            position: chapter.number, // Using position to store the sequence order/page number
+                            position: chapter.number,
                             prompt: illustrationPrompt,
                             imageUrl: imageUrl,
                             altText: chapter.scene.description.slice(0, 200),
+                            status: 'completed',
+                            retryCount: 0,
                         }
                     });
 
                     // Update character first appearances for future reference
-                    // Any character appearing in this panel for the first time gets stored
                     if (chapter.scene.characters && Array.isArray(chapter.scene.characters)) {
                         for (const charName of chapter.scene.characters) {
                             if (!characterFirstAppearances.has(charName)) {
@@ -373,43 +392,179 @@ export async function POST(
                         }
                     }
 
-                    return chapter.number;
+                    return { success: true, panelNumber: chapter.number };
+                } else {
+                    // Generation failed - create a failed illustration record for retry
+                    const errorMessage = 'Content blocked by safety filter or API rate limit exhausted';
+                    console.log(`[Visual Gen] Panel ${chapter.number} failed, creating failed record for retry`);
+
+                    await prisma.illustration.create({
+                        data: {
+                            bookId: id,
+                            chapterId: chapterId,
+                            position: chapter.number,
+                            prompt: illustrationPrompt,
+                            imageUrl: null, // No image yet
+                            altText: chapter.scene.description.slice(0, 200),
+                            status: 'failed',
+                            errorMessage: errorMessage,
+                            retryCount: 0,
+                        }
+                    });
+
+                    return { success: false, panelNumber: chapter.number, error: errorMessage };
                 }
             } catch (e: any) {
                 const errorMsg = e?.message || 'Unknown error';
                 console.error(`[Visual Gen] FAILED panel ${chapter.number}: ${errorMsg}`);
-                // Track failures but don't throw - let other panels continue
+
+                // Create failed illustration record for retry
+                try {
+                    // First ensure chapter exists
+                    let chapterId = null;
+                    const existingChapter = await prisma.chapter.findUnique({
+                        where: { bookId_number: { bookId: id, number: chapter.number } }
+                    });
+                    if (existingChapter) {
+                        chapterId = existingChapter.id;
+                    } else if (chapter.scene) {
+                        const newChapter = await prisma.chapter.create({
+                            data: {
+                                bookId: id,
+                                number: chapter.number,
+                                title: chapter.title || `Panel ${chapter.number}`,
+                                content: chapter.text || '',
+                                summary: chapter.scene.description || 'Panel',
+                                wordCount: (chapter.text || '').split(/\s+/).length,
+                                sceneDescription: chapter.scene as any,
+                                dialogue: chapter.dialogue as any,
+                            }
+                        });
+                        chapterId = newChapter.id;
+                    }
+
+                    // Check if illustration already exists (avoid duplicates)
+                    const existingIllustration = await prisma.illustration.findFirst({
+                        where: { bookId: id, position: chapter.number }
+                    });
+
+                    if (!existingIllustration) {
+                        await prisma.illustration.create({
+                            data: {
+                                bookId: id,
+                                chapterId: chapterId,
+                                position: chapter.number,
+                                prompt: `Scene: ${chapter.scene?.description || 'Unknown'}`,
+                                imageUrl: null,
+                                status: 'failed',
+                                errorMessage: errorMsg.substring(0, 500),
+                                retryCount: 0,
+                            }
+                        });
+                    }
+                } catch (dbError) {
+                    console.error(`[Visual Gen] Failed to save failure record for panel ${chapter.number}:`, dbError);
+                }
+
+                return { success: false, panelNumber: chapter.number, error: errorMsg };
             }
-            return null;
         };
 
         // Process all pending in parallel batches
         // We do ALL of them. The 5 min timeout is the hard limit.
         let totalFailures = 0;
+        let totalSuccesses = 0;
+        let stoppedDueToTimeout = false;
+
         for (let i = 0; i < pendingChapters.length; i += CONCURRENCY) {
+            // Check timeout before starting new batch
+            if (isApproachingTimeout()) {
+                console.log(`[Visual Gen] Timeout approaching after ${Math.floor((Date.now() - generationStartTime) / 1000)}s, stopping gracefully`);
+                stoppedDueToTimeout = true;
+                break;
+            }
+
             const chunk = pendingChapters.slice(i, i + CONCURRENCY);
-            const results = await Promise.all(chunk.map(ch => generateOne(ch)));
-            totalFailures += results.filter(r => r === null).length;
+            const batchResults = await Promise.all(chunk.map(ch => generateOne(ch)));
+
+            for (const result of batchResults) {
+                if (result.success) {
+                    totalSuccesses++;
+                } else {
+                    totalFailures++;
+                }
+            }
 
             // Log progress
-            const completed = await prisma.illustration.count({ where: { bookId: id } });
-            console.log(`[Visual Gen] Batch complete: ${completed}/${targetChapters.length} panels done, ${totalFailures} failures`);
+            const successfulPanels = await prisma.illustration.count({
+                where: { bookId: id, status: 'completed' }
+            });
+            const failedPanels = await prisma.illustration.count({
+                where: { bookId: id, status: 'failed' }
+            });
+            console.log(`[Visual Gen] Batch complete: ${successfulPanels} success, ${failedPanels} failed of ${targetChapters.length} total`);
         }
 
-        // Check completion again
-        const finalCount = await prisma.illustration.count({ where: { bookId: id } });
-        console.log(`[Visual Gen] Generation finished: ${finalCount}/${targetChapters.length} panels, ${totalFailures} failures`);
+        // Check completion status
+        const successfulPanels = await prisma.illustration.count({
+            where: { bookId: id, status: 'completed' }
+        });
+        const failedPanels = await prisma.illustration.count({
+            where: { bookId: id, status: 'failed' }
+        });
+        const totalPanels = successfulPanels + failedPanels;
 
-        if (finalCount >= Math.min(targetChapters.length, maxIllustrations)) {
-            // Assemble
+        console.log(`[Visual Gen] Generation finished: ${successfulPanels} success, ${failedPanels} failed of ${targetChapters.length} total`);
+
+        // If stopped due to timeout, return partial status so client can retry
+        if (stoppedDueToTimeout) {
+            return NextResponse.json({
+                success: true,
+                status: 'timeout',
+                panelsCompleted: successfulPanels,
+                panelsFailed: failedPanels,
+                panelsRemaining: targetChapters.length - totalPanels,
+                message: 'Generation paused due to timeout. Refresh to continue or retry failed panels.',
+            });
+        }
+
+        // Check if all panels are processed (either success or fail)
+        if (totalPanels >= Math.min(targetChapters.length, maxIllustrations)) {
+            // Check if this is a free tier preview (not fully paid)
+            if (!canGenerate) {
+                console.log(`[Visual Gen] Free tier preview complete for book ${id}: ${successfulPanels} success, ${failedPanels} failed`);
+                return NextResponse.json({
+                    success: true,
+                    status: failedPanels > 0 ? 'preview_with_failures' : 'preview_complete',
+                    panelsGenerated: successfulPanels,
+                    panelsFailed: failedPanels,
+                    message: failedPanels > 0
+                        ? `Preview complete with ${failedPanels} failed panel(s). Retry them or upgrade to unlock the full book!`
+                        : 'Preview generation complete. Upgrade to unlock the full book!',
+                });
+            }
+
+            // All panels have been attempted - check if any failed
+            if (failedPanels > 0) {
+                console.log(`[Visual Gen] Book ${id} has ${failedPanels} failed panels that need retry`);
+                return NextResponse.json({
+                    success: true,
+                    status: 'completed_with_failures',
+                    panelsCompleted: successfulPanels,
+                    panelsFailed: failedPanels,
+                    message: `Generation complete but ${failedPanels} panel(s) failed. Use retry to regenerate them.`,
+                });
+            }
+
+            // Full book with all panels successful - proceed with assembly
             const assembleUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/books/${id}/assemble`;
             await fetch(assembleUrl, { method: 'POST' });
-            return NextResponse.json({ success: true, status: 'completed' });
+            return NextResponse.json({ success: true, status: 'completed', panelsCompleted: successfulPanels });
         }
 
-        // If we have some panels but not all, check if it's a total failure
-        if (finalCount === 0 && pendingChapters.length > 0) {
-            // All panels failed - mark book as failed
+        // If we have some panels but not all processed yet
+        if (successfulPanels === 0 && failedPanels === 0 && pendingChapters.length > 0) {
+            // No panels at all - complete failure
             console.error(`[Visual Gen] ALL panels failed for book ${id}. Marking as failed.`);
             await prisma.book.update({
                 where: { id },
@@ -421,7 +576,13 @@ export async function POST(
             return NextResponse.json({ error: 'All panel generations failed', status: 'failed' }, { status: 500 });
         }
 
-        return NextResponse.json({ success: true, status: 'partial', produced: finalCount, failures: totalFailures });
+        return NextResponse.json({
+            success: true,
+            status: 'partial',
+            panelsCompleted: successfulPanels,
+            panelsFailed: failedPanels,
+            panelsRemaining: targetChapters.length - totalPanels,
+        });
 
     } catch (err: any) {
         const errorMsg = err?.message || 'Unknown error';

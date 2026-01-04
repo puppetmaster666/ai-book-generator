@@ -1152,6 +1152,17 @@ export async function expandIdea(idea: string, hintBookType?: string): Promise<{
 }> {
   const isNonFiction = hintBookType === 'non-fiction';
 
+  // Safety instructions to prevent output blocking
+  const safetyGuidelines = `
+CONTENT SAFETY - CRITICAL:
+- Keep all content suitable for general audiences
+- Avoid graphic violence descriptions - use implied or off-screen action
+- No explicit sexual content - keep romance tasteful and implied
+- No detailed drug use - reference consequences, not methods
+- Transform dark themes into compelling drama without explicit details
+- Focus on emotional stakes and character development over shock value
+`;
+
   const fictionPrompt = `Create a book plan from this idea: "${idea}"
 
 STRICT RULES:
@@ -1162,7 +1173,7 @@ STRICT RULES:
 - No special characters that break JSON
 - Complete the entire JSON structure
 - IMPORTANT: Preserve specific details, names, plot points, and unique elements from the user's idea in the premise
-
+${safetyGuidelines}
 CHARACTER VARIETY - Make each character unique and memorable:
 - Use diverse names from various cultures (not just Western names)
 - Each character should have a distinct visual appearance if this is a visual book
@@ -1193,32 +1204,56 @@ STRICT RULES:
 - No special characters that break JSON
 - Complete the entire JSON structure
 - bookType MUST be "non-fiction"
-
+${safetyGuidelines}
 JSON format:
 {"title":"Title","genre":"selfhelp","bookType":"non-fiction","premise":"Detailed description of the book's content (up to 300 words)","characters":[],"beginning":"Introduction hook","middle":"Topic 1, Topic 2, Topic 3, Topic 4","ending":"Conclusion and takeaways","writingStyle":"informative","targetWords":50000,"targetChapters":15}`;
 
   // Retry with sanitization if content policy blocks
-  const maxRetries = 3;
+  const maxRetries = 4;
   let lastError: Error | null = null;
+
+  // Comprehensive list of words that may trigger content filters
+  const sensitiveWordPatterns = [
+    // Violence
+    /\b(kill|murder|death|dead|dying|blood|bloody|bleed|violence|violent|weapon|gun|pistol|rifle|knife|stab|gore|brutal|torture|assault|attack|slaughter|massacre|execute|strangle|suffocate|decapitate|dismember|mutilate)\b/gi,
+    // Sexual content
+    /\b(sex|sexy|sexual|nude|naked|porn|pornographic|explicit|erotic|sensual|intimate|aroused|orgasm|genitals|breasts|buttocks|lingerie|seductive|provocative|lustful)\b/gi,
+    // Drugs
+    /\b(drug|drugs|cocaine|heroin|meth|methamphetamine|marijuana|cannabis|weed|overdose|inject|snort|addiction|addict|narcotic|opiate|fentanyl|ecstasy|lsd|mushrooms)\b/gi,
+    // Hate/discrimination
+    /\b(hate|racist|racism|sexist|sexism|discriminate|slur|bigot|extremist|supremacist)\b/gi,
+    // Self-harm
+    /\b(suicide|suicidal|self-harm|cutting|hanging|overdose)\b/gi,
+    // Illegal activities
+    /\b(illegal|crime|criminal|trafficking|smuggling|kidnap|ransom|hostage|terrorist|terrorism|bomb|explosive)\b/gi,
+  ];
 
   for (let attempt = 0; attempt < maxRetries; attempt++) {
     try {
       let sanitizedIdea = idea;
 
-      // Sanitize on retries
+      // Sanitize on retries with increasingly aggressive filtering
       if (attempt > 0) {
         console.log(`[ExpandIdea] Retry ${attempt}: Sanitizing idea to avoid content policy...`);
-        // Remove potentially offensive words
-        sanitizedIdea = idea
-          .replace(/\b(kill|murder|death|blood|violence|weapon|gun|knife|gore|brutal)\b/gi, '')
-          .replace(/\b(sex|sexy|nude|naked|porn|explicit)\b/gi, '')
-          .replace(/\b(drug|cocaine|heroin|meth)\b/gi, '')
-          .replace(/\s+/g, ' ')
-          .trim();
 
-        // Make it even more generic on later retries
-        if (attempt > 1) {
-          sanitizedIdea = `A story about: ${sanitizedIdea.substring(0, 200)}`;
+        // Apply all sensitive word patterns
+        for (const pattern of sensitiveWordPatterns) {
+          sanitizedIdea = sanitizedIdea.replace(pattern, '');
+        }
+        sanitizedIdea = sanitizedIdea.replace(/\s+/g, ' ').trim();
+
+        // On attempt 2, also simplify the idea
+        if (attempt >= 2) {
+          // Extract just the core concept (first 150 chars, no sensitive context)
+          const coreIdea = sanitizedIdea.substring(0, 150).replace(/[^\w\s.,'-]/g, '');
+          sanitizedIdea = `A creative story concept: ${coreIdea}`;
+        }
+
+        // On attempt 3, make it extremely generic
+        if (attempt >= 3) {
+          // Extract only nouns and verbs, create a minimal prompt
+          const words = sanitizedIdea.split(' ').filter(w => w.length > 3).slice(0, 10);
+          sanitizedIdea = `An engaging story about: ${words.join(' ')}. Create a family-friendly interpretation.`;
         }
       }
 
@@ -1254,7 +1289,7 @@ JSON format:
       };
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
-      const isSafetyError = errorMsg.includes('SAFETY') || errorMsg.includes('blocked') || errorMsg.includes('Prohibited Use');
+      const isSafetyError = errorMsg.includes('SAFETY') || errorMsg.includes('blocked') || errorMsg.includes('Prohibited Use') || errorMsg.includes('content policy');
 
       lastError = error as Error;
 
@@ -1263,13 +1298,18 @@ JSON format:
         continue; // Retry with sanitized version
       }
 
+      // Log final failure details
+      if (isSafetyError) {
+        console.error(`[ExpandIdea] All ${maxRetries} attempts failed due to content policy. Original idea length: ${idea.length} chars`);
+      }
+
       // Not a safety error or out of retries
       throw error;
     }
   }
 
-  // If we got here, all retries failed
-  throw new Error(`Failed to expand idea after ${maxRetries} attempts. The idea may contain words that violate content policies. Please try rephrasing your idea. Last error: ${lastError?.message}`);
+  // If we got here, all retries failed - provide helpful user message
+  throw new Error(`Your idea couldn't be processed due to content restrictions. Please try:\n- Removing any violent, explicit, or sensitive terms\n- Focusing on the story's themes rather than specific actions\n- Describing conflicts in general terms\n\nIf the issue persists, try a simpler description of your concept.`);
 }
 
 // Helper to build prompt for speech bubbles

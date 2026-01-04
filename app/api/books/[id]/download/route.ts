@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { generateEpub } from '@/lib/epub';
 import { generatePdf } from '@/lib/pdf';
+import { generateScreenplayPdf } from '@/lib/screenplay-pdf';
 import { FontStyleKey } from '@/lib/constants';
 
 /**
@@ -33,6 +34,50 @@ function generateTxt(bookData: {
   }
 
   // End
+  lines.push('');
+  lines.push('THE END');
+  lines.push('');
+
+  return lines.join('\n');
+}
+
+/**
+ * Generate a plain text version of a screenplay
+ * Preserves screenplay formatting for easy copy-paste to screenwriting software
+ */
+function generateScreenplayTxt(bookData: {
+  title: string;
+  authorName: string;
+  chapters: Array<{ number: number; title: string; content: string }>;
+}): string {
+  const lines: string[] = [];
+
+  // Title page
+  lines.push('');
+  lines.push('');
+  lines.push('');
+  lines.push(bookData.title.toUpperCase());
+  lines.push('');
+  lines.push('');
+  lines.push('Written by');
+  lines.push('');
+  lines.push(bookData.authorName);
+  lines.push('');
+  lines.push('');
+  lines.push('═'.repeat(60));
+  lines.push('');
+  lines.push('');
+
+  // Sequences (chapters in screenplay terms)
+  for (const chapter of bookData.chapters) {
+    // Add sequence content directly - it should already be in screenplay format
+    lines.push(chapter.content);
+    lines.push('');
+  }
+
+  // End
+  lines.push('');
+  lines.push('FADE OUT.');
   lines.push('');
   lines.push('THE END');
   lines.push('');
@@ -79,8 +124,18 @@ export async function GET(
                          book.dialogueStyle === 'prose' ||
                          book.bookFormat === 'picture_book';
     const isTextOnly = book.bookFormat === 'text_only';
+    const isScreenplay = book.bookFormat === 'screenplay';
+
+    // Sanitize dashes for screenplays (replace em/en dashes with regular hyphens)
+    const sanitizeDashes = (text: string): string => {
+      return text
+        .replace(/—/g, '-')  // em dash
+        .replace(/–/g, '-')  // en dash
+        .replace(/−/g, '-'); // minus sign
+    };
 
     // Prepare book data for generation
+    // Filter out failed illustrations (those with null imageUrl)
     const bookData = {
       title: book.title,
       authorName: book.authorName,
@@ -88,12 +143,14 @@ export async function GET(
       chapters: book.chapters.map((ch) => ({
         number: ch.number,
         title: ch.title,
-        content: ch.content,
-        illustrations: ch.illustrations?.map((ill) => ({
-          imageUrl: ill.imageUrl,
-          altText: ill.altText || undefined,
-          position: ill.position,
-        })),
+        content: isScreenplay ? sanitizeDashes(ch.content) : ch.content,
+        illustrations: ch.illustrations
+          ?.filter((ill) => ill.imageUrl !== null)
+          .map((ill) => ({
+            imageUrl: ill.imageUrl as string,
+            altText: ill.altText || undefined,
+            position: ill.position,
+          })),
       })),
       fontStyle: book.fontStyle as FontStyleKey,
       coverImageUrl: book.coverImageUrl || undefined,
@@ -104,10 +161,14 @@ export async function GET(
     const safeFilename = book.title.replace(/[^a-z0-9]/gi, '_');
 
     // Determine download format
+    // Screenplays always use PDF (default) or TXT, never EPUB
     // If explicitly requested, use that format; otherwise auto-detect
     let downloadFormat: 'txt' | 'epub' | 'pdf';
     if (requestedFormat === 'txt') {
       downloadFormat = 'txt';
+    } else if (isScreenplay) {
+      // Screenplays default to PDF, can also be TXT (already handled above)
+      downloadFormat = 'pdf';
     } else if (requestedFormat === 'pdf' || (isVisualBook && !isTextOnly && requestedFormat !== 'epub')) {
       downloadFormat = 'pdf';
     } else {
@@ -127,9 +188,11 @@ export async function GET(
 
     // Generate TXT for easy copy-paste
     if (downloadFormat === 'txt') {
-      console.log(`Generating TXT for book ${id}`);
+      console.log(`Generating TXT for book ${id}, isScreenplay=${isScreenplay}`);
 
-      const txtContent = generateTxt(bookData);
+      const txtContent = isScreenplay
+        ? generateScreenplayTxt(bookData)
+        : generateTxt(bookData);
 
       return new NextResponse(txtContent, {
         headers: {
@@ -139,8 +202,28 @@ export async function GET(
       });
     }
 
-    // Use PDF for visual books, EPUB for text-only novels
+    // Use PDF for visual books and screenplays, EPUB for text-only novels
     if (downloadFormat === 'pdf') {
+      // Use screenplay-specific PDF generator for screenplays
+      if (isScreenplay) {
+        console.log(`Generating screenplay PDF for book ${id}`);
+
+        // Combine all sequence content into one screenplay
+        const fullContent = bookData.chapters.map(ch => ch.content).join('\n\n');
+        const pdfBuffer = await generateScreenplayPdf({
+          title: bookData.title,
+          authorName: bookData.authorName,
+          content: fullContent,
+        });
+
+        return new NextResponse(new Uint8Array(pdfBuffer), {
+          headers: {
+            'Content-Type': 'application/pdf',
+            'Content-Disposition': `attachment; filename="${safeFilename}.pdf"`,
+          },
+        });
+      }
+
       console.log(`Generating PDF for visual book ${id}: format=${book.bookFormat}, dialogueStyle=${book.dialogueStyle}`);
 
       const pdfBuffer = await generatePdf(bookData);

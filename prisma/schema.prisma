@@ -192,7 +192,7 @@ model Illustration {
   chapter     Chapter? @relation(fields: [chapterId], references: [id], onDelete: Cascade)
 
   // Image details
-  imageUrl    String   // URL to stored image (may have speech bubbles overlaid)
+  imageUrl    String?  // URL to stored image (null if failed/pending)
   originalUrl String?  // Original image URL before bubble overlay (for comics)
   prompt      String   @db.Text  // The prompt used to generate
   altText     String?  // Accessibility text
@@ -203,10 +203,17 @@ model Illustration {
   height      Int      @default(1024)
   style       String?  // Art style used
 
+  // Generation status tracking
+  status       String   @default("completed") // pending, generating, completed, failed
+  errorMessage String?  @db.Text  // Error message if failed
+  retryCount   Int      @default(0) // Number of retry attempts
+
   createdAt   DateTime @default(now())
+  updatedAt   DateTime @default(now()) @updatedAt
 
   @@index([bookId])
   @@index([chapterId])
+  @@index([bookId, status])
 }
 
 model Payment {

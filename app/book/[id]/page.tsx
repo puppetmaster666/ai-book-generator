@@ -1085,6 +1085,14 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
   const isIllustrated = book.bookFormat !== 'text_only' && book.bookFormat !== 'screenplay';
   const isScreenplay = book.bookFormat === 'screenplay';
 
+  // Check if free tier preview limit has been reached
+  const FREE_TIER_CHAPTER_LIMIT = 1;
+  const FREE_TIER_PANEL_LIMIT = 5;
+  const previewLimitReached = !paymentCompleted && (
+    (isIllustrated && (book.illustrations?.length || 0) >= FREE_TIER_PANEL_LIMIT) ||
+    (!isIllustrated && book.chapters.length >= FREE_TIER_CHAPTER_LIMIT)
+  );
+
   // Show restart option for failed books or admins
   const canRestart = isAdminUser || isFailed;
 
@@ -1319,7 +1327,7 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
           </div>
 
           {/* Preview Limit Reached - Upgrade CTA */}
-          {!isPending && !isGenerating && book.status !== 'completed' && book.status !== 'failed' && book.paymentStatus !== 'completed' && book.chapters.length > 0 && (
+          {previewLimitReached && !isFailed && (
             <div className="bg-gradient-to-br from-neutral-900 to-neutral-800 rounded-2xl p-6 sm:p-8 mb-6 text-white">
               <div className="text-center">
                 <div className="w-16 h-16 mx-auto mb-4 bg-white/10 rounded-full flex items-center justify-center">
@@ -1329,10 +1337,16 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
                   Your Preview is Ready!
                 </h2>
                 <p className="text-neutral-300 mb-2">
-                  You've generated {book.chapters.length} chapter{book.chapters.length > 1 ? 's' : ''} ({book.totalWords.toLocaleString()} words)
+                  {isIllustrated
+                    ? `You've generated ${book.illustrations?.length || 0} panel${(book.illustrations?.length || 0) > 1 ? 's' : ''}`
+                    : `You've generated ${book.chapters.length} chapter${book.chapters.length > 1 ? 's' : ''} (${book.totalWords.toLocaleString()} words)`
+                  }
                 </p>
                 <p className="text-neutral-400 text-sm mb-6">
-                  Unlock the full {book.totalChapters}-chapter book for just $9.99
+                  {isIllustrated
+                    ? `Unlock the full ${book.totalChapters || 20}-panel book for just $9.99`
+                    : `Unlock the full ${book.totalChapters}-chapter book for just $9.99`
+                  }
                 </p>
                 <Link
                   href={`/review?bookId=${id}`}
@@ -1884,11 +1898,11 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
                   onClick={handleDownload}
                   className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-neutral-900 text-white rounded-xl hover:bg-black font-medium transition-colors"
                 >
-                  <Download className="h-5 w-5" /> Download {isIllustrated ? 'PDF' : 'EPUB'}
+                  <Download className="h-5 w-5" /> Download {isIllustrated || isScreenplay ? 'PDF' : 'EPUB'}
                 </button>
 
-                {/* TXT download for easy copy-paste - only for text books */}
-                {!isIllustrated && (
+                {/* TXT download for easy copy-paste - for text books and screenplays */}
+                {(!isIllustrated || isScreenplay) && (
                   <button
                     onClick={handleTxtDownload}
                     className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-white text-neutral-900 border border-neutral-200 rounded-xl hover:bg-neutral-50 font-medium transition-colors"

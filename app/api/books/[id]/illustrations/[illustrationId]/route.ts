@@ -37,6 +37,11 @@ export async function GET(
       return NextResponse.json({ error: 'Illustration not found' }, { status: 404 });
     }
 
+    // Check if illustration has an image (could be null if failed)
+    if (!illustration.imageUrl) {
+      return NextResponse.json({ error: 'Illustration image not available (generation failed)' }, { status: 404 });
+    }
+
     // Parse the base64 data URL
     const matches = illustration.imageUrl.match(/^data:image\/([a-z]+);base64,(.+)$/i);
     if (!matches) {
