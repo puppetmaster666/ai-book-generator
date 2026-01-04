@@ -21,17 +21,17 @@ export default function PricingContent() {
               Simple, Transparent Pricing
             </h1>
             <p className="text-xl text-neutral-600 max-w-2xl mx-auto">
-              Pay per book or subscribe for the best value. No hidden fees.
+              Pay per generation or subscribe for the best value. No hidden fees.
             </p>
           </div>
 
           {/* Pricing Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
 
-            {/* Single Book */}
+            {/* Single Generation */}
             <div className="bg-white rounded-2xl border border-neutral-200 p-8 hover:shadow-lg transition-shadow flex flex-col">
               <h3 className="text-xl font-semibold mb-2" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>
-                Single Book
+                Single Generation
               </h3>
               <div className="mb-4">
                 <span className="text-5xl font-bold tracking-tight" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>$9.99</span>
@@ -75,15 +75,15 @@ export default function PricingContent() {
                 <span className="text-5xl font-bold tracking-tight" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>$39</span>
                 <span className="text-neutral-500">/month</span>
               </div>
-              <p className="text-neutral-500 mb-6">$7.80 per book</p>
+              <p className="text-neutral-500 mb-6">$7.80 per generation</p>
               <ul className="space-y-4 flex-grow">
                 <li className="flex items-start gap-3 text-neutral-600">
                   <Check className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
-                  <span><strong>5 books per month</strong> (any type)</span>
+                  <span><strong>5 generations per month</strong> (any type)</span>
                 </li>
                 <li className="flex items-start gap-3 text-neutral-600">
                   <Check className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
-                  <span><strong>Unused books roll over</strong></span>
+                  <span><strong>Unused credits roll over</strong></span>
                 </li>
                 <li className="flex items-start gap-3 text-neutral-600">
                   <Check className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
@@ -131,8 +131,8 @@ export default function PricingContent() {
                 <p className="text-neutral-600">For text books: 1 full chapter to see the writing quality. For visual books: 5 illustrated panels. If you like it, pay to unlock the full book.</p>
               </div>
               <div className="bg-white p-6 rounded-xl border border-neutral-200">
-                <h3 className="font-medium mb-2">Do unused subscription books roll over?</h3>
-                <p className="text-neutral-600">Yes! With the Author Plan, any unused books roll over to the next month. Use them whenever you need them.</p>
+                <h3 className="font-medium mb-2">Do unused subscription credits roll over?</h3>
+                <p className="text-neutral-600">Yes! With the Author Plan, any unused credits roll over to the next month. Use them whenever you need them.</p>
               </div>
               <div className="bg-white p-6 rounded-xl border border-neutral-200">
                 <h3 className="font-medium mb-2">What if I am not satisfied?</h3>

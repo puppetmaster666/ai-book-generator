@@ -71,11 +71,11 @@ const faqs = [
     questions: [
       {
         q: 'What does each plan include?',
-        a: 'Single Book ($9.99): 1 book + cover. Author Plan ($39/month): 5 books/month with rollover. All plans include full commercial rights and downloads.'
+        a: 'Single Generation ($9.99): 1 generation + cover. Author Plan ($39/month): 5 generations/month with rollover. All plans include full commercial rights and downloads.'
       },
       {
-        q: 'Do unused books roll over?',
-        a: 'Yes! With the Author Plan, any unused books roll over to the next month as long as your subscription is active.'
+        q: 'Do unused credits roll over?',
+        a: 'Yes! With the Author Plan, any unused credits roll over to the next month as long as your subscription is active.'
       },
       {
         q: 'What is your refund policy?',

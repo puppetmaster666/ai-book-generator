@@ -1,18 +1,18 @@
 // Pricing
 export const PRICING = {
-  // Single book purchase (any type)
+  // Single generation purchase (any type)
   ONE_TIME: {
     price: 999, // cents
     priceDisplay: '$9.99',
-    books: 1,
+    credits: 1,
   },
   // Author Plan - monthly subscription with rollover
   MONTHLY: {
     price: 3900,
     priceDisplay: '$39',
-    books: 5,
+    credits: 5,
     interval: 'month',
-    rollover: true, // unused books roll over to next month
+    rollover: true, // unused credits roll over to next month
   },
   // Visual books use same pricing as text
   VISUAL: {

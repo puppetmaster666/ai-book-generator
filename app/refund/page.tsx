@@ -29,7 +29,7 @@ export default function RefundPolicy() {
             </section>
 
             <section>
-              <h2 className="text-2xl font-semibold mb-4" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>Single Book Purchases ($9.99)</h2>
+              <h2 className="text-2xl font-semibold mb-4" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>Single Generation Purchases ($9.99)</h2>
               <div className="bg-neutral-50 border border-neutral-200 rounded-xl p-6">
                 <p className="text-neutral-600 leading-relaxed mb-4">
                   <strong>Full refund available if:</strong>
@@ -52,7 +52,7 @@ export default function RefundPolicy() {
                   <li>Cancel anytime before your next billing date</li>
                   <li>No refunds for partial months</li>
                   <li>Access continues until end of billing period</li>
-                  <li>Unused book credits roll over to next month while subscribed</li>
+                  <li>Unused credits roll over to next month while subscribed</li>
                 </ul>
               </div>
             </section>

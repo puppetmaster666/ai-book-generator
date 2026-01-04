@@ -55,12 +55,12 @@ export async function POST(request: NextRequest) {
           description = 'AI Book Generator - Visual Book';
         } else {
           amount = PRICING.ONE_TIME.price;
-          description = 'AI Book Generator - Single Book';
+          description = 'AI Book Generator - Single Generation';
         }
         break;
       case 'monthly':
         amount = PRICING.MONTHLY.price;
-        description = 'AI Book Generator - Author Plan (5 books/month, rollover)';
+        description = 'AI Book Generator - Author Plan (5 generations/month, rollover)';
         break;
       default:
         return NextResponse.json(

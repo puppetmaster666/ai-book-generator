@@ -51,7 +51,7 @@ const faqJsonLd = {
       name: 'What does each plan include?',
       acceptedAnswer: {
         '@type': 'Answer',
-        text: 'Single Book ($9.99): 1 book + cover. Author Plan ($39/month): 5 books/month with rollover. All plans include full commercial rights and downloads.',
+        text: 'Single Generation ($9.99): 1 generation + cover. Author Plan ($39/month): 5 generations/month with rollover. All plans include full commercial rights and downloads.',
       },
     },
   ],
