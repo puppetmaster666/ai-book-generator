@@ -42,6 +42,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           return null;
         }
 
+        // Block unverified users from logging in
+        if (!user.emailVerified) {
+          throw new Error('Please verify your email before logging in. Check your inbox for the verification link.');
+        }
+
         return {
           id: user.id,
           email: user.email,

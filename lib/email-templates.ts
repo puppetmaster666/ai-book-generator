@@ -62,6 +62,33 @@ function ctaButton(text: string, url: string): string {
 
 // Email Templates
 
+export function getVerifyEmailEmail(userName: string, verifyUrl: string): { subject: string; html: string } {
+  const firstName = userName?.split(' ')[0] || 'there';
+
+  return {
+    subject: 'Verify your email - DraftMyBook',
+    html: emailWrapper(`
+      <h2 style="font-size: 24px; font-weight: 600; margin: 0 0 16px 0; color: #171717;">
+        Verify your email, ${firstName}.
+      </h2>
+
+      <p style="color: #525252; font-size: 15px; margin: 0 0 24px 0; line-height: 1.6;">
+        Click the button below to verify your email address and activate your account.
+      </p>
+
+      ${ctaButton('Verify Email', verifyUrl)}
+
+      <p style="color: #737373; font-size: 13px; margin: 32px 0 0 0; text-align: center;">
+        This link expires in 24 hours.
+      </p>
+
+      <p style="color: #737373; font-size: 13px; margin: 16px 0 0 0; text-align: center;">
+        If you didn't create an account, you can ignore this email.
+      </p>
+    `, 'Verify your email to activate your DraftMyBook account.'),
+  };
+}
+
 export function getWelcomeEmail(userName: string): { subject: string; html: string } {
   const firstName = userName?.split(' ')[0] || 'there';
 

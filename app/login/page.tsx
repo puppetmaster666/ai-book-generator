@@ -5,13 +5,14 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { signIn, useSession } from 'next-auth/react';
 import Header from '@/components/Header';
-import { Loader2 } from 'lucide-react';
+import { Loader2, CheckCircle2 } from 'lucide-react';
 
 function LoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const bookId = searchParams.get('bookId');
   const callbackUrl = searchParams.get('callbackUrl');
+  const isVerified = searchParams.get('verified') === 'true';
   const { data: session, status } = useSession();
 
   const [email, setEmail] = useState('');
@@ -19,6 +20,7 @@ function LoginContent() {
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showVerifiedMessage, setShowVerifiedMessage] = useState(isVerified);
 
   // Claim book for user after authentication
   const claimBook = async (userId: string) => {
@@ -63,7 +65,12 @@ function LoginContent() {
       });
 
       if (result?.error) {
-        setError('Invalid email or password');
+        // Check if it's a verification error
+        if (result.error.includes('verify your email')) {
+          setError(result.error);
+        } else {
+          setError('Invalid email or password');
+        }
       } else {
         router.refresh();
       }
@@ -100,6 +107,21 @@ function LoginContent() {
             </h1>
             <p className="text-neutral-600">Log in to your account</p>
           </div>
+
+          {/* Email Verified Success Message */}
+          {showVerifiedMessage && (
+            <div className="mb-6 bg-green-50 rounded-xl p-4 border border-green-200">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                  <CheckCircle2 className="h-5 w-5 text-green-600" />
+                </div>
+                <div>
+                  <p className="font-medium text-green-800">Email verified!</p>
+                  <p className="text-sm text-green-700">You can now log in to your account.</p>
+                </div>
+              </div>
+            </div>
+          )}
 
           <div className="bg-white rounded-2xl border border-neutral-200 p-8">
             <form onSubmit={handleSubmit} className="space-y-5">

@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { signIn, useSession } from 'next-auth/react';
 import Header from '@/components/Header';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Mail, CheckCircle2 } from 'lucide-react';
 
 function SignupContent() {
   const router = useRouter();
@@ -23,6 +23,7 @@ function SignupContent() {
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [error, setError] = useState('');
   const [isClaiming, setIsClaiming] = useState(false);
+  const [verificationSent, setVerificationSent] = useState(false);
 
   // Claim book for user after authentication
   const claimBook = async (): Promise<{ success: boolean; error?: string }> => {
@@ -120,7 +121,13 @@ function SignupContent() {
         return;
       }
 
-      // Sign in after successful registration
+      // Check if verification is required
+      if (data.requiresVerification) {
+        setVerificationSent(true);
+        return;
+      }
+
+      // If no verification needed (shouldn't happen but fallback), try to sign in
       const result = await signIn('credentials', {
         email,
         password,
@@ -130,8 +137,6 @@ function SignupContent() {
       if (result?.error) {
         setError('Account created but failed to sign in. Please try logging in.');
       } else {
-        // Claim book if we have a bookId (the useEffect will handle the redirect)
-        // Just refresh to trigger the session check
         router.refresh();
       }
     } catch (err) {
@@ -163,6 +168,47 @@ function SignupContent() {
       setIsGoogleLoading(false);
     }
   };
+
+  // Show verification sent screen
+  if (verificationSent) {
+    return (
+      <div className="min-h-screen bg-white">
+        <Header />
+        <main className="py-20 px-6">
+          <div className="max-w-md mx-auto text-center">
+            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+              <Mail className="h-8 w-8 text-green-600" />
+            </div>
+            <h1 className="text-2xl font-bold mb-3" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>
+              Check your email
+            </h1>
+            <p className="text-neutral-600 mb-2">
+              We sent a verification link to:
+            </p>
+            <p className="font-medium text-neutral-900 mb-6">{email}</p>
+            <div className="bg-neutral-50 rounded-xl p-4 mb-6 text-left">
+              <p className="text-sm text-neutral-600">
+                <CheckCircle2 className="h-4 w-4 inline mr-2 text-green-600" />
+                Click the link in your email to activate your account
+              </p>
+              <p className="text-sm text-neutral-500 mt-2 ml-6">
+                The link expires in 24 hours
+              </p>
+            </div>
+            <p className="text-sm text-neutral-500">
+              Didn&apos;t receive the email? Check your spam folder or{' '}
+              <button
+                onClick={() => setVerificationSent(false)}
+                className="text-neutral-900 hover:underline"
+              >
+                try again
+              </button>
+            </p>
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-white">

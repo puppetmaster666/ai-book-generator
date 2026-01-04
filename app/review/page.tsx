@@ -450,19 +450,21 @@ function ReviewContent() {
     setEmailError('');
     setError('');
 
-    // Validate email
-    if (!email.trim()) {
-      setEmailError('Email address is required');
-      // Scroll to email field
-      document.getElementById('email-input')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      document.getElementById('email-input')?.focus();
-      return;
-    }
-    if (!email.includes('@') || !email.includes('.')) {
-      setEmailError('Please enter a valid email address');
-      document.getElementById('email-input')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      document.getElementById('email-input')?.focus();
-      return;
+    // Validate email - only required if user is not logged in
+    if (!session?.user?.email) {
+      if (!email.trim()) {
+        setEmailError('Email address is required');
+        // Scroll to email field
+        document.getElementById('email-input')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        document.getElementById('email-input')?.focus();
+        return;
+      }
+      if (!email.includes('@') || !email.includes('.')) {
+        setEmailError('Please enter a valid email address');
+        document.getElementById('email-input')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        document.getElementById('email-input')?.focus();
+        return;
+      }
     }
 
     setIsSubmitting(true);
@@ -1269,8 +1271,8 @@ function ReviewContent() {
             </>
           )}
 
-          {/* Your Details - hide for already paid books (they already have email on file) */}
-          {!isAlreadyPaid && (
+          {/* Your Details - hide for already paid books or logged-in users (they already have email on file) */}
+          {!isAlreadyPaid && !session?.user?.email && (
             <div className="bg-white rounded-2xl border border-neutral-200 p-6 mb-6">
               <h3 className="font-semibold text-lg mb-4">Your Details</h3>
               <div className="space-y-4">
@@ -1329,6 +1331,31 @@ function ReviewContent() {
                     This will appear on your book cover
                   </p>
                 </div>
+              </div>
+            </div>
+          )}
+
+          {/* Author Name only - for logged-in users who already have email */}
+          {!isAlreadyPaid && session?.user?.email && (
+            <div className="bg-white rounded-2xl border border-neutral-200 p-6 mb-6">
+              <h3 className="font-semibold text-lg mb-4">Author Details</h3>
+              <div>
+                <label className="block text-sm font-medium text-neutral-700 mb-1">
+                  Author Name
+                </label>
+                <div className="relative">
+                  <Pencil className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-400" />
+                  <input
+                    type="text"
+                    value={authorName}
+                    onChange={(e) => setAuthorName(e.target.value)}
+                    placeholder="Your pen name or real name"
+                    className="w-full pl-10 pr-4 py-3 border border-neutral-200 rounded-xl focus:border-neutral-900 focus:outline-none transition-colors"
+                  />
+                </div>
+                <p className="text-xs text-neutral-500 mt-1">
+                  This will appear on your book cover
+                </p>
               </div>
             </div>
           )}
