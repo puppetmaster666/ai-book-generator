@@ -2181,24 +2181,14 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
                 Chapters {isGenerating && <span className="text-sm font-normal text-neutral-500">(updating live)</span>}
               </h2>
               <div className="space-y-2">
-                {book.chapters.map((chapter, index) => (
+                {book.chapters.map((chapter) => (
                   <div
                     key={chapter.id}
-                    className={`flex items-center justify-between p-4 rounded-xl transition-all ${index === book.chapters.length - 1 && isGenerating
-                      ? 'bg-neutral-100 border border-neutral-300'
-                      : 'bg-neutral-50'
-                      }`}
+                    className="flex items-center justify-between p-4 rounded-xl transition-all bg-neutral-50"
                   >
                     <div className="flex items-center gap-3">
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${index === book.chapters.length - 1 && isGenerating
-                        ? 'bg-neutral-200 text-neutral-700'
-                        : 'bg-neutral-900 text-white'
-                        }`}>
-                        {index === book.chapters.length - 1 && isGenerating ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <Check className="h-4 w-4" />
-                        )}
+                      <div className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium bg-neutral-900 text-white">
+                        <Check className="h-4 w-4" />
                       </div>
                       <div>
                         <p className="font-medium text-neutral-900">
