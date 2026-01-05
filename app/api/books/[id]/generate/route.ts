@@ -538,11 +538,11 @@ export async function POST(
       console.log('[Generate] No auth session, treating as non-admin');
     }
 
-    // Check for outlineOnly mode (for comics - client handles parallel panel generation)
-    let outlineOnly = false;
+    // Check for outlineOnly mode from request body
+    let outlineOnlyFromBody = false;
     try {
       const body = await request.json();
-      outlineOnly = body.outlineOnly === true;
+      outlineOnlyFromBody = body.outlineOnly === true;
     } catch {
       // No body or invalid JSON - use default
     }
@@ -554,6 +554,17 @@ export async function POST(
 
     if (!book) {
       return NextResponse.json({ error: 'Book not found' }, { status: 404 });
+    }
+
+    // CRITICAL: Text books and screenplays should ALWAYS use outlineOnly mode
+    // This prevents Vercel timeout (300s) and uses the rolling context system
+    // The client will call /generate-next for each chapter sequentially
+    const isTextBook = book.bookFormat === 'text_only';
+    const isScreenplay = book.bookFormat === 'screenplay';
+    const outlineOnly = outlineOnlyFromBody || isTextBook || isScreenplay;
+
+    if (outlineOnly && !outlineOnlyFromBody) {
+      console.log(`[Generate] Auto-enabling outlineOnly for ${book.bookFormat} book (prevents timeout, uses rolling context)`);
     }
 
     // Check payment status - allow preview generation for unpaid books

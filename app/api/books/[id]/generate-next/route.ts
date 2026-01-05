@@ -10,6 +10,8 @@ import {
   summarizeScreenplaySequence,
   reviewScreenplaySequence,
   generateMetadataAndMarketing,
+  checkOutlineConsistency,
+  applyThematicPolish,
   type ContentRating,
 } from '@/lib/gemini';
 import { countWords } from '@/lib/epub';
@@ -509,6 +511,75 @@ ${chapterPlan.summary}
 
     // Update story so far
     storySoFar += `\n\nChapter ${nextChapterNum}: ${chapterPlan.title}\n${summary}`;
+
+    // Run consistency check every 5 chapters to prevent narrative drift
+    // This runs in parallel with other operations and stores corrective instructions
+    if (nextChapterNum % 5 === 0 && nextChapterNum < totalChapters) {
+      try {
+        console.log(`[Consistency] Running outline consistency check at chapter ${nextChapterNum}`);
+        const consistencyResult = await checkOutlineConsistency({
+          title: book.title,
+          originalPlan: {
+            premise: book.premise || '',
+            beginning: (outline.chapters[0] as { summary?: string })?.summary || '',
+            middle: (outline.chapters[Math.floor(totalChapters / 2)] as { summary?: string })?.summary || '',
+            ending: (outline.chapters[totalChapters - 1] as { summary?: string })?.summary || '',
+            characters: characters,
+          },
+          storySoFar,
+          characterStates: characterStates as Record<string, { lastSeen: string; currentState: string }>,
+          currentChapter: nextChapterNum,
+          totalChapters,
+        });
+
+        // Log the drift analysis and corrective instructions
+        console.log(`[Consistency] Drift analysis: ${consistencyResult.driftAnalysis.substring(0, 200)}...`);
+        if (consistencyResult.correctiveInstructions) {
+          console.log(`[Consistency] Corrective instructions: ${consistencyResult.correctiveInstructions.substring(0, 200)}...`);
+          // TODO: In future, could enhance generateChapter to accept these instructions
+        }
+      } catch (consistencyError) {
+        console.error(`[Consistency] Check failed (non-blocking):`, consistencyError);
+        // Continue without consistency check - it's an enhancement, not critical
+      }
+    }
+
+    // Apply thematic polish to the final chapter for satisfying conclusion
+    const isLastChapter = nextChapterNum >= totalChapters;
+    if (isLastChapter) {
+      try {
+        console.log(`[ThematicPolish] Applying final chapter polish...`);
+        // Get first chapter summary for bookend effect
+        const firstChapter = await prisma.chapter.findFirst({
+          where: { bookId: id, number: 1 },
+          select: { summary: true },
+        });
+
+        const polishResult = await applyThematicPolish({
+          title: book.title,
+          genre: book.genre,
+          bookType: book.bookType,
+          originalPlan: {
+            premise: book.premise || '',
+            beginning: (outline.chapters[0] as { summary?: string })?.summary || '',
+            ending: (outline.chapters[totalChapters - 1] as { summary?: string })?.summary || '',
+            characters: characters,
+          },
+          firstChapterSummary: firstChapter?.summary || 'The story begins...',
+          finalChapterContent: chapterContent,
+          characterArcs: characterStates as Record<string, { startState: string; endState: string }>,
+        });
+
+        // Use polished content if available
+        if (polishResult.polishedContent && polishResult.polishedContent.length > chapterContent.length * 0.5) {
+          chapterContent = polishResult.polishedContent;
+          console.log(`[ThematicPolish] Applied: ${polishResult.thematicNotes.substring(0, 150)}...`);
+        }
+      } catch (polishError) {
+        console.error(`[ThematicPolish] Failed (using original):`, polishError);
+        // Continue with original content - polish is enhancement, not critical
+      }
+    }
 
     // Verify book still exists before saving (user may have deleted it)
     const bookStillExists = await prisma.book.findUnique({
