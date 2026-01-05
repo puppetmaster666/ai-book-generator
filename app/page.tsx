@@ -519,16 +519,16 @@ export default function Home() {
       {/* Success Story - Blood & Silver */}
       <section className="py-20 px-6 bg-white">
         <div className="max-w-6xl mx-auto">
-          <div className="grid md:grid-cols-5 gap-8 items-start">
-            {/* Book Cover - smaller */}
-            <div className="md:col-span-2 flex justify-center">
+          <div className="grid md:grid-cols-2 gap-12 items-stretch">
+            {/* Left: Book Cover + Info */}
+            <div className="flex gap-6">
               <a
                 href="https://a.co/d/f9GkEr9"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="group relative block no-underline focus:outline-none hover:scale-105 transition-transform duration-300"
+                className="group relative block no-underline focus:outline-none hover:scale-105 transition-transform duration-300 flex-shrink-0"
               >
-                <div className="relative w-56 md:w-64 aspect-[2/3] rounded-lg overflow-hidden shadow-2xl bg-neutral-100">
+                <div className="relative w-40 md:w-48 aspect-[2/3] rounded-lg overflow-hidden shadow-2xl bg-neutral-100">
                   <Image
                     src="/images/cover.jpg"
                     alt="Blood & Silver by Freddie Fabrevoie"
@@ -537,51 +537,45 @@ export default function Home() {
                   />
                 </div>
                 <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg">
-                  <span className="text-white flex items-center gap-2">
+                  <span className="text-white flex items-center gap-2 text-sm">
                     View on Amazon <ExternalLink className="h-4 w-4" />
                   </span>
                 </div>
               </a>
-            </div>
-
-            {/* Content + Featured Cards */}
-            <div className="md:col-span-3">
-              <div className="inline-flex items-center gap-2 bg-neutral-100 px-4 py-2 rounded-full text-sm text-neutral-600 mb-6">
-                <span className="w-2 h-2 bg-neutral-900 rounded-full" />
-                Published on Amazon KDP
-              </div>
-              <h2 className="text-4xl md:text-5xl font-bold tracking-tight mb-6 text-neutral-900" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>
-                Blood &{' '}
-                <span className="relative inline-block">
-                  <span className="absolute -inset-x-1 -inset-y-1 bg-black -skew-y-2 translate-x-1 translate-y-1" aria-hidden="true" />
-                  <span className={`absolute -inset-x-1 -inset-y-1 ${ACCENT.bg} -skew-y-2`} aria-hidden="true" />
-                  <span className="relative text-neutral-900 px-2">Silver</span>
-                </span>
-              </h2>
-              <p className="text-xl text-neutral-600 mb-4">
-                by Freddie Fabrevoie
-              </p>
-              <p className="text-neutral-500 mb-6 leading-relaxed">
-                A complete 10-chapter historical fiction exploring history&apos;s most ruthless untold betrayals.
-                Created with draftmybook, formatted to Amazon KDP specifications, and published in under an hour.
-              </p>
-              <div className="flex flex-wrap gap-4 mb-8">
+              <div className="flex flex-col justify-center">
+                <div className="inline-flex items-center gap-2 bg-neutral-100 px-3 py-1.5 rounded-full text-xs text-neutral-600 mb-4 w-fit">
+                  <span className="w-1.5 h-1.5 bg-neutral-900 rounded-full" />
+                  Published on Amazon KDP
+                </div>
+                <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-3 text-neutral-900" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>
+                  Blood &{' '}
+                  <span className="relative inline-block">
+                    <span className="absolute -inset-x-1 -inset-y-1 bg-black -skew-y-2 translate-x-1 translate-y-1" aria-hidden="true" />
+                    <span className={`absolute -inset-x-1 -inset-y-1 ${ACCENT.bg} -skew-y-2`} aria-hidden="true" />
+                    <span className="relative text-neutral-900 px-2">Silver</span>
+                  </span>
+                </h2>
+                <p className="text-lg text-neutral-600 mb-2">
+                  by Freddie Fabrevoie
+                </p>
+                <p className="text-sm text-neutral-500 mb-4 leading-relaxed">
+                  A complete 10-chapter historical fiction exploring history&apos;s most ruthless untold betrayals.
+                </p>
                 <a
                   href="https://a.co/d/f9GkEr9"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 bg-neutral-900 text-white px-6 py-3 rounded-full font-medium hover:bg-neutral-800 transition-colors"
+                  className="inline-flex items-center gap-2 bg-neutral-900 text-white px-5 py-2.5 rounded-full text-sm font-medium hover:bg-neutral-800 transition-colors w-fit"
                 >
                   View on Amazon
                   <ExternalLink className="h-4 w-4" />
                 </a>
               </div>
+            </div>
 
-              {/* Featured Community Books - Compact */}
-              <div className="pt-6 border-t border-neutral-200">
-                <p className="text-xs text-neutral-500 mb-3 uppercase tracking-wide font-medium">Community Creations</p>
-                <FeaturedShowcase variant="compact" />
-              </div>
+            {/* Right: Featured Books Grid */}
+            <div className="flex flex-col justify-center">
+              <FeaturedShowcase variant="compact" />
             </div>
           </div>
         </div>
