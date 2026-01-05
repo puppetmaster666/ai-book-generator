@@ -25,12 +25,20 @@ export async function GET() {
         authorName: true,
         totalWords: true,
         totalChapters: true,
+        metadata: true,
       },
       orderBy: { createdAt: 'desc' },
       take: 8, // Max 8 items for showcase
     });
 
-    return NextResponse.json({ items });
+    // Extract logline from metadata JSON
+    const itemsWithLogline = items.map(item => ({
+      ...item,
+      logline: (item.metadata as { logline?: string } | null)?.logline || null,
+      metadata: undefined, // Don't expose full metadata
+    }));
+
+    return NextResponse.json({ items: itemsWithLogline });
   } catch (error) {
     console.error('Fetch featured error:', error);
     return NextResponse.json({ items: [] });

@@ -15,18 +15,19 @@ interface FeaturedItem {
   authorName: string;
   totalWords: number;
   totalChapters: number;
+  logline: string | null;
 }
 
 // Placeholder data for empty slots
 const PLACEHOLDERS: Omit<FeaturedItem, 'id'>[] = [
-  { title: 'Your Novel Here', genre: 'Fantasy', bookType: 'text', bookFormat: 'text_only', coverImageUrl: null, authorName: 'Your Name', totalWords: 50000, totalChapters: 15 },
-  { title: 'Epic Comic Adventure', genre: 'Action', bookType: 'visual', bookFormat: 'comic', coverImageUrl: null, authorName: 'Your Name', totalWords: 8000, totalChapters: 24 },
-  { title: 'Award-Winning Script', genre: 'Drama', bookType: 'screenplay', bookFormat: 'screenplay', coverImageUrl: null, authorName: 'Your Name', totalWords: 25000, totalChapters: 8 },
-  { title: 'Children\'s Picture Book', genre: 'Adventure', bookType: 'visual', bookFormat: 'picture_book', coverImageUrl: null, authorName: 'Your Name', totalWords: 500, totalChapters: 12 },
-  { title: 'Sci-Fi Thriller', genre: 'Science Fiction', bookType: 'text', bookFormat: 'text_only', coverImageUrl: null, authorName: 'Your Name', totalWords: 80000, totalChapters: 20 },
-  { title: 'Romance Novel', genre: 'Romance', bookType: 'text', bookFormat: 'text_only', coverImageUrl: null, authorName: 'Your Name', totalWords: 60000, totalChapters: 18 },
-  { title: 'TV Series Pilot', genre: 'Mystery', bookType: 'screenplay', bookFormat: 'tv_series', coverImageUrl: null, authorName: 'Your Name', totalWords: 12000, totalChapters: 1 },
-  { title: 'Graphic Novel', genre: 'Horror', bookType: 'visual', bookFormat: 'comic', coverImageUrl: null, authorName: 'Your Name', totalWords: 15000, totalChapters: 40 },
+  { title: 'Your Novel Here', genre: 'Fantasy', bookType: 'text', bookFormat: 'text_only', coverImageUrl: null, authorName: 'Your Name', totalWords: 50000, totalChapters: 15, logline: 'An epic tale waiting to be written...' },
+  { title: 'Epic Comic Adventure', genre: 'Action', bookType: 'visual', bookFormat: 'comic', coverImageUrl: null, authorName: 'Your Name', totalWords: 8000, totalChapters: 24, logline: 'Your visual story could inspire others...' },
+  { title: 'Award-Winning Script', genre: 'Drama', bookType: 'screenplay', bookFormat: 'screenplay', coverImageUrl: null, authorName: 'Your Name', totalWords: 25000, totalChapters: 8, logline: 'The next great screenplay awaits...' },
+  { title: 'Children\'s Picture Book', genre: 'Adventure', bookType: 'visual', bookFormat: 'picture_book', coverImageUrl: null, authorName: 'Your Name', totalWords: 500, totalChapters: 12, logline: 'A magical journey for young readers...' },
+  { title: 'Sci-Fi Thriller', genre: 'Science Fiction', bookType: 'text', bookFormat: 'text_only', coverImageUrl: null, authorName: 'Your Name', totalWords: 80000, totalChapters: 20, logline: 'Explore new worlds and possibilities...' },
+  { title: 'Romance Novel', genre: 'Romance', bookType: 'text', bookFormat: 'text_only', coverImageUrl: null, authorName: 'Your Name', totalWords: 60000, totalChapters: 18, logline: 'Love stories that capture hearts...' },
+  { title: 'TV Series Pilot', genre: 'Mystery', bookType: 'screenplay', bookFormat: 'tv_series', coverImageUrl: null, authorName: 'Your Name', totalWords: 12000, totalChapters: 1, logline: 'The pilot episode that hooks viewers...' },
+  { title: 'Graphic Novel', genre: 'Horror', bookType: 'visual', bookFormat: 'comic', coverImageUrl: null, authorName: 'Your Name', totalWords: 15000, totalChapters: 40, logline: 'Dark tales brought to life...' },
 ];
 
 function getTypeIcon(bookFormat: string) {
@@ -188,9 +189,14 @@ export default function FeaturedShowcase() {
                   <h3 className={`font-semibold mb-1 line-clamp-1 ${isPlaceholder ? 'text-neutral-400' : 'text-neutral-900'}`}>
                     {item.title}
                   </h3>
-                  <p className={`text-sm ${isPlaceholder ? 'text-neutral-300' : 'text-neutral-500'}`}>
+                  <p className={`text-xs mb-1 ${isPlaceholder ? 'text-neutral-300' : 'text-neutral-500'}`}>
                     {item.genre}
                   </p>
+                  {item.logline && (
+                    <p className={`text-xs line-clamp-2 ${isPlaceholder ? 'text-neutral-300 italic' : 'text-neutral-600'}`}>
+                      {item.logline}
+                    </p>
+                  )}
                 </div>
               </div>
             );
