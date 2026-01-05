@@ -23,6 +23,9 @@ import {
   type ScreenplayContext,
   estimatePageCount,
   createInitialContext,
+  detectSequenceLoop,
+  flagExcessiveTics,
+  validateSequenceContinuity,
 } from '@/lib/screenplay';
 
 // Allow up to 5 minutes for chapter generation (Vercel Pro plan max: 300s)
@@ -332,6 +335,74 @@ export async function POST(
 
       let sequenceContent = sequenceResult.content;
       const pageCount = sequenceResult.pageCount;
+
+      // Loop detection - check if AI is rehashing previous sequences
+      if (nextChapterNum > 1 && screenplayContext.sequenceSummaries.length > 0) {
+        const loopAnalysis = detectSequenceLoop(
+          sequenceContent,
+          screenplayContext.sequenceSummaries
+        );
+
+        if (loopAnalysis.isLoop) {
+          console.warn(`[LOOP DETECTED] Sequence ${nextChapterNum} - Score: ${loopAnalysis.score}. Beats: ${loopAnalysis.repeatedBeats.join(', ')}`);
+
+          // Regenerate with corrective instructions by adding to context
+          const correctiveContext: ScreenplayContext = {
+            ...screenplayContext,
+            lastSequenceSummary: `${screenplayContext.lastSequenceSummary}
+
+CRITICAL ERROR DETECTED: Your previous attempt repeated beats from earlier sequences.
+REPEATED BEATS: ${loopAnalysis.repeatedBeats.join('; ')}
+DO NOT REWRITE THESE SCENES. THE STORY MUST MOVE FORWARD.
+Pick up AFTER the last event and push toward the next beat sheet milestone.`,
+          };
+
+          try {
+            const correctedResult = await withTimeout(
+              generateScreenplaySequence({
+                beatSheet: screenplayOutline.beatSheet,
+                characters: screenplayOutline.characters,
+                sequenceNumber: nextChapterNum,
+                context: correctiveContext,
+                genre: book.genre,
+                title: book.title,
+                activeSubplots,
+              }),
+              CHAPTER_TIMEOUT_MS,
+              `Sequence ${nextChapterNum} corrective generation`
+            );
+
+            // Re-check after corrective generation
+            const secondCheck = detectSequenceLoop(
+              correctedResult.content,
+              screenplayContext.sequenceSummaries
+            );
+
+            if (secondCheck.isLoop) {
+              console.error(`[LOOP PERSISTS] Sequence ${nextChapterNum} still looping after correction. Score: ${secondCheck.score}`);
+              // Continue with original content but log the issue
+            } else {
+              sequenceContent = correctedResult.content;
+              console.log(`[LOOP FIXED] Sequence ${nextChapterNum} corrective generation succeeded`);
+            }
+          } catch (correctionError) {
+            console.error(`Failed to regenerate sequence ${nextChapterNum}:`, correctionError);
+            // Continue with original content
+          }
+        }
+
+        // Validate continuity patterns
+        const continuityCheck = validateSequenceContinuity(sequenceContent, nextChapterNum);
+        if (!continuityCheck.valid) {
+          console.warn(`[CONTINUITY WARNING] Sequence ${nextChapterNum}: ${continuityCheck.issues.join(', ')}`);
+        }
+      }
+
+      // Flag excessive tics (last line of defense)
+      const ticCheck = flagExcessiveTics(sequenceContent);
+      if (ticCheck.warnings.length > 0) {
+        console.warn(`[TIC WARNING] Sequence ${nextChapterNum}: ${ticCheck.warnings.join(', ')}`);
+      }
 
       // Review and polish - ALWAYS runs (ruthless pacing editor)
       try {

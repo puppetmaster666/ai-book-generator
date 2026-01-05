@@ -18,7 +18,7 @@ function getArchetypeDescription(archetype: string): string {
   const descriptions: Record<string, string> = {
     'The Evader': 'deflects with humor, changes subject, never straight answers',
     'The Steamroller': 'bulldozes, interrupts, dominates through volume',
-    'The Professor': 'over-explains, lectures, uses precision for control',
+    'The Professor': 'uses technical precision as ARMOR, but cracks under pressure. When challenged, retreats into jargon. When emotionally cornered, precision FAILS and raw human speech breaks through',
     'The Reactor': 'short bursts, emotional, often monosyllabic',
   };
   return descriptions[archetype] || descriptions['The Reactor'];
@@ -115,10 +115,97 @@ export async function generateScreenplaySequence(data: {
     ? `\nACTIVE SUBPLOTS TO WEAVE IN:\n${data.activeSubplots.map(s => `- ${s.name}: ${s.arc} (Characters: ${s.characters.join(', ')})`).join('\n')}`
     : '';
 
-  // Build context from previous sequences
+  // Build context from previous sequences with CONTINUITY LOCK
+  const allSummaries = data.context.sequenceSummaries || [];
   const previousContext = data.context.lastSequenceSummary
     ? `\nPREVIOUS SEQUENCE SUMMARY:\n${data.context.lastSequenceSummary}\n\nCHARACTER STATES:\n${Object.entries(data.context.characterStates).map(([name, state]) => `- ${name}: ${state}`).join('\n')}\n\nSETUPS TO PAY OFF: ${data.context.plantedSetups.filter(s => !data.context.resolvedPayoffs.includes(s)).join(', ') || 'None pending'}`
     : '';
+
+  // CONTINUITY LOCK - prevents AI from restarting the story
+  const continuityLock = data.sequenceNumber > 1
+    ? `
+=== CONTINUITY LOCK (CRITICAL - PREVENTS LOOPING) ===
+This is SEQUENCE ${data.sequenceNumber} of 8. The story CONTINUES - do NOT restart.
+
+EVENTS THAT HAVE ALREADY HAPPENED (NO-GO ZONE - DO NOT REWRITE THESE):
+${allSummaries.map(s => `- Seq ${s.sequenceNumber}: ${s.summary}`).join('\n') || '(No previous summaries)'}
+
+RULES:
+- DO NOT reintroduce characters as if meeting them for the first time
+- DO NOT restart conversations that already happened
+- NEVER write "FADE IN:" after Sequence 1
+- NEVER write exposition that "sets up" the world - it's already established
+- Pick up AFTER the last event from the previous sequence
+
+=== CHARACTER TRUTH (IMMUTABLE - DO NOT ALTER) ===
+${data.characters.map(c => `- NAME: ${c.name}
+  AGE: ${c.age || 'Unknown'} (DO NOT CHANGE)
+  ROLE: ${c.role}
+  CURRENT STATE: ${data.context.characterStates[c.name] || 'Normal'}
+  ARCHETYPE: ${c.dialogueArchetype}`).join('\n\n')}
+
+These are FACTS. If a character's age or appearance changes, you have FAILED.
+`
+    : '';
+
+  // Emotional break-point requirement for Professor/Steamroller archetypes
+  const hasProfessorOrSteamroller = data.characters.some(c =>
+    c.dialogueArchetype === 'The Professor' || c.dialogueArchetype === 'The Steamroller'
+  );
+  const emotionalBreakSection = hasProfessorOrSteamroller
+    ? `
+=== EMOTIONAL BREAK-POINTS ===
+Every "Professor" or "Steamroller" character MUST have 1-2 moments where their verbal strategy FAILS:
+- Professor losing precision: "The statistical likelihood— God, I don't know. I just don't."
+- Steamroller going quiet: "[Character] opens mouth. Closes it. Nothing comes."
+- Evader finally direct: "Fine. Yes. I'm terrified. Happy now?"
+
+This is MANDATORY for emotional authenticity. Consistent verbal strategy = robot.
+`
+    : '';
+
+  // Protagonist agency requirements for climax sequences (7-8)
+  const protagonistAgencySection = (data.sequenceNumber >= 7)
+    ? `
+=== PROTAGONIST AGENCY (SEQUENCES 7-8 ONLY) ===
+The protagonist MUST take ACTIVE decisive action in the climax:
+- NOT: "Elias watches as Vance leaves" (passive)
+- YES: "Elias grabs Vance's arm. ELIAS: You don't get to walk away." (active)
+
+The protagonist's final choice must CAUSE the resolution, not witness it.
+If antagonist departs, protagonist must either:
+1. Physically stop them (confrontation)
+2. Let them go as a CHOICE (with dialogue showing agency)
+3. Do something that makes the departure happen on protagonist's terms
+
+=== SPATIAL COMPLETENESS ===
+Every character exit must be SHOWN:
+- HOW they leave (door, window, car, on foot)
+- Protagonist's REACTION to departure
+- NO "magic disappearances" - if character is gone, we see them go
+
+BAD: "Vance is gone. The cabin is empty."
+GOOD: "The truck engine growls. Vance's headlights sweep across the cabin as he backs out. Elias watches from the window until the taillights vanish into the pines."
+`
+    : '';
+
+  // Rhythm directive (anti-staccato)
+  const rhythmSection = `
+=== SENTENCE RHYTHM (CRITICAL - ANTI-AI) ===
+DO NOT write in metronome rhythm. Vary sentence length using the 1-2-5 rule:
+- ONE short sentence for impact (under 6 words)
+- TWO medium sentences for detail (8-15 words)
+- ONE long, flowing sentence for atmosphere (20+ words with commas, dashes, or semicolons)
+
+BAD (AI metronome):
+"The water bites. She doesn't flinch. Sinks until the slurry meets her chin."
+
+GOOD (human breath):
+"The water bites—she doesn't flinch, just sinks slowly until the grey slurry meets her chin and the cold seeps into her bones like a living thing."
+
+NEVER start three consecutive sentences with the same pronoun (She, He, It, The).
+NEVER use more than two 2-word fragments in a row.
+`;
 
   // Genre-specific tone guidance
   const genreTone = getGenreToneGuidance(data.genre);
@@ -134,6 +221,10 @@ BEATS TO HIT:
 ${beatsContent}
 ${subplotSection}
 ${previousContext}
+${continuityLock}
+${emotionalBreakSection}
+${protagonistAgencySection}
+${rhythmSection}
 
 === CHARACTER PSYCHOLOGY (MANDATORY FOR EVERY LINE) ===
 ${characterPsychology}
@@ -209,6 +300,7 @@ OUTPUT: Industry-standard screenplay format ONLY. No commentary.`;
 
 /**
  * Summarize a screenplay sequence for context continuity
+ * Uses SPECIFIC closed-loop events to prevent AI from restarting scenes
  */
 export async function summarizeScreenplaySequence(data: {
   sequenceContent: string;
@@ -224,16 +316,35 @@ ${data.sequenceContent.substring(0, 8000)}
 
 CHARACTERS TO TRACK: ${data.characters.map(c => c.name).join(', ')}
 
+=== SUMMARY REQUIREMENTS (CRITICAL) ===
+List SPECIFIC events that CANNOT be repeated in future sequences.
+Each event should be a CLOSED LOOP that future sequences must not reopen.
+
+BAD SUMMARY (too vague - AI will restart the scene):
+"Elias and Malik argue about the past"
+
+GOOD SUMMARY (specific - AI knows this is DONE):
+"Elias reveals he knew about Sarah's affair. Malik punches the wall. They agree to never speak of it again."
+
+For each major event, include:
+1. WHO did WHAT to WHOM
+2. What was REVEALED or DECIDED
+3. How the scene ENDED (physically - who left, who stayed)
+
 Provide a JSON summary:
 {
   "sequenceNumber": ${data.sequenceNumber},
   "pageRange": "${sequenceInfo?.pageRange || 'unknown'}",
   "actNumber": ${sequenceInfo?.act || 2},
   "beatsCovered": ${JSON.stringify(sequenceInfo?.beats || [])},
-  "summary": "200-word summary of key plot events...",
+  "summary": "200-word summary with SPECIFIC events (not themes or feelings)...",
+  "closedLoops": ["Event 1 that is DONE and cannot be repeated", "Event 2..."],
   "characterStates": {
-    "CHARACTER_NAME": "Where they are emotionally and physically at end of sequence"
+    "CHARACTER_NAME": "Physical location + emotional state at END of sequence"
   },
+  "characterExits": [
+    {"character": "NAME", "howExited": "drove away in red truck", "lastSeenLocation": "driveway"}
+  ],
   "plantedSetups": ["Things introduced that need payoff later (Chekhov's guns)"],
   "resolvedPayoffs": ["Setups from earlier sequences that were paid off here"]
 }`;

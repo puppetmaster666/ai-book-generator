@@ -16,6 +16,8 @@ export type DialogueArchetype = 'The Evader' | 'The Steamroller' | 'The Professo
  */
 export interface CharacterProfile {
   name: string;
+  age?: number; // Exact age (not range) for consistency
+  physicalDescription?: string; // Locked description for consistency
   role: 'protagonist' | 'antagonist' | 'supporting' | 'minor';
   want: string; // External goal - what they're trying to achieve
   need: string; // Internal arc - what they need to learn/become
@@ -84,7 +86,13 @@ export interface SequenceSummary {
   actNumber: number; // 1, 2, or 3
   beatsCovered: string[]; // Which beats from the beat sheet
   summary: string; // 200-word summary of what happened
+  closedLoops?: string[]; // SPECIFIC events that are DONE and cannot be repeated
   characterStates: Record<string, string>; // Where each character is emotionally/physically
+  characterExits?: Array<{ // How characters left scenes
+    character: string;
+    howExited: string; // "drove away in red truck"
+    lastSeenLocation: string;
+  }>;
   plantedSetups: string[]; // Chekhov's guns planted in this sequence
   resolvedPayoffs: string[]; // Setups from earlier sequences paid off here
 }
@@ -168,6 +176,63 @@ export const SCREENPLAY_BANNED_PHRASES = [
   'You have to understand',
   'At the end of the day',
   'It is what it is',
+];
+
+/**
+ * Banned mathematical/mechanical metaphors (AI detection risk)
+ */
+export const SCREENPLAY_BANNED_METAPHORS = [
+  'with (perfect |mathematical |precise )?geometry',
+  'like a (well-oiled |precision )?machine',
+  'clockwork precision',
+  'calculated (grace|movement|precision)',
+  'algorithmic',
+  'binary (choice|decision)',
+  'systematic(ally)?',
+  'geometric (precision|perfection)',
+  'mathematically (precise|perfect)',
+  'with surgical precision',
+  'like an equation',
+  'variables in (the|an) equation',
+];
+
+/**
+ * Banned training-set clichés (AI detection risk)
+ */
+export const SCREENPLAY_BANNED_CLICHES = [
+  'skin like (cured |old )?leather',
+  'eyes (that )?tell(ing)? (a |the )?(thousand |million )?(stories|tales)',
+  'weight of the world',
+  'heart (of gold|skipped a beat)',
+  'time stood still',
+  'pregnant pause',
+  'deafening silence',
+  'steely (gaze|determination)',
+  'piercing (eyes|stare|gaze)',
+  'golden (light|sun|rays|glow)', // The "golden ending" tell
+  'bathed in (golden |warm )?light',
+  'sun turn(ed|ing|s) .* (to |into )?gold',
+  'hung heavy in the air',
+  'thick with tension',
+  'could cut the tension with a knife',
+  'exchanged a look',
+  'shared a knowing (glance|look)',
+];
+
+/**
+ * Science-speak in emotional moments (breaks authenticity)
+ */
+export const SCREENPLAY_SCIENCE_IN_EMOTION = [
+  "I'm not a variable",
+  'the equation',
+  'calculate the odds',
+  'probability suggests',
+  'statistically speaking',
+  'data indicates',
+  'the evidence shows',
+  'logically speaking',
+  'hypothesis',
+  'correlation between',
 ];
 
 /**
@@ -315,4 +380,132 @@ export function detectAIPatterns(text: string): { found: boolean; patterns: stri
     found: foundPatterns.length > 0,
     patterns: foundPatterns,
   };
+}
+
+/**
+ * Detects if a new sequence is rehashing story beats that already happened.
+ * Returns a 'confidence score' (0 to 1). If > 0.6, it's likely a loop.
+ * Uses Jaccard similarity on keywords + slugline matching.
+ */
+export function detectSequenceLoop(
+  newContent: string,
+  previousSummaries: { sequenceNumber: number; summary: string }[]
+): { isLoop: boolean; score: number; repeatedBeats: string[] } {
+  const repeatedBeats: string[] = [];
+  let loopScore = 0;
+
+  // 1. Extract Sluglines (Scene Headings)
+  const sluglineRegex = /^(INT\.|EXT\.)\s+[A-Z\s\-]+/gm;
+  const currentSluglines = newContent.match(sluglineRegex) || [];
+
+  // 2. Extract Key Nouns/Actions (5+ char words)
+  const getKeywords = (text: string) => {
+    return new Set(
+      text.toLowerCase()
+        .replace(/[^a-zA-Z\s]/g, '')
+        .split(/\s+/)
+        .filter(word => word.length > 5)
+    );
+  };
+
+  const currentKeywords = getKeywords(newContent);
+
+  for (const prev of previousSummaries) {
+    const prevKeywords = getKeywords(prev.summary);
+
+    // Calculate Jaccard Similarity for keywords
+    const intersection = new Set([...currentKeywords].filter(x => prevKeywords.has(x)));
+    const similarity = intersection.size / Math.min(currentKeywords.size, prevKeywords.size);
+
+    // 3. Slugline matching against summary descriptions
+    const slugOverlap = currentSluglines.filter(slug =>
+      prev.summary.toUpperCase().includes(slug.replace(/^(INT\.|EXT\.)\s+/, ''))
+    );
+
+    if (similarity > 0.5) {
+      loopScore += similarity;
+      repeatedBeats.push(`Sequence ${prev.sequenceNumber} keywords detected (${(similarity * 100).toFixed(0)}% overlap)`);
+    }
+
+    if (slugOverlap.length > 0 && similarity > 0.4) {
+      loopScore += 0.3;
+      repeatedBeats.push(`Repeat of locations from Sequence ${prev.sequenceNumber}`);
+    }
+  }
+
+  return {
+    isLoop: loopScore > 0.7,
+    score: Math.min(loopScore, 1),
+    repeatedBeats
+  };
+}
+
+/**
+ * Flag excessive tics before saving (last line of defense)
+ * Returns warnings if tics exceed limit
+ */
+export function flagExcessiveTics(text: string): {
+  text: string;
+  warnings: string[];
+} {
+  const ticPatterns: Record<string, RegExp> = {
+    'glasses': /\b(glasses|spectacles)\b/gi,
+    'wrists': /\bwrist/gi,
+    'drip': /\bdrip(s|ping|ped)?\b/gi,
+    'sigh': /\bsigh(s|ed|ing)?\b/gi,
+    'nod': /\bnod(s|ded|ding)?\b/gi,
+  };
+
+  const warnings: string[] = [];
+
+  for (const [tic, regex] of Object.entries(ticPatterns)) {
+    const matches = text.match(regex) || [];
+    if (matches.length > 2) {
+      warnings.push(`"${tic}" appears ${matches.length}x (max 2)`);
+    }
+  }
+
+  return { text, warnings };
+}
+
+/**
+ * Validate sequence doesn't reset story - prevents AI loops
+ */
+export function validateSequenceContinuity(
+  newSequence: string,
+  sequenceNumber: number
+): { valid: boolean; issues: string[] } {
+  const issues: string[] = [];
+
+  // Check for "opening image" patterns in non-first sequences
+  if (sequenceNumber > 1) {
+    const openingPatterns = [
+      /FADE IN:/i,
+      /^INT\..+MORNING/m,
+      /establishes? the world/i,
+      /we (first )?meet/i,
+      /introduces? (us to|the protagonist)/i,
+    ];
+
+    for (const pattern of openingPatterns) {
+      if (pattern.test(newSequence)) {
+        issues.push(`Sequence ${sequenceNumber} contains opening pattern: ${pattern.source}`);
+      }
+    }
+  }
+
+  // Check for story reset keywords
+  const resetPatterns = [
+    /before (all|any of) this/i,
+    /it all began/i,
+    /where (it|our story) (all )?(begins|started)/i,
+  ];
+
+  for (const pattern of resetPatterns) {
+    if (pattern.test(newSequence)) {
+      issues.push(`Story reset detected: ${pattern.source}`);
+    }
+  }
+
+  return { valid: issues.length === 0, issues };
 }
