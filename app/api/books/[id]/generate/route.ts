@@ -622,17 +622,22 @@ export async function POST(
 
       // SAFEGUARD: For text books with progress, don't delete - use /resume endpoint instead
       // This prevents accidental data loss when client incorrectly calls /generate
+      // EXCEPTION: Admins can force restart any book
       const bookFormatCheck = book.bookFormat || 'text_only';
       const isTextOnlyBook = bookFormatCheck === 'text_only';
       const hasProgress = book.currentChapter > 0 || book.chapters.length > 0;
 
-      if (isTextOnlyBook && hasProgress && book.outline) {
+      if (isTextOnlyBook && hasProgress && book.outline && !isAdmin) {
         console.log(`SAFEGUARD: Text book ${id} has ${book.chapters.length} chapters and outline. Refusing to delete. Use /resume instead.`);
         return NextResponse.json({
           error: 'Book has existing progress. Use /resume endpoint to continue generation.',
           currentChapter: book.currentChapter,
           existingChapters: book.chapters.length,
         }, { status: 400 });
+      }
+
+      if (isAdmin && hasProgress) {
+        console.log(`[Admin] Force restarting book ${id} with ${book.chapters.length} existing chapters`);
       }
 
       // Delete any existing chapters and illustrations from failed attempt
@@ -1050,10 +1055,20 @@ export async function POST(
       // Cast outline to visual chapters
       const visualChapters = outline.chapters as VisualChapter[];
 
-      // Step 2a: Generate all illustrations in parallel (using scene descriptions from outline)
-      console.log('Generating all illustrations in parallel...');
+      // PREVIEW LIMIT: Unpaid visual books get max 5 panels (free preview)
+      // This prevents Vercel timeout from trying to generate 20-24 panels
+      const FREE_PREVIEW_PANELS = 5;
+      const maxPanels = isPaid ? visualChapters.length : FREE_PREVIEW_PANELS;
+      const chaptersToGenerate = visualChapters.slice(startChapter - 1, maxPanels);
+
+      if (!isPaid && visualChapters.length > FREE_PREVIEW_PANELS) {
+        console.log(`[Preview] Limiting unpaid visual book to ${FREE_PREVIEW_PANELS} panels (book has ${visualChapters.length} total)`);
+      }
+
+      // Step 2a: Generate illustrations in parallel (using scene descriptions from outline)
+      console.log(`Generating ${chaptersToGenerate.length} illustrations in parallel...`);
       const illustrationResults = await generateIllustrationsInParallel(
-        visualChapters.slice(startChapter - 1), // Start from where we left off
+        chaptersToGenerate,
         {
           id,
           title: book.title,
@@ -1072,7 +1087,9 @@ export async function POST(
       console.log(`Generated ${illustrationResults.size} illustrations`);
 
       // Step 2b: Save chapters with their illustrations
-      for (let i = startChapter; i <= outline.chapters.length; i++) {
+      // For unpaid books, only save up to maxPanels (preview limit)
+      const panelsToSave = isPaid ? outline.chapters.length : maxPanels;
+      for (let i = startChapter; i <= panelsToSave; i++) {
         const chapterPlan = visualChapters[i - 1];
 
         // For visual books, the text is already in the outline
@@ -1139,8 +1156,9 @@ export async function POST(
       }
 
       // CRITICAL: Check if all illustrations were generated
-      // Visual books MUST have all illustrations before being marked complete
-      const expectedPanels = outline.chapters.length;
+      // For unpaid preview, we only expect panelsToSave illustrations
+      // For paid books, we expect all outline chapters
+      const expectedPanels = panelsToSave;
       const generatedPanels = illustrationResults.size;
       if (generatedPanels < expectedPanels) {
         console.error(`Visual book incomplete: ${generatedPanels}/${expectedPanels} illustrations generated`);
@@ -1157,6 +1175,27 @@ export async function POST(
           expected: expectedPanels,
           message: 'Some illustrations failed to generate. Please retry.',
         }, { status: 500 });
+      }
+
+      // For unpaid preview, mark as preview_complete instead of completed
+      // User needs to pay to generate all panels
+      if (!isPaid && panelsToSave < outline.chapters.length) {
+        console.log(`[Preview] Visual book preview complete: ${panelsToSave}/${outline.chapters.length} panels`);
+        await prisma.book.update({
+          where: { id },
+          data: {
+            status: 'preview',
+            currentChapter: panelsToSave,
+            totalChapters: outline.chapters.length,
+          },
+        });
+        return NextResponse.json({
+          success: true,
+          preview: true,
+          message: `Preview complete! ${panelsToSave} of ${outline.chapters.length} panels generated.`,
+          generatedPanels: panelsToSave,
+          totalPanels: outline.chapters.length,
+        });
       }
     } else {
       // STANDARD FLOW: Sequential generation for text-based books
