@@ -13,6 +13,7 @@ import Testimonials from '@/components/Testimonials';
 import FAQ from '@/components/FAQ';
 import SamplesSection from '@/components/SamplesSection';
 import ScreenplayAnimation from '@/components/ScreenplayAnimation';
+import FeaturedShowcase from '@/components/FeaturedShowcase';
 
 // Idea categories for the Surprise Me feature
 type IdeaCategory = 'random' | 'novel' | 'short_story' | 'nonfiction' | 'childrens' | 'comic' | 'adult_comic' | 'screenplay' | 'tv_series';
@@ -754,6 +755,9 @@ export default function Home() {
 
       {/* Sample Downloads */}
       <SamplesSection />
+
+      {/* Featured Showcase - Books, Comics, Screenplays */}
+      <FeaturedShowcase />
 
       {/* Screenplay Animation Showcase */}
       <section className="py-20 px-6 bg-white">

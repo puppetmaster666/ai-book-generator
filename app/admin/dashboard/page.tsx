@@ -29,6 +29,7 @@ import {
   Star,
   Upload,
 } from 'lucide-react';
+import Image from 'next/image';
 import ConfirmModal from '@/components/ConfirmModal';
 
 interface AdminStats {
@@ -865,6 +866,81 @@ export default function AdminDashboard() {
               )}
             </div>
           </div>
+        </div>
+
+        {/* Featured Content Management */}
+        <div className="bg-white rounded-xl border border-neutral-200 p-6 mb-8">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <h2 className="text-lg font-semibold flex items-center gap-2">
+                <Star className="h-5 w-5 text-yellow-500" />
+                Featured Showcase
+              </h2>
+              <span className="text-sm text-neutral-500">
+                ({stats.books.filter(b => b.isFeaturedSample).length}/8 slots filled)
+              </span>
+            </div>
+            <p className="text-sm text-neutral-500">
+              Toggle &quot;Featured&quot; on books below to add them to the homepage showcase
+            </p>
+          </div>
+
+          {/* Featured Items Grid */}
+          <div className="grid grid-cols-4 md:grid-cols-8 gap-3">
+            {Array.from({ length: 8 }).map((_, i) => {
+              const featuredBooks = stats.books.filter(b => b.isFeaturedSample);
+              const book = featuredBooks[i];
+
+              return (
+                <div
+                  key={i}
+                  className={`aspect-[3/4] rounded-lg border-2 overflow-hidden ${
+                    book
+                      ? 'border-yellow-400 bg-yellow-50'
+                      : 'border-dashed border-neutral-200 bg-neutral-50'
+                  }`}
+                >
+                  {book ? (
+                    <div className="h-full flex flex-col">
+                      {book.coverImageUrl ? (
+                        <div className="flex-1 relative">
+                          <Image
+                            src={book.coverImageUrl}
+                            alt={book.title}
+                            fill
+                            className="object-cover"
+                          />
+                        </div>
+                      ) : (
+                        <div className="flex-1 flex items-center justify-center bg-neutral-100">
+                          <BookOpen className="h-6 w-6 text-neutral-300" />
+                        </div>
+                      )}
+                      <div className="p-1.5 bg-white border-t border-neutral-100">
+                        <p className="text-[10px] font-medium text-neutral-900 truncate">{book.title}</p>
+                        <p className="text-[9px] text-neutral-500 truncate">
+                          {book.bookFormat === 'screenplay' ? 'Script' :
+                           book.bookFormat === 'comic' ? 'Comic' :
+                           book.bookFormat === 'picture_book' ? 'Picture' : 'Novel'}
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="h-full flex flex-col items-center justify-center p-2">
+                      <div className="w-8 h-8 rounded-full bg-neutral-100 flex items-center justify-center mb-1">
+                        <span className="text-neutral-400 text-xs font-medium">{i + 1}</span>
+                      </div>
+                      <span className="text-[9px] text-neutral-400 text-center">Empty slot</span>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          <p className="text-xs text-neutral-400 mt-3">
+            Expand a book in the list below and click &quot;Feature on Homepage&quot; to add it to the showcase.
+          </p>
         </div>
 
         {/* All Books */}
