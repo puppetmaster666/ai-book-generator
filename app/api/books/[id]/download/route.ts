@@ -161,11 +161,19 @@ export async function GET(
       return NextResponse.json({ error: 'Book not found' }, { status: 404 });
     }
 
-    if (book.status !== 'completed') {
+    // Allow download for completed books AND preview books (free samples)
+    // Preview books have limited content but should still be downloadable
+    const isDownloadable = book.status === 'completed' || book.status === 'preview';
+    if (!isDownloadable) {
       return NextResponse.json(
         { error: 'Book generation not complete' },
         { status: 400 }
       );
+    }
+
+    const isPreview = book.status === 'preview';
+    if (isPreview) {
+      console.log(`[Download] Generating preview download for book ${id} (free sample)`);
     }
 
     // Handle marketing materials download separately
