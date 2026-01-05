@@ -4,6 +4,98 @@ export type ContentRating = 'childrens' | 'general' | 'mature';
 // Truncate text to a maximum word count (for originalIdea preservation)
 export const MAX_ORIGINAL_IDEA_WORDS = 1000;
 
+/**
+ * Banned AI-sounding phrases for fiction writing.
+ * These are patterns that scream "AI-generated" and must be rewritten.
+ * Includes regex patterns (strings) for flexible matching.
+ */
+export const FICTION_BANNED_PHRASES: (string | RegExp)[] = [
+  // Narrative clichés that AI overuses
+  /little did .* know/i,
+  /couldn't help but/i,
+  /before .* knew it/i,
+  /as if on cue/i,
+  /in that moment/i,
+  /time seemed to/i,
+  /it was then that/i,
+  /with a sense of/i,
+  /something inside .* shifted/i,
+  /despite .* best efforts/i,
+
+  // Academic/essay transitions in fiction
+  'moreover',
+  'furthermore',
+  'additionally',
+  'subsequently',
+  "it's worth noting",
+  'interestingly',
+  'needless to say',
+  'it goes without saying',
+  'in conclusion',
+  'as mentioned earlier',
+
+  // Overdramatic physical reactions
+  'shivers ran down',
+  'blood ran cold',
+  'heart skipped a beat',
+  'breath caught in',
+  'stomach dropped',
+  'world seemed to stop',
+  'knees went weak',
+  'pulse quickened',
+
+  // AI dialogue patterns
+  'I need you to understand',
+  "Here's the thing",
+  'Let me be clear',
+  'With all due respect',
+  'To be honest with you',
+  'At the end of the day',
+  'The thing is',
+  'Look, I get it',
+
+  // Overwrought descriptions
+  'a kaleidoscope of',
+  'a symphony of',
+  'a tapestry of',
+  'a whirlwind of',
+  'a cascade of',
+  'a myriad of',
+
+  // Chapter opening clichés
+  /the (morning|evening|night) (sun|moon|air)/i,
+  /another day had (passed|begun|dawned)/i,
+];
+
+/**
+ * Check text for banned AI-sounding phrases.
+ * Returns found patterns for reporting and rewriting.
+ */
+export function detectFictionBannedPhrases(text: string): {
+  found: boolean;
+  patterns: string[];
+} {
+  const foundPatterns: string[] = [];
+  const lowerText = text.toLowerCase();
+
+  for (const phrase of FICTION_BANNED_PHRASES) {
+    if (phrase instanceof RegExp) {
+      if (phrase.test(text)) {
+        foundPatterns.push(`Pattern: "${phrase.source}"`);
+      }
+    } else {
+      if (lowerText.includes(phrase.toLowerCase())) {
+        foundPatterns.push(`Phrase: "${phrase}"`);
+      }
+    }
+  }
+
+  return {
+    found: foundPatterns.length > 0,
+    patterns: foundPatterns,
+  };
+}
+
 export function truncateToWordLimit(text: string, maxWords: number = MAX_ORIGINAL_IDEA_WORDS): string {
   const words = text.trim().split(/\s+/);
   if (words.length <= maxWords) return text;
@@ -37,8 +129,11 @@ export function getDynamicWritingInstructions(genre: string, bookType: string): 
 }
 
 /**
- * Returns only the last N chapter summaries to prevent AI from doing recaps.
- * A rolling context window keeps prompts lean and focused on immediate continuity.
+ * Returns Chapter 1 anchor + last N chapter summaries to prevent AI from doing recaps
+ * while maintaining the original "Opening Image" and core conflicts.
+ *
+ * The anchor prevents "plot amnesia" where the AI forgets the original setup,
+ * while the rolling window keeps prompts lean and focused on immediate continuity.
  */
 export function getRollingContext(storySoFar: string, maxPreviousChapters: number = 3): string {
   if (!storySoFar || storySoFar.trim() === '') {
@@ -46,16 +141,35 @@ export function getRollingContext(storySoFar: string, maxPreviousChapters: numbe
   }
 
   // Split by chapter summaries (usually separated by double newlines or "Chapter X:" patterns)
-  const summaries = storySoFar.split(/\n\n+/);
+  const summaries = storySoFar.split(/\n\n+/).filter(s => s.trim());
 
-  // Keep only the last N summaries
-  const recentSummaries = summaries.slice(-maxPreviousChapters);
-
-  if (recentSummaries.length === 0) {
+  if (summaries.length === 0) {
     return storySoFar; // Fallback to original if splitting failed
   }
 
-  return recentSummaries.join('\n\n');
+  // Always include the first chapter as anchor (contains the "Opening Image" and original conflicts)
+  const anchor = summaries[0];
+
+  // If we only have a few summaries, return them all
+  if (summaries.length <= maxPreviousChapters + 1) {
+    return storySoFar;
+  }
+
+  // Get the most recent N summaries (excluding the anchor if it would be duplicated)
+  const recentSummaries = summaries.slice(-maxPreviousChapters);
+
+  // Check if anchor is already included in recent summaries (avoid duplication)
+  const anchorInRecent = recentSummaries[0] === anchor;
+
+  if (anchorInRecent) {
+    return recentSummaries.join('\n\n');
+  }
+
+  return `=== OPENING ANCHOR (Chapter 1 - DO NOT FORGET) ===
+${anchor}
+
+=== RECENT EVENTS ===
+${recentSummaries.join('\n\n')}`;
 }
 
 // Get content guidelines based on content rating

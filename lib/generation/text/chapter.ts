@@ -12,7 +12,9 @@ import {
   getContentRatingInstructions,
   getDynamicWritingInstructions,
   getRollingContext,
-  detectLanguageInstruction
+  detectLanguageInstruction,
+  detectFictionBannedPhrases,
+  FICTION_BANNED_PHRASES
 } from '../shared/writing-quality';
 
 // Remove duplicate chapter headings that appear twice (e.g., ALL CAPS then Title Case)
@@ -206,6 +208,7 @@ export async function generateChapter(data: {
   chapterKeyPoints?: string[]; // For non-fiction chapters
   contentRating?: ContentRating; // Content maturity level
   totalChapters?: number; // Total chapters in book (for "The End" on last chapter)
+  correctiveInstructions?: string; // From consistency check - steering to fix drift
 }): Promise<string> {
   const isLastChapter = data.totalChapters && data.chapterNumber >= data.totalChapters;
   const formatInstruction = {
@@ -323,7 +326,12 @@ ${rollingContext}
 
 CHARACTER STATES:
 ${JSON.stringify(data.characterStates || {}, null, 2)}
-
+${data.correctiveInstructions ? `
+=== CORRECTIVE STEERING (MANDATORY) ===
+A consistency check has identified issues that MUST be addressed in this chapter:
+${data.correctiveInstructions}
+Follow these instructions carefully to maintain story consistency.
+` : ''}
 WRITE CHAPTER ${data.chapterNumber}: "${data.chapterTitle}"
 Plan: ${data.chapterPlan}
 ${data.chapterPov ? `POV: ${data.chapterPov}` : ''}
@@ -396,7 +404,8 @@ This is the FINAL chapter. End the book with "The End" on its own line at the ve
 OUTPUT: The chapter text only, starting with the chapter heading.`;
   }
 
-  // Try with progressively more aggressive sanitization (4 attempts)
+  // Try with progressively more tasteful rewrites (4 attempts)
+  // Key insight: Don't corrupt the prompt with word-swapping. Instead, add rewrite instructions.
   const maxAttempts = 4;
   let lastError: Error | null = null;
 
@@ -404,15 +413,30 @@ OUTPUT: The chapter text only, starting with the chapter heading.`;
     let currentPrompt = prompt;
 
     if (attempt === 1) {
-      // First retry: Basic sanitization
-      console.log(`[Chapter ${data.chapterNumber}] Attempt 2: Retrying with sanitized content...`);
-      currentPrompt = sanitizeContentForSafety(prompt);
-      currentPrompt += '\n\nIMPORTANT: Write a tasteful, mature story that focuses on emotional connections and character development. Use euphemisms and implications rather than explicit descriptions. Keep all content suitable for a mature but not explicit audience.';
+      // First retry: Add tasteful rewrite instructions (no word-swapping)
+      console.log(`[Chapter ${data.chapterNumber}] Attempt 2: Retrying with tasteful rewrite instructions...`);
+      currentPrompt = prompt + `
+
+=== CONTENT FILTER TRIGGERED - REWRITE INSTRUCTIONS ===
+The previous version was blocked by safety filters. Rewrite this chapter to:
+- Replace explicit scenes with atmospheric implication ("the door closed behind them" + time skip)
+- Use emotional focus: "she felt wanted for the first time in years" instead of physical description
+- For violence: focus on the aftermath and emotional impact, not the act itself
+- Keep the same plot beats but make them "prestige drama" (HBO level, not explicit)
+- Characters can still be flirtatious and romantic, just fade-to-black on intimate scenes`;
     } else if (attempt === 2) {
-      // Second retry: Ultra-sanitized, family-friendly
-      console.log(`[Chapter ${data.chapterNumber}] Attempt 3: Ultra-sanitized family-friendly mode...`);
-      currentPrompt = sanitizeContentForSafety(sanitizeContentForSafety(prompt)); // Double sanitize
-      currentPrompt += '\n\nCRITICAL SAFETY OVERRIDE: The previous attempts were blocked. You MUST write completely family-friendly content suitable for all ages. NO violence, NO romance beyond hand-holding, NO conflict descriptions. Focus purely on dialogue, character emotions, and plot advancement. If the scene requires mature content, summarize it as "time passed" and skip to the next safe scene.';
+      // Second retry: Summarize explicit scenes, don't write them
+      console.log(`[Chapter ${data.chapterNumber}] Attempt 3: Skip-and-summarize mode...`);
+      currentPrompt = prompt + `
+
+=== SAFETY OVERRIDE - SUMMARIZE DON'T SHOW ===
+Multiple attempts were blocked. For this version:
+- If ANY scene could be explicit: write ONE LINE summarizing what happened, then skip ahead
+  Example: "They spent the night together. By morning, everything had changed."
+  Example: "The fight was brutal. When it was over, only Marcus was standing."
+- Focus entirely on dialogue, emotions, and plot advancement
+- Think PG-13: implications yes, details no
+- This is still a good story - just safer to publish`;
     } else if (attempt === 3) {
       // Final fallback: Generate a minimal bridge chapter from just the summary
       console.log(`[Chapter ${data.chapterNumber}] Attempt 4: Generating safe bridge chapter from summary only...`);
@@ -592,6 +616,32 @@ YOUR EDITING TASKS:
    - Vary transition phrases - not every chapter should end with "In the next chapter, we will..."
    - Fix truncated words: "legary"→"legendary", "surrer"→"surrender", "sp time"→"spend time", "Ninto"→"Nintendo"
 
+7b. REMOVE BANNED AI PHRASES (CRITICAL FOR FICTION):
+   These phrases SCREAM "AI-generated" and MUST be rewritten or removed:
+
+   NARRATIVE CLICHÉS - rewrite completely:
+   - "little did [X] know" → just show what happens next
+   - "couldn't help but" → "she [action]" directly
+   - "before [X] knew it" → delete, show the action
+   - "as if on cue" → delete or describe the timing naturally
+   - "in that moment" → delete, redundant
+   - "time seemed to slow/stop" → delete, use specific sensory details
+   - "something inside [X] shifted" → show the emotion through action
+
+   ACADEMIC TRANSITIONS - delete or replace with nothing:
+   - "moreover", "furthermore", "additionally", "subsequently"
+   - "it's worth noting", "interestingly", "needless to say"
+
+   OVERWROUGHT PHYSICAL REACTIONS - replace with specific, unique descriptions:
+   - "shivers ran down" → something specific to the character
+   - "blood ran cold" → describe the actual physical sensation uniquely
+   - "heart skipped a beat" → "her breath hitched" or similar
+   - "stomach dropped" → find a fresh alternative
+
+   CLICHÉ DESCRIPTIONS - rewrite entirely:
+   - "a kaleidoscope/symphony/tapestry/whirlwind/cascade/myriad of"
+   - These are lazy placeholder descriptions - be specific instead
+
 8. FIX "CHAPTER RESET SYNDROME" (CRITICAL FOR FICTION):
    - If the chapter opening summarizes or recaps the previous chapter - REMOVE IT
    - Examples to DELETE or rewrite:
@@ -698,6 +748,14 @@ Return ONLY the corrected chapter text. No explanations, no comments, no markdow
     if (polishedWords < originalWords * 0.5) {
       console.error(`[Review] REJECTED: Output too short (${polishedWords} vs ${originalWords} words). Keeping original.`);
       return { content: chapterContent, success: false };
+    }
+
+    // Check for remaining banned AI phrases (for monitoring/improvement)
+    if (bookType === 'fiction' || bookType === 'novel') {
+      const bannedCheck = detectFictionBannedPhrases(polished);
+      if (bannedCheck.found) {
+        console.warn(`[Review] WARNING: ${bannedCheck.patterns.length} AI phrases still present after review:`, bannedCheck.patterns.slice(0, 5).join(', '));
+      }
     }
 
     console.log(`[Review] SUCCESS in ${elapsed}ms. Words: ${originalWords} -> ${polishedWords}`);

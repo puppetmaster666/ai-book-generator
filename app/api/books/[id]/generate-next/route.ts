@@ -237,6 +237,15 @@ export async function POST(
     let characterStates = (book.characterStates as Record<string, object>) || {};
     let totalWords = book.totalWords || 0;
 
+    // Extract any corrective instructions from previous consistency check
+    // These are stored in characterStates under a special key to persist between API calls
+    const correctiveInstructions = (characterStates as Record<string, unknown>).__correctiveInstructions as string | undefined;
+    if (correctiveInstructions) {
+      console.log(`[Consistency] Applying corrective instructions from previous check: ${correctiveInstructions.substring(0, 100)}...`);
+      // Clear after reading (will be re-added if another consistency check runs)
+      delete (characterStates as Record<string, unknown>).__correctiveInstructions;
+    }
+
     console.log(`Generating chapter ${nextChapterNum}/${totalChapters} for book ${id}`);
 
     // SCREENPLAY GENERATION FLOW
@@ -471,6 +480,7 @@ export async function POST(
           chapterKeyPoints: chapterPlan.keyPoints, // Pass key points for non-fiction
           contentRating: (book.contentRating || 'general') as ContentRating,
           totalChapters, // For adding "The End" on final chapter
+          correctiveInstructions, // From consistency check - steering to fix narrative drift
         }),
         CHAPTER_TIMEOUT_MS,
         `Chapter ${nextChapterNum} generation`
@@ -536,7 +546,9 @@ ${chapterPlan.summary}
         console.log(`[Consistency] Drift analysis: ${consistencyResult.driftAnalysis.substring(0, 200)}...`);
         if (consistencyResult.correctiveInstructions) {
           console.log(`[Consistency] Corrective instructions: ${consistencyResult.correctiveInstructions.substring(0, 200)}...`);
-          // TODO: In future, could enhance generateChapter to accept these instructions
+          // Store corrective instructions in characterStates for the NEXT chapter to use
+          // This persists between API calls via the database
+          (characterStates as Record<string, unknown>).__correctiveInstructions = consistencyResult.correctiveInstructions;
         }
       } catch (consistencyError) {
         console.error(`[Consistency] Check failed (non-blocking):`, consistencyError);
