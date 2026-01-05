@@ -400,12 +400,20 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
 
           // First, check current book status - the chapter might have completed during a timeout
           const statusRes = await fetch(`/api/books/${id}/status`);
+          let serverCurrentChapter = 0;
           if (statusRes.ok) {
             const statusData = await statusRes.json();
             const serverChapterCount = statusData.status?.chapterCount || 0;
+            serverCurrentChapter = statusData.status?.currentChapter || 0;
             const localChapterCount = lastKnownChapterCountRef.current;
 
-            // If server has more chapters, fetch full data and update
+            // ALWAYS sync local ref with server state to avoid stale data on resume
+            if (serverChapterCount !== localChapterCount) {
+              console.log(`[Session ${currentSession}] Syncing chapter count: local=${localChapterCount}, server=${serverChapterCount}`);
+              lastKnownChapterCountRef.current = serverChapterCount;
+            }
+
+            // If server has more chapters, fetch full data and update UI
             if (serverChapterCount > localChapterCount) {
               console.log(`[Session ${currentSession}] Detected new chapters on server (${localChapterCount} -> ${serverChapterCount})`);
               const fullRes = await fetch(`/api/books/${id}`);
@@ -436,8 +444,9 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
             }
           }
 
-          // Mark current chapter as generating in the UI
-          const nextChapterNum = (lastKnownChapterCountRef.current || 0) + 1;
+          // Use server's currentChapter to determine next chapter (more reliable than local count)
+          // Server currentChapter is the last completed chapter number (0 = none done, 1 = ch1 done, etc.)
+          const nextChapterNum = serverCurrentChapter + 1;
           setChapterStatuses(prev => prev.map(ch =>
             ch.number === nextChapterNum ? { ...ch, status: 'generating' as const, error: undefined } : ch
           ));
