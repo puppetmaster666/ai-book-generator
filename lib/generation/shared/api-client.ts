@@ -261,6 +261,54 @@ export function getGeminiImage(): GenerativeModel {
   return _geminiImage;
 }
 
+// Quick health check timeout - 5 seconds max for a simple test
+const HEALTH_CHECK_TIMEOUT_MS = 5000;
+
+// Test if an API key is working with a quick, cheap request
+// Returns true if working, false if rate-limited or broken
+async function testApiKeyHealth(): Promise<boolean> {
+  try {
+    const model = getGeminiFlashLight();
+    const result = await Promise.race([
+      model.generateContent('Say "ok"'),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('HEALTH_CHECK_TIMEOUT')), HEALTH_CHECK_TIMEOUT_MS)
+      )
+    ]);
+    // Check if we got a response
+    const text = result.response?.text?.();
+    return !!text; // Any response means the key is working
+  } catch (error) {
+    const errorMsg = (error as Error).message || '';
+    console.log(`[Gemini] Health check failed for key ${getCurrentKeyIndex()}: ${errorMsg.substring(0, 100)}`);
+    return false;
+  }
+}
+
+// Find a working API key by testing each one quickly
+// Returns true if a working key was found, false if all keys failed
+async function findWorkingKey(): Promise<boolean> {
+  const totalKeys = API_KEY_ENV_NAMES.filter(name => process.env[name]).length;
+  const startKey = getCurrentKeyIndex();
+
+  console.log(`[Gemini] Quick health check starting with key ${startKey}...`);
+
+  for (let i = 0; i < totalKeys; i++) {
+    const isHealthy = await testApiKeyHealth();
+    if (isHealthy) {
+      console.log(`[Gemini] Key ${getCurrentKeyIndex()} passed health check`);
+      return true;
+    }
+
+    // Key failed, try next one
+    const rotated = rotateApiKey();
+    if (!rotated) break;
+  }
+
+  console.warn(`[Gemini] All keys failed health check, proceeding with key ${getCurrentKeyIndex()} anyway`);
+  return false;
+}
+
 // Key rotation wrapper - tries all 4 keys before giving up
 // Each key attempt has a 240s safety timeout to prevent Vercel from killing the function
 // Takes a function that creates the promise so we can retry with different key
@@ -276,6 +324,11 @@ export async function withTimeout<T>(
 
   // Start with last working key if available
   switchToLastWorkingKey();
+
+  // Quick health check: find a working key BEFORE starting the expensive operation
+  // This detects rate-limited keys in ~2s instead of waiting 4min for timeout
+  await findWorkingKey();
+
   console.log(`[Gemini] Starting ${operationName} with key ${getCurrentKeyIndex()} (${SAFETY_TIMEOUT_MS / 1000}s safety timeout per key)`);
 
   // Try all keys before giving up
