@@ -530,8 +530,30 @@ Pick up AFTER the last event and push toward the next beat sheet milestone.`,
     }
 
     // STANDARD CHAPTER GENERATION FLOW
-    // Generate chapter content with timeout to prevent stale books
+    // Generate chapter content with streaming for live preview
     let chapterContent: string;
+
+    // Track last DB update time to throttle writes
+    let lastLivePreviewUpdate = 0;
+    const LIVE_PREVIEW_UPDATE_INTERVAL = 1500; // Update DB every 1.5 seconds max
+
+    // Callback for live preview updates during streaming
+    const onProgress = async (accumulatedText: string) => {
+      const now = Date.now();
+      if (now - lastLivePreviewUpdate > LIVE_PREVIEW_UPDATE_INTERVAL) {
+        try {
+          await prisma.book.update({
+            where: { id },
+            data: { livePreview: accumulatedText },
+          });
+          lastLivePreviewUpdate = now;
+        } catch (e) {
+          // Ignore errors - live preview is non-critical
+          console.log(`[LivePreview] Failed to update: ${(e as Error).message}`);
+        }
+      }
+    };
+
     try {
       chapterContent = await withTimeout(
         generateChapter({
@@ -552,6 +574,7 @@ Pick up AFTER the last event and push toward the next beat sheet milestone.`,
           contentRating: (book.contentRating || 'general') as ContentRating,
           totalChapters, // For adding "The End" on final chapter
           correctiveInstructions, // From consistency check - steering to fix narrative drift
+          onProgress, // Live preview streaming callback
         }),
         CHAPTER_TIMEOUT_MS,
         `Chapter ${nextChapterNum} generation`
@@ -728,7 +751,7 @@ ${chapterPlan.summary}
       throw createError;
     }
 
-    // Update book progress
+    // Update book progress and clear live preview
     await prisma.book.update({
       where: { id },
       data: {
@@ -737,6 +760,7 @@ ${chapterPlan.summary}
         totalWords,
         storySoFar,
         characterStates,
+        livePreview: null, // Clear live preview after chapter complete
         errorMessage: null, // Clear any previous error
       },
     });

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { Sparkles, Eye, EyeOff, Loader2 } from 'lucide-react';
 
 interface LivePreviewProps {
@@ -20,78 +20,85 @@ export default function LivePreview({
 }: LivePreviewProps) {
   const [isExpanded, setIsExpanded] = useState(true);
   const [streamText, setStreamText] = useState('');
-  const [chapterTitle, setChapterTitle] = useState('');
-  const [wordCount, setWordCount] = useState(0);
-  const [isConnected, setIsConnected] = useState(false);
-  const [hasStarted, setHasStarted] = useState(false);
+  const [isActive, setIsActive] = useState(false);
+  const [lastChapter, setLastChapter] = useState(currentChapter);
   const contentRef = useRef<HTMLDivElement>(null);
-  const eventSourceRef = useRef<EventSource | null>(null);
+  const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Connect to SSE stream when generation starts
+  // Count words in text
+  const countWords = (text: string) => {
+    return text.split(/\s+/).filter(w => w.length > 0).length;
+  };
+
+  const wordCount = countWords(streamText);
+
+  // Poll for live preview content
+  const fetchLivePreview = useCallback(async () => {
+    try {
+      const response = await fetch(`/api/books/${bookId}/live-preview`);
+      if (!response.ok) return;
+
+      const data = await response.json();
+
+      if (data.livePreview) {
+        setStreamText(data.livePreview);
+        setIsActive(true);
+      }
+
+      // Detect chapter completion
+      if (data.currentChapter > lastChapter) {
+        setLastChapter(data.currentChapter);
+        if (onChapterComplete) {
+          onChapterComplete(data.currentChapter, countWords(data.livePreview || ''));
+        }
+        // Clear preview text when chapter completes
+        if (!data.livePreview) {
+          setStreamText('');
+        }
+      }
+
+      // Stop polling if no longer generating
+      if (!data.isGenerating) {
+        setIsActive(false);
+      }
+    } catch (error) {
+      // Ignore errors - polling is best-effort
+    }
+  }, [bookId, lastChapter, onChapterComplete]);
+
+  // Start/stop polling based on generation status
   useEffect(() => {
     if (!isGenerating || !bookId) {
-      // Clean up when not generating
-      if (eventSourceRef.current) {
-        eventSourceRef.current.close();
-        eventSourceRef.current = null;
+      // Stop polling when not generating
+      if (pollIntervalRef.current) {
+        clearInterval(pollIntervalRef.current);
+        pollIntervalRef.current = null;
       }
-      setIsConnected(false);
+      setIsActive(false);
       return;
     }
 
-    // Don't stream for visual books (comics, picture books) - they have different flow
+    // Don't poll for visual books
     if (bookFormat && ['comic', 'picture_book', 'illustrated'].includes(bookFormat)) {
       return;
     }
 
-    // Connect to the stream
-    const eventSource = new EventSource(`/api/books/${bookId}/stream`);
-    eventSourceRef.current = eventSource;
-
-    eventSource.onopen = () => {
-      setIsConnected(true);
-      setStreamText('');
-      setHasStarted(false);
-    };
-
-    eventSource.addEventListener('start', (e) => {
-      const data = JSON.parse(e.data);
-      setChapterTitle(data.chapterTitle || `Chapter ${data.chapterNum}`);
-      setStreamText('');
-      setWordCount(0);
-      setHasStarted(true);
-    });
-
-    eventSource.addEventListener('chunk', (e) => {
-      const data = JSON.parse(e.data);
-      setStreamText(prev => prev + data.text);
-      setWordCount(data.wordCount);
-    });
-
-    eventSource.addEventListener('complete', (e) => {
-      const data = JSON.parse(e.data);
-      setIsConnected(false);
-      if (onChapterComplete && data.chapterNum) {
-        onChapterComplete(data.chapterNum, data.wordCount);
-      }
-      eventSource.close();
-    });
-
-    eventSource.addEventListener('error', (e) => {
-      console.error('SSE error:', e);
-      setIsConnected(false);
-      eventSource.close();
-    });
-
-    eventSource.onerror = () => {
-      setIsConnected(false);
-      eventSource.close();
-    };
+    // Start polling every 1 second
+    fetchLivePreview(); // Initial fetch
+    pollIntervalRef.current = setInterval(fetchLivePreview, 1000);
 
     return () => {
-      eventSource.close();
+      if (pollIntervalRef.current) {
+        clearInterval(pollIntervalRef.current);
+        pollIntervalRef.current = null;
+      }
     };
-  }, [isGenerating, bookId, bookFormat, onChapterComplete]);
+  }, [isGenerating, bookId, bookFormat, fetchLivePreview]);
+
+  // Update lastChapter when prop changes
+  useEffect(() => {
+    setLastChapter(currentChapter);
+  }, [currentChapter]);
 
   // Auto-scroll to bottom as new text arrives
   useEffect(() => {
@@ -110,7 +117,7 @@ export default function LivePreview({
     return null;
   }
 
-  // Get last ~500 characters for the preview
+  // Get last ~800 characters for the preview
   const previewText = streamText.length > 800
     ? '...' + streamText.slice(-800)
     : streamText;
@@ -125,9 +132,9 @@ export default function LivePreview({
         <div className="flex items-center gap-2">
           <Sparkles className="h-4 w-4 text-lime-400 animate-pulse" />
           <span className="text-sm font-medium text-white">
-            {hasStarted ? chapterTitle : 'AI Writing...'}
+            Chapter {currentChapter + 1}
           </span>
-          {isConnected && (
+          {isActive && (
             <span className="flex items-center gap-1 text-xs text-lime-400">
               <Loader2 className="h-3 w-3 animate-spin" />
               Live
@@ -153,22 +160,20 @@ export default function LivePreview({
           className="p-4 h-48 overflow-y-auto bg-neutral-900 font-mono text-xs text-neutral-300 leading-relaxed"
           style={{ scrollBehavior: 'smooth' }}
         >
-          {!hasStarted ? (
+          {!streamText ? (
             <div className="flex items-center justify-center h-full text-neutral-500">
               <div className="text-center">
                 <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2" />
-                <p>Preparing chapter...</p>
+                <p>Waiting for AI...</p>
               </div>
             </div>
-          ) : previewText ? (
+          ) : (
             <>
               <span className="whitespace-pre-wrap">{previewText}</span>
-              <span className="inline-block w-2 h-4 bg-lime-400 ml-0.5 animate-pulse" />
+              {isActive && (
+                <span className="inline-block w-2 h-4 bg-lime-400 ml-0.5 animate-pulse" />
+              )}
             </>
-          ) : (
-            <div className="flex items-center justify-center h-full text-neutral-500">
-              <Loader2 className="h-5 w-5 animate-spin" />
-            </div>
           )}
         </div>
       )}

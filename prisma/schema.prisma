@@ -8,35 +8,26 @@ datasource db {
 }
 
 model User {
-  id            String    @id @default(cuid())
-  email         String    @unique
-  emailVerified DateTime?
-  name          String?
-  image         String?
-  passwordHash  String?
-
-  // Subscription
-  plan          String    @default("free") // free, monthly, yearly
-  credits       Int       @default(0)
-  stripeCustomerId String?
+  id                   String         @id @default(cuid())
+  email                String         @unique
+  name                 String?
+  passwordHash         String?
+  plan                 String         @default("free")
+  credits              Int            @default(0)
+  stripeCustomerId     String?
   stripeSubscriptionId String?
-
-  // Free tier tracking
-  freeBookUsed  Boolean   @default(false)
-  freeCredits   Int       @default(0) // Free book credits from admin
-
-  // Admin
-  isAdmin       Boolean   @default(false)
-
-  // NextAuth relations
-  accounts      Account[]
-  sessions      Session[]
-
-  books         Book[]
-  notifications Notification[]
-  creditClaims  CreditClaim[]
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  createdAt            DateTime       @default(now())
+  updatedAt            DateTime       @updatedAt
+  emailVerified        DateTime?
+  image                String?
+  freeBookUsed         Boolean        @default(false)
+  isAdmin              Boolean        @default(false)
+  freeCredits          Int            @default(0)
+  accounts             Account[]
+  books                Book[]
+  creditClaims         CreditClaim[]
+  notifications        Notification[]
+  sessions             Session[]
 }
 
 model Account {
@@ -45,15 +36,14 @@ model Account {
   type              String
   provider          String
   providerAccountId String
-  refresh_token     String? @db.Text
-  access_token      String? @db.Text
+  refresh_token     String?
+  access_token      String?
   expires_at        Int?
   token_type        String?
   scope             String?
-  id_token          String? @db.Text
+  id_token          String?
   session_state     String?
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
 }
@@ -75,148 +65,104 @@ model VerificationToken {
 }
 
 model Book {
-  id              String    @id @default(cuid())
-
-  // Optional user association (anonymous purchases have null)
-  userId          String?
-  user            User?     @relation(fields: [userId], references: [id])
-
-  // For anonymous users
-  email           String?
-  ipAddress       String?   // Track IP for rate limiting
-
-  // User inputs
-  title           String
-  authorName      String    @default("")
-  genre           String
-  bookType        String    // fiction, non-fiction
-  premise         String    @db.Text
-  originalIdea    String?   @db.Text  // User's full original input (preserved for context)
-  characters      Json      // Array of {name, description}
-  beginning       String    @db.Text
-  middle          String    @db.Text
-  ending          String    @db.Text
-  writingStyle    String
-  chapterFormat   String    // numbers, titles, both, pov
-  fontStyle       String    @default("classic")
-
-  // Book format & illustrations
-  bookFormat      String    @default("text_only") // text_only, illustrated, picture_book
-  artStyle        String?   // watercolor, cartoon, storybook, etc.
-  dialogueStyle   String?   // prose (text under images), bubbles (speech bubbles on images)
-  bookPreset      String?   // novel, childrens_picture, etc.
-  contentRating   String    @default("general") // childrens, general, mature
-
-  // Target settings
-  targetWords     Int
-  targetChapters  Int
-
-  // Generated content
-  outline         Json?     // Array of {chapterNum, title, summary, pov, targetWords, illustrationPrompt?}
-  storySoFar      String?   @db.Text
-  characterStates Json?     // Current state of each character
-
-  // Visual consistency guides (for illustrated books)
-  characterVisualGuide Json?  // Detailed character descriptions for consistent illustrations
-  visualStyleGuide     Json?  // Style guide for maintaining illustration consistency
-  characterPortraits   Json?  // Array of {characterName, facePortrait, fullBodyPortrait} - canonical reference images
-
-  // Screenplay-specific context (for movie scripts)
-  screenplayContext    Json?  // Running context for screenplay continuity (character states, setups, payoffs)
-
-  // Marketing metadata (generated after book completes)
-  metadata             Json?  // { logline, backCoverCopy, amazonKeywords[], includeBackCoverInPdf }
-
-  // Protagonist image (for illustrated books - user uploads their photo)
-  protagonistPhoto     String?   @db.Text  // Original uploaded photo (base64)
-  protagonistStyled    String?   @db.Text  // Stylized version in book's art style (base64)
-  protagonistDescription String? @db.Text  // Text description of protagonist for consistency
-
-  // Cover
-  coverImageUrl   String?
-  coverPrompt     String?   @db.Text
-
-  // Status
-  status          String    @default("pending") // pending, outlining, generating, completed, failed
-  currentChapter  Int       @default(0)
-  totalChapters   Int       @default(0)
-  totalWords      Int       @default(0)
-  errorMessage    String?   @db.Text
-  generationStartedAt DateTime?  // When generation actually started
-
-  // Payment
-  paymentId       String?
-  paymentStatus   String    @default("pending") // pending, free_preview (limited sample), completed, failed
-  paymentMethod   String?   // stripe_single, stripe_subscription, free_book, free_credit, promo
-
-  // Featured books for public showcase
-  featured        Boolean   @default(false)
-
-  // Featured samples for homepage (admin selects these)
-  isFeaturedSample Boolean  @default(false)
-  samplePdfUrl     String?  // Uploaded PDF for sample download
-
-  // Download tracking
-  downloadedAt    DateTime?  // When book was first downloaded
-  downloadFormat  String?    // epub or pdf
-
-  chapters        Chapter[]
-  illustrations   Illustration[]
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-  completedAt     DateTime?
+  id                     String         @id @default(cuid())
+  userId                 String?
+  email                  String?
+  title                  String
+  authorName             String         @default("")
+  genre                  String
+  bookType               String
+  premise                String
+  characters             Json
+  beginning              String
+  middle                 String
+  ending                 String
+  writingStyle           String
+  chapterFormat          String
+  fontStyle              String         @default("classic")
+  targetWords            Int
+  targetChapters         Int
+  outline                Json?
+  storySoFar             String?
+  characterStates        Json?
+  coverImageUrl          String?
+  coverPrompt            String?
+  status                 String         @default("pending")
+  currentChapter         Int            @default(0)
+  totalChapters          Int            @default(0)
+  totalWords             Int            @default(0)
+  errorMessage           String?
+  paymentId              String?
+  paymentStatus          String         @default("pending")
+  createdAt              DateTime       @default(now())
+  updatedAt              DateTime       @updatedAt
+  completedAt            DateTime?
+  artStyle               String?
+  bookFormat             String         @default("text_only")
+  bookPreset             String?
+  characterVisualGuide   Json?
+  visualStyleGuide       Json?
+  dialogueStyle          String?
+  featured               Boolean        @default(false)
+  generationStartedAt    DateTime?
+  downloadFormat         String?
+  downloadedAt           DateTime?
+  protagonistDescription String?
+  protagonistPhoto       String?
+  protagonistStyled      String?
+  contentRating          String         @default("general")
+  originalIdea           String?
+  paymentMethod          String?
+  ipAddress              String?
+  characterPortraits     Json?
+  screenplayContext      Json?
+  metadata               Json?
+  isFeaturedSample       Boolean        @default(false)
+  samplePdfUrl           String?
+  livePreview            String?
+  user                   User?          @relation(fields: [userId], references: [id])
+  chapters               Chapter[]
+  illustrations          Illustration[]
 }
 
 model Chapter {
-  id        String   @id @default(cuid())
-  bookId    String
-  book      Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
-
-  number    Int
-  title     String
-  content   String   @db.Text
-  summary   String   @db.Text
-  wordCount Int
-
-  // Scene description for visual books (enables parallel generation)
-  sceneDescription Json?   // { description, characters, characterActions, background, mood, cameraAngle }
-  // Dialogue for comic-style books
-  dialogue         Json?   // Array of { speaker, text, position }
-
-  illustrations Illustration[]
-  reviewed      Boolean  @default(false)  // Track if async review has been done
-  createdAt     DateTime @default(now())
+  id               String         @id @default(cuid())
+  bookId           String
+  number           Int
+  title            String
+  content          String
+  summary          String
+  wordCount        Int
+  createdAt        DateTime       @default(now())
+  dialogue         Json?
+  sceneDescription Json?
+  reviewed         Boolean        @default(false)
+  book             Book           @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  illustrations    Illustration[]
 
   @@unique([bookId, number])
   @@index([bookId])
 }
 
 model Illustration {
-  id          String   @id @default(cuid())
-  bookId      String
-  book        Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
-  chapterId   String?
-  chapter     Chapter? @relation(fields: [chapterId], references: [id], onDelete: Cascade)
-
-  // Image details
-  imageUrl    String?  // URL to stored image (null if failed/pending)
-  originalUrl String?  // Original image URL before bubble overlay (for comics)
-  prompt      String   @db.Text  // The prompt used to generate
-  altText     String?  // Accessibility text
-  position    Int      @default(0) // Order within chapter (0 = chapter start)
-
-  // Metadata
-  width       Int      @default(1024)
-  height      Int      @default(1024)
-  style       String?  // Art style used
-
-  // Generation status tracking
-  status       String   @default("completed") // pending, generating, completed, failed
-  errorMessage String?  @db.Text  // Error message if failed
-  retryCount   Int      @default(0) // Number of retry attempts
-
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @default(now()) @updatedAt
+  id           String   @id @default(cuid())
+  bookId       String
+  chapterId    String?
+  imageUrl     String?
+  prompt       String
+  altText      String?
+  position     Int      @default(0)
+  width        Int      @default(1024)
+  height       Int      @default(1024)
+  style        String?
+  createdAt    DateTime @default(now())
+  originalUrl  String?
+  errorMessage String?
+  retryCount   Int      @default(0)
+  status       String   @default("completed")
+  updatedAt    DateTime @default(now()) @updatedAt
+  book         Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  chapter      Chapter? @relation(fields: [chapterId], references: [id], onDelete: Cascade)
 
   @@index([bookId])
   @@index([chapterId])
@@ -224,49 +170,42 @@ model Illustration {
 }
 
 model Payment {
-  id              String   @id @default(cuid())
-
-  // Stripe
-  stripePaymentId String   @unique
+  id               String   @id @default(cuid())
+  stripePaymentId  String   @unique
   stripeCustomerId String?
-
-  // Details
-  email           String
-  amount          Int      // in cents
-  currency        String   @default("usd")
-  status          String   // pending, completed, failed, refunded
-
-  // What was purchased
-  productType     String   // one-time, monthly, yearly
-  bookId          String?  // for one-time purchases
-
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  email            String
+  amount           Int
+  currency         String   @default("usd")
+  status           String
+  productType      String
+  bookId           String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 }
 
 model PromoCode {
-  id          String   @id @default(cuid())
-  code        String   @unique
-  discount    Float    @default(1.0) // 1.0 = 100% off (free)
-  fixedPrice  Int?     // If set, overrides price to this amount in cents (e.g., 150 = $1.50)
+  id          String           @id @default(cuid())
+  code        String           @unique
+  discount    Float            @default(1.0)
   maxUses     Int
-  currentUses Int      @default(0)
+  currentUses Int              @default(0)
   validUntil  DateTime?
-  isActive    Boolean  @default(true)
-  onePerUser  Boolean  @default(false) // Limit to one use per email/IP
+  isActive    Boolean          @default(true)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  onePerUser  Boolean          @default(false)
+  fixedPrice  Int?
   usages      PromoCodeUsage[]
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
 }
 
 model PromoCodeUsage {
   id          String    @id @default(cuid())
   promoCodeId String
-  promoCode   PromoCode @relation(fields: [promoCodeId], references: [id], onDelete: Cascade)
   email       String?
   ipAddress   String?
   bookId      String?
   createdAt   DateTime  @default(now())
+  promoCode   PromoCode @relation(fields: [promoCodeId], references: [id], onDelete: Cascade)
 
   @@index([promoCodeId])
   @@index([email])
@@ -276,12 +215,12 @@ model PromoCodeUsage {
 model Notification {
   id        String   @id @default(cuid())
   userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  type      String   // 'free_credit', 'welcome', 'promo', etc.
+  type      String
   title     String
-  message   String   @db.Text
+  message   String
   read      Boolean  @default(false)
   createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
 }
@@ -289,13 +228,13 @@ model Notification {
 model CreditClaim {
   id        String   @id @default(cuid())
   token     String   @unique
-  userId    String?  // Optional - null for anonymous claims
-  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  email     String?  // For anonymous claims - email to match when claiming
+  userId    String?
   credits   Int      @default(1)
   claimed   Boolean  @default(false)
   expiresAt DateTime
   createdAt DateTime @default(now())
+  email     String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([token])
@@ -303,16 +242,16 @@ model CreditClaim {
 }
 
 model EmailLog {
-  id          String   @id @default(cuid())
-  to          String   // Recipient email
-  subject     String
-  template    String   // Template type: welcome, announcement, bug_apology, etc.
-  status      String   // sent, failed, pending
-  error       String?  @db.Text // Error message if failed
-  messageId   String?  // Email provider message ID
-  userId      String?  // If sent to a registered user
-  metadata    Json?    // Additional context (credits included, etc.)
-  createdAt   DateTime @default(now())
+  id        String   @id @default(cuid())
+  to        String
+  subject   String
+  template  String
+  status    String
+  error     String?
+  messageId String?
+  userId    String?
+  metadata  Json?
+  createdAt DateTime @default(now())
 
   @@index([to])
   @@index([status])
@@ -320,7 +259,7 @@ model EmailLog {
 }
 
 model SiteSettings {
-  id                   String   @id @default("default")
-  trafficWarningEnabled Boolean @default(false)
-  updatedAt            DateTime @updatedAt
+  id                    String   @id @default("default")
+  trafficWarningEnabled Boolean  @default(false)
+  updatedAt             DateTime @updatedAt
 }

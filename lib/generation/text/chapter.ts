@@ -209,6 +209,7 @@ export async function generateChapter(data: {
   contentRating?: ContentRating; // Content maturity level
   totalChapters?: number; // Total chapters in book (for "The End" on last chapter)
   correctiveInstructions?: string; // From consistency check - steering to fix drift
+  onProgress?: (accumulatedText: string) => void; // Callback for live preview updates
 }): Promise<string> {
   const isLastChapter = data.totalChapters && data.chapterNumber >= data.totalChapters;
   const formatInstruction = {
@@ -458,12 +459,41 @@ Write the chapter now:`;
     }
 
     try {
-      const result = await withTimeout(
-        () => getGeminiPro().generateContent(currentPrompt),
-        CHAPTER_GENERATION_TIMEOUT,
-        `Chapter ${data.chapterNumber} generation (attempt ${attempt + 1})`
-      );
-      let content = result.response.text();
+      let content: string;
+
+      // Use streaming if onProgress callback is provided for live preview
+      if (data.onProgress && attempt === 0) {
+        // Only use streaming on first attempt (retries use non-streaming for simplicity)
+        const model = getGeminiPro();
+        let accumulated = '';
+        let lastProgressUpdate = 0;
+
+        const streamResult = await model.generateContentStream(currentPrompt);
+        for await (const chunk of streamResult.stream) {
+          const chunkText = chunk.text();
+          if (chunkText) {
+            accumulated += chunkText;
+            // Update progress every ~500 characters to avoid too many DB writes
+            if (accumulated.length - lastProgressUpdate > 500) {
+              data.onProgress(accumulated);
+              lastProgressUpdate = accumulated.length;
+            }
+          }
+        }
+        // Final progress update
+        if (accumulated.length > lastProgressUpdate) {
+          data.onProgress(accumulated);
+        }
+        content = accumulated;
+      } else {
+        // Non-streaming generation (retries or no callback)
+        const result = await withTimeout(
+          () => getGeminiPro().generateContent(currentPrompt),
+          CHAPTER_GENERATION_TIMEOUT,
+          `Chapter ${data.chapterNumber} generation (attempt ${attempt + 1})`
+        );
+        content = result.response.text();
+      }
 
       // Quick cleanup of obvious AI artifacts and word truncation errors
       content = content

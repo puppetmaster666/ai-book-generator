@@ -238,6 +238,7 @@ export async function GET(request: NextRequest) {
         coverImageUrl: true,
         createdAt: true,
         completedAt: true,
+        isFeaturedSample: true,
       },
     });
 

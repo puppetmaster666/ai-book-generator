@@ -6,7 +6,7 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
-import { BookOpen, Plus, Download, Clock, Check, AlertCircle, Zap } from 'lucide-react';
+import { BookOpen, Plus, Download, Clock, Check, AlertCircle, Zap, Star } from 'lucide-react';
 
 interface Book {
   id: string;
@@ -19,6 +19,7 @@ interface Book {
   coverImageUrl: string | null;
   createdAt: string;
   completedAt: string | null;
+  isFeaturedSample: boolean;
 }
 
 interface UserInfo {
@@ -27,6 +28,7 @@ interface UserInfo {
   freeCredits: number;
   totalCredits: number;
   hasFirstBookFree: boolean;
+  isAdmin: boolean;
 }
 
 export default function Dashboard() {
@@ -92,6 +94,34 @@ export default function Dashboard() {
         return <AlertCircle className="h-4 w-4 text-red-600" />;
       default:
         return <Clock className="h-4 w-4 text-neutral-500" />;
+    }
+  };
+
+  // Toggle featured status (admin only)
+  const toggleFeatured = async (e: React.MouseEvent, bookId: string) => {
+    e.preventDefault(); // Prevent navigation to book page
+    e.stopPropagation();
+
+    try {
+      const formData = new FormData();
+      formData.append('action', 'toggle');
+
+      const res = await fetch(`/api/admin/books/${bookId}/sample`, {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        // Update local state
+        setBooks(books.map(book =>
+          book.id === bookId
+            ? { ...book, isFeaturedSample: data.isFeaturedSample }
+            : book
+        ));
+      }
+    } catch (error) {
+      console.error('Failed to toggle featured:', error);
     }
   };
 
@@ -196,6 +226,20 @@ export default function Dashboard() {
                       <div className="w-full h-full flex items-center justify-center">
                         <BookOpen className="h-12 w-12 text-neutral-400" />
                       </div>
+                    )}
+                    {/* Admin: Feature on homepage button */}
+                    {userInfo?.isAdmin && book.status === 'completed' && (
+                      <button
+                        onClick={(e) => toggleFeatured(e, book.id)}
+                        className={`absolute top-2 right-2 p-2 rounded-full transition-colors ${
+                          book.isFeaturedSample
+                            ? 'bg-yellow-400 text-yellow-900 hover:bg-yellow-500'
+                            : 'bg-white/80 text-neutral-400 hover:bg-white hover:text-yellow-500'
+                        }`}
+                        title={book.isFeaturedSample ? 'Remove from homepage' : 'Feature on homepage'}
+                      >
+                        <Star className={`h-4 w-4 ${book.isFeaturedSample ? 'fill-current' : ''}`} />
+                      </button>
                     )}
                   </div>
                   <div className="p-4">
