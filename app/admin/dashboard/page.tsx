@@ -1308,6 +1308,33 @@ export default function AdminDashboard() {
                                     </span>
                                   )}
                                   <div className="flex-1" />
+                                  {/* Toggle Feature Button */}
+                                  <button
+                                    onClick={async () => {
+                                      const formData = new FormData();
+                                      formData.append('action', 'toggle');
+                                      try {
+                                        const res = await fetch(`/api/admin/books/${book.id}/sample`, {
+                                          method: 'POST',
+                                          body: formData,
+                                        });
+                                        if (res.ok) {
+                                          const data = await res.json();
+                                          alert(data.isFeaturedSample ? 'Book featured on homepage!' : 'Book removed from homepage.');
+                                          window.location.reload();
+                                        }
+                                      } catch {
+                                        alert('Failed to toggle feature status');
+                                      }
+                                    }}
+                                    className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${
+                                      book.isFeaturedSample
+                                        ? 'bg-yellow-50 text-yellow-700 hover:bg-yellow-100'
+                                        : 'bg-green-50 text-green-700 hover:bg-green-100'
+                                    }`}
+                                  >
+                                    {book.isFeaturedSample ? '★ Featured' : '☆ Add to Homepage'}
+                                  </button>
                                   <label className="cursor-pointer flex items-center gap-2 px-3 py-1.5 text-sm bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-lg transition-colors">
                                     <Upload className="h-4 w-4" />
                                     Upload Sample PDF
