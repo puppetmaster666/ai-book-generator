@@ -202,6 +202,9 @@ export default function AdminDashboard() {
   const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
   const [showRestartConfirm, setShowRestartConfirm] = useState(false);
   const [restartBookData, setRestartBookData] = useState<{ id: string; title: string } | null>(null);
+  const [showUserDeleteConfirm, setShowUserDeleteConfirm] = useState(false);
+  const [isDeletingUsers, setIsDeletingUsers] = useState(false);
+  const [deleteUsersError, setDeleteUsersError] = useState('');
 
   // Email logs state
   const [emailLogs, setEmailLogs] = useState<Array<{
@@ -399,6 +402,47 @@ export default function AdminDashboard() {
       setTimeout(() => setShowToast(false), 5000);
     } finally {
       setIsGiftingCredits(false);
+    }
+  };
+
+  const handleDeleteUsers = () => {
+    if (selectedUsers.size === 0) return;
+    setShowUserDeleteConfirm(true);
+  };
+
+  const confirmDeleteUsers = async () => {
+    setIsDeletingUsers(true);
+    setDeleteUsersError('');
+
+    try {
+      const response = await fetch('/api/admin/users/bulk-delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userIds: Array.from(selectedUsers),
+          deleteBooks: true, // Also delete their books
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to delete users');
+      }
+
+      setEmailResult({
+        success: true,
+        message: `Deleted ${data.deletedCount} user(s) and ${data.booksDeleted} book(s)`,
+      });
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 5000);
+      setSelectedUsers(new Set());
+      setShowUserDeleteConfirm(false);
+      await fetchStats(true);
+    } catch (err) {
+      setDeleteUsersError(err instanceof Error ? err.message : 'Failed to delete users');
+    } finally {
+      setIsDeletingUsers(false);
     }
   };
 
@@ -1480,6 +1524,18 @@ export default function AdminDashboard() {
                     )}
                     Gift {creditsToGift} Credit{creditsToGift > 1 ? 's' : ''}
                   </button>
+                  <button
+                    onClick={handleDeleteUsers}
+                    disabled={isDeletingUsers}
+                    className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 disabled:opacity-50 transition-colors"
+                  >
+                    {isDeletingUsers ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Trash2 className="h-4 w-4" />
+                    )}
+                    Delete Users
+                  </button>
                 </div>
               </div>
 
@@ -2035,6 +2091,21 @@ export default function AdminDashboard() {
         confirmText="Restart Book"
         cancelText="Cancel"
         type="warning"
+      />
+
+      {/* Delete Users Confirmation Modal */}
+      <ConfirmModal
+        isOpen={showUserDeleteConfirm}
+        onClose={() => {
+          setShowUserDeleteConfirm(false);
+          setDeleteUsersError('');
+        }}
+        onConfirm={confirmDeleteUsers}
+        title="Delete Users Permanently"
+        message={`Are you sure you want to permanently delete ${selectedUsers.size} user(s)? This will also delete ALL their books, chapters, and illustrations. They will need to register again. This action cannot be undone.${deleteUsersError ? `\n\nError: ${deleteUsersError}` : ''}`}
+        confirmText="Delete Users"
+        cancelText="Cancel"
+        type="danger"
       />
     </div>
   );
