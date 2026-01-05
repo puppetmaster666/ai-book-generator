@@ -176,46 +176,8 @@ const jsonLdWebsite = {
   },
 };
 
-const jsonLdFAQ = {
-  '@context': 'https://schema.org',
-  '@type': 'FAQPage',
-  mainEntity: [
-    {
-      '@type': 'Question',
-      name: 'How does the AI book generator work?',
-      acceptedAnswer: {
-        '@type': 'Answer',
-        text: 'Simply type your book idea in one sentence, choose your book format (novel, children\'s book, comic, etc.), and our AI generates a complete book with chapters, illustrations, and cover art in minutes.',
-      },
-    },
-    {
-      '@type': 'Question',
-      name: 'Can I publish my AI-generated book on Amazon?',
-      acceptedAnswer: {
-        '@type': 'Answer',
-        text: 'Yes! All books are exported as EPUB files that are ready for Amazon KDP (Kindle Direct Publishing). You own the content and can publish it immediately.',
-      },
-    },
-    {
-      '@type': 'Question',
-      name: 'Can I try it for free?',
-      acceptedAnswer: {
-        '@type': 'Answer',
-        text: 'Yes! You can try a free sample with no credit card required. This includes 1 chapter for text books or 5 panels for visual books, so you can experience the quality before upgrading.',
-      },
-    },
-    {
-      '@type': 'Question',
-      name: 'What types of books can I create?',
-      acceptedAnswer: {
-        '@type': 'Answer',
-        text: 'You can create novels, children\'s picture books, comic books, self-help books, romance, thriller, fantasy, and many more genres. Each book type has customizable options for length and style.',
-      },
-    },
-  ],
-};
-
-const jsonLd = [jsonLdOrganization, jsonLdSoftwareApp, jsonLdWebsite, jsonLdFAQ];
+// Note: FAQPage schema is only on /faq page to avoid duplicate structured data errors
+const jsonLd = [jsonLdOrganization, jsonLdSoftwareApp, jsonLdWebsite];
 
 export default function RootLayout({
   children,
