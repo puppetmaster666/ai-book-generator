@@ -465,41 +465,33 @@ Pick up AFTER the last event and push toward the next beat sheet milestone.`,
         }, { status: 404 });
       }
 
-      // Save sequence as a chapter
+      // Save sequence as a chapter (use upsert to handle retries gracefully)
       const wordCount = countWords(sequenceContent);
       totalWords += wordCount;
 
-      let savedChapter;
-      try {
-        savedChapter = await prisma.chapter.create({
-          data: {
+      const savedChapter = await prisma.chapter.upsert({
+        where: {
+          bookId_number: {
             bookId: id,
             number: nextChapterNum,
-            title: chapterPlan.title,
-            content: sequenceContent,
-            summary: screenplayContext.lastSequenceSummary,
-            wordCount,
           },
-        });
-        console.log(`Sequence ${nextChapterNum} saved. Page count: ~${pageCount}`);
-      } catch (createError: unknown) {
-        if (createError && typeof createError === 'object' && 'code' in createError && createError.code === 'P2002') {
-          console.log(`Sequence ${nextChapterNum} already exists (race condition), skipping save`);
-          await prisma.book.update({
-            where: { id },
-            data: { currentChapter: nextChapterNum },
-          });
-          return NextResponse.json({
-            done: false,
-            currentChapter: nextChapterNum,
-            totalChapters,
-            totalWords: book.totalWords,
-            message: `Sequence ${nextChapterNum} already exists. Continuing...`,
-            skipped: true,
-          });
-        }
-        throw createError;
-      }
+        },
+        update: {
+          title: chapterPlan.title,
+          content: sequenceContent,
+          summary: screenplayContext.lastSequenceSummary,
+          wordCount,
+        },
+        create: {
+          bookId: id,
+          number: nextChapterNum,
+          title: chapterPlan.title,
+          content: sequenceContent,
+          summary: screenplayContext.lastSequenceSummary,
+          wordCount,
+        },
+      });
+      console.log(`Sequence ${nextChapterNum} saved. Page count: ~${pageCount}`);
 
       // Update book progress with screenplay context
       await prisma.book.update({
@@ -701,54 +693,43 @@ ${chapterPlan.summary}
       }, { status: 404 });
     }
 
-    // Save chapter
-    let savedChapter;
-    try {
-      savedChapter = await prisma.chapter.create({
-        data: {
+    // Save chapter (use upsert to handle retries gracefully)
+    const savedChapter = await prisma.chapter.upsert({
+      where: {
+        bookId_number: {
           bookId: id,
           number: nextChapterNum,
-          title: chapterPlan.title,
-          content: chapterContent,
-          summary,
-          wordCount,
         },
-      });
-      console.log(`Chapter ${nextChapterNum} saved. Word count: ${wordCount}`);
+      },
+      update: {
+        title: chapterPlan.title,
+        content: chapterContent,
+        summary,
+        wordCount,
+      },
+      create: {
+        bookId: id,
+        number: nextChapterNum,
+        title: chapterPlan.title,
+        content: chapterContent,
+        summary,
+        wordCount,
+      },
+    });
+    console.log(`Chapter ${nextChapterNum} saved. Word count: ${wordCount}`);
 
-      // Fire off async review ONLY for text-heavy books (novels, non-fiction)
-      // Skip review for visual books (illustrated, picture_book, comic) - their text is minimal
-      const isTextHeavyBook = book.bookFormat === 'text_only' || !book.bookFormat;
-      if (isTextHeavyBook) {
-        const reviewUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/books/${id}/review-chapter`;
-        fetch(reviewUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ chapterId: savedChapter.id }),
-        }).catch(err => console.log(`[Review] Background review request failed for chapter ${nextChapterNum}:`, err.message));
-      } else {
-        console.log(`[Review] Skipping review for visual book format: ${book.bookFormat}`);
-      }
-
-    } catch (createError: unknown) {
-      // Handle unique constraint violation - chapter already exists (race condition)
-      if (createError && typeof createError === 'object' && 'code' in createError && createError.code === 'P2002') {
-        console.log(`Chapter ${nextChapterNum} already exists (race condition), skipping save`);
-        // Update progress and continue
-        await prisma.book.update({
-          where: { id },
-          data: { currentChapter: nextChapterNum },
-        });
-        return NextResponse.json({
-          done: false,
-          currentChapter: nextChapterNum,
-          totalChapters,
-          totalWords: book.totalWords,
-          message: `Chapter ${nextChapterNum} already exists. Continuing...`,
-          skipped: true,
-        });
-      }
-      throw createError;
+    // Fire off async review ONLY for text-heavy books (novels, non-fiction)
+    // Skip review for visual books (illustrated, picture_book, comic) - their text is minimal
+    const isTextHeavyBook = book.bookFormat === 'text_only' || !book.bookFormat;
+    if (isTextHeavyBook) {
+      const reviewUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/books/${id}/review-chapter`;
+      fetch(reviewUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chapterId: savedChapter.id }),
+      }).catch(err => console.log(`[Review] Background review request failed for chapter ${nextChapterNum}:`, err.message));
+    } else {
+      console.log(`[Review] Skipping review for visual book format: ${book.bookFormat}`);
     }
 
     // Update book progress and clear live preview

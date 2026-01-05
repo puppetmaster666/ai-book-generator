@@ -205,16 +205,28 @@ Begin with the chapter heading "Chapter ${nextChapterNum}: ${chapterPlan.title}"
           fullContent += '\n\nThe End';
         }
 
-        // Save the chapter to database
+        // Save the chapter to database (use upsert in case retrying a failed chapter)
         const finalWordCount = countWords(fullContent);
 
-        await prisma.chapter.create({
-          data: {
+        await prisma.chapter.upsert({
+          where: {
+            bookId_number: {
+              bookId: id,
+              number: nextChapterNum,
+            },
+          },
+          update: {
+            title: chapterPlan.title,
+            content: fullContent,
+            summary: chapterPlan.summary,
+            wordCount: finalWordCount,
+          },
+          create: {
             bookId: id,
             number: nextChapterNum,
             title: chapterPlan.title,
             content: fullContent,
-            summary: chapterPlan.summary, // Use plan summary for now
+            summary: chapterPlan.summary,
             wordCount: finalWordCount,
           },
         });
