@@ -635,18 +635,18 @@ export default function Home() {
             {[
               {
                 icon: BookOpen,
-                title: 'Choose your format',
-                description: 'Novel, comic book, children\'s picture book, screenplay, or non-fiction guide. Pick what fits your vision.',
+                title: 'Pick your format',
+                description: 'Novels, comics with AI art, children\'s picture books, industry-standard screenplays, or non-fiction guides.',
               },
               {
                 icon: Sparkles,
-                title: 'Share your idea',
-                description: 'Describe your concept in a few sentences, or upload an existing draft. The AI handles the rest.',
+                title: 'Describe your vision',
+                description: 'Share your concept and watch it come to life. Each format uses specialized AI trained on professional standards.',
               },
               {
                 icon: Download,
-                title: 'Download & publish',
-                description: 'Get your complete work in EPUB, PDF, or TXT format. Ready for Amazon KDP or any platform.',
+                title: 'Export anywhere',
+                description: 'EPUB for ebooks, PDF for print, Final Draft-ready screenplays. Publish to Amazon KDP or pitch to studios.',
               },
             ].map((step, i) => (
               <div key={i} className="relative group">
@@ -705,6 +705,12 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Testimonials */}
+      <Testimonials />
+
+      {/* Sample Downloads */}
+      <SamplesSection />
+
       {/* Screenplay Animation Showcase */}
       <section className="py-20 px-6 bg-white">
         <div className="max-w-6xl mx-auto">
@@ -754,12 +760,6 @@ export default function Home() {
           </div>
         </div>
       </section>
-
-      {/* Testimonials */}
-      <Testimonials />
-
-      {/* Sample Downloads */}
-      <SamplesSection />
 
       {/* Showcase */}
       <section className="py-24 px-6 bg-neutral-900">
