@@ -1610,6 +1610,23 @@ COMIC-STYLE REQUIREMENTS:
 - Visual comedy and dramatic moments
 - Clear action beats that translate to panels
 - Sound effects where appropriate (CRASH! WHOOSH! etc.)
+
+DIALOGUE SUBTEXT (CRITICAL):
+- Characters must NEVER state their internal emotions directly (NO "I am angry", "I feel sad")
+- Instead, use sarcasm, evasion, deflection, or silence to convey emotional states
+- Show emotions through ACTIONS: gripping a glass tightly, turning away, forced laughter
+- Subtext makes dialogue feel REAL - what characters say vs. what they mean should differ
+- Example BAD: "I'm so scared right now!"
+- Example GOOD: "It's fine. Everything's fine." (while hands tremble)
+
+VISUAL PERFORMANCE:
+- Describe what characters DO to show emotion, not how they "feel"
+- Physical descriptions: "clenched jaw", "narrowed eyes", "shoulders slumped"
+- Characters should interact with their environment (leaning, fidgeting, pacing)
+
+PAGE TURN MOMENTUM:
+- Each story segment should end with a hook that demands the next page
+- Use questions, reveals, arrivals, or visual cliffhangers
 ` : `
 PICTURE BOOK REQUIREMENTS:
 - Gentle, flowing prose suitable for reading aloud
@@ -1716,6 +1733,24 @@ Each page should specify a "panelLayout" to vary the visual pacing:
 
 For multi-panel pages, the scene description should describe what happens ACROSS all panels in sequence.
 Example: "Panel 1: Hero spots danger. Panel 2: Hero leaps into action. Panel 3: Villain turns in surprise."
+
+=== VISUAL PERFORMANCE (ACTING) ===
+- NO EMOTIONAL LABELS: In "characterActions", use physical descriptions NOT emotional labels.
+  BAD: "angry", "sad", "happy"
+  GOOD: "clenched jaw, narrowed eyes", "shoulders slumped, gaze fixed on floor", "wide grin, eyes crinkled"
+- MICRO-EXPRESSIONS: Describe specific facial muscle movements and body language.
+- INTERACTIVE SETTINGS: Characters should interact with the environment (leaning against a pillar, kicking a stone, gripping a glass).
+- CAMERA ANGLES: Vary angles for dramatic effect. Low angles = power/threat. High angles = vulnerability. Extreme close-ups = secrets/intensity.
+
+=== PAGE TURN HOOKS ===
+- The FINAL panel of every page MUST end on a micro-cliffhanger, a question, or a visual hook.
+- Examples: A shadow appearing behind a character, a hand reaching for something, a character's expression shifting, an unexpected arrival.
+- This creates rhythm and urgency - readers MUST turn the page.
+
+=== SOUND EFFECTS (SFX) ===
+- Include SFX where they add kinetic energy: CRASH!, WHOOSH!, ZAP!, THWACK!
+- Describe the typography style: "Jagged, electric-yellow 'ZAP!'", "Bold red 'CRASH!' with debris fragments"
+- SFX should integrate with the action, not float in corners.
 `
     : `
 For each page, the "text" field contains the prose that appears under/around the image.
@@ -3472,6 +3507,24 @@ ${characterDescriptions}
     prompt += `Lighting: ${visualStyleGuide.lightingStyle}. `;
   }
 
+  // Add composition and depth directives for professional cinematography
+  prompt += `
+=== COMPOSITION & DEPTH ===
+- FOCUS VARIATION: Use 'Deep Focus' for establishing shots (sharp background), 'Shallow Focus' (blurred background) for intimate close-ups.
+- SILHOUETTES: Consider high-contrast silhouettes to build mood and atmosphere.
+- VERTICALITY: Camera angle already specified, but reinforce - low angles = power/threat, high angles = vulnerability.
+`;
+
+  // Add SFX instructions for comic-style books
+  if (panelLayout) {
+    prompt += `
+=== SOUND EFFECTS (SFX) ===
+- If the scene has action, include stylized SFX typography integrated into the composition.
+- SFX should have visual impact: "Jagged, bold lettering", "Explosion-style burst", "Electric crackling effect".
+- Position SFX to enhance the action, not float randomly in corners.
+`;
+  }
+
   // Add panel layout instructions for comics
   if (panelLayout && panelLayout !== 'splash') {
     const layoutInstructions: Record<PanelLayout, string> = {
@@ -3516,6 +3569,164 @@ This is an ADULT comic. Make the visuals match the mature tone:
   prompt += 'Full color illustration.';
 
   return prompt;
+}
+
+/**
+ * Check outline consistency every 5 chapters to prevent narrative drift.
+ * Compares the "Story So Far" against the "Original Master Plan" and generates
+ * corrective instructions to keep the story on track.
+ */
+export async function checkOutlineConsistency(data: {
+  title: string;
+  originalPlan: {
+    premise: string;
+    beginning: string;
+    middle: string;
+    ending: string;
+    characters: { name: string; description: string }[];
+  };
+  storySoFar: string;
+  characterStates: Record<string, { lastSeen: string; currentState: string }>;
+  currentChapter: number;
+  totalChapters: number;
+}): Promise<{
+  driftAnalysis: string;
+  correctiveInstructions: string;
+  updatedNextChapters: { number: number; focus: string }[];
+}> {
+  const prompt = `You are a Lead Script Doctor and Book Editor performing a mid-story consistency audit.
+
+BOOK: "${data.title}"
+CURRENT PROGRESS: Chapter ${data.currentChapter} of ${data.totalChapters}
+
+=== ORIGINAL MASTER PLAN ===
+PREMISE: ${data.originalPlan.premise}
+BEGINNING: ${data.originalPlan.beginning}
+MIDDLE: ${data.originalPlan.middle}
+ENDING: ${data.originalPlan.ending}
+
+CHARACTERS:
+${data.originalPlan.characters.map(c => `- ${c.name}: ${c.description}`).join('\n')}
+
+=== STORY GENERATED SO FAR ===
+${data.storySoFar}
+
+=== CURRENT CHARACTER STATES ===
+${Object.entries(data.characterStates).map(([name, state]) =>
+  `- ${name}: Last seen in "${state.lastSeen}". Current state: ${state.currentState}`
+).join('\n')}
+
+=== YOUR AUDIT TASKS ===
+1. DRIFT ANALYSIS: Has the story deviated from the Original Master Plan? Are we still on track for the planned ending?
+2. PLOT POINT CHECK: Identify any missed plot points, abandoned subplots, or unresolved setups from earlier chapters.
+3. CHARACTER CONSISTENCY: Are characters behaving in-character? Has anyone acted OOC (Out of Character)?
+4. PACING CHECK: Given we're at chapter ${data.currentChapter}/${data.totalChapters}, are we pacing correctly toward the ending?
+5. CORRECTIVE INSTRUCTIONS: Provide specific steering instructions for the next 3-5 chapters to ensure the book reaches its intended conclusion.
+
+Output ONLY valid JSON:
+{
+  "driftAnalysis": "Detailed analysis of how the story is tracking against the plan...",
+  "correctiveInstructions": "Specific instructions for steering the next chapters (e.g., 'Ensure Sarah remembers the key from Ch 2', 'Begin building tension for the climax', 'Resolve the subplot about X')...",
+  "updatedNextChapters": [
+    {"number": ${data.currentChapter + 1}, "focus": "What this chapter should accomplish..."},
+    {"number": ${data.currentChapter + 2}, "focus": "What this chapter should accomplish..."},
+    {"number": ${data.currentChapter + 3}, "focus": "What this chapter should accomplish..."}
+  ]
+}`;
+
+  try {
+    const result = await getGeminiFlash().generateContent(prompt);
+    const response = result.response.text();
+    return parseJSONFromResponse(response) as {
+      driftAnalysis: string;
+      correctiveInstructions: string;
+      updatedNextChapters: { number: number; focus: string }[];
+    };
+  } catch (error) {
+    console.error('[checkOutlineConsistency] Error:', error);
+    // Return neutral result if check fails - don't block generation
+    return {
+      driftAnalysis: 'Unable to analyze - continuing with current trajectory.',
+      correctiveInstructions: '',
+      updatedNextChapters: [],
+    };
+  }
+}
+
+/**
+ * Apply thematic polish to the final chapter.
+ * Ensures the ending mirrors the opening for thematic closure and
+ * verifies that character arcs are properly resolved.
+ */
+export async function applyThematicPolish(data: {
+  title: string;
+  genre: string;
+  bookType: string;
+  originalPlan: {
+    premise: string;
+    beginning: string;
+    ending: string;
+    characters: { name: string; description: string }[];
+  };
+  firstChapterSummary: string;
+  finalChapterContent: string;
+  characterArcs: Record<string, { startState: string; endState: string }>;
+}): Promise<{
+  polishedContent: string;
+  thematicNotes: string;
+}> {
+  const prompt = `You are a Senior Executive Editor performing the FINAL POLISH on a book's concluding chapter.
+
+BOOK: "${data.title}"
+GENRE: ${data.genre}
+TYPE: ${data.bookType}
+
+=== ORIGINAL VISION ===
+PREMISE: ${data.originalPlan.premise}
+INTENDED ENDING: ${data.originalPlan.ending}
+
+=== OPENING (Chapter 1 Summary) ===
+${data.firstChapterSummary}
+
+=== CURRENT FINAL CHAPTER ===
+${data.finalChapterContent}
+
+=== CHARACTER ARC TRACKING ===
+${Object.entries(data.characterArcs).map(([name, arc]) =>
+  `- ${name}: Started as "${arc.startState}" → Should end as "${arc.endState}"`
+).join('\n')}
+
+=== YOUR FINAL POLISH OBJECTIVES ===
+1. THEMATIC RESONANCE: Does the final chapter echo or mirror the opening? Create a satisfying "bookend" effect.
+2. CHARACTER ARC COMPLETION: Verify that each character's internal journey is resolved or addressed.
+3. EMOTIONAL LANDING: Ensure the ending delivers the appropriate emotional payoff for the genre.
+4. FINAL IMAGE: End on a visual/emotional beat that lingers in the reader's mind.
+5. LOOSE ENDS: Flag any unresolved plot threads that need brief mentions.
+
+Return the POLISHED version of the final chapter with subtle improvements for thematic closure.
+Do NOT dramatically change the plot - just enhance the emotional and thematic landing.
+
+Output ONLY valid JSON:
+{
+  "polishedContent": "The enhanced final chapter text with thematic improvements...",
+  "thematicNotes": "Brief notes on what was enhanced and why..."
+}`;
+
+  try {
+    const result = await getGeminiPro().generateContent(prompt);
+    const response = result.response.text();
+    return parseJSONFromResponse(response) as {
+      polishedContent: string;
+      thematicNotes: string;
+    };
+  } catch (error) {
+    console.error('[applyThematicPolish] Error:', error);
+    // Return original content if polish fails
+    return {
+      polishedContent: data.finalChapterContent,
+      thematicNotes: 'Polish skipped due to error.',
+    };
+  }
 }
 
 export async function generateCoverImage(coverPrompt: string): Promise<string> {
@@ -3841,7 +4052,24 @@ export async function generateVisualStyleGuide(data: {
   moodAndAtmosphere: string;
   consistencyRules: string[];
 }> {
-  const isNoir = data.artStyle.toLowerCase().includes('noir');
+  // Technical anchors - specific aesthetic rules for each art style to avoid generic "digital art" look
+  const styleAnchors: Record<string, string> = {
+    'manga': "Screentones, G Pen inking, 90s cel-shaded aesthetic, expressive micro-expressions, speed lines for motion.",
+    'anime': "Screentones, G Pen inking, 90s cel-shaded aesthetic, expressive micro-expressions, speed lines for motion.",
+    'noir': "High-contrast Chiaroscuro, ink-heavy, no mid-tones, dramatic black shadows, Sin City aesthetic.",
+    'superhero': "Dynamic Foreshortening, Bold Black Inking, Kirby Krackle energy effects, Ben-Day dots, Silver Age comic aesthetic.",
+    'retro': "Offset Printing Artifacts, Limited CMYK Palette, Aged Paper Texture, 1950s Silver Age aesthetic, halftone patterns.",
+    'watercolor': "Wet-on-Wet Textures, Visible Paper Grain, Soft Color Bleeds, Pigment Blooms, translucent washes, deckled edges.",
+    'cartoon': "Thick Clean Outlines, Flat/Cell Shading, Saturday Morning Cartoon style, expressive exaggerated proportions.",
+    'classic': "Cross-Hatching, Ink Wash, Muted Earth-Tones, Beatrix Potter and Arthur Rackham inspired textures.",
+    'storybook': "Cross-Hatching, Ink Wash, Muted Earth-Tones, Beatrix Potter and Arthur Rackham inspired textures.",
+    'fantasy': "Luminous Lighting, Epic Scale, Painterly oil-on-canvas texture, Ghibli/Zelda background depth, magical atmosphere."
+  };
+
+  const normalizedStyle = data.artStyle.toLowerCase();
+  const technicalAnchor = Object.entries(styleAnchors).find(([key]) => normalizedStyle.includes(key))?.[1] || "";
+
+  const isNoir = normalizedStyle.includes('noir');
   const colorInstruction = isNoir
     ? 'NOIR BLACK AND WHITE ONLY: This is a noir/monochrome style. Use ONLY grayscale values (black, white, and shades of gray). NO colors whatsoever.'
     : '';
@@ -3852,14 +4080,16 @@ BOOK DETAILS:
 - Title: "${data.title}"
 - Genre: ${data.genre}
 - Art Style: ${data.artStyle} (${data.artStylePrompt})
+${technicalAnchor ? `- Technical Anchor: ${technicalAnchor}` : ''}
 - Format: ${data.bookFormat}
 - Premise: ${data.premise}
 ${colorInstruction}
 
 Create a comprehensive style guide that ensures ALL illustrations in this book look like they belong together.
+${technicalAnchor ? `\nIMPORTANT: This style MUST incorporate the Technical Anchor specifications. These are the defining characteristics that make this art style authentic and professional.` : ''}
 
 Define:
-1. Overall Style: How the ${data.artStyle} style should be interpreted for this specific book
+1. Overall Style: How the ${data.artStyle} style should be interpreted for this specific book${technicalAnchor ? ', emphasizing the Technical Anchor specifications' : ''}
 2. ${isNoir ? 'Grayscale Palette' : 'Color Palette'}: ${isNoir ? 'Grayscale values (black, white, shades of gray) to use throughout - ABSOLUTELY NO COLORS' : 'Primary, secondary, and accent colors to use throughout'}
 3. Lighting Style: How light and shadow should be rendered
 4. Line Weight: Thick/thin lines, outline style, edge treatment
