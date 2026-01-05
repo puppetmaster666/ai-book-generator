@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import VideoEmbed from '@/components/VideoEmbed';
-import { Sparkles, FileText, Zap, Download, ArrowRight, Check, FileCheck, BookOpen, Palette, Layers } from 'lucide-react';
+import { Sparkles, FileText, Zap, Download, ArrowRight, Check, FileCheck, BookOpen, Palette, Layers, Shield, RefreshCw, Pencil } from 'lucide-react';
 
 export default function HowItWorksContent() {
   const router = useRouter();
@@ -52,10 +52,10 @@ export default function HowItWorksContent() {
                 </div>
                 <h3 className="text-lg font-semibold mb-2">Novel</h3>
                 <p className="text-sm text-neutral-600 mb-3">
-                  Full-length novels with 50,000+ words across 20+ chapters.
+                  Full-length novels with 50,000+ words, natural prose, and story consistency.
                 </p>
                 <ul className="text-xs text-neutral-500 space-y-1">
-                  <li className="flex items-center gap-1"><Check className="h-3 w-3 text-green-600" /> Text-only format</li>
+                  <li className="flex items-center gap-1"><Check className="h-3 w-3 text-green-600" /> Human-quality writing</li>
                   <li className="flex items-center gap-1"><Check className="h-3 w-3 text-green-600" /> EPUB download</li>
                   <li className="flex items-center gap-1"><Check className="h-3 w-3 text-green-600" /> AI-generated cover</li>
                 </ul>
@@ -80,11 +80,11 @@ export default function HowItWorksContent() {
                 </div>
                 <h3 className="text-lg font-semibold mb-2">Comic Book</h3>
                 <p className="text-sm text-neutral-600 mb-3">
-                  Visual stories with speech bubbles across 24 illustrated pages.
+                  Visual stories with dialogue subtext and page-turn hooks across 24 illustrated pages.
                 </p>
                 <ul className="text-xs text-neutral-500 space-y-1">
                   <li className="flex items-center gap-1"><Check className="h-3 w-3 text-green-600" /> Noir, Manga, Superhero, Retro styles</li>
-                  <li className="flex items-center gap-1"><Check className="h-3 w-3 text-green-600" /> PDF download</li>
+                  <li className="flex items-center gap-1"><Check className="h-3 w-3 text-green-600" /> Natural dialogue with subtext</li>
                   <li className="flex items-center gap-1"><Check className="h-3 w-3 text-green-600" /> Speech bubbles on images</li>
                 </ul>
               </div>
@@ -128,13 +128,14 @@ export default function HowItWorksContent() {
                   </h2>
                   <p className="text-neutral-600 mb-4">
                     Our AI analyzes your input and creates a detailed outline tailored to your book type.
-                    Novels get chapter-by-chapter breakdowns; visual books get page-by-page scene descriptions.
+                    Novels get chapter-by-chapter breakdowns with character arcs; comics get page-by-page scene
+                    descriptions with causal chain logic and dialogue subtext.
                   </p>
                   <ul className="grid sm:grid-cols-2 gap-2 text-sm text-neutral-600">
                     <li className="flex items-center gap-2"><Check className="h-4 w-4 text-green-600" /> Structured by book type</li>
-                    <li className="flex items-center gap-2"><Check className="h-4 w-4 text-green-600" /> Proper pacing and flow</li>
+                    <li className="flex items-center gap-2"><Check className="h-4 w-4 text-green-600" /> Cause-and-effect story logic</li>
                     <li className="flex items-center gap-2"><Check className="h-4 w-4 text-green-600" /> Character arc planning</li>
-                    <li className="flex items-center gap-2"><Check className="h-4 w-4 text-green-600" /> Scene/illustration descriptions</li>
+                    <li className="flex items-center gap-2"><Check className="h-4 w-4 text-green-600" /> Page-turn hooks and transitions</li>
                   </ul>
                 </div>
               </div>
@@ -151,15 +152,59 @@ export default function HowItWorksContent() {
                     3. Content Generation
                   </h2>
                   <p className="text-neutral-600 mb-4">
-                    The AI creates your book page by page or chapter by chapter. For novels, it writes 2,000-5,000 words per chapter.
-                    For visual books, it generates each illustration with your chosen art style and adds text or speech bubbles.
+                    The AI creates your book chapter by chapter or page by page, with built-in quality systems that ensure
+                    natural-sounding prose and story consistency. Each chapter goes through multiple refinement passes.
                   </p>
                   <ul className="grid sm:grid-cols-2 gap-2 text-sm text-neutral-600">
                     <li className="flex items-center gap-2"><Check className="h-4 w-4 text-green-600" /> Novels: 2,000-5,000 words/chapter</li>
                     <li className="flex items-center gap-2"><Check className="h-4 w-4 text-green-600" /> Comics: Speech bubbles on art</li>
                     <li className="flex items-center gap-2"><Check className="h-4 w-4 text-green-600" /> Picture books: Text under images</li>
-                    <li className="flex items-center gap-2"><Check className="h-4 w-4 text-green-600" /> Consistent style throughout</li>
+                    <li className="flex items-center gap-2"><Check className="h-4 w-4 text-green-600" /> Professional editing pass</li>
                   </ul>
+                </div>
+              </div>
+            </div>
+
+            {/* Quality Systems */}
+            <div className="bg-gradient-to-br from-neutral-50 to-neutral-100 rounded-2xl border border-neutral-200 p-8">
+              <div className="text-center mb-8">
+                <h2 className="text-2xl font-semibold mb-2" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>
+                  Human-Quality Writing Systems
+                </h2>
+                <p className="text-neutral-600">
+                  Our AI uses advanced techniques to produce natural, engaging prose
+                </p>
+              </div>
+              <div className="grid md:grid-cols-3 gap-6">
+                <div className="bg-white rounded-xl p-5 border border-neutral-200">
+                  <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center mb-3">
+                    <Shield className="h-5 w-5 text-green-700" />
+                  </div>
+                  <h3 className="font-semibold mb-2">Anti-AI Detection</h3>
+                  <p className="text-sm text-neutral-600">
+                    50+ banned AI phrases automatically detected and rewritten. No &quot;little did she know&quot; or
+                    &quot;in that moment&quot;&mdash;just natural storytelling.
+                  </p>
+                </div>
+                <div className="bg-white rounded-xl p-5 border border-neutral-200">
+                  <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mb-3">
+                    <RefreshCw className="h-5 w-5 text-blue-700" />
+                  </div>
+                  <h3 className="font-semibold mb-2">Story Memory</h3>
+                  <p className="text-sm text-neutral-600">
+                    Chapter 1 anchor system ensures the AI never forgets your opening conflicts.
+                    Consistency checks every 5 chapters prevent plot drift.
+                  </p>
+                </div>
+                <div className="bg-white rounded-xl p-5 border border-neutral-200">
+                  <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center mb-3">
+                    <Pencil className="h-5 w-5 text-purple-700" />
+                  </div>
+                  <h3 className="font-semibold mb-2">Professional Polish</h3>
+                  <p className="text-sm text-neutral-600">
+                    Every chapter goes through an editing pass that fixes dialogue formatting,
+                    sentence variety, and repetitive patterns.
+                  </p>
                 </div>
               </div>
             </div>
