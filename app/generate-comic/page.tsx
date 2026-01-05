@@ -6,6 +6,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
+import ConfirmModal from '@/components/ConfirmModal';
 import { Loader2, Check, X, Download, AlertCircle, RefreshCw, StopCircle, Clock, ShieldAlert, Zap, BookOpen } from 'lucide-react';
 
 // Format elapsed time as MM:SS
@@ -74,6 +75,8 @@ function GenerateComicContent() {
   const [allComplete, setAllComplete] = useState(false);
   const [elapsedTime, setElapsedTime] = useState(0);
   const [isWaitingForOutline, setIsWaitingForOutline] = useState(false);
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [showAdminForceConfirm, setShowAdminForceConfirm] = useState(false);
 
   // AbortController for cancelling requests
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -371,17 +374,23 @@ function GenerateComicContent() {
     setIsGenerating(false);
     setIsCancelling(false);
 
-    if (confirm('Generation will continue in the background. Do you want to go to the book page to verify later?')) {
-      router.push(`/book/${bookId}`);
-    }
+    // Show styled confirmation modal
+    setShowCancelConfirm(true);
+  }, []);
+
+  // Handle cancel confirmation
+  const handleCancelConfirm = useCallback(() => {
+    router.push(`/book/${bookId}`);
   }, [bookId, router]);
 
-  // Emergency stop for admins
-  const emergencyStop = useCallback(async () => {
-    if (!confirm('ADMIN: Force mark this book as completed?')) {
-      return;
-    }
-    // ... same as before ...
+  // Emergency stop for admins - show modal
+  const emergencyStop = useCallback(() => {
+    setShowAdminForceConfirm(true);
+  }, []);
+
+  // Handle admin force complete confirmation
+  const handleAdminForceConfirm = useCallback(async () => {
+    setIsEmergencyStopping(true);
     try {
       const response = await fetch(`/api/books/${bookId}/emergency-stop`, {
         method: 'POST',
@@ -391,6 +400,8 @@ function GenerateComicContent() {
       }
     } catch (err) {
       console.error(err);
+    } finally {
+      setIsEmergencyStopping(false);
     }
   }, [bookId, router]);
 
@@ -792,6 +803,30 @@ function GenerateComicContent() {
       </main>
 
       <Footer />
+
+      {/* Cancel Generation Confirmation Modal */}
+      <ConfirmModal
+        isOpen={showCancelConfirm}
+        onClose={() => setShowCancelConfirm(false)}
+        onConfirm={handleCancelConfirm}
+        title="Generation in Progress"
+        message="Generation will continue in the background. Do you want to go to the book page to verify later?"
+        confirmText="Go to Book Page"
+        cancelText="Stay Here"
+        type="info"
+      />
+
+      {/* Admin Force Complete Confirmation Modal */}
+      <ConfirmModal
+        isOpen={showAdminForceConfirm}
+        onClose={() => setShowAdminForceConfirm(false)}
+        onConfirm={handleAdminForceConfirm}
+        title="Force Complete Book"
+        message="Are you sure you want to force mark this book as completed? This is an admin action and should only be used when generation is stuck."
+        confirmText="Force Complete"
+        cancelText="Cancel"
+        type="danger"
+      />
     </div>
   );
 }

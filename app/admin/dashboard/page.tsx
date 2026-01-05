@@ -27,6 +27,7 @@ import {
   ChevronUp,
   ExternalLink,
 } from 'lucide-react';
+import ConfirmModal from '@/components/ConfirmModal';
 
 interface AdminStats {
   overview: {
@@ -190,6 +191,11 @@ export default function AdminDashboard() {
   // Search state
   const [booksSearch, setBooksSearch] = useState('');
   const [usersSearch, setUsersSearch] = useState('');
+
+  // Confirmation modal state
+  const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
+  const [showRestartConfirm, setShowRestartConfirm] = useState(false);
+  const [restartBookData, setRestartBookData] = useState<{ id: string; title: string } | null>(null);
 
   // Email logs state
   const [emailLogs, setEmailLogs] = useState<Array<{
@@ -390,15 +396,12 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleBulkDelete = async () => {
+  const handleBulkDelete = () => {
     if (selectedBooks.size === 0) return;
+    setShowBulkDeleteConfirm(true);
+  };
 
-    const confirmed = window.confirm(
-      `Are you sure you want to permanently delete ${selectedBooks.size} book(s)? This cannot be undone.`
-    );
-
-    if (!confirmed) return;
-
+  const confirmBulkDelete = async () => {
     setIsDeleting(true);
     setDeleteError('');
 
@@ -425,13 +428,15 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleRestartBook = async (bookId: string, bookTitle: string) => {
-    const confirmed = window.confirm(
-      `Are you sure you want to restart "${bookTitle}" from scratch?\n\nThis will DELETE all chapters, illustrations, and generated content.\n\nThe original book input (title, premise, characters, etc.) will be kept.`
-    );
+  const handleRestartBook = (bookId: string, bookTitle: string) => {
+    setRestartBookData({ id: bookId, title: bookTitle });
+    setShowRestartConfirm(true);
+  };
 
-    if (!confirmed) return;
+  const confirmRestartBook = async () => {
+    if (!restartBookData) return;
 
+    const { id: bookId } = restartBookData;
     setRestartingBookId(bookId);
     setRestartResult(null);
 
@@ -479,6 +484,7 @@ export default function AdminDashboard() {
       });
     } finally {
       setRestartingBookId(null);
+      setRestartBookData(null);
     }
   };
 
@@ -1844,6 +1850,33 @@ export default function AdminDashboard() {
           )}
         </div>
       </main>
+
+      {/* Bulk Delete Confirmation Modal */}
+      <ConfirmModal
+        isOpen={showBulkDeleteConfirm}
+        onClose={() => setShowBulkDeleteConfirm(false)}
+        onConfirm={confirmBulkDelete}
+        title="Delete Books Permanently"
+        message={`Are you sure you want to permanently delete ${selectedBooks.size} book(s)? This action cannot be undone.`}
+        confirmText="Delete Books"
+        cancelText="Cancel"
+        type="danger"
+      />
+
+      {/* Restart Book Confirmation Modal */}
+      <ConfirmModal
+        isOpen={showRestartConfirm}
+        onClose={() => {
+          setShowRestartConfirm(false);
+          setRestartBookData(null);
+        }}
+        onConfirm={confirmRestartBook}
+        title="Restart Book from Scratch"
+        message={restartBookData ? `Are you sure you want to restart "${restartBookData.title}" from scratch? This will DELETE all chapters, illustrations, and generated content. The original book input (title, premise, characters, etc.) will be kept.` : ''}
+        confirmText="Restart Book"
+        cancelText="Cancel"
+        type="warning"
+      />
     </div>
   );
 }
