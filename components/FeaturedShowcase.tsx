@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { BookOpen, Film, Palette, ImageIcon, Sparkles, ArrowRight } from 'lucide-react';
+import { BookOpen, Film, Palette, ImageIcon, Sparkles, ArrowRight, Download } from 'lucide-react';
 
 interface FeaturedItem {
   id: string;
@@ -16,18 +16,19 @@ interface FeaturedItem {
   totalWords: number;
   totalChapters: number;
   logline: string | null;
+  samplePdfUrl: string | null;
 }
 
 // Placeholder data for empty slots
 const PLACEHOLDERS: Omit<FeaturedItem, 'id'>[] = [
-  { title: 'Your Novel Here', genre: 'Fantasy', bookType: 'text', bookFormat: 'text_only', coverImageUrl: null, authorName: 'Your Name', totalWords: 50000, totalChapters: 15, logline: 'An epic tale waiting to be written...' },
-  { title: 'Epic Comic Adventure', genre: 'Action', bookType: 'visual', bookFormat: 'comic', coverImageUrl: null, authorName: 'Your Name', totalWords: 8000, totalChapters: 24, logline: 'Your visual story could inspire others...' },
-  { title: 'Award-Winning Script', genre: 'Drama', bookType: 'screenplay', bookFormat: 'screenplay', coverImageUrl: null, authorName: 'Your Name', totalWords: 25000, totalChapters: 8, logline: 'The next great screenplay awaits...' },
-  { title: 'Children\'s Picture Book', genre: 'Adventure', bookType: 'visual', bookFormat: 'picture_book', coverImageUrl: null, authorName: 'Your Name', totalWords: 500, totalChapters: 12, logline: 'A magical journey for young readers...' },
-  { title: 'Sci-Fi Thriller', genre: 'Science Fiction', bookType: 'text', bookFormat: 'text_only', coverImageUrl: null, authorName: 'Your Name', totalWords: 80000, totalChapters: 20, logline: 'Explore new worlds and possibilities...' },
-  { title: 'Romance Novel', genre: 'Romance', bookType: 'text', bookFormat: 'text_only', coverImageUrl: null, authorName: 'Your Name', totalWords: 60000, totalChapters: 18, logline: 'Love stories that capture hearts...' },
-  { title: 'TV Series Pilot', genre: 'Mystery', bookType: 'screenplay', bookFormat: 'tv_series', coverImageUrl: null, authorName: 'Your Name', totalWords: 12000, totalChapters: 1, logline: 'The pilot episode that hooks viewers...' },
-  { title: 'Graphic Novel', genre: 'Horror', bookType: 'visual', bookFormat: 'comic', coverImageUrl: null, authorName: 'Your Name', totalWords: 15000, totalChapters: 40, logline: 'Dark tales brought to life...' },
+  { title: 'Your Novel Here', genre: 'Fantasy', bookType: 'text', bookFormat: 'text_only', coverImageUrl: null, authorName: 'Your Name', totalWords: 50000, totalChapters: 15, logline: 'An epic tale waiting to be written...', samplePdfUrl: null },
+  { title: 'Epic Comic Adventure', genre: 'Action', bookType: 'visual', bookFormat: 'comic', coverImageUrl: null, authorName: 'Your Name', totalWords: 8000, totalChapters: 24, logline: 'Your visual story could inspire others...', samplePdfUrl: null },
+  { title: 'Award-Winning Script', genre: 'Drama', bookType: 'screenplay', bookFormat: 'screenplay', coverImageUrl: null, authorName: 'Your Name', totalWords: 25000, totalChapters: 8, logline: 'The next great screenplay awaits...', samplePdfUrl: null },
+  { title: 'Children\'s Picture Book', genre: 'Adventure', bookType: 'visual', bookFormat: 'picture_book', coverImageUrl: null, authorName: 'Your Name', totalWords: 500, totalChapters: 12, logline: 'A magical journey for young readers...', samplePdfUrl: null },
+  { title: 'Sci-Fi Thriller', genre: 'Science Fiction', bookType: 'text', bookFormat: 'text_only', coverImageUrl: null, authorName: 'Your Name', totalWords: 80000, totalChapters: 20, logline: 'Explore new worlds and possibilities...', samplePdfUrl: null },
+  { title: 'Romance Novel', genre: 'Romance', bookType: 'text', bookFormat: 'text_only', coverImageUrl: null, authorName: 'Your Name', totalWords: 60000, totalChapters: 18, logline: 'Love stories that capture hearts...', samplePdfUrl: null },
+  { title: 'TV Series Pilot', genre: 'Mystery', bookType: 'screenplay', bookFormat: 'tv_series', coverImageUrl: null, authorName: 'Your Name', totalWords: 12000, totalChapters: 1, logline: 'The pilot episode that hooks viewers...', samplePdfUrl: null },
+  { title: 'Graphic Novel', genre: 'Horror', bookType: 'visual', bookFormat: 'comic', coverImageUrl: null, authorName: 'Your Name', totalWords: 15000, totalChapters: 40, logline: 'Dark tales brought to life...', samplePdfUrl: null },
 ];
 
 function getTypeIcon(bookFormat: string) {
@@ -124,14 +125,16 @@ export default function FeaturedShowcase({ variant = 'full' }: FeaturedShowcaseP
                   {getTypeLabel(item.bookFormat)}
                 </div>
                 {/* Hover overlay */}
-                {!isPlaceholder && (
+                {!isPlaceholder && 'samplePdfUrl' in item && item.samplePdfUrl && (
                   <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                    <Link
-                      href={`/book/${item.id}`}
-                      className="px-2 py-1 bg-white text-neutral-900 rounded text-[10px] font-medium hover:bg-neutral-100 transition-colors"
+                    <a
+                      href={item.samplePdfUrl}
+                      download={`${item.title.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`}
+                      className="px-2 py-1 bg-white text-neutral-900 rounded text-[10px] font-medium hover:bg-neutral-100 transition-colors flex items-center gap-1"
                     >
-                      View
-                    </Link>
+                      <Download className="h-3 w-3" />
+                      PDF
+                    </a>
                   </div>
                 )}
               </div>
@@ -215,16 +218,17 @@ export default function FeaturedShowcase({ variant = 'full' }: FeaturedShowcaseP
                     {getTypeLabel(item.bookFormat)}
                   </div>
 
-                  {/* Hover Overlay for real items */}
-                  {!isPlaceholder && (
+                  {/* Hover Overlay for real items with PDF */}
+                  {!isPlaceholder && 'samplePdfUrl' in item && item.samplePdfUrl && (
                     <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                      <Link
-                        href={`/book/${item.id}`}
+                      <a
+                        href={item.samplePdfUrl}
+                        download={`${item.title.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`}
                         className="px-4 py-2 bg-white text-neutral-900 rounded-lg text-sm font-medium hover:bg-neutral-100 transition-colors flex items-center gap-2"
                       >
-                        View Details
-                        <ArrowRight className="h-4 w-4" />
-                      </Link>
+                        <Download className="h-4 w-4" />
+                        Download PDF
+                      </a>
                     </div>
                   )}
 

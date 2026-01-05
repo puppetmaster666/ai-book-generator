@@ -21,6 +21,7 @@ export async function GET() {
         totalWords: true,
         totalChapters: true,
         metadata: true,
+        samplePdfUrl: true,
       },
       orderBy: { createdAt: 'desc' },
       take: 8, // Max 8 items for showcase
