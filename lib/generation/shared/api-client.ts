@@ -261,6 +261,53 @@ export function getGeminiImage(): GenerativeModel {
   return _geminiImage;
 }
 
+// Streaming content generator - yields text chunks as they arrive
+// Returns an async generator that yields partial text and finally the full text
+export async function* streamContent(
+  prompt: string,
+  onChunk?: (chunk: string, accumulated: string) => void
+): AsyncGenerator<{ chunk: string; accumulated: string; done: boolean }, string, unknown> {
+  const model = getGeminiPro();
+  let accumulated = '';
+
+  try {
+    const result = await model.generateContentStream(prompt);
+
+    for await (const chunk of result.stream) {
+      const chunkText = chunk.text();
+      if (chunkText) {
+        accumulated += chunkText;
+        if (onChunk) {
+          onChunk(chunkText, accumulated);
+        }
+        yield { chunk: chunkText, accumulated, done: false };
+      }
+    }
+
+    // Mark key as working after successful stream
+    markKeyAsWorking();
+
+    yield { chunk: '', accumulated, done: true };
+    return accumulated;
+  } catch (error) {
+    const errorMsg = (error as Error).message || '';
+    const isRateLimit = errorMsg.includes('429') || errorMsg.includes('quota') || errorMsg.includes('rate');
+
+    if (isRateLimit) {
+      // Try rotating key and retrying once
+      const rotated = rotateApiKey();
+      if (rotated) {
+        console.log('[Gemini Stream] Rate limit hit, retrying with rotated key...');
+        // Recursively retry with new key
+        yield* streamContent(prompt, onChunk);
+        return accumulated;
+      }
+    }
+
+    throw error;
+  }
+}
+
 // Quick health check timeout - 5 seconds max for a simple test
 const HEALTH_CHECK_TIMEOUT_MS = 5000;
 

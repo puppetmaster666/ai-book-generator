@@ -10,6 +10,7 @@ import ScreenplayPreview from '@/components/ScreenplayPreview';
 import { useGeneratingBook } from '@/contexts/GeneratingBookContext';
 import Link from 'next/link';
 import FirstBookDiscountPopup from '@/components/FirstBookDiscountPopup';
+import LivePreview from '@/components/LivePreview';
 
 interface Chapter {
   id: string;
@@ -2300,6 +2301,16 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
         </div>
 
       </main>
+
+      {/* Live Preview - shows AI writing in real-time */}
+      {book && (
+        <LivePreview
+          bookId={id}
+          isGenerating={book.status === 'generating'}
+          currentChapter={book.currentChapter}
+          bookFormat={book.bookFormat}
+        />
+      )}
     </div>
   );
 }
