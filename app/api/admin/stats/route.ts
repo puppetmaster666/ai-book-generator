@@ -152,6 +152,10 @@ export async function GET(request: NextRequest) {
           // Download tracking
           downloadedAt: true,
           downloadFormat: true,
+          // Featured sample
+          isFeaturedSample: true,
+          samplePdfUrl: true,
+          coverImageUrl: true,
           user: {
             select: { email: true, name: true, plan: true, freeBookUsed: true },
           },

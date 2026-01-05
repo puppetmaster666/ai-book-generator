@@ -152,6 +152,10 @@ model Book {
   // Featured books for public showcase
   featured        Boolean   @default(false)
 
+  // Featured samples for homepage (admin selects these)
+  isFeaturedSample Boolean  @default(false)
+  samplePdfUrl     String?  // Uploaded PDF for sample download
+
   // Download tracking
   downloadedAt    DateTime?  // When book was first downloaded
   downloadFormat  String?    // epub or pdf

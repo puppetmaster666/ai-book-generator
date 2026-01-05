@@ -26,6 +26,8 @@ import {
   ChevronDown,
   ChevronUp,
   ExternalLink,
+  Star,
+  Upload,
 } from 'lucide-react';
 import ConfirmModal from '@/components/ConfirmModal';
 
@@ -91,6 +93,9 @@ interface AdminStats {
     errorMessage: string | null;
     downloadedAt: string | null;
     downloadFormat: string | null;
+    isFeaturedSample: boolean;
+    samplePdfUrl: string | null;
+    coverImageUrl: string | null;
     user: { email: string; name: string | null; plan: string; freeBookUsed: boolean } | null;
   }>;
   booksPagination: {
@@ -1158,6 +1163,84 @@ export default function AdminDashboard() {
                                 <p className="text-sm text-red-700 bg-red-50 rounded-lg p-3 border border-red-200">
                                   {book.errorMessage}
                                 </p>
+                              </div>
+                            )}
+                            {/* Featured Sample Controls (only for completed books) */}
+                            {book.status === 'completed' && (
+                              <div className="md:col-span-2 mt-4 pt-4 border-t border-neutral-200">
+                                <label className="block text-xs font-semibold text-neutral-500 uppercase tracking-wide mb-2">
+                                  Homepage Sample
+                                </label>
+                                <div className="flex items-center gap-4 bg-white rounded-lg p-4 border border-neutral-200">
+                                  <div className="flex items-center gap-2">
+                                    {book.isFeaturedSample ? (
+                                      <Star className="h-5 w-5 text-yellow-500 fill-yellow-500" />
+                                    ) : (
+                                      <Star className="h-5 w-5 text-neutral-300" />
+                                    )}
+                                    <span className="text-sm font-medium">
+                                      {book.isFeaturedSample ? 'Featured Sample' : 'Not Featured'}
+                                    </span>
+                                  </div>
+                                  {book.samplePdfUrl && (
+                                    <span className="text-xs text-green-600 bg-green-50 px-2 py-1 rounded">
+                                      PDF Uploaded
+                                    </span>
+                                  )}
+                                  <div className="flex-1" />
+                                  <label className="cursor-pointer flex items-center gap-2 px-3 py-1.5 text-sm bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-lg transition-colors">
+                                    <Upload className="h-4 w-4" />
+                                    Upload Sample PDF
+                                    <input
+                                      type="file"
+                                      accept="application/pdf"
+                                      className="hidden"
+                                      onChange={async (e) => {
+                                        const file = e.target.files?.[0];
+                                        if (!file) return;
+                                        const formData = new FormData();
+                                        formData.append('action', 'upload');
+                                        formData.append('pdf', file);
+                                        try {
+                                          const res = await fetch(`/api/admin/books/${book.id}/sample`, {
+                                            method: 'POST',
+                                            body: formData,
+                                          });
+                                          if (res.ok) {
+                                            alert('Sample PDF uploaded! Refresh to see changes.');
+                                          } else {
+                                            const data = await res.json();
+                                            alert(data.error || 'Upload failed');
+                                          }
+                                        } catch {
+                                          alert('Upload failed');
+                                        }
+                                      }}
+                                    />
+                                  </label>
+                                  {book.isFeaturedSample && (
+                                    <button
+                                      onClick={async () => {
+                                        const formData = new FormData();
+                                        formData.append('action', 'remove');
+                                        try {
+                                          const res = await fetch(`/api/admin/books/${book.id}/sample`, {
+                                            method: 'POST',
+                                            body: formData,
+                                          });
+                                          if (res.ok) {
+                                            alert('Sample removed. Refresh to see changes.');
+                                          }
+                                        } catch {
+                                          alert('Failed to remove sample');
+                                        }
+                                      }}
+                                      className="px-3 py-1.5 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                    >
+                                      Remove
+                                    </button>
+                                  )}
+                                </div>
                               </div>
                             )}
                           </div>

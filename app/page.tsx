@@ -11,6 +11,8 @@ import TrafficWarning from '@/components/TrafficWarning';
 import Header from '@/components/Header';
 import Testimonials from '@/components/Testimonials';
 import FAQ from '@/components/FAQ';
+import SamplesSection from '@/components/SamplesSection';
+import ScreenplayAnimation from '@/components/ScreenplayAnimation';
 
 // Idea categories for the Surprise Me feature
 type IdeaCategory = 'random' | 'novel' | 'childrens' | 'comic' | 'nonfiction' | 'screenplay' | 'adult_comic';
@@ -703,8 +705,61 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Screenplay Animation Showcase */}
+      <section className="py-20 px-6 bg-white">
+        <div className="max-w-6xl mx-auto">
+          <div className="grid md:grid-cols-2 gap-12 items-center">
+            {/* Content */}
+            <div>
+              <div className="inline-flex items-center gap-2 bg-neutral-100 px-4 py-2 rounded-full text-sm text-neutral-600 mb-6">
+                <span className="w-2 h-2 bg-purple-500 rounded-full" />
+                Professional Screenplay Format
+              </div>
+              <h2 className="text-4xl md:text-5xl font-bold tracking-tight mb-6 text-neutral-900" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>
+                Movie-ready{' '}
+                <span className="relative inline-block">
+                  <span className="absolute -inset-x-1 -inset-y-1 bg-black -skew-y-2 translate-x-1 translate-y-1" aria-hidden="true" />
+                  <span className={`absolute -inset-x-1 -inset-y-1 ${ACCENT.bg} -skew-y-2`} aria-hidden="true" />
+                  <span className="relative text-neutral-900 px-2">scripts</span>
+                </span>
+              </h2>
+              <p className="text-neutral-500 mb-8 leading-relaxed">
+                Generate properly formatted screenplays with scene headings, action lines, character names, and dialogue.
+                Industry-standard format ready for production or submission.
+              </p>
+              <div className="flex flex-wrap gap-4 text-sm text-neutral-500">
+                <span className="flex items-center gap-2">
+                  <Check className="h-4 w-4 text-lime-500" />
+                  Scene headings
+                </span>
+                <span className="flex items-center gap-2">
+                  <Check className="h-4 w-4 text-lime-500" />
+                  Action lines
+                </span>
+                <span className="flex items-center gap-2">
+                  <Check className="h-4 w-4 text-lime-500" />
+                  Dialogue formatting
+                </span>
+                <span className="flex items-center gap-2">
+                  <Check className="h-4 w-4 text-lime-500" />
+                  Transitions
+                </span>
+              </div>
+            </div>
+
+            {/* Animation */}
+            <div>
+              <ScreenplayAnimation />
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Testimonials */}
       <Testimonials />
+
+      {/* Sample Downloads */}
+      <SamplesSection />
 
       {/* Showcase */}
       <section className="py-24 px-6 bg-neutral-900">
