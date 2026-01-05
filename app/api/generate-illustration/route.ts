@@ -147,17 +147,65 @@ export async function POST(request: NextRequest) {
 
     // Execute with retry logic that handles safety blocks
     let useSafeMode = false;
+    let safeModeLevel = 0; // 0 = off, 1 = light sanitization, 2 = heavy sanitization, 3 = fallback
+
+    // Sanitize scene for safety by replacing sensitive words
+    const sanitizeScene = (text: string, level: number): string => {
+      let sanitized = text;
+
+      if (level >= 1) {
+        // Level 1: Replace sensitive words with milder alternatives
+        const replacements: Record<string, string> = {
+          'blood': 'red liquid', 'bloody': 'stained', 'bleeding': 'injured',
+          'gore': 'mess', 'gory': 'intense', 'kill': 'confront', 'killing': 'confronting',
+          'murder': 'conflict', 'murderer': 'antagonist', 'dead': 'still', 'death': 'end',
+          'dying': 'fading', 'knife': 'object', 'weapon': 'tool', 'gun': 'device',
+          'stab': 'strike', 'stabbing': 'striking', 'horror': 'tension', 'terrifying': 'intense',
+          'terrified': 'startled', 'scary': 'mysterious', 'creepy': 'unusual', 'violent': 'dramatic',
+          'violence': 'conflict', 'attack': 'approach', 'attacking': 'approaching',
+          'corpse': 'figure', 'body': 'form', 'victim': 'person', 'scream': 'expression',
+          'screaming': 'calling out', 'dark': 'dim', 'darkness': 'shadows', 'sinister': 'mysterious',
+          'fear': 'concern', 'afraid': 'worried', 'panic': 'urgency', 'terror': 'suspense',
+          'sexy': 'attractive', 'seductive': 'charming', 'naked': 'unclothed', 'nude': 'natural',
+          'kiss': 'close moment', 'kissing': 'embracing', 'bedroom': 'private room',
+          'intimate': 'close', 'passionate': 'emotional', 'desire': 'longing',
+        };
+
+        for (const [word, replacement] of Object.entries(replacements)) {
+          const regex = new RegExp(`\\b${word}\\b`, 'gi');
+          sanitized = sanitized.replace(regex, replacement);
+        }
+      }
+
+      if (level >= 2) {
+        // Level 2: Focus on atmosphere, reduce action focus
+        sanitized = `A calm, atmospheric scene: ${sanitized.substring(0, 150)}. Focus on environment, lighting, and peaceful mood.`;
+      }
+
+      if (level >= 3) {
+        // Level 3: Complete fallback - just use setting
+        sanitized = `A beautiful, peaceful illustration showing a serene ${setting || 'landscape'}. Professional book illustration with warm lighting and inviting atmosphere. No people, just the environment.`;
+      }
+
+      return sanitized;
+    };
 
     const generateWithSafeMode = async () => {
-      // If in safe mode, sanitize the prompt
+      // If in safe mode, sanitize the scene in the prompt
       let currentPrompt = prompt;
       if (useSafeMode) {
-        console.log('[Illustration] Using SAFE MODE prompt due to previous block');
-        // Add strong safety override instruction
-        currentPrompt = prompt + `\n\nIMPORTANT SAFETY OVERRIDE: The previous attempt was blocked by content filters. Re-generate this scene to be completely safe for general audiences. Use euphemisms, remove any violence/gore/sexual themes, and focus on atmosphere/mood instead of explicit details. Make it PG-rated.`;
+        console.log(`[Illustration] Using SAFE MODE level ${safeModeLevel} due to previous block`);
 
-        // If a mature context was added, remove it
-        currentPrompt = currentPrompt.replace(/MATURE VISUAL STYLE:.*$/m, '');
+        // Sanitize the scene portion of the prompt
+        const sanitizedScene = sanitizeScene(scene, safeModeLevel);
+        currentPrompt = prompt.replace(scene, sanitizedScene);
+
+        // Add safety override instruction
+        currentPrompt += `\n\nIMPORTANT SAFETY OVERRIDE: Create this scene to be completely safe for general audiences. Focus on atmosphere and mood. Make it family-friendly and PG-rated.`;
+
+        // Remove mature style sections (use [\s\S] instead of 's' flag for compatibility)
+        currentPrompt = currentPrompt.replace(/=== MATURE VISUAL STYLE ===[\s\S]*?=== END MATURE STYLE ===/g, '');
+        currentPrompt = currentPrompt.replace(/MATURE VISUAL STYLE:.*$/gm, '');
       }
 
       const model = getGenAI().getGenerativeModel({
@@ -198,9 +246,10 @@ export async function POST(request: NextRequest) {
       const candidate = response.candidates?.[0];
       if (!candidate) {
         const blockReason = response.promptFeedback?.blockReason;
-        // This could be a rate limit OR a block
-        if (blockReason === 'SAFETY' || blockReason === 'OTHER') {
-          return { blocked: true, reason: blockReason };
+        const blockReasonStr = String(blockReason || '').toUpperCase();
+        // Check if this is a content policy block (not a rate limit)
+        if (blockReasonStr.includes('SAFETY') || blockReasonStr.includes('OTHER') || blockReasonStr.includes('PROHIBITED') || blockReasonStr.includes('BLOCK')) {
+          return { blocked: true, reason: blockReasonStr };
         }
         throw new Error(`No candidates - possible rate limit. Reason: ${blockReason || 'unknown'}`);
       }
@@ -256,14 +305,16 @@ export async function POST(request: NextRequest) {
           if ('blocked' in result && result.blocked) {
             console.warn(`[Illustration] Blocked by ${result.reason} (attempt ${attempt + 1})`);
 
-            if (!useSafeMode) {
-              useSafeMode = true;
-              console.log('[Illustration] Enabling SAFE MODE for retry...');
-              continue;
-            }
+            // Enable safe mode and increment level for each retry
+            useSafeMode = true;
+            safeModeLevel = Math.min(safeModeLevel + 1, 3);
+            console.log(`[Illustration] Enabling SAFE MODE level ${safeModeLevel} for retry...`);
 
-            if (attempt >= 3) return result;
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            if (safeModeLevel >= 3 && attempt >= 3) {
+              // Give up after level 3 fallback fails
+              return result;
+            }
+            await new Promise(resolve => setTimeout(resolve, 500));
             continue;
           }
 
@@ -276,6 +327,27 @@ export async function POST(request: NextRequest) {
         } catch (error) {
           lastError = error as Error;
           const errorMessage = lastError.message?.toLowerCase() || '';
+
+          // Check if it's a content policy block (should trigger safe mode, not key rotation)
+          const isContentPolicyError =
+            errorMessage.includes('prohibited_content') ||
+            errorMessage.includes('blocked') ||
+            errorMessage.includes('safety');
+
+          if (isContentPolicyError) {
+            console.warn(`[Illustration] Content policy error detected: ${errorMessage}`);
+            // Enable safe mode and increment level for each retry
+            useSafeMode = true;
+            safeModeLevel = Math.min(safeModeLevel + 1, 3);
+            console.log(`[Illustration] Enabling SAFE MODE level ${safeModeLevel} due to content policy error...`);
+
+            // Give up after level 3 fallback fails multiple times
+            if (safeModeLevel >= 3 && attempt >= 3) {
+              throw new Error('Content blocked by safety policy even with fallback scene');
+            }
+            await new Promise(resolve => setTimeout(resolve, 500));
+            continue;
+          }
 
           const isRateLimitError =
             errorMessage.includes('rate limit') ||
