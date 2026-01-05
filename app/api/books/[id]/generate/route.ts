@@ -875,6 +875,16 @@ export async function POST(
           status: 'generating',
         },
       });
+    } else {
+      // Outline already exists (from previous attempt) - just update status to 'generating'
+      console.log(`Outline already exists with ${outline.chapters.length} chapters, skipping regeneration`);
+      await prisma.book.update({
+        where: { id },
+        data: {
+          status: 'generating',
+          totalChapters: outline.chapters.length,
+        },
+      });
     }
 
     // Step 1.5: Generate visual guides for illustrated books (before any illustrations)

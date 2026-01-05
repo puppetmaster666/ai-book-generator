@@ -52,7 +52,8 @@
       "Bash(node scripts/fix-oauth-email-verified.js:*)",
       "Bash(node scripts/fix-unverified-users.js:*)",
       "Bash(npx next build)",
-      "Bash(del check-book.js fix-book.js)"
+      "Bash(del check-book.js fix-book.js)",
+      "Bash(npx prisma db pull:*)"
     ]
   }
 }
