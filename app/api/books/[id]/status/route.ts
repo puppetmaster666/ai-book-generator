@@ -8,17 +8,17 @@ import { prisma } from '@/lib/db';
  * Full book fetch: ~6MB (with illustrations)
  * This endpoint: ~2KB
  *
- * Also detects stale generations - if a book has been "generating" for 7+ minutes
+ * Also detects stale generations - if a book has been "generating" for 20+ minutes
  * without progress, automatically marks it as failed (handles Vercel timeout cases).
  *
- * Note: Chapter generation has a 4-minute timeout, Vercel has a 5-minute max.
- * 7 minutes gives buffer for network delays and client retries.
+ * Note: API key rotation allows up to 4 keys × 4 minutes each = 16 minutes max.
+ * 20 minutes gives buffer for network delays, retries, and outline generation.
  */
 
-// Stale generation threshold: 7 minutes without progress
+// Stale generation threshold: 20 minutes without progress
+// API key rotation can take up to 16 minutes (4 keys × 4 min timeout each)
 // Each chapter generation updates the book timestamp as a "heartbeat"
-// With our 4-minute chapter timeout, this should only trigger on genuine failures
-const STALE_GENERATION_MS = 7 * 60 * 1000;
+const STALE_GENERATION_MS = 20 * 60 * 1000;
 
 export async function GET(
   request: NextRequest,
@@ -69,7 +69,7 @@ export async function GET(
     }
 
     // Check for stale generation
-    // If book is "generating" or "outlining" but hasn't had any activity in 15+ minutes, mark as failed
+    // If book is "generating" or "outlining" but hasn't had any activity in 20+ minutes, mark as failed
     let currentStatus = book.status;
     if (book.status === 'generating' || book.status === 'outlining') {
       const now = Date.now();
