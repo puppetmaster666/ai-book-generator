@@ -847,8 +847,29 @@ export async function POST(
         };
       } else {
         // Use standard outline for fiction text-based books
-        outline = await withTimeout(
-          generateOutline({
+        // Outline generation callback for live preview updates
+        let lastOutlineProgressUpdate = 0;
+        const onOutlineProgress = async (status: string, chaptersCompleted: number, totalChapters: number) => {
+          const now = Date.now();
+          // Throttle updates to every 2 seconds
+          if (now - lastOutlineProgressUpdate > 2000) {
+            try {
+              await prisma.book.update({
+                where: { id },
+                data: { livePreview: `📝 ${status}\n\nPlanning ${chaptersCompleted}/${totalChapters} chapters...` },
+              });
+              lastOutlineProgressUpdate = now;
+            } catch (e) {
+              // Ignore errors - live preview is non-critical
+            }
+          }
+        };
+
+        // For large books (>16 chapters), chunked generation handles its own timeouts per chunk
+        // For smaller books, use the standard timeout wrapper
+        if (book.targetChapters > 16) {
+          console.log(`[Generate] Large book (${book.targetChapters} chapters) - using chunked outline generation`);
+          outline = await generateOutline({
             title: book.title,
             genre: book.genre,
             bookType: book.bookType,
@@ -861,10 +882,35 @@ export async function POST(
             writingStyle: book.writingStyle,
             targetWords: book.targetWords,
             targetChapters: book.targetChapters,
-          }),
-          OUTLINE_TIMEOUT_MS,
-          'Fiction outline generation'
-        );
+            onProgress: onOutlineProgress,
+          });
+        } else {
+          outline = await withTimeout(
+            generateOutline({
+              title: book.title,
+              genre: book.genre,
+              bookType: book.bookType,
+              premise: book.premise,
+              originalIdea: book.originalIdea || undefined,
+              characters: book.characters as { name: string; description: string }[],
+              beginning: book.beginning,
+              middle: book.middle,
+              ending: book.ending,
+              writingStyle: book.writingStyle,
+              targetWords: book.targetWords,
+              targetChapters: book.targetChapters,
+              onProgress: onOutlineProgress,
+            }),
+            OUTLINE_TIMEOUT_MS,
+            'Fiction outline generation'
+          );
+        }
+
+        // Clear live preview after outline complete
+        await prisma.book.update({
+          where: { id },
+          data: { livePreview: null },
+        });
       }
 
       await prisma.book.update({

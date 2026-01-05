@@ -6,6 +6,7 @@ import { Sparkles, Eye, EyeOff, Loader2 } from 'lucide-react';
 interface LivePreviewProps {
   bookId: string;
   isGenerating: boolean;
+  isOutlining?: boolean;
   currentChapter: number;
   bookFormat?: string;
   onChapterComplete?: (chapterNum: number, wordCount: number) => void;
@@ -14,6 +15,7 @@ interface LivePreviewProps {
 export default function LivePreview({
   bookId,
   isGenerating,
+  isOutlining = false,
   currentChapter,
   bookFormat,
   onChapterComplete,
@@ -130,19 +132,19 @@ export default function LivePreview({
         onClick={() => setIsExpanded(!isExpanded)}
       >
         <div className="flex items-center gap-2">
-          <Sparkles className="h-4 w-4 text-lime-400 animate-pulse" />
+          <Sparkles className={`h-4 w-4 animate-pulse ${isOutlining ? 'text-blue-400' : 'text-lime-400'}`} />
           <span className="text-sm font-medium text-white">
-            Chapter {currentChapter + 1}
+            {isOutlining ? 'Planning Outline' : `Chapter ${currentChapter + 1}`}
           </span>
           {isActive && (
-            <span className="flex items-center gap-1 text-xs text-lime-400">
+            <span className={`flex items-center gap-1 text-xs ${isOutlining ? 'text-blue-400' : 'text-lime-400'}`}>
               <Loader2 className="h-3 w-3 animate-spin" />
               Live
             </span>
           )}
         </div>
         <div className="flex items-center gap-2">
-          {wordCount > 0 && (
+          {wordCount > 0 && !isOutlining && (
             <span className="text-xs text-neutral-400">
               {wordCount.toLocaleString()} words
             </span>
@@ -182,7 +184,9 @@ export default function LivePreview({
       {isExpanded && (
         <div className="px-4 py-2 bg-neutral-800 border-t border-neutral-700">
           <p className="text-xs text-neutral-500 text-center">
-            Watch the AI write your story in real-time
+            {isOutlining
+              ? 'Planning your book structure...'
+              : 'Watch the AI write your story in real-time'}
           </p>
         </div>
       )}

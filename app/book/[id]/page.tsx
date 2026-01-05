@@ -2302,11 +2302,12 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
 
       </main>
 
-      {/* Live Preview - shows AI writing in real-time */}
+      {/* Live Preview - shows AI writing in real-time during outlining and generating */}
       {book && (
         <LivePreview
           bookId={id}
-          isGenerating={book.status === 'generating'}
+          isGenerating={book.status === 'generating' || book.status === 'outlining'}
+          isOutlining={book.status === 'outlining'}
           currentChapter={book.currentChapter}
           bookFormat={book.bookFormat}
         />

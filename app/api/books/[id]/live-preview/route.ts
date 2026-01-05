@@ -32,7 +32,8 @@ export async function GET(
       status: book.status,
       currentChapter: book.currentChapter,
       totalChapters: book.totalChapters,
-      isGenerating: book.status === 'generating',
+      isGenerating: book.status === 'generating' || book.status === 'outlining',
+      isOutlining: book.status === 'outlining',
     });
   } catch (error) {
     console.error('Error fetching live preview:', error);
