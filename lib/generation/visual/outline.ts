@@ -73,7 +73,16 @@ COMIC-STYLE REQUIREMENTS:
 - Clear action beats that translate to panels
 - Sound effects where appropriate (CRASH! WHOOSH! etc.)
 
-DIALOGUE SUBTEXT (CRITICAL):
+=== CAUSAL CHAIN LOGIC (CRITICAL FOR STORY SENSE) ===
+- NEVER use "And then" logic where scenes just happen in sequence
+- Every scene MUST follow "Therefore/But" structure:
+  * "Action A happens, THEREFORE Action B must happen. BUT a new obstacle arises, THEREFORE Action C occurs."
+- MOTIVATION ANCHOR: Every character action must be driven by their established "Want" or "Internal Conflict"
+- If a character does something "just because the plot needs it," readers will feel it's nonsense
+- Each scene must be a CONSEQUENCE of the previous one - cause and effect chain
+- Ask: "Why does this scene happen?" The answer must come from the previous scene.
+
+=== DIALOGUE SUBTEXT (CRITICAL) ===
 - Characters must NEVER state their internal emotions directly (NO "I am angry", "I feel sad")
 - Instead, use sarcasm, evasion, deflection, or silence to convey emotional states
 - Show emotions through ACTIONS: gripping a glass tightly, turning away, forced laughter
@@ -81,12 +90,29 @@ DIALOGUE SUBTEXT (CRITICAL):
 - Example BAD: "I'm so scared right now!"
 - Example GOOD: "It's fine. Everything's fine." (while hands tremble)
 
-VISUAL PERFORMANCE:
+=== THE 50/50 RULE ===
+- If the IMAGE shows an action (falling, fighting, running), the DIALOGUE should NOT describe that action
+- Instead, dialogue should show the REACTION, a different topic, or be completely silent
+- Bad: Character falls, says "I'm falling!"
+- Good: Character falls, says "GRAB THE LEDGE!" or just "NO!"
+
+=== BANNED AI-ISMS (FORBIDDEN PHRASES) ===
+Never use these robotic AI dialogue patterns:
+- "I need you to understand..."
+- "Here's the thing..."
+- "Let me be clear..."
+- "I have to tell you something..."
+- "You need to know that..."
+- "The truth is..."
+- "Can we talk about..."
+These make dialogue feel artificial. Use natural speech instead.
+
+=== VISUAL PERFORMANCE ===
 - Describe what characters DO to show emotion, not how they "feel"
 - Physical descriptions: "clenched jaw", "narrowed eyes", "shoulders slumped"
 - Characters should interact with their environment (leaning, fidgeting, pacing)
 
-PAGE TURN MOMENTUM:
+=== PAGE TURN MOMENTUM ===
 - Each story segment should end with a hook that demands the next page
 - Use questions, reveals, arrivals, or visual cliffhangers
 ` : `
@@ -208,6 +234,27 @@ Example: "Panel 1: Hero spots danger. Panel 2: Hero leaps into action. Panel 3: 
 - The FINAL panel of every page MUST end on a micro-cliffhanger, a question, or a visual hook.
 - Examples: A shadow appearing behind a character, a hand reaching for something, a character's expression shifting, an unexpected arrival.
 - This creates rhythm and urgency - readers MUST turn the page.
+
+=== GUTTER LOGIC (TRANSITIONS BETWEEN PAGES) ===
+- The "gutter" is the space between panels/pages - readers fill in missing action here
+- For EVERY page after page 1, include a "transitionNote" explaining how characters got here
+- If a character is in a NEW location, the first panel MUST be an establishing shot
+- Bad: Page 1 shows kitchen, Page 2 shows forest with no explanation
+- Good: Page 2's first panel shows character walking into forest, or a transition note: "After breakfast, they set out..."
+- This prevents the "teleportation" problem where characters jump between scenes nonsensically
+
+=== CAUSAL CHAIN (THEREFORE/BUT) ===
+- NEVER use "And then" logic - scenes must connect causally
+- Each page's events must be a CONSEQUENCE of the previous page
+- Structure: "Page A happens, THEREFORE Page B. BUT obstacle arises, THEREFORE Page C."
+- Every character action must be driven by their established want/goal
+
+=== BANNED AI-ISMS ===
+NEVER use these robotic dialogue patterns:
+- "I need you to understand...", "Here's the thing...", "Let me be clear..."
+- "I have to tell you something...", "The truth is..."
+- "You need to know that...", "Can we talk about..."
+Use natural, subtext-driven speech instead.
 
 === SOUND EFFECTS (SFX) ===
 - Include SFX where they add kinetic energy: CRASH!, WHOOSH!, ZAP!, THWACK!
@@ -405,11 +452,12 @@ Output ONLY valid JSON with EXACTLY ${sanitizedBookData.targetChapters} chapters
       ],` : ''}
       "scene": {
         "location": "Specific place (castle courtyard, dark alley, bedroom, etc.)",
+        "transitionNote": "How characters got here from previous page (REQUIRED for pages 2+). E.g., 'After leaving the castle...', 'The next morning...'",
         "description": "What's happening - action-focused, unique to this page",
         "characters": ["Only characters IN THIS scene"],
         "characterActions": {
-          "Character1": "dynamic action: leaping, crouching, shouting, laughing",
-          "Character2": "different action with emotion"
+          "Character1": "PHYSICAL action only: clenched fists, narrowed eyes, leaning forward (NO 'angry' or 'sad')",
+          "Character2": "different PHYSICAL action: trembling hands, forced smile, backing away"
         },
         "background": "Time of day, weather, objects, atmosphere",
         "mood": "emotional tone",

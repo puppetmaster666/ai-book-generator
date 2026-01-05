@@ -1,6 +1,7 @@
 // Scene description for visual illustrations
 export interface SceneDescription {
   location: string;
+  transitionNote?: string; // How characters got here from previous page (for story continuity)
   description: string;
   characters: string[];
   characterActions: Record<string, string>;

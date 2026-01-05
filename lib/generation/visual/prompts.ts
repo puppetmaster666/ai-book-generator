@@ -246,6 +246,11 @@ END COPYRIGHT PROTECTION
     prompt += `Setting: ${scene.location}. `;
   }
 
+  // Add transition context if available (helps with story continuity)
+  if (scene.transitionNote) {
+    prompt += `Scene context: ${scene.transitionNote}. `;
+  }
+
   // Add scene description
   prompt += `${scene.description}. `;
 
