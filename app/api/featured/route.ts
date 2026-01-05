@@ -8,11 +8,6 @@ export async function GET() {
       where: {
         isFeaturedSample: true,
         status: 'completed',
-        // Must have either a cover image or be a screenplay
-        OR: [
-          { coverImageUrl: { not: null } },
-          { bookFormat: 'screenplay' },
-        ],
       },
       select: {
         id: true,

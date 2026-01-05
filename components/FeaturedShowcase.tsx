@@ -78,8 +78,8 @@ export default function FeaturedShowcase({ variant = 'full' }: FeaturedShowcaseP
       .catch(() => setLoading(false));
   }, []);
 
-  // Fill remaining slots with placeholders
-  const maxItems = variant === 'compact' ? 4 : 8;
+  // Fill remaining slots with placeholders - always show 8 to match admin panel slots
+  const maxItems = 8;
   const displayItems: (FeaturedItem | (Omit<FeaturedItem, 'id'> & { id?: string; isPlaceholder: true }))[] = [
     ...featured.slice(0, maxItems),
     ...PLACEHOLDERS.slice(0, maxItems - Math.min(featured.length, maxItems)).map((p, i) => ({ ...p, id: `placeholder-${i}`, isPlaceholder: true as const })),
@@ -88,8 +88,8 @@ export default function FeaturedShowcase({ variant = 'full' }: FeaturedShowcaseP
   // Compact variant - just the grid of cards, no wrapper section
   if (variant === 'compact') {
     return (
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-        {displayItems.slice(0, 4).map((item, index) => {
+      <div className="grid grid-cols-4 gap-2">
+        {displayItems.slice(0, 8).map((item, index) => {
           const isPlaceholder = 'isPlaceholder' in item && item.isPlaceholder;
           return (
             <div

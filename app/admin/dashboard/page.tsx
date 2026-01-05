@@ -105,6 +105,13 @@ interface AdminStats {
     total: number;
     totalPages: number;
   };
+  featuredBooks: Array<{
+    id: string;
+    title: string;
+    bookFormat: string;
+    coverImageUrl: string | null;
+    status: string;
+  }>;
   booksByFormat: Array<{ format: string; count: number }>;
   dailyStats: Array<{ date: string; booksCreated: number }>;
   anonymousContacts: Array<{
@@ -501,20 +508,50 @@ export default function AdminDashboard() {
 
         // Update local state instead of reloading
         if (stats) {
+          const updatedBooks = stats.books.map(book => {
+            if (book.id === bookId) {
+              if (action === 'toggle') {
+                return { ...book, isFeaturedSample: data.isFeaturedSample };
+              } else if (action === 'upload') {
+                return { ...book, samplePdfUrl: data.samplePdfUrl };
+              } else if (action === 'remove') {
+                return { ...book, isFeaturedSample: false, samplePdfUrl: null };
+              }
+            }
+            return book;
+          });
+
+          // Also update the featuredBooks array
+          let updatedFeaturedBooks = [...(stats.featuredBooks || [])];
+          const bookInList = stats.books.find(b => b.id === bookId);
+
+          if (action === 'toggle') {
+            if (data.isFeaturedSample && bookInList) {
+              // Add to featured (if not already there)
+              if (!updatedFeaturedBooks.find(b => b.id === bookId)) {
+                updatedFeaturedBooks.unshift({
+                  id: bookInList.id,
+                  title: bookInList.title,
+                  bookFormat: bookInList.bookFormat,
+                  coverImageUrl: bookInList.coverImageUrl,
+                  status: bookInList.status,
+                });
+                // Keep only 8
+                updatedFeaturedBooks = updatedFeaturedBooks.slice(0, 8);
+              }
+            } else {
+              // Remove from featured
+              updatedFeaturedBooks = updatedFeaturedBooks.filter(b => b.id !== bookId);
+            }
+          } else if (action === 'remove') {
+            // Remove from featured
+            updatedFeaturedBooks = updatedFeaturedBooks.filter(b => b.id !== bookId);
+          }
+
           setStats({
             ...stats,
-            books: stats.books.map(book => {
-              if (book.id === bookId) {
-                if (action === 'toggle') {
-                  return { ...book, isFeaturedSample: data.isFeaturedSample };
-                } else if (action === 'upload') {
-                  return { ...book, samplePdfUrl: data.samplePdfUrl };
-                } else if (action === 'remove') {
-                  return { ...book, isFeaturedSample: false, samplePdfUrl: null };
-                }
-              }
-              return book;
-            }),
+            books: updatedBooks,
+            featuredBooks: updatedFeaturedBooks,
           });
         }
 
@@ -1011,7 +1048,7 @@ export default function AdminDashboard() {
                 Featured Showcase
               </h2>
               <span className="text-sm text-neutral-500">
-                ({stats.books.filter(b => b.isFeaturedSample).length}/8 slots filled)
+                ({stats.featuredBooks?.length || 0}/8 slots filled)
               </span>
             </div>
             <p className="text-sm text-neutral-500">
@@ -1022,8 +1059,7 @@ export default function AdminDashboard() {
           {/* Featured Items Grid */}
           <div className="grid grid-cols-4 md:grid-cols-8 gap-3">
             {Array.from({ length: 8 }).map((_, i) => {
-              const featuredBooks = stats.books.filter(b => b.isFeaturedSample);
-              const book = featuredBooks[i];
+              const book = stats.featuredBooks?.[i];
 
               return (
                 <div
@@ -1400,6 +1436,7 @@ export default function AdminDashboard() {
                                   <div className="flex-1" />
                                   {/* Toggle Feature Button */}
                                   <button
+                                    type="button"
                                     onClick={() => toggleFeatureSample(book.id, 'toggle')}
                                     className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${
                                       book.isFeaturedSample
@@ -1426,6 +1463,7 @@ export default function AdminDashboard() {
                                   </label>
                                   {book.isFeaturedSample && (
                                     <button
+                                      type="button"
                                       onClick={() => toggleFeatureSample(book.id, 'remove')}
                                       className="px-3 py-1.5 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                                     >

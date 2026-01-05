@@ -53,6 +53,7 @@ export async function GET(request: NextRequest) {
       allPayments,
       recentUsers,
       recentBooks,
+      featuredBooks,
       booksByFormat,
       dailyStats,
       anonymousContacts,
@@ -165,6 +166,19 @@ export async function GET(request: NextRequest) {
           },
         },
       }),
+      // All featured books (separate query to avoid pagination issues)
+      prisma.book.findMany({
+        where: { isFeaturedSample: true },
+        orderBy: { createdAt: 'desc' },
+        take: 8,
+        select: {
+          id: true,
+          title: true,
+          bookFormat: true,
+          coverImageUrl: true,
+          status: true,
+        },
+      }),
       // Books by format
       prisma.book.groupBy({
         by: ['bookFormat'],
@@ -253,6 +267,7 @@ export async function GET(request: NextRequest) {
         illustrationCount: b._count.illustrations,
         _count: undefined,
       })),
+      featuredBooks, // All featured books for the showcase grid
       booksPagination: {
         page: booksPage,
         limit: booksLimit,
