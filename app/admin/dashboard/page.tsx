@@ -206,6 +206,10 @@ export default function AdminDashboard() {
   const [isDeletingUsers, setIsDeletingUsers] = useState(false);
   const [deleteUsersError, setDeleteUsersError] = useState('');
 
+  // Feature sample toast state
+  const [featureResult, setFeatureResult] = useState<{ success: boolean; message: string } | null>(null);
+  const [showFeatureToast, setShowFeatureToast] = useState(false);
+
   // Email logs state
   const [emailLogs, setEmailLogs] = useState<Array<{
     id: string;
@@ -478,6 +482,68 @@ export default function AdminDashboard() {
     }
   };
 
+  // Feature sample toggle handler - updates local state without page reload
+  const toggleFeatureSample = async (bookId: string, action: 'toggle' | 'upload' | 'remove', file?: File) => {
+    const formData = new FormData();
+    formData.append('action', action);
+    if (file) {
+      formData.append('pdf', file);
+    }
+
+    try {
+      const res = await fetch(`/api/admin/books/${bookId}/sample`, {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+
+        // Update local state instead of reloading
+        if (stats) {
+          setStats({
+            ...stats,
+            books: stats.books.map(book => {
+              if (book.id === bookId) {
+                if (action === 'toggle') {
+                  return { ...book, isFeaturedSample: data.isFeaturedSample };
+                } else if (action === 'upload') {
+                  return { ...book, samplePdfUrl: data.samplePdfUrl };
+                } else if (action === 'remove') {
+                  return { ...book, isFeaturedSample: false, samplePdfUrl: null };
+                }
+              }
+              return book;
+            }),
+          });
+        }
+
+        // Show success toast
+        let message = '';
+        if (action === 'toggle') {
+          message = data.isFeaturedSample ? 'Book featured on homepage!' : 'Book removed from homepage.';
+        } else if (action === 'upload') {
+          message = 'Sample PDF uploaded successfully!';
+        } else if (action === 'remove') {
+          message = 'Sample removed from homepage.';
+        }
+
+        setFeatureResult({ success: true, message });
+        setShowFeatureToast(true);
+        setTimeout(() => setShowFeatureToast(false), 3000);
+      } else {
+        const data = await res.json();
+        setFeatureResult({ success: false, message: data.error || 'Action failed' });
+        setShowFeatureToast(true);
+        setTimeout(() => setShowFeatureToast(false), 3000);
+      }
+    } catch {
+      setFeatureResult({ success: false, message: 'Action failed' });
+      setShowFeatureToast(true);
+      setTimeout(() => setShowFeatureToast(false), 3000);
+    }
+  };
+
   const handleRestartBook = (bookId: string, bookTitle: string) => {
     setRestartBookData({ id: bookId, title: bookTitle });
     setShowRestartConfirm(true);
@@ -725,6 +791,30 @@ export default function AdminDashboard() {
             <span className="font-medium">{emailResult.message}</span>
             <button
               onClick={() => setShowToast(false)}
+              className="ml-2 text-neutral-400 hover:text-neutral-600"
+            >
+              <XCircle className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Feature Sample Toast */}
+      {showFeatureToast && featureResult && (
+        <div className="fixed top-4 right-4 z-[100] animate-in slide-in-from-top-2 duration-300">
+          <div className={`flex items-center gap-3 px-5 py-4 rounded-xl shadow-lg border ${
+            featureResult.success
+              ? 'bg-green-50 border-green-200 text-green-800'
+              : 'bg-red-50 border-red-200 text-red-800'
+          }`}>
+            {featureResult.success ? (
+              <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0" />
+            ) : (
+              <XCircle className="h-5 w-5 text-red-500 flex-shrink-0" />
+            )}
+            <span className="font-medium">{featureResult.message}</span>
+            <button
+              onClick={() => setShowFeatureToast(false)}
               className="ml-2 text-neutral-400 hover:text-neutral-600"
             >
               <XCircle className="h-4 w-4" />
@@ -1310,23 +1400,7 @@ export default function AdminDashboard() {
                                   <div className="flex-1" />
                                   {/* Toggle Feature Button */}
                                   <button
-                                    onClick={async () => {
-                                      const formData = new FormData();
-                                      formData.append('action', 'toggle');
-                                      try {
-                                        const res = await fetch(`/api/admin/books/${book.id}/sample`, {
-                                          method: 'POST',
-                                          body: formData,
-                                        });
-                                        if (res.ok) {
-                                          const data = await res.json();
-                                          alert(data.isFeaturedSample ? 'Book featured on homepage!' : 'Book removed from homepage.');
-                                          window.location.reload();
-                                        }
-                                      } catch {
-                                        alert('Failed to toggle feature status');
-                                      }
-                                    }}
+                                    onClick={() => toggleFeatureSample(book.id, 'toggle')}
                                     className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${
                                       book.isFeaturedSample
                                         ? 'bg-yellow-50 text-yellow-700 hover:bg-yellow-100'
@@ -1342,46 +1416,17 @@ export default function AdminDashboard() {
                                       type="file"
                                       accept="application/pdf"
                                       className="hidden"
-                                      onChange={async (e) => {
+                                      onChange={(e) => {
                                         const file = e.target.files?.[0];
-                                        if (!file) return;
-                                        const formData = new FormData();
-                                        formData.append('action', 'upload');
-                                        formData.append('pdf', file);
-                                        try {
-                                          const res = await fetch(`/api/admin/books/${book.id}/sample`, {
-                                            method: 'POST',
-                                            body: formData,
-                                          });
-                                          if (res.ok) {
-                                            alert('Sample PDF uploaded! Refresh to see changes.');
-                                          } else {
-                                            const data = await res.json();
-                                            alert(data.error || 'Upload failed');
-                                          }
-                                        } catch {
-                                          alert('Upload failed');
+                                        if (file) {
+                                          toggleFeatureSample(book.id, 'upload', file);
                                         }
                                       }}
                                     />
                                   </label>
                                   {book.isFeaturedSample && (
                                     <button
-                                      onClick={async () => {
-                                        const formData = new FormData();
-                                        formData.append('action', 'remove');
-                                        try {
-                                          const res = await fetch(`/api/admin/books/${book.id}/sample`, {
-                                            method: 'POST',
-                                            body: formData,
-                                          });
-                                          if (res.ok) {
-                                            alert('Sample removed. Refresh to see changes.');
-                                          }
-                                        } catch {
-                                          alert('Failed to remove sample');
-                                        }
-                                      }}
+                                      onClick={() => toggleFeatureSample(book.id, 'remove')}
                                       className="px-3 py-1.5 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                                     >
                                       Remove
