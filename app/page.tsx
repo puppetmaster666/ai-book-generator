@@ -15,16 +15,39 @@ import SamplesSection from '@/components/SamplesSection';
 import ScreenplayAnimation from '@/components/ScreenplayAnimation';
 
 // Idea categories for the Surprise Me feature
-type IdeaCategory = 'random' | 'novel' | 'childrens' | 'comic' | 'nonfiction' | 'screenplay' | 'adult_comic';
+type IdeaCategory = 'random' | 'novel' | 'short_story' | 'nonfiction' | 'childrens' | 'comic' | 'adult_comic' | 'screenplay' | 'tv_series';
 
+// Grouped by book type for display
+const IDEA_CATEGORY_GROUPS: { label: string; categories: { value: IdeaCategory; label: string; emoji: string }[] }[] = [
+  {
+    label: 'Text Books',
+    categories: [
+      { value: 'novel', label: 'Novel', emoji: '📖' },
+      { value: 'short_story', label: 'Short Story', emoji: '📝' },
+      { value: 'nonfiction', label: 'Non-Fiction', emoji: '📚' },
+    ],
+  },
+  {
+    label: 'Visual Books',
+    categories: [
+      { value: 'childrens', label: "Children's", emoji: '🧒' },
+      { value: 'comic', label: 'Comic', emoji: '💥' },
+      { value: 'adult_comic', label: 'Adult Comic (18+)', emoji: '🔥' },
+    ],
+  },
+  {
+    label: 'Screenplays',
+    categories: [
+      { value: 'screenplay', label: 'Movie Script', emoji: '🎬' },
+      { value: 'tv_series', label: 'TV Series', emoji: '📺' },
+    ],
+  },
+];
+
+// Flat list for compatibility (with random at the top)
 const IDEA_CATEGORIES: { value: IdeaCategory; label: string; emoji: string }[] = [
-  { value: 'random', label: 'Any Type', emoji: '🎲' },
-  { value: 'novel', label: 'Novel', emoji: '📚' },
-  { value: 'childrens', label: "Children's", emoji: '🧸' },
-  { value: 'comic', label: 'Comic', emoji: '💥' },
-  { value: 'nonfiction', label: 'Non-Fiction', emoji: '📖' },
-  { value: 'screenplay', label: 'Movie Script', emoji: '🎬' },
-  { value: 'adult_comic', label: 'Adult Comic (18+)', emoji: '🔥' },
+  { value: 'random', label: 'Surprise Me', emoji: '🎲' },
+  ...IDEA_CATEGORY_GROUPS.flatMap(g => g.categories),
 ];
 
 // Locked accent color: Lime
@@ -363,22 +386,43 @@ export default function Home() {
                         <ChevronDown className="h-3 w-3" />
                       </button>
                       {showCategoryDropdown && (
-                        <div className="absolute left-0 bottom-full mb-1 bg-white rounded-lg shadow-lg border border-neutral-200 py-1 z-50 min-w-[140px]">
-                          {IDEA_CATEGORIES.map((cat) => (
-                            <button
-                              key={cat.value}
-                              type="button"
-                              onClick={() => {
-                                setIdeaCategory(cat.value);
-                                setShowCategoryDropdown(false);
-                              }}
-                              className={`w-full text-left px-3 py-2 text-sm hover:bg-neutral-100 flex items-center gap-2 ${
-                                ideaCategory === cat.value ? 'bg-neutral-50 font-medium' : ''
-                              }`}
-                            >
-                              <span>{cat.emoji}</span>
-                              <span>{cat.label}</span>
-                            </button>
+                        <div className="absolute left-0 bottom-full mb-1 bg-white rounded-lg shadow-lg border border-neutral-200 py-1 z-50 min-w-[160px]">
+                          {/* Surprise Me option */}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setIdeaCategory('random');
+                              setShowCategoryDropdown(false);
+                            }}
+                            className={`w-full text-left px-3 py-2 text-sm hover:bg-neutral-50 flex items-center gap-2 ${
+                              ideaCategory === 'random' ? 'bg-neutral-50 font-medium' : ''
+                            }`}
+                          >
+                            <span>🎲</span>
+                            Surprise Me
+                          </button>
+                          <div className="border-t border-neutral-100 my-1" />
+                          {/* Grouped categories */}
+                          {IDEA_CATEGORY_GROUPS.map((group) => (
+                            <div key={group.label}>
+                              <div className="px-3 py-1 text-xs text-neutral-400 font-medium">{group.label}</div>
+                              {group.categories.map((cat) => (
+                                <button
+                                  key={cat.value}
+                                  type="button"
+                                  onClick={() => {
+                                    setIdeaCategory(cat.value);
+                                    setShowCategoryDropdown(false);
+                                  }}
+                                  className={`w-full text-left px-3 py-1.5 text-sm hover:bg-neutral-50 flex items-center gap-2 ${
+                                    ideaCategory === cat.value ? 'bg-neutral-50 font-medium' : ''
+                                  }`}
+                                >
+                                  <span>{cat.emoji}</span>
+                                  {cat.label}
+                                </button>
+                              ))}
+                            </div>
                           ))}
                         </div>
                       )}
