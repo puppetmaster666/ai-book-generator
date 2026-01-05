@@ -14,6 +14,41 @@ function VerifyEmailContent() {
 
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
   const [message, setMessage] = useState('');
+  const [showResend, setShowResend] = useState(false);
+  const [resendEmail, setResendEmail] = useState('');
+  const [isResending, setIsResending] = useState(false);
+  const [resendMessage, setResendMessage] = useState('');
+
+  const handleResendVerification = async () => {
+    if (!resendEmail) return;
+    setIsResending(true);
+    setResendMessage('');
+
+    try {
+      const response = await fetch('/api/auth/resend-verification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: resendEmail }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setResendMessage(data.error || 'Failed to resend verification email');
+        return;
+      }
+
+      if (data.alreadyVerified) {
+        setResendMessage('Your email is already verified! You can log in now.');
+      } else {
+        setResendMessage('Verification email sent! Check your inbox.');
+      }
+    } catch (err) {
+      setResendMessage('Failed to resend. Please try again.');
+    } finally {
+      setIsResending(false);
+    }
+  };
 
   useEffect(() => {
     if (!token) {
@@ -88,21 +123,60 @@ function VerifyEmailContent() {
               </div>
               <h1 className="text-2xl font-bold mb-2 text-red-700">Verification Failed</h1>
               <p className="text-neutral-600 mb-6">{message}</p>
-              <div className="space-y-3">
-                <Link
-                  href="/signup"
-                  className="inline-flex items-center gap-2 px-6 py-3 bg-neutral-900 text-white rounded-full hover:bg-neutral-800 transition-colors"
-                >
-                  <Mail className="h-4 w-4" />
-                  Sign Up Again
-                </Link>
-                <p className="text-sm text-neutral-500">
-                  Already have an account?{' '}
-                  <Link href="/login" className="text-neutral-900 hover:underline">
-                    Log in
-                  </Link>
-                </p>
-              </div>
+
+              {!showResend ? (
+                <div className="space-y-3">
+                  <button
+                    onClick={() => setShowResend(true)}
+                    className="inline-flex items-center gap-2 px-6 py-3 bg-neutral-900 text-white rounded-full hover:bg-neutral-800 transition-colors"
+                  >
+                    <Mail className="h-4 w-4" />
+                    Resend Verification Email
+                  </button>
+                  <p className="text-sm text-neutral-500">
+                    Already verified?{' '}
+                    <Link href="/login" className="text-neutral-900 hover:underline">
+                      Log in
+                    </Link>
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div>
+                    <input
+                      type="email"
+                      value={resendEmail}
+                      onChange={(e) => setResendEmail(e.target.value)}
+                      placeholder="Enter your email"
+                      className="w-full px-4 py-3 border border-neutral-200 rounded-xl focus:border-neutral-900 focus:outline-none transition-colors"
+                    />
+                  </div>
+                  <button
+                    onClick={handleResendVerification}
+                    disabled={isResending || !resendEmail}
+                    className="w-full inline-flex items-center justify-center gap-2 px-6 py-3 bg-neutral-900 text-white rounded-full hover:bg-neutral-800 transition-colors disabled:opacity-50"
+                  >
+                    {isResending ? (
+                      <><Loader2 className="h-4 w-4 animate-spin" /> Sending...</>
+                    ) : (
+                      <>
+                        <Mail className="h-4 w-4" />
+                        Send Verification Email
+                      </>
+                    )}
+                  </button>
+                  {resendMessage && (
+                    <p className={`text-sm ${resendMessage.includes('Failed') ? 'text-red-600' : 'text-green-600'}`}>
+                      {resendMessage}
+                    </p>
+                  )}
+                  <p className="text-sm text-neutral-500">
+                    <Link href="/login" className="text-neutral-900 hover:underline">
+                      Back to login
+                    </Link>
+                  </p>
+                </div>
+              )}
             </>
           )}
         </div>

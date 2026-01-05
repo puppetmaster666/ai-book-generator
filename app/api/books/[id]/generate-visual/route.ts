@@ -484,6 +484,13 @@ export async function POST(
                 break;
             }
 
+            // Update book timestamp as "heartbeat" so stale detection knows we're active
+            // This prevents the 7-minute stale timeout from triggering during long visual generations
+            await prisma.book.update({
+                where: { id },
+                data: { status: 'generating' }, // updatedAt auto-updates
+            });
+
             const chunk = pendingChapters.slice(i, i + CONCURRENCY);
             const batchResults = await Promise.all(chunk.map(ch => generateOne(ch)));
 
@@ -533,6 +540,17 @@ export async function POST(
             // Check if this is a free tier preview (not fully paid)
             if (!canGenerate) {
                 console.log(`[Visual Gen] Free tier preview complete for book ${id}: ${successfulPanels} success, ${failedPanels} failed`);
+
+                // Mark book as preview_complete so user can see their sample and download it
+                await prisma.book.update({
+                    where: { id },
+                    data: {
+                        status: 'preview_complete',
+                        currentChapter: successfulPanels,
+                        completedAt: new Date(),
+                    },
+                });
+
                 return NextResponse.json({
                     success: true,
                     status: failedPanels > 0 ? 'preview_with_failures' : 'preview_complete',

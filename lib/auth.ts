@@ -13,6 +13,12 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     Google({
       clientId: process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+      // Request email verification status from Google
+      authorization: {
+        params: {
+          scope: 'openid email profile',
+        },
+      },
     }),
     Credentials({
       name: 'credentials',
@@ -40,11 +46,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
         if (!isValid) {
           return null;
-        }
-
-        // Block unverified users from logging in
-        if (!user.emailVerified) {
-          throw new Error('Please verify your email before logging in. Check your inbox for the verification link.');
         }
 
         return {
@@ -75,6 +76,31 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         session.user.id = token.id as string;
       }
       return session;
+    },
+    // Auto-verify email for OAuth users (Google verifies emails)
+    async signIn({ user, account }) {
+      // If signing in via OAuth provider, ensure email is marked as verified
+      if (account?.provider === 'google' && user.email) {
+        try {
+          const existingUser = await prisma.user.findUnique({
+            where: { email: user.email },
+            select: { id: true, emailVerified: true },
+          });
+
+          // If user exists but email not verified, verify it now
+          if (existingUser && !existingUser.emailVerified) {
+            await prisma.user.update({
+              where: { id: existingUser.id },
+              data: { emailVerified: new Date() },
+            });
+            console.log(`[Auth] Auto-verified email for Google OAuth user: ${user.email}`);
+          }
+        } catch (error) {
+          console.error('[Auth] Error auto-verifying OAuth user email:', error);
+          // Don't block sign-in if this fails
+        }
+      }
+      return true;
     },
   },
 });

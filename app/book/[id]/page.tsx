@@ -5,7 +5,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import Header from '@/components/Header';
 import ToastModal from '@/components/ToastModal';
-import { Download, BookOpen, Loader2, Check, AlertCircle, ImageIcon, Mail, Palette, PenTool, Clock, Zap, AlertTriangle, Save, Trash2, RefreshCw, X, FileText, Film, Megaphone } from 'lucide-react';
+import { Download, BookOpen, Loader2, Check, AlertCircle, ImageIcon, Mail, Palette, PenTool, Clock, Zap, AlertTriangle, Save, Trash2, RefreshCw, X, FileText, Film, Megaphone, Lock } from 'lucide-react';
 import ScreenplayPreview from '@/components/ScreenplayPreview';
 import { useGeneratingBook } from '@/contexts/GeneratingBookContext';
 import Link from 'next/link';
@@ -607,7 +607,7 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
       setElapsedTime(Math.floor((Date.now() - startTime) / 1000));
 
       return () => clearInterval(interval);
-    } else if (book?.status === 'completed' || book?.status === 'failed') {
+    } else if (book?.status === 'completed' || book?.status === 'preview_complete' || book?.status === 'failed') {
       startTimeRef.current = null;
     }
   }, [book?.status, redirectingToComic, serverStartTime]);
@@ -657,9 +657,11 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
         const serverIllustrationCount = status.illustrationCount || 0;
         const hasNewIllustrations = serverIllustrationCount > localIllustrationCount;
 
-        // Fetch full book data if there are new chapters, new illustrations, OR status completed
-        if (hasNewChapters || hasNewIllustrations || (status.status === 'completed' && book?.status !== 'completed')) {
-          const reason = hasNewChapters ? 'new chapters' : hasNewIllustrations ? 'new illustrations' : 'book completed';
+        // Fetch full book data if there are new chapters, new illustrations, OR status completed/preview_complete
+        const isNowComplete = (status.status === 'completed' || status.status === 'preview_complete') &&
+          book?.status !== 'completed' && book?.status !== 'preview_complete';
+        if (hasNewChapters || hasNewIllustrations || isNowComplete) {
+          const reason = hasNewChapters ? 'new chapters' : hasNewIllustrations ? 'new illustrations' : 'book completed/preview';
           console.log(`Fetching full book data: ${reason} (chapters: ${localChapterCount}→${serverChapterCount}, illustrations: ${localIllustrationCount}→${serverIllustrationCount})`);
           const fullRes = await fetch(`/api/books/${id}`);
           if (fullRes.ok) {
@@ -1162,6 +1164,7 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
   const isGenerating = book.status === 'generating' || book.status === 'outlining';
   const isPending = book.status === 'pending';
   const isFailed = book.status === 'failed' || !!book.errorMessage;
+  const isPreviewComplete = book.status === 'preview_complete';
   // Treat ?success=true as payment completed for UI (webhook may be delayed)
   // Also treat free_preview as "payment completed" since they're eligible to generate (with limits)
   const paymentCompleted = book.paymentStatus === 'completed' || book.paymentStatus === 'free_preview' || success === 'true';
@@ -1171,10 +1174,10 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
   // Check if free tier preview limit has been reached
   const FREE_TIER_CHAPTER_LIMIT = 1;
   const FREE_TIER_PANEL_LIMIT = 5;
-  const previewLimitReached = !paymentCompleted && (
+  const previewLimitReached = isPreviewComplete || (!paymentCompleted && (
     (isIllustrated && (book.illustrations?.length || 0) >= FREE_TIER_PANEL_LIMIT) ||
     (!isIllustrated && book.chapters.length >= FREE_TIER_CHAPTER_LIMIT)
-  );
+  ));
 
   // Show restart option for failed books or admins
   const canRestart = isAdminUser || isFailed;
@@ -1370,18 +1373,21 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
                 {/* Status Badge */}
                 <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium ${book.status === 'completed'
                   ? 'bg-neutral-900 text-white'
-                  : book.status === 'failed'
-                    ? 'bg-red-50 text-red-700 border border-red-200'
-                    : isPending
-                      ? 'bg-neutral-100 text-neutral-600'
-                      : 'bg-neutral-100 text-neutral-700'
+                  : isPreviewComplete
+                    ? 'bg-green-100 text-green-700 border border-green-200'
+                    : book.status === 'failed'
+                      ? 'bg-red-50 text-red-700 border border-red-200'
+                      : isPending
+                        ? 'bg-neutral-100 text-neutral-600'
+                        : 'bg-neutral-100 text-neutral-700'
                   }`}>
                   {book.status === 'completed' && <Check className="h-4 w-4" />}
+                  {isPreviewComplete && <Check className="h-4 w-4" />}
                   {isGenerating && <Loader2 className="h-4 w-4 animate-spin" />}
                   {isPending && <Clock className="h-4 w-4" />}
                   {book.status === 'failed' && <AlertCircle className="h-4 w-4" />}
                   <span className="capitalize">
-                    {isPending ? 'Queued' : book.status}
+                    {isPending ? 'Queued' : isPreviewComplete ? 'Preview Ready' : book.status}
                   </span>
                 </div>
 
@@ -1409,8 +1415,8 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
             </div>
           </div>
 
-          {/* Preview Limit Reached - Upgrade CTA */}
-          {previewLimitReached && !isFailed && (
+          {/* Preview Limit Reached - Upgrade CTA (during generation, before preview_complete) */}
+          {previewLimitReached && !isFailed && !isPreviewComplete && (
             <div className="bg-gradient-to-br from-neutral-900 to-neutral-800 rounded-2xl p-6 sm:p-8 mb-6 text-white">
               <div className="text-center">
                 <div className="w-16 h-16 mx-auto mb-4 bg-white/10 rounded-full flex items-center justify-center">
@@ -1713,7 +1719,7 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
                     const missingCount = totalPanels - (book.illustrations?.length || 0);
                     const failedCount = failedIllustrations.length;
                     const totalProblems = failedCount + missingCount;
-                    const showRetryButton = totalProblems > 0 && !isGenerating && book.status !== 'completed';
+                    const showRetryButton = totalProblems > 0 && !isGenerating && book.status !== 'completed' && !isPreviewComplete;
 
                     if (!showRetryButton) return null;
 
@@ -1772,6 +1778,9 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
                         const canRetry = isFailed && !isRetryingThis && (ill?.retryCount ?? 0) < 5;
                         const maxRetriesReached = isFailed && (ill?.retryCount ?? 0) >= 5;
 
+                        // Check if this panel is locked (beyond free tier limit for unpaid users)
+                        const isLocked = previewLimitReached && num > FREE_TIER_PANEL_LIMIT;
+
                         // Determine if this is the next panel to generate (for pending state)
                         const prevIll = illMap.get(num - 1);
                         const isNextToGenerate = !ill && (num === 1 || (prevIll && (prevIll.status === 'completed' || prevIll.imageUrl)));
@@ -1780,6 +1789,7 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
                           <div
                             key={num}
                             className={`relative aspect-square rounded-xl overflow-hidden bg-neutral-100 border transition-all ${
+                              isLocked ? 'border-neutral-300 bg-gradient-to-br from-neutral-200 to-neutral-300' :
                               isCompleted ? 'border-neutral-900' :
                               isFailed ? 'border-red-400 bg-red-50' :
                               isRetryingThis ? 'border-amber-400 bg-amber-50' :
@@ -1787,7 +1797,15 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
                               'border-neutral-200'
                             }`}
                           >
-                            {isCompleted && ill?.imageUrl ? (
+                            {isLocked ? (
+                              // Locked panel - blurred placeholder with lock icon
+                              <div className="w-full h-full flex flex-col items-center justify-center p-2 text-center bg-gradient-to-br from-neutral-200/80 to-neutral-300/80 backdrop-blur-sm">
+                                <div className="w-10 h-10 rounded-full bg-neutral-400/50 flex items-center justify-center mb-1">
+                                  <Lock className="h-5 w-5 text-neutral-600" />
+                                </div>
+                                <span className="text-[10px] font-medium text-neutral-600">Unlock</span>
+                              </div>
+                            ) : isCompleted && ill?.imageUrl ? (
                               <img src={ill.imageUrl} alt={`Panel ${num}`} className="w-full h-full object-cover" />
                             ) : isFailed ? (
                               <div className="w-full h-full flex flex-col items-center justify-center p-2 text-center">
@@ -1836,7 +1854,7 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
                                 )}
                               </div>
                             )}
-                            {isCompleted && (
+                            {isCompleted && !isLocked && (
                               <div className="absolute bottom-1 right-1 bg-black/60 text-white text-[10px] px-1.5 py-0.5 rounded-full backdrop-blur-sm">
                                 #{num}
                               </div>
@@ -1990,6 +2008,54 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
               )}
             </div>
             )
+          )}
+
+          {/* Preview Complete Section - Free Tier */}
+          {isPreviewComplete && (
+            <div className="bg-white rounded-2xl border border-neutral-200 p-6 sm:p-8 mb-6">
+              <div className="text-center mb-6">
+                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Check className="h-8 w-8 text-green-600" />
+                </div>
+                <h2 className="text-2xl font-bold text-neutral-900 mb-2">Your Preview is Ready!</h2>
+                <p className="text-neutral-600">
+                  {isIllustrated
+                    ? `${book.illustrations?.length || 0} of ${book.totalChapters || 20} panels generated`
+                    : `${book.chapters.length} of ${book.totalChapters} chapters generated`
+                  }
+                </p>
+              </div>
+
+              {/* Preview Stats */}
+              <div className="grid grid-cols-2 gap-4 mb-6">
+                <div className="bg-green-50 rounded-xl p-4 text-center border border-green-100">
+                  <p className="text-2xl font-bold text-green-700">
+                    {isIllustrated ? (book.illustrations?.length || 0) : book.chapters.length}
+                  </p>
+                  <p className="text-sm text-green-600">Free Preview</p>
+                </div>
+                <div className="bg-neutral-50 rounded-xl p-4 text-center border border-neutral-100">
+                  <p className="text-2xl font-bold text-neutral-400">
+                    {isIllustrated
+                      ? (book.totalChapters || 20) - (book.illustrations?.length || 0)
+                      : book.totalChapters - book.chapters.length
+                    }
+                  </p>
+                  <p className="text-sm text-neutral-500">Locked</p>
+                </div>
+              </div>
+
+              {/* Upgrade CTA */}
+              <Link
+                href={`/review?bookId=${id}`}
+                className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-neutral-900 text-white rounded-xl hover:bg-black font-medium transition-colors mb-3"
+              >
+                <Zap className="h-5 w-5" /> Unlock Full Book - $9.99
+              </Link>
+              <p className="text-xs text-neutral-500 text-center">
+                30-day money-back guarantee
+              </p>
+            </div>
           )}
 
           {/* Completed Section */}
@@ -2188,8 +2254,8 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
             </div>
           )}
 
-          {/* Save Your Work Section - show when book is completed and user is NOT logged in */}
-          {book.status === 'completed' && !session && (
+          {/* Save Your Work Section - show when book is completed/preview_complete and user is NOT logged in */}
+          {(book.status === 'completed' || isPreviewComplete) && !session && (
             <div className="bg-gradient-to-br from-neutral-900 to-neutral-800 rounded-2xl p-6 sm:p-8 text-white">
               <div className="text-center mb-6">
                 <div className="w-16 h-16 bg-white/10 rounded-full flex items-center justify-center mx-auto mb-4">

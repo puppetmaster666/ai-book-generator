@@ -116,9 +116,23 @@ export async function POST(
       if ('chapters' in limit) {
         const chaptersGenerated = book.chapters.length;
         if (chaptersGenerated >= limit.chapters) {
+          // Mark book as preview_complete so user can see their sample
+          if (book.status !== 'preview_complete') {
+            await prisma.book.update({
+              where: { id },
+              data: {
+                status: 'preview_complete',
+                completedAt: new Date(),
+              },
+            });
+            console.log(`[Generate Next] Marked book ${id} as preview_complete (${chaptersGenerated} chapters)`);
+          }
+
           return NextResponse.json({
             error: 'preview_limit',
-            message: `Preview limit reached. You've generated ${chaptersGenerated} chapter(s). Upgrade to unlock the full book!`,
+            done: true,
+            status: 'preview_complete',
+            message: `Preview complete! You've generated ${chaptersGenerated} chapter(s). Upgrade to unlock the full book!`,
             chaptersGenerated,
             limit: limit.chapters,
             upgradeUrl: `/book/${id}?upgrade=true`,
@@ -248,9 +262,23 @@ export async function POST(
       if (!canGenerate) {
         const limit = FREE_TIER_LIMITS.screenplay.pages;
         if (screenplayContext.totalPagesGenerated >= limit) {
+          // Mark book as preview_complete so user can see their sample
+          if (book.status !== 'preview_complete') {
+            await prisma.book.update({
+              where: { id },
+              data: {
+                status: 'preview_complete',
+                completedAt: new Date(),
+              },
+            });
+            console.log(`[Generate Next] Marked screenplay ${id} as preview_complete (${screenplayContext.totalPagesGenerated} pages)`);
+          }
+
           return NextResponse.json({
             error: 'preview_limit',
-            message: `Preview limit reached. You've generated ${screenplayContext.totalPagesGenerated} pages. Upgrade to unlock the full screenplay!`,
+            done: true,
+            status: 'preview_complete',
+            message: `Preview complete! You've generated ${screenplayContext.totalPagesGenerated} pages. Upgrade to unlock the full screenplay!`,
             pagesGenerated: screenplayContext.totalPagesGenerated,
             limit,
             upgradeUrl: `/book/${id}?upgrade=true`,

@@ -31,7 +31,7 @@ export default function HowItWorksContent() {
           {/* Full Walkthrough Video */}
           <div className="mb-16">
             <VideoEmbed
-              videoId="dQw4w9WgXcQ"
+              videoId="XalUtL0ofEg"
               title="Full Walkthrough: Creating a Book from Start to Finish"
               className="max-w-3xl mx-auto"
             />
