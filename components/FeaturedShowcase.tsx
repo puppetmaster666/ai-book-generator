@@ -55,21 +55,16 @@ function getTypeLabel(bookFormat: string) {
   }
 }
 
-function getTypeColor(bookFormat: string) {
-  switch (bookFormat) {
-    case 'screenplay':
-    case 'tv_series':
-      return 'bg-purple-100 text-purple-700';
-    case 'comic':
-      return 'bg-blue-100 text-blue-700';
-    case 'picture_book':
-      return 'bg-pink-100 text-pink-700';
-    default:
-      return 'bg-neutral-100 text-neutral-700';
-  }
+function getTypeColor() {
+  // Neutral colors for all types
+  return 'bg-white/90 backdrop-blur-sm text-neutral-700';
 }
 
-export default function FeaturedShowcase() {
+interface FeaturedShowcaseProps {
+  variant?: 'full' | 'compact';
+}
+
+export default function FeaturedShowcase({ variant = 'full' }: FeaturedShowcaseProps) {
   const [featured, setFeatured] = useState<FeaturedItem[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -83,18 +78,81 @@ export default function FeaturedShowcase() {
       .catch(() => setLoading(false));
   }, []);
 
-  // Fill remaining slots with placeholders to always show 8
+  // Fill remaining slots with placeholders
+  const maxItems = variant === 'compact' ? 4 : 8;
   const displayItems: (FeaturedItem | (Omit<FeaturedItem, 'id'> & { id?: string; isPlaceholder: true }))[] = [
-    ...featured,
-    ...PLACEHOLDERS.slice(0, 8 - featured.length).map((p, i) => ({ ...p, id: `placeholder-${i}`, isPlaceholder: true as const })),
+    ...featured.slice(0, maxItems),
+    ...PLACEHOLDERS.slice(0, maxItems - Math.min(featured.length, maxItems)).map((p, i) => ({ ...p, id: `placeholder-${i}`, isPlaceholder: true as const })),
   ];
+
+  // Compact variant - just the grid of cards, no wrapper section
+  if (variant === 'compact') {
+    return (
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+        {displayItems.slice(0, 4).map((item, index) => {
+          const isPlaceholder = 'isPlaceholder' in item && item.isPlaceholder;
+          return (
+            <div
+              key={item.id || index}
+              className={`group relative bg-white rounded-lg border overflow-hidden transition-all duration-300 ${
+                isPlaceholder
+                  ? 'border-dashed border-neutral-200 hover:border-neutral-400'
+                  : 'border-neutral-200 hover:shadow-md'
+              }`}
+            >
+              <div className={`aspect-[3/4] relative ${isPlaceholder ? 'bg-neutral-50' : 'bg-neutral-100'}`}>
+                {item.coverImageUrl ? (
+                  <Image
+                    src={item.coverImageUrl}
+                    alt={item.title}
+                    fill
+                    className="object-cover"
+                  />
+                ) : (
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    {isPlaceholder ? (
+                      <ImageIcon className="h-5 w-5 text-neutral-300" />
+                    ) : (
+                      <div className="w-8 h-8 rounded-full bg-neutral-200 flex items-center justify-center">
+                        {getTypeIcon(item.bookFormat)}
+                      </div>
+                    )}
+                  </div>
+                )}
+                {/* Type Badge - small */}
+                <div className={`absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded text-[9px] font-medium ${getTypeColor()}`}>
+                  {getTypeLabel(item.bookFormat)}
+                </div>
+                {/* Hover overlay */}
+                {!isPlaceholder && (
+                  <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                    <Link
+                      href={`/book/${item.id}`}
+                      className="px-2 py-1 bg-white text-neutral-900 rounded text-[10px] font-medium hover:bg-neutral-100 transition-colors"
+                    >
+                      View
+                    </Link>
+                  </div>
+                )}
+              </div>
+              <div className="p-1.5">
+                <h3 className={`text-[10px] font-medium line-clamp-1 ${isPlaceholder ? 'text-neutral-400' : 'text-neutral-900'}`}>
+                  {item.title}
+                </h3>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
+  }
 
   return (
     <section className="py-20 px-6 bg-neutral-50">
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="text-center mb-12">
-          <div className="inline-flex items-center gap-2 bg-lime-100 px-4 py-2 rounded-full text-sm text-lime-700 mb-4">
+          <div className="inline-flex items-center gap-2 bg-neutral-100 px-4 py-2 rounded-full text-sm text-neutral-600 mb-4">
             <Sparkles className="h-4 w-4" />
             Community Creations
           </div>
@@ -152,7 +210,7 @@ export default function FeaturedShowcase() {
                   )}
 
                   {/* Type Badge */}
-                  <div className={`absolute top-3 left-3 px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1 ${getTypeColor(item.bookFormat)}`}>
+                  <div className={`absolute top-3 left-3 px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1 ${getTypeColor()}`}>
                     {getTypeIcon(item.bookFormat)}
                     {getTypeLabel(item.bookFormat)}
                   </div>

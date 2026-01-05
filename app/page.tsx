@@ -519,16 +519,16 @@ export default function Home() {
       {/* Success Story - Blood & Silver */}
       <section className="py-20 px-6 bg-white">
         <div className="max-w-6xl mx-auto">
-          <div className="grid md:grid-cols-2 gap-12 items-center">
-            {/* Book Cover */}
-            <div className="flex justify-center">
+          <div className="grid md:grid-cols-5 gap-8 items-start">
+            {/* Book Cover - smaller */}
+            <div className="md:col-span-2 flex justify-center">
               <a
                 href="https://a.co/d/f9GkEr9"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="group relative block no-underline focus:outline-none hover:scale-105 transition-transform duration-300"
               >
-                <div className="relative w-72 md:w-80 aspect-[2/3] rounded-lg overflow-hidden shadow-2xl bg-neutral-100">
+                <div className="relative w-56 md:w-64 aspect-[2/3] rounded-lg overflow-hidden shadow-2xl bg-neutral-100">
                   <Image
                     src="/images/cover.jpg"
                     alt="Blood & Silver by Freddie Fabrevoie"
@@ -544,10 +544,10 @@ export default function Home() {
               </a>
             </div>
 
-            {/* Content */}
-            <div>
+            {/* Content + Featured Cards */}
+            <div className="md:col-span-3">
               <div className="inline-flex items-center gap-2 bg-neutral-100 px-4 py-2 rounded-full text-sm text-neutral-600 mb-6">
-                <span className="w-2 h-2 bg-lime-400 rounded-full" />
+                <span className="w-2 h-2 bg-neutral-900 rounded-full" />
                 Published on Amazon KDP
               </div>
               <h2 className="text-4xl md:text-5xl font-bold tracking-tight mb-6 text-neutral-900" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>
@@ -561,11 +561,11 @@ export default function Home() {
               <p className="text-xl text-neutral-600 mb-4">
                 by Freddie Fabrevoie
               </p>
-              <p className="text-neutral-500 mb-8 leading-relaxed">
+              <p className="text-neutral-500 mb-6 leading-relaxed">
                 A complete 10-chapter historical fiction exploring history&apos;s most ruthless untold betrayals.
                 Created with draftmybook, formatted to Amazon KDP specifications, and published in under an hour.
               </p>
-              <div className="flex flex-wrap gap-4">
+              <div className="flex flex-wrap gap-4 mb-8">
                 <a
                   href="https://a.co/d/f9GkEr9"
                   target="_blank"
@@ -575,6 +575,12 @@ export default function Home() {
                   View on Amazon
                   <ExternalLink className="h-4 w-4" />
                 </a>
+              </div>
+
+              {/* Featured Community Books - Compact */}
+              <div className="pt-6 border-t border-neutral-200">
+                <p className="text-xs text-neutral-500 mb-3 uppercase tracking-wide font-medium">Community Creations</p>
+                <FeaturedShowcase variant="compact" />
               </div>
             </div>
           </div>
@@ -588,7 +594,7 @@ export default function Home() {
             {/* Content - Left side on desktop */}
             <div className="order-2 md:order-1">
               <div className="inline-flex items-center gap-2 bg-white px-4 py-2 rounded-full text-sm text-neutral-600 mb-6 border border-neutral-200">
-                <span className="w-2 h-2 bg-lime-400 rounded-full" />
+                <span className="w-2 h-2 bg-neutral-900 rounded-full" />
                 Comic Book - 3 minutes to create
               </div>
               <h2 className="text-4xl md:text-5xl font-bold tracking-tight mb-6 text-neutral-900" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>
@@ -654,6 +660,56 @@ export default function Home() {
                   </button>
                 ))}
               </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Screenplay Animation Showcase */}
+      <section className="py-20 px-6 bg-white">
+        <div className="max-w-6xl mx-auto">
+          <div className="grid md:grid-cols-2 gap-12 items-center">
+            {/* Content */}
+            <div>
+              <div className="inline-flex items-center gap-2 bg-neutral-100 px-4 py-2 rounded-full text-sm text-neutral-600 mb-6">
+                <span className="w-2 h-2 bg-neutral-900 rounded-full" />
+                Professional Screenplay Format
+              </div>
+              <h2 className="text-4xl md:text-5xl font-bold tracking-tight mb-6 text-neutral-900" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>
+                Movie-ready{' '}
+                <span className="relative inline-block">
+                  <span className="absolute -inset-x-1 -inset-y-1 bg-black -skew-y-2 translate-x-1 translate-y-1" aria-hidden="true" />
+                  <span className={`absolute -inset-x-1 -inset-y-1 ${ACCENT.bg} -skew-y-2`} aria-hidden="true" />
+                  <span className="relative text-neutral-900 px-2">scripts</span>
+                </span>
+              </h2>
+              <p className="text-neutral-500 mb-8 leading-relaxed">
+                Generate properly formatted screenplays with scene headings, action lines, character names, and dialogue.
+                Industry-standard format ready for production or submission.
+              </p>
+              <div className="flex flex-wrap gap-4 text-sm text-neutral-500">
+                <span className="flex items-center gap-2">
+                  <Check className="h-4 w-4 text-lime-500" />
+                  Scene headings
+                </span>
+                <span className="flex items-center gap-2">
+                  <Check className="h-4 w-4 text-lime-500" />
+                  Action lines
+                </span>
+                <span className="flex items-center gap-2">
+                  <Check className="h-4 w-4 text-lime-500" />
+                  Dialogue formatting
+                </span>
+                <span className="flex items-center gap-2">
+                  <Check className="h-4 w-4 text-lime-500" />
+                  Transitions
+                </span>
+              </div>
+            </div>
+
+            {/* Animation */}
+            <div>
+              <ScreenplayAnimation />
             </div>
           </div>
         </div>
@@ -755,59 +811,6 @@ export default function Home() {
 
       {/* Sample Downloads */}
       <SamplesSection />
-
-      {/* Featured Showcase - Books, Comics, Screenplays */}
-      <FeaturedShowcase />
-
-      {/* Screenplay Animation Showcase */}
-      <section className="py-20 px-6 bg-white">
-        <div className="max-w-6xl mx-auto">
-          <div className="grid md:grid-cols-2 gap-12 items-center">
-            {/* Content */}
-            <div>
-              <div className="inline-flex items-center gap-2 bg-neutral-100 px-4 py-2 rounded-full text-sm text-neutral-600 mb-6">
-                <span className="w-2 h-2 bg-purple-500 rounded-full" />
-                Professional Screenplay Format
-              </div>
-              <h2 className="text-4xl md:text-5xl font-bold tracking-tight mb-6 text-neutral-900" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>
-                Movie-ready{' '}
-                <span className="relative inline-block">
-                  <span className="absolute -inset-x-1 -inset-y-1 bg-black -skew-y-2 translate-x-1 translate-y-1" aria-hidden="true" />
-                  <span className={`absolute -inset-x-1 -inset-y-1 ${ACCENT.bg} -skew-y-2`} aria-hidden="true" />
-                  <span className="relative text-neutral-900 px-2">scripts</span>
-                </span>
-              </h2>
-              <p className="text-neutral-500 mb-8 leading-relaxed">
-                Generate properly formatted screenplays with scene headings, action lines, character names, and dialogue.
-                Industry-standard format ready for production or submission.
-              </p>
-              <div className="flex flex-wrap gap-4 text-sm text-neutral-500">
-                <span className="flex items-center gap-2">
-                  <Check className="h-4 w-4 text-lime-500" />
-                  Scene headings
-                </span>
-                <span className="flex items-center gap-2">
-                  <Check className="h-4 w-4 text-lime-500" />
-                  Action lines
-                </span>
-                <span className="flex items-center gap-2">
-                  <Check className="h-4 w-4 text-lime-500" />
-                  Dialogue formatting
-                </span>
-                <span className="flex items-center gap-2">
-                  <Check className="h-4 w-4 text-lime-500" />
-                  Transitions
-                </span>
-              </div>
-            </div>
-
-            {/* Animation */}
-            <div>
-              <ScreenplayAnimation />
-            </div>
-          </div>
-        </div>
-      </section>
 
       {/* Showcase */}
       <section className="py-24 px-6 bg-neutral-900">
