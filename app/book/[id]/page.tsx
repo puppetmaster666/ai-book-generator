@@ -447,9 +447,20 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
           // Use server's currentChapter to determine next chapter (more reliable than local count)
           // Server currentChapter is the last completed chapter number (0 = none done, 1 = ch1 done, etc.)
           const nextChapterNum = serverCurrentChapter + 1;
-          setChapterStatuses(prev => prev.map(ch =>
-            ch.number === nextChapterNum ? { ...ch, status: 'generating' as const, error: undefined } : ch
-          ));
+
+          // CRITICAL: Ensure all chapters up to serverCurrentChapter are marked as 'done'
+          // This fixes the bug where resuming keeps old chapters stuck in 'generating' state
+          setChapterStatuses(prev => prev.map(ch => {
+            if (ch.number <= serverCurrentChapter) {
+              // This chapter is already done on server - mark as done
+              return ch.status !== 'done' ? { ...ch, status: 'done' as const } : ch;
+            } else if (ch.number === nextChapterNum) {
+              // This is the next chapter to generate
+              return { ...ch, status: 'generating' as const, error: undefined };
+            }
+            // Leave other chapters as pending
+            return ch;
+          }));
 
           console.log(`[Session ${currentSession}] Orchestrating: generating chapter ${nextChapterNum}...`);
           const res = await fetch(`/api/books/${id}/generate-next`, { method: 'POST' });
