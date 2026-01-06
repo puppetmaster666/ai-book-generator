@@ -275,7 +275,13 @@ ACTION LINES:
 - Character names: ALL CAPS before dialogue
 - Transitions: Use sparingly (CUT TO:, FADE OUT.)
 
-Write 12-15 pages. Start with a slugline. End on a BUTTON (sharp moment).
+=== LENGTH REQUIREMENT (CRITICAL) ===
+This sequence MUST be 14-18 pages (approximately 3500-4500 words).
+A page of screenplay = ~250 words in proper format.
+DO NOT rush. Include FULL scenes with proper action lines, dialogue exchanges, and transitions.
+Each beat should have 3-5 scenes minimum.
+
+Start with a slugline. End on a BUTTON (sharp moment).
 
 OUTPUT: Industry-standard screenplay format ONLY. No commentary.`;
 
@@ -284,7 +290,7 @@ OUTPUT: Industry-standard screenplay format ONLY. No commentary.`;
       contents: [{ role: 'user', parts: [{ text: prompt }] }],
       generationConfig: {
         temperature: 0.9, // Slightly higher for more creative dialogue
-        maxOutputTokens: 12000,
+        maxOutputTokens: 16000, // Increased to support 14-18 pages per sequence
       },
       safetySettings: SAFETY_SETTINGS,
     }),
