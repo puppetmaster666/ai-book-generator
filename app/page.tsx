@@ -521,27 +521,15 @@ export default function Home() {
         <div className="max-w-6xl mx-auto">
           <div className="grid md:grid-cols-2 gap-12 items-stretch">
             {/* Left: Book Cover + Info */}
-            <div className="flex gap-6">
-              <a
-                href="https://a.co/d/f9GkEr9"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="group relative block no-underline focus:outline-none hover:scale-105 transition-transform duration-300 flex-shrink-0"
-              >
-                <div className="relative w-40 md:w-48 aspect-[2/3] rounded-lg overflow-hidden shadow-2xl bg-neutral-100">
-                  <Image
-                    src="/images/cover.jpg"
-                    alt="Blood & Silver by Freddie Fabrevoie"
-                    fill
-                    className="object-contain"
-                  />
-                </div>
-                <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg">
-                  <span className="text-white flex items-center gap-2 text-sm">
-                    View on Amazon <ExternalLink className="h-4 w-4" />
-                  </span>
-                </div>
-              </a>
+            <div className="flex gap-8 items-center">
+              <div className="relative w-48 md:w-56 aspect-[2/3] rounded-lg overflow-hidden shadow-2xl bg-neutral-100 flex-shrink-0">
+                <Image
+                  src="/images/cover.jpg"
+                  alt="Blood & Silver by Freddie Fabrevoie"
+                  fill
+                  className="object-contain"
+                />
+              </div>
               <div className="flex flex-col justify-center">
                 <div className="inline-flex items-center gap-2 bg-neutral-100 px-3 py-1.5 rounded-full text-xs text-neutral-600 mb-4 w-fit">
                   <span className="w-1.5 h-1.5 bg-neutral-900 rounded-full" />
