@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
-import { prisma } from '@/lib/db';
+import { prisma, withRetry } from '@/lib/db';
 
 export async function GET(request: NextRequest) {
   try {
@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    // Fetch all stats in parallel
+    // Fetch all stats in parallel with retry for connection errors
     const [
       totalUsers,
       totalBooks,
@@ -57,7 +57,7 @@ export async function GET(request: NextRequest) {
       booksByFormat,
       dailyStats,
       anonymousContacts,
-    ] = await Promise.all([
+    ] = await withRetry(() => Promise.all([
       // Total users
       prisma.user.count(),
       // Total books
@@ -214,7 +214,7 @@ export async function GET(request: NextRequest) {
           completedAt: true,
         },
       }),
-    ]);
+    ]));
 
     // Calculate revenue
     const totalRevenue = (totalPayments._sum.amount || 0) / 100;
