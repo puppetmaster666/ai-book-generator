@@ -574,7 +574,7 @@ Provide a JSON summary:
       contents: [{ role: 'user', parts: [{ text: prompt }] }],
       generationConfig: {
         temperature: 0.3,
-        maxOutputTokens: 2000,
+        maxOutputTokens: 4000,  // Increased for complex JSON with causalBridge, closedLoops, characterStates
       },
       safetySettings: SAFETY_SETTINGS,
     }),
@@ -636,7 +636,7 @@ Return JSON:
       contents: [{ role: 'user', parts: [{ text: prompt }] }],
       generationConfig: {
         temperature: 0.3,
-        maxOutputTokens: 1500,
+        maxOutputTokens: 2500,  // Increased for 200-word setupSummary
       },
       safetySettings: SAFETY_SETTINGS,
     }),
