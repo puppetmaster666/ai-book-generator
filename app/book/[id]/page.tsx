@@ -1478,11 +1478,22 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
             <div className="bg-white rounded-2xl border border-neutral-200 p-8 mb-6">
               {paymentCompleted ? (
                 <div className="text-center">
-                  <div className="relative w-16 h-16 mx-auto mb-4">
-                    <div className="absolute inset-0 rounded-full border-4 border-neutral-100" />
-                    <div className="absolute inset-0 rounded-full border-4 border-t-neutral-900 animate-spin" />
+                  {/* Animated initialization graphic */}
+                  <div className="relative w-24 h-24 mx-auto mb-6">
+                    {/* Outer pulsing ring */}
+                    <div className="absolute inset-0 rounded-full bg-emerald-100 animate-ping opacity-30" />
+                    {/* Middle glow ring */}
+                    <div className="absolute inset-2 rounded-full bg-gradient-to-br from-emerald-50 to-emerald-100 animate-pulse" />
+                    {/* Spinning border */}
+                    <div className="absolute inset-3 rounded-full border-4 border-neutral-100" />
+                    <div className="absolute inset-3 rounded-full border-4 border-transparent border-t-emerald-500 border-r-emerald-300 animate-spin" />
+                    {/* Center icon */}
                     <div className="absolute inset-0 flex items-center justify-center">
-                      <Zap className="h-6 w-6 text-neutral-700" />
+                      <div className="relative">
+                        <Zap className="h-8 w-8 text-emerald-600 animate-pulse" />
+                        {/* Spark effect */}
+                        <div className="absolute -top-1 -right-1 w-2 h-2 bg-emerald-400 rounded-full animate-ping" />
+                      </div>
                     </div>
                   </div>
                   <h2 className="text-xl font-semibold text-neutral-900 mb-2">
@@ -1491,9 +1502,14 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
                   <p className="text-neutral-600 mb-4">
                     Your book is being prepared. This page updates automatically.
                   </p>
-                  <div className="inline-flex items-center gap-2 text-sm text-neutral-500">
-                    <div className="w-1.5 h-1.5 bg-neutral-500 rounded-full animate-pulse" />
-                    <span>Connecting to AI</span>
+                  {/* Animated connection indicator */}
+                  <div className="inline-flex items-center gap-3 text-sm bg-emerald-50 px-4 py-2 rounded-full border border-emerald-200">
+                    <div className="flex items-center gap-1">
+                      <div className="w-2 h-2 bg-emerald-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                      <div className="w-2 h-2 bg-emerald-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                      <div className="w-2 h-2 bg-emerald-300 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                    </div>
+                    <span className="text-emerald-700 font-medium">Connecting to AI</span>
                   </div>
                 </div>
               ) : (

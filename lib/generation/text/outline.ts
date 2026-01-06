@@ -3,6 +3,7 @@ import { getGeminiPro, getGeminiFlash } from '../shared/api-client';
 import { parseJSONFromResponse } from '../shared/json-utils';
 import { detectLanguageInstruction } from '../shared/writing-quality';
 import { buildNameGuidancePrompt, BANNED_OVERUSED_NAMES } from '../shared/name-variety';
+import { buildNameSuggestionPrompt } from '../shared/name-generator';
 
 // Threshold for chunked outline generation - books with more chapters use chunked approach
 const CHUNK_THRESHOLD = 16;
@@ -122,6 +123,7 @@ WRITING QUALITY NOTES:
 - Use ONLY the characters provided - do not invent major characters
 
 ${buildNameGuidancePrompt(bookData.premise, bookData.title, bookData.genre)}
+${buildNameSuggestionPrompt(bookData.premise)}
 
 NAME USAGE IN SUMMARIES (CRITICAL - AI tends to spam names):
 - Use each character's name ONCE per summary, then switch to pronouns (he/she/they)
@@ -512,9 +514,7 @@ ANTI-AI WRITING NOTES:
 - Each chapter must have a DIFFERENT opening style: fact, anecdote, bold statement, scene, etc.
 - Case study names must be DIVERSE and UNIQUE - never reuse names across chapters
 
-=== BANNED OVERUSED NAMES (DO NOT USE FOR CASE STUDIES) ===
-${BANNED_OVERUSED_NAMES.slice(0, 30).join(', ')}
-Use fresh, unique names for any case studies or examples.
+${buildNameSuggestionPrompt(bookData.premise)}
 
 For each chapter provide:
 1. Chapter number
