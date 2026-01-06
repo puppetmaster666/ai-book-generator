@@ -213,6 +213,7 @@ export async function generateScreenplaySequence(data: {
   genre: string;
   title: string;
   activeSubplots?: Subplot[]; // Subplots active in this sequence
+  onProgress?: (text: string) => void; // Live preview callback
 }): Promise<{
   content: string;
   pageCount: number;
@@ -429,20 +430,56 @@ Start with a slugline. End on a BUTTON (sharp moment).
 
 OUTPUT: Industry-standard screenplay format ONLY. No commentary.`;
 
-  const result = await withTimeout(
-    () => getGeminiFlash().generateContent({
+  let content: string;
+
+  // Use streaming if onProgress callback is provided for live preview
+  if (data.onProgress) {
+    const model = getGeminiFlash();
+    let accumulated = '';
+    let lastProgressUpdate = 0;
+
+    const streamResult = await model.generateContentStream({
       contents: [{ role: 'user', parts: [{ text: prompt }] }],
       generationConfig: {
-        temperature: 0.9, // Slightly higher for more creative dialogue
-        maxOutputTokens: 16000, // Increased to support 14-18 pages per sequence
+        temperature: 0.9,
+        maxOutputTokens: 16000,
       },
       safetySettings: SAFETY_SETTINGS,
-    }),
-    180000,
-    `generateScreenplaySequence_${data.sequenceNumber}`
-  );
+    });
 
-  const content = result.response.text();
+    for await (const chunk of streamResult.stream) {
+      const chunkText = chunk.text();
+      if (chunkText) {
+        accumulated += chunkText;
+        // Update progress every ~500 characters to avoid too many DB writes
+        if (accumulated.length - lastProgressUpdate > 500) {
+          data.onProgress(accumulated);
+          lastProgressUpdate = accumulated.length;
+        }
+      }
+    }
+    // Final progress update
+    if (accumulated.length > lastProgressUpdate) {
+      data.onProgress(accumulated);
+    }
+    content = accumulated;
+  } else {
+    // Non-streaming generation
+    const result = await withTimeout(
+      () => getGeminiFlash().generateContent({
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        generationConfig: {
+          temperature: 0.9, // Slightly higher for more creative dialogue
+          maxOutputTokens: 16000, // Increased to support 14-18 pages per sequence
+        },
+        safetySettings: SAFETY_SETTINGS,
+      }),
+      180000,
+      `generateScreenplaySequence_${data.sequenceNumber}`
+    );
+    content = result.response.text();
+  }
+
   const pageCount = estimatePageCount(content);
 
   return { content, pageCount };

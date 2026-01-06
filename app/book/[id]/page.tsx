@@ -1449,13 +1449,17 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
                 <p className="text-neutral-300 mb-2">
                   {isIllustrated
                     ? `You've generated ${book.illustrations?.length || 0} panel${(book.illustrations?.length || 0) > 1 ? 's' : ''}`
-                    : `You've generated ${book.chapters.length} chapter${book.chapters.length > 1 ? 's' : ''} (${book.totalWords.toLocaleString()} words)`
+                    : isScreenplay
+                      ? `You've generated ${book.chapters.length} sequence${book.chapters.length > 1 ? 's' : ''} (~${Math.ceil(book.totalWords / 250)} pages)`
+                      : `You've generated ${book.chapters.length} chapter${book.chapters.length > 1 ? 's' : ''} (${book.totalWords.toLocaleString()} words)`
                   }
                 </p>
                 <p className="text-neutral-400 text-sm mb-6">
                   {isIllustrated
                     ? `Unlock the full ${book.totalChapters || 20}-panel book for just $9.99`
-                    : `Unlock the full ${book.totalChapters}-chapter book for just $9.99`
+                    : isScreenplay
+                      ? `Unlock the full ${book.totalChapters}-sequence screenplay for just $9.99`
+                      : `Unlock the full ${book.totalChapters}-chapter book for just $9.99`
                   }
                 </p>
                 <Link
@@ -1555,7 +1559,7 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
                 </p>
                 {book.currentChapter > 0 && (
                   <p className="text-sm text-neutral-600 mb-4">
-                    {book.currentChapter} chapter{book.currentChapter > 1 ? 's' : ''} completed ({book.totalWords.toLocaleString()} words)
+                    {book.currentChapter} {isScreenplay ? 'sequence' : 'chapter'}{book.currentChapter > 1 ? 's' : ''} completed ({isScreenplay ? `~${Math.ceil(book.totalWords / 250)} pages` : `${book.totalWords.toLocaleString()} words`})
                   </p>
                 )}
 
@@ -1668,7 +1672,9 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
                     <p className="text-xs text-neutral-500">
                       {isIllustrated
                         ? 'We will generate the panels one by one. You can come back anytime.'
-                        : 'Estimated: 30-60 minutes for a full novel. Each chapter takes 2-4 minutes.'}
+                        : isScreenplay
+                          ? 'Estimated: 20-40 minutes for a full screenplay. Each sequence takes 2-4 minutes.'
+                          : 'Estimated: 30-60 minutes for a full novel. Each chapter takes 2-4 minutes.'}
                     </p>
                   </div>
                 </div>
@@ -1687,8 +1693,8 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
                           return `${generatedCount} of ${totalPanels} panels`;
                         })()
                         : chapterStatuses.length > 0
-                          ? `${chapterStatuses.filter(c => c.status === 'done').length} of ${chapterStatuses.length} chapters`
-                          : `Chapter ${book.currentChapter} of ${book.totalChapters}`
+                          ? `${chapterStatuses.filter(c => c.status === 'done').length} of ${chapterStatuses.length} ${isScreenplay ? 'sequences' : 'chapters'}`
+                          : `${isScreenplay ? 'Sequence' : 'Chapter'} ${book.currentChapter} of ${book.totalChapters}`
                     }
                   </span>
                   <span className="font-medium text-neutral-900">
@@ -1890,10 +1896,10 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
                 </div>
               )}
 
-              {/* Chapter Card Grid - Text Books Only */}
+              {/* Chapter/Sequence Card Grid - Text Books Only */}
               {!isIllustrated && chapterStatuses.length > 0 && (
                 <div className="mb-6">
-                  <p className="text-xs uppercase tracking-wide text-neutral-400 mb-3">Chapter Progress</p>
+                  <p className="text-xs uppercase tracking-wide text-neutral-400 mb-3">{isScreenplay ? 'Sequence' : 'Chapter'} Progress</p>
                   <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 gap-2">
                     {chapterStatuses.map((chapter) => (
                       <div
@@ -1938,7 +1944,7 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
                               ? 'Waiting'
                               : chapter.status === 'error'
                                 ? 'Failed'
-                                : `Ch. ${chapter.number}`
+                                : isScreenplay ? `Seq. ${chapter.number}` : `Ch. ${chapter.number}`
                           }
                         </p>
 
@@ -2014,7 +2020,7 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
                 <div className="mt-6 border-t border-neutral-100 pt-6">
                   <div className="flex items-center justify-between mb-3">
                     <p className="text-xs uppercase tracking-wide text-neutral-400">Live Preview</p>
-                    <span className="text-xs text-neutral-400">Chapter {book.chapters[book.chapters.length - 1].number}</span>
+                    <span className="text-xs text-neutral-400">{isScreenplay ? 'Sequence' : 'Chapter'} {book.chapters[book.chapters.length - 1].number}</span>
                   </div>
                   <div className="bg-neutral-50 rounded-xl p-4 border border-neutral-100 max-h-48 overflow-y-auto">
                     <p className="text-sm text-neutral-700 leading-relaxed whitespace-pre-wrap">
@@ -2039,7 +2045,9 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
                 <p className="text-neutral-600">
                   {isIllustrated
                     ? `${book.illustrations?.length || 0} of ${book.totalChapters || 20} panels generated`
-                    : `${book.chapters.length} of ${book.totalChapters} chapters generated`
+                    : isScreenplay
+                      ? `${book.chapters.length} of ${book.totalChapters} sequences generated`
+                      : `${book.chapters.length} of ${book.totalChapters} chapters generated`
                   }
                 </p>
               </div>
@@ -2188,11 +2196,11 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
             </div>
           )}
 
-          {/* Chapters List - only show for text books, not visual books */}
+          {/* Chapters/Sequences List - only show for text books, not visual books */}
           {!isIllustrated && book.chapters.length > 0 && (
             <div className="bg-white rounded-2xl border border-neutral-200 p-6 sm:p-8 mb-6">
               <h2 className="text-lg font-semibold text-neutral-900 mb-4">
-                Chapters {isGenerating && <span className="text-sm font-normal text-neutral-500">(updating live)</span>}
+                {isScreenplay ? 'Sequences' : 'Chapters'} {isGenerating && <span className="text-sm font-normal text-neutral-500">(updating live)</span>}
               </h2>
               <div className="space-y-2">
                 {book.chapters.map((chapter) => (
@@ -2206,10 +2214,10 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
                       </div>
                       <div>
                         <p className="font-medium text-neutral-900">
-                          Chapter {chapter.number}: {chapter.title}
+                          {isScreenplay ? 'Sequence' : 'Chapter'} {chapter.number}: {chapter.title}
                         </p>
                         <p className="text-sm text-neutral-500">
-                          {chapter.wordCount.toLocaleString()} words
+                          {isScreenplay ? `~${Math.ceil(chapter.wordCount / 250)} pages` : `${chapter.wordCount.toLocaleString()} words`}
                         </p>
                       </div>
                     </div>

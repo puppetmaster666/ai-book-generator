@@ -320,22 +320,40 @@ export async function POST(
         s.intersectionPoints.includes(nextChapterNum)
       ) || [];
 
-      // Generate the next sequence with timeout to prevent stale books
+      // Track last DB update time to throttle writes for screenplay live preview
+      let lastScreenplayPreviewUpdate = 0;
+      const SCREENPLAY_PREVIEW_UPDATE_INTERVAL = 1500; // Update DB every 1.5 seconds max
+
+      // Callback for live preview updates during screenplay streaming
+      const onScreenplayProgress = async (accumulatedText: string) => {
+        const now = Date.now();
+        if (now - lastScreenplayPreviewUpdate > SCREENPLAY_PREVIEW_UPDATE_INTERVAL) {
+          try {
+            await prisma.book.update({
+              where: { id },
+              data: { livePreview: accumulatedText },
+            });
+            lastScreenplayPreviewUpdate = now;
+          } catch (e) {
+            // Ignore errors - live preview is non-critical
+            console.log(`[LivePreview] Failed to update: ${(e as Error).message}`);
+          }
+        }
+      };
+
+      // Generate the next sequence with streaming for live preview
       let sequenceResult: { content: string; pageCount: number };
       try {
-        sequenceResult = await withTimeout(
-          generateScreenplaySequence({
-            beatSheet: screenplayOutline.beatSheet,
-            characters: screenplayOutline.characters,
-            sequenceNumber: nextChapterNum,
-            context: screenplayContext,
-            genre: book.genre,
-            title: book.title,
-            activeSubplots, // Inject active subplots for this sequence
-          }),
-          CHAPTER_TIMEOUT_MS,
-          `Sequence ${nextChapterNum} generation`
-        );
+        sequenceResult = await generateScreenplaySequence({
+          beatSheet: screenplayOutline.beatSheet,
+          characters: screenplayOutline.characters,
+          sequenceNumber: nextChapterNum,
+          context: screenplayContext,
+          genre: book.genre,
+          title: book.title,
+          activeSubplots, // Inject active subplots for this sequence
+          onProgress: onScreenplayProgress, // Live preview streaming callback
+        });
       } catch (timeoutError) {
         console.error(`Sequence ${nextChapterNum} generation timed out:`, timeoutError);
         // Create emergency placeholder sequence
@@ -373,19 +391,16 @@ Pick up AFTER the last event and push toward the next beat sheet milestone.`,
           };
 
           try {
-            const correctedResult = await withTimeout(
-              generateScreenplaySequence({
-                beatSheet: screenplayOutline.beatSheet,
-                characters: screenplayOutline.characters,
-                sequenceNumber: nextChapterNum,
-                context: correctiveContext,
-                genre: book.genre,
-                title: book.title,
-                activeSubplots,
-              }),
-              CHAPTER_TIMEOUT_MS,
-              `Sequence ${nextChapterNum} corrective generation`
-            );
+            const correctedResult = await generateScreenplaySequence({
+              beatSheet: screenplayOutline.beatSheet,
+              characters: screenplayOutline.characters,
+              sequenceNumber: nextChapterNum,
+              context: correctiveContext,
+              genre: book.genre,
+              title: book.title,
+              activeSubplots,
+              onProgress: onScreenplayProgress, // Continue streaming for corrective generation
+            });
 
             // Re-check after corrective generation
             const secondCheck = detectSequenceLoop(
@@ -431,24 +446,21 @@ Pick up AFTER the last event and push toward the next beat sheet milestone.`,
           console.warn(`[HARD REJECT] Sequence ${nextChapterNum} (attempt ${regenerationAttempts + 1}): ${postProcessed.report.clinicalFound.length} clinical, ${postProcessed.report.onTheNoseFound.length} on-the-nose`);
 
           try {
-            const regeneratedResult = await withTimeout(
-              generateScreenplaySequence({
-                beatSheet: screenplayOutline.beatSheet,
-                characters: screenplayOutline.characters,
-                sequenceNumber: nextChapterNum,
-                context: {
-                  ...screenplayContext,
-                  lastSequenceSummary: `${screenplayContext.lastSequenceSummary}
+            const regeneratedResult = await generateScreenplaySequence({
+              beatSheet: screenplayOutline.beatSheet,
+              characters: screenplayOutline.characters,
+              sequenceNumber: nextChapterNum,
+              context: {
+                ...screenplayContext,
+                lastSequenceSummary: `${screenplayContext.lastSequenceSummary}
 
 ${postProcessed.surgicalPrompt}`,
-                },
-                genre: book.genre,
-                title: book.title,
-                activeSubplots,
-              }),
-              CHAPTER_TIMEOUT_MS,
-              `Sequence ${nextChapterNum} hard reject regeneration`
-            );
+              },
+              genre: book.genre,
+              title: book.title,
+              activeSubplots,
+              onProgress: onScreenplayProgress, // Continue streaming for hard reject regeneration
+            });
 
             sequenceContent = regeneratedResult.content;
             regenerationAttempts++;
