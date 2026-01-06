@@ -4,8 +4,12 @@ import {
   ScreenplayContext,
   SequenceSummary,
   Subplot,
+  CausalBridge,
   SEQUENCE_TO_BEATS,
   estimatePageCount,
+  SCREENPLAY_CLINICAL_VOCABULARY,
+  SCREENPLAY_TIC_PATTERNS,
+  SCREENPLAY_ON_THE_NOSE_PATTERNS,
 } from '@/lib/screenplay';
 import { SAFETY_SETTINGS } from '../shared/safety';
 import { getGeminiFlash, withTimeout } from '../shared/api-client';
@@ -73,6 +77,131 @@ function getGenreToneGuidance(genre: string): string {
 }
 
 /**
+ * Helper: Build momentum context from last 2 sequences
+ */
+function buildMomentumContext(summaries: SequenceSummary[]): string {
+  if (summaries.length === 0) return 'No previous sequences.';
+
+  return summaries.map(s => {
+    const causalInfo = s.causalBridge
+      ? `\n  CAUSAL BRIDGE: Because "${s.causalBridge.triggerEvent}" → Therefore "${s.causalBridge.therefore}" → But "${s.causalBridge.but}"`
+      : '';
+    return `SEQ ${s.sequenceNumber}: ${s.summary}
+  CLOSED LOOPS: ${s.closedLoops?.join('; ') || 'None'}${causalInfo}`;
+  }).join('\n\n');
+}
+
+/**
+ * Helper: Build dual-layer context (Anchor + Momentum)
+ * Anchor = permanent Seq 1 context that never gets removed
+ * Momentum = rolling last 2 sequences
+ */
+function buildDualLayerContext(context: ScreenplayContext, sequenceNumber: number): string {
+  if (sequenceNumber <= 1) return '';
+
+  const allSummaries = context.sequenceSummaries || [];
+  const lastTwo = allSummaries.slice(-2);
+  const lastSummary = allSummaries[allSummaries.length - 1];
+
+  // Anchor layer (from Seq 1 - never forgotten)
+  const anchorSection = context.anchorContext ? `
+=== LAYER 1: THE ANCHOR (PERMANENT - DO NOT FORGET) ===
+OPENING IMAGE: ${context.anchorContext.openingImage}
+THEME STATED: ${context.anchorContext.themeStated}
+PROTAGONIST STARTED AS: ${context.anchorContext.protagonistStartState}
+SETUP SUMMARY: ${context.anchorContext.setupSummary}
+` : '';
+
+  // Momentum layer (rolling last 2 sequences)
+  const momentumSection = `
+=== LAYER 2: THE MOMENTUM (ROLLING - LAST 2 SEQUENCES) ===
+${buildMomentumContext(lastTwo)}
+`;
+
+  // CausalBridge from previous sequence
+  const causalBridgeSection = lastSummary?.causalBridge ? `
+=== CAUSAL BRIDGE FROM PREVIOUS (MANDATORY PICKUP) ===
+Human stories use THEREFORE/BUT logic. AI uses AND THEN (which causes loops).
+
+Because: ${lastSummary.causalBridge.triggerEvent}
+THEREFORE: ${lastSummary.causalBridge.therefore}
+BUT: ${lastSummary.causalBridge.but}
+THIS SEQUENCE MUST ADDRESS: ${lastSummary.causalBridge.nextSequenceMustAddress}
+
+You MUST pick up from the THEREFORE/BUT above. Do NOT invent new setup.
+` : '';
+
+  return anchorSection + momentumSection + causalBridgeSection;
+}
+
+/**
+ * Helper: Build clinical vocabulary ban section
+ */
+function buildClinicalVocabBan(): string {
+  const examples = SCREENPLAY_CLINICAL_VOCABULARY.slice(0, 10).map(p => `"${p}"`).join(', ');
+  return `
+=== CLINICAL VOCABULARY (HARD REJECT) ===
+These phrases trigger automatic regeneration:
+${examples}...
+
+Even "Professor" archetype characters speak like HUMANS under stress.
+When precision FAILS, raw speech emerges:
+- "The statistical— God. I don't know."
+- "It's not— I can't—" [trails off]
+- "Just... just stop."
+
+CONSTRAINT: Every Professor character must have 1-2 moments where
+their verbal armor SHATTERS into messy, human fragments.
+`;
+}
+
+/**
+ * Helper: Build subtext engine section
+ */
+function buildSubtextEngine(): string {
+  return `
+=== SUBTEXT ENGINE (EVERY SCENE) ===
+Before writing dialogue, define for each character IN THIS SCENE:
+1. SURFACE GOAL: What they SAY they want
+2. SECRET: What they're actually hiding
+3. CONSTRAINT: What they CANNOT mention
+
+EXAMPLE:
+- Sarah's Surface Goal: "Get the car keys from Elias"
+- Sarah's Secret: "She's the one who crashed the car"
+- Sarah's Constraint: "Cannot mention the accident or the damage"
+
+This forces EVASION and SUBTEXT. Characters dance around the truth.
+
+ON-THE-NOSE DIALOGUE (HARD REJECT):
+✗ "I feel betrayed" / "You make me angry" / "I'm scared"
+✓ "You knew. This whole time." / "Get out." / [backs against wall]
+
+Emotion is shown through BEHAVIOR, never stated.
+`;
+}
+
+/**
+ * Helper: Build tic budget warning
+ */
+function buildTicBudgetWarning(): string {
+  const ticLimits = SCREENPLAY_TIC_PATTERNS.slice(0, 8).map(p =>
+    `- ${p.name.replace(/_/g, ' ')}: ${p.maxPerSequence}x max`
+  ).join('\n');
+
+  return `
+=== TIC BUDGET (ENFORCED BY CODE) ===
+Each physical tic is LIMITED per sequence:
+${ticLimits}
+
+Excess tics will be AUTOMATICALLY REMOVED by post-processing.
+Vary your physical business. Use the environment instead of character tics.
+AVOID: glasses cleaning, throat clearing, jaw clenching repeated.
+USE: Interacting with props, environment, other characters physically.
+`;
+}
+
+/**
  * Generate a single screenplay sequence (10-15 pages)
  * Uses "Performance Mode" writing with subtext-driven dialogue
  */
@@ -115,10 +244,13 @@ export async function generateScreenplaySequence(data: {
     ? `\nACTIVE SUBPLOTS TO WEAVE IN:\n${data.activeSubplots.map(s => `- ${s.name}: ${s.arc} (Characters: ${s.characters.join(', ')})`).join('\n')}`
     : '';
 
-  // Build context from previous sequences with CONTINUITY LOCK
+  // Build DUAL-LAYER context (Anchor + Momentum + CausalBridge)
   const allSummaries = data.context.sequenceSummaries || [];
-  const previousContext = data.context.lastSequenceSummary
-    ? `\nPREVIOUS SEQUENCE SUMMARY:\n${data.context.lastSequenceSummary}\n\nCHARACTER STATES:\n${Object.entries(data.context.characterStates).map(([name, state]) => `- ${name}: ${state}`).join('\n')}\n\nSETUPS TO PAY OFF: ${data.context.plantedSetups.filter(s => !data.context.resolvedPayoffs.includes(s)).join(', ') || 'None pending'}`
+  const dualLayerContext = buildDualLayerContext(data.context, data.sequenceNumber);
+
+  // Character states and setups (always included)
+  const characterStatesSection = data.sequenceNumber > 1
+    ? `\nCHARACTER STATES:\n${Object.entries(data.context.characterStates).map(([name, state]) => `- ${name}: ${state}`).join('\n')}\n\nSETUPS TO PAY OFF: ${data.context.plantedSetups.filter(s => !data.context.resolvedPayoffs.includes(s)).join(', ') || 'None pending'}`
     : '';
 
   // CONTINUITY LOCK - prevents AI from restarting the story
@@ -128,7 +260,10 @@ export async function generateScreenplaySequence(data: {
 This is SEQUENCE ${data.sequenceNumber} of 8. The story CONTINUES - do NOT restart.
 
 EVENTS THAT HAVE ALREADY HAPPENED (NO-GO ZONE - DO NOT REWRITE THESE):
-${allSummaries.map(s => `- Seq ${s.sequenceNumber}: ${s.summary}`).join('\n') || '(No previous summaries)'}
+${allSummaries.map(s => {
+  const closedLoopsInfo = s.closedLoops && s.closedLoops.length > 0 ? ` [CLOSED: ${s.closedLoops.join('; ')}]` : '';
+  return `- Seq ${s.sequenceNumber}: ${s.summary}${closedLoopsInfo}`;
+}).join('\n') || '(No previous summaries)'}
 
 RULES:
 - DO NOT reintroduce characters as if meeting them for the first time
@@ -147,6 +282,11 @@ ${data.characters.map(c => `- NAME: ${c.name}
 These are FACTS. If a character's age or appearance changes, you have FAILED.
 `
     : '';
+
+  // NEW: Clinical vocabulary ban, subtext engine, tic budget
+  const clinicalVocabBan = buildClinicalVocabBan();
+  const subtextEngine = buildSubtextEngine();
+  const ticBudget = buildTicBudgetWarning();
 
   // Emotional break-point requirement for Professor/Steamroller archetypes
   const hasProfessorOrSteamroller = data.characters.some(c =>
@@ -220,11 +360,15 @@ ACT ${sequenceInfo.act} | PAGES ${sequenceInfo.pageRange}
 BEATS TO HIT:
 ${beatsContent}
 ${subplotSection}
-${previousContext}
+${characterStatesSection}
+${dualLayerContext}
 ${continuityLock}
 ${emotionalBreakSection}
 ${protagonistAgencySection}
 ${rhythmSection}
+${clinicalVocabBan}
+${subtextEngine}
+${ticBudget}
 
 === CHARACTER PSYCHOLOGY (MANDATORY FOR EVERY LINE) ===
 ${characterPsychology}
@@ -337,6 +481,33 @@ For each major event, include:
 2. What was REVEALED or DECIDED
 3. How the scene ENDED (physically - who left, who stayed)
 
+=== CLOSED LOOPS FORMAT (MANDATORY) ===
+Each closed loop MUST follow this template:
+"[CHARACTER] [VERB-ED] [OBJECT/PERSON] at [LOCATION]. Result: [OUTCOME]. Scene ended: [HOW]."
+
+BAD (too vague - AI will restart):
+"Elias confronts his past"
+
+GOOD (specific - AI knows this is DONE):
+"Elias punched Malik in the cabin kitchen. Result: Malik's nose bled, left through back door. Scene ended: Elias alone, washing blood off knuckles."
+
+=== CAUSAL BRIDGE (MANDATORY) ===
+Human stories use THEREFORE/BUT logic. AI uses AND THEN (which causes loops).
+
+You MUST provide:
+1. TRIGGER EVENT: The key event that ended this sequence
+2. THEREFORE: What the protagonist MUST do next as a result
+3. BUT: The obstacle preventing easy resolution
+4. NEXT SEQUENCE MUST ADDRESS: The specific conflict to resolve
+
+EXAMPLE:
+- TRIGGER: "Elias discovered Sarah's letter revealing the affair"
+- THEREFORE: "Elias must confront Sarah before she leaves"
+- BUT: "Sarah is already at the airport, and Malik knows Elias is coming"
+- NEXT MUST ADDRESS: "Airport confrontation with both Sarah and Malik"
+
+This creates FORWARD MOMENTUM. Without it, the AI will loop.
+
 Provide a JSON summary:
 {
   "sequenceNumber": ${data.sequenceNumber},
@@ -344,7 +515,7 @@ Provide a JSON summary:
   "actNumber": ${sequenceInfo?.act || 2},
   "beatsCovered": ${JSON.stringify(sequenceInfo?.beats || [])},
   "summary": "200-word summary with SPECIFIC events (not themes or feelings)...",
-  "closedLoops": ["Event 1 that is DONE and cannot be repeated", "Event 2..."],
+  "closedLoops": ["[WHO] [DID WHAT] at [WHERE]. Result: [OUTCOME]. Scene ended: [HOW].", "..."],
   "characterStates": {
     "CHARACTER_NAME": "Physical location + emotional state at END of sequence"
   },
@@ -352,7 +523,13 @@ Provide a JSON summary:
     {"character": "NAME", "howExited": "drove away in red truck", "lastSeenLocation": "driveway"}
   ],
   "plantedSetups": ["Things introduced that need payoff later (Chekhov's guns)"],
-  "resolvedPayoffs": ["Setups from earlier sequences that were paid off here"]
+  "resolvedPayoffs": ["Setups from earlier sequences that were paid off here"],
+  "causalBridge": {
+    "triggerEvent": "The key event that ended this sequence",
+    "therefore": "What protagonist MUST do next as a result",
+    "but": "The obstacle preventing easy resolution",
+    "nextSequenceMustAddress": "The specific conflict for next sequence"
+  }
 }`;
 
   const result = await withTimeout(
@@ -370,4 +547,71 @@ Provide a JSON summary:
 
   const response = result.response.text();
   return parseJSONFromResponse(response) as SequenceSummary;
+}
+
+/**
+ * Extract anchor context from Sequence 1 for dual-layer context system.
+ * Called once after Sequence 1 completes. This anchor is NEVER removed from context.
+ */
+export async function extractAnchorContext(data: {
+  sequenceContent: string;
+  beatSheet: BeatSheet;
+  characters: CharacterProfile[];
+}): Promise<{
+  openingImage: string;
+  themeStated: string;
+  setupSummary: string;
+  protagonistStartState: string;
+}> {
+  const protagonist = data.characters.find(c => c.role === 'protagonist') || data.characters[0];
+
+  const prompt = `Extract anchor context from Sequence 1 of this screenplay.
+This will be used as PERMANENT context for all future sequences.
+
+SEQUENCE 1 CONTENT:
+${data.sequenceContent.substring(0, 6000)}
+
+BEAT SHEET REFERENCE:
+- Opening Image: ${data.beatSheet.beats.openingImage}
+- Theme Stated: ${data.beatSheet.beats.themeStated}
+- Setup: ${data.beatSheet.beats.setup}
+
+PROTAGONIST: ${protagonist?.name || 'Unknown'}
+
+=== EXTRACTION REQUIREMENTS ===
+1. OPENING IMAGE: The first significant visual from the screenplay (1 sentence)
+2. THEME STATED: The thematic dialogue or moment that introduces the theme (1 sentence)
+3. SETUP SUMMARY: 200-word summary of Sequence 1 events, characters introduced, world established
+4. PROTAGONIST START STATE: Where the protagonist begins emotionally, physically, professionally
+
+This anchor will remind the AI of the beginning throughout the entire screenplay.
+
+Return JSON:
+{
+  "openingImage": "The first significant visual moment (1 sentence)",
+  "themeStated": "The thematic dialogue or moment (1 sentence)",
+  "setupSummary": "200-word summary of Sequence 1...",
+  "protagonistStartState": "Where ${protagonist?.name || 'protagonist'} begins: emotionally, physically, professionally"
+}`;
+
+  const result = await withTimeout(
+    () => getGeminiFlash().generateContent({
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      generationConfig: {
+        temperature: 0.3,
+        maxOutputTokens: 1500,
+      },
+      safetySettings: SAFETY_SETTINGS,
+    }),
+    60000,
+    'extractAnchorContext'
+  );
+
+  const response = result.response.text();
+  return parseJSONFromResponse(response) as {
+    openingImage: string;
+    themeStated: string;
+    setupSummary: string;
+    protagonistStartState: string;
+  };
 }

@@ -137,6 +137,7 @@ model Chapter {
   dialogue         Json?
   sceneDescription Json?
   reviewed         Boolean        @default(false)
+  needsPolish      Boolean        @default(false) // Chapters flagged for background polish (review timeout/hard reject)
   book             Book           @relation(fields: [bookId], references: [id], onDelete: Cascade)
   illustrations    Illustration[]
 

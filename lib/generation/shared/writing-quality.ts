@@ -5,6 +5,105 @@ export type ContentRating = 'childrens' | 'general' | 'mature';
 export const MAX_ORIGINAL_IDEA_WORDS = 1000;
 
 /**
+ * Clinical/robotic phrases that make NON-FICTION sound AI-generated.
+ * These are academic padding phrases that add no value.
+ */
+export const NONFICTION_CLINICAL_PHRASES: (string | RegExp)[] = [
+  // Academic filler
+  'it is important to note',
+  'it should be noted that',
+  'it is worth mentioning',
+  'one must consider',
+  'one might argue',
+  'one could say',
+  'it is evident that',
+  'it is clear that',
+  'it is well known that',
+  'it is generally accepted',
+  'it is widely believed',
+  'it is commonly understood',
+
+  // Vague research claims (without citation = AI tell)
+  /studies have shown/i,
+  /research indicates/i,
+  /research suggests/i,
+  /experts agree/i,
+  /scientists believe/i,
+  /according to experts/i,
+
+  // Redundant transitions
+  'in conclusion',
+  'in summary',
+  'to summarize',
+  'as previously mentioned',
+  'as mentioned above',
+  'as stated earlier',
+  'the aforementioned',
+  'the above-mentioned',
+
+  // Robotic constructions
+  'it shall',
+  'it is imperative',
+  'highly irregular',
+  'sufficient for',
+  'I require',
+  'it would appear',
+  'one might suggest',
+  'most certainly',
+  'precisely so',
+  'in my estimation',
+
+  // Overwrought intros
+  /in (today's|the modern|our current) world/i,
+  /in (this|the current|our) day and age/i,
+  /since the dawn of time/i,
+  /throughout human history/i,
+
+  // Lazy chapter endings
+  /in the next chapter, (we will|you will|we'll)/i,
+  /the following chapter (will|explores)/i,
+];
+
+/**
+ * Check non-fiction text for clinical/robotic phrases.
+ * These phrases make non-fiction sound AI-generated.
+ */
+export function detectNonfictionClinicalPhrases(text: string): {
+  found: boolean;
+  patterns: string[];
+  severity: 'none' | 'warning' | 'hard_reject';
+} {
+  const foundPatterns: string[] = [];
+  const lowerText = text.toLowerCase();
+
+  for (const phrase of NONFICTION_CLINICAL_PHRASES) {
+    if (phrase instanceof RegExp) {
+      if (phrase.test(text)) {
+        foundPatterns.push(`Pattern: "${phrase.source}"`);
+      }
+    } else {
+      if (lowerText.includes(phrase.toLowerCase())) {
+        foundPatterns.push(`Phrase: "${phrase}"`);
+      }
+    }
+  }
+
+  // Determine severity
+  let severity: 'none' | 'warning' | 'hard_reject' = 'none';
+  if (foundPatterns.length >= 3) {
+    severity = 'hard_reject';
+  } else if (foundPatterns.length > 0) {
+    severity = 'warning';
+  }
+
+  return {
+    found: foundPatterns.length > 0,
+    patterns: foundPatterns,
+    severity,
+  };
+}
+
+/**
  * Banned AI-sounding phrases for fiction writing.
  * These are patterns that scream "AI-generated" and must be rewritten.
  * Includes regex patterns (strings) for flexible matching.

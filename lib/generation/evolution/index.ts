@@ -256,6 +256,147 @@ export interface EvolutionPipelineResult {
   revisionReasons: string[];
   revisions?: OutlineRevision[] | ComicPageRevision[] | ScreenplaySequenceRevision[];
   format: ContentFormat;
+  ticUsage?: TicUsageReport;  // Track tic patterns across the story
+}
+
+/**
+ * Physical tic patterns that AI overuses.
+ * Each tic has limits per chapter and per book.
+ */
+export const TIC_PATTERNS = [
+  { name: 'glasses', pattern: /(clean|wipe|polish|adjust|push|remove)s?\s+(his|her|their)?\s*(glasses|spectacles)/gi, maxPerChapter: 1, maxPerBook: 8 },
+  { name: 'wrist', pattern: /rub(s|bing|bed)?\s+(his|her|their)\s+wrist/gi, maxPerChapter: 1, maxPerBook: 5 },
+  { name: 'throat', pattern: /clear(s|ing|ed)?\s+(his|her|their)\s+throat/gi, maxPerChapter: 1, maxPerBook: 6 },
+  { name: 'jaw', pattern: /clench(es|ing|ed)?\s+(his|her|their)\s+jaw/gi, maxPerChapter: 2, maxPerBook: 10 },
+  { name: 'fist', pattern: /ball(s|ing|ed)?\s+(his|her|their)\s+fist/gi, maxPerChapter: 2, maxPerBook: 10 },
+  { name: 'sigh', pattern: /\bsigh(s|ed|ing)?\b/gi, maxPerChapter: 2, maxPerBook: 15 },
+  { name: 'nod', pattern: /\bnod(s|ded|ding)?\b/gi, maxPerChapter: 3, maxPerBook: 20 },
+  { name: 'shrug', pattern: /\bshrug(s|ged|ging)?\b/gi, maxPerChapter: 2, maxPerBook: 12 },
+  { name: 'deep_breath', pattern: /take(s)?\s+a\s+deep\s+breath/gi, maxPerChapter: 2, maxPerBook: 10 },
+  { name: 'eye_contact', pattern: /(break|avoid|hold)s?\s+(eye\s+)?contact/gi, maxPerChapter: 2, maxPerBook: 12 },
+  { name: 'runs_hand', pattern: /runs?\s+(a\s+)?(his|her|their)?\s*hand\s+through/gi, maxPerChapter: 1, maxPerBook: 6 },
+  { name: 'bites_lip', pattern: /bit(e|es|ing)?\s+(his|her|their)\s+lip/gi, maxPerChapter: 1, maxPerBook: 5 },
+  { name: 'eyebrow', pattern: /raise(s|d)?\s+(an?\s+)?(his|her|their)?\s*eyebrow/gi, maxPerChapter: 2, maxPerBook: 10 },
+  { name: 'shoulders_drop', pattern: /shoulders?\s+(drop(ped)?|sag(ged)?|slump(ed)?)/gi, maxPerChapter: 1, maxPerBook: 6 },
+];
+
+/**
+ * Report of tic usage across the story
+ */
+export interface TicUsageReport {
+  ticCounts: Record<string, number>;           // Total count per tic
+  ticCountsThisChapter: Record<string, number>; // Count in current chapter
+  overusedTics: string[];                       // Tics that exceeded book limit
+  chapterViolations: string[];                  // Tics that exceeded chapter limit
+}
+
+/**
+ * Tracker for physical tic usage across the entire story
+ */
+export class TicUsageTracker {
+  private bookId: string;
+  private ticCounts: Record<string, number> = {};
+  private currentChapterCounts: Record<string, number> = {};
+  private currentChapter: number = 0;
+
+  constructor(bookId: string) {
+    this.bookId = bookId;
+    // Initialize all tic counts to 0
+    for (const tic of TIC_PATTERNS) {
+      this.ticCounts[tic.name] = 0;
+    }
+  }
+
+  /**
+   * Process a chapter and count all tic occurrences
+   */
+  processChapter(content: string, chapterNumber: number): TicUsageReport {
+    // Reset chapter counts if moving to a new chapter
+    if (chapterNumber !== this.currentChapter) {
+      this.currentChapterCounts = {};
+      this.currentChapter = chapterNumber;
+    }
+
+    const chapterViolations: string[] = [];
+    const overusedTics: string[] = [];
+
+    for (const tic of TIC_PATTERNS) {
+      // Reset regex lastIndex for global patterns
+      tic.pattern.lastIndex = 0;
+      const matches = content.match(tic.pattern);
+      const count = matches ? matches.length : 0;
+
+      // Update chapter counts
+      this.currentChapterCounts[tic.name] = (this.currentChapterCounts[tic.name] || 0) + count;
+
+      // Update book-wide counts
+      this.ticCounts[tic.name] = (this.ticCounts[tic.name] || 0) + count;
+
+      // Check chapter limit
+      if (this.currentChapterCounts[tic.name] > tic.maxPerChapter) {
+        chapterViolations.push(
+          `${tic.name}: ${this.currentChapterCounts[tic.name]}x (max ${tic.maxPerChapter} per chapter)`
+        );
+      }
+
+      // Check book limit
+      if (this.ticCounts[tic.name] > tic.maxPerBook) {
+        overusedTics.push(
+          `${tic.name}: ${this.ticCounts[tic.name]}x (max ${tic.maxPerBook} per book)`
+        );
+      }
+    }
+
+    return {
+      ticCounts: { ...this.ticCounts },
+      ticCountsThisChapter: { ...this.currentChapterCounts },
+      overusedTics,
+      chapterViolations,
+    };
+  }
+
+  /**
+   * Get current tic counts
+   */
+  getCounts(): Record<string, number> {
+    return { ...this.ticCounts };
+  }
+
+  /**
+   * Generate a warning string for prompts
+   */
+  generateTicWarnings(): string {
+    const warnings: string[] = [];
+
+    for (const tic of TIC_PATTERNS) {
+      const count = this.ticCounts[tic.name] || 0;
+      const remaining = tic.maxPerBook - count;
+
+      if (remaining <= 0) {
+        warnings.push(`- ${tic.name.replace(/_/g, ' ')}: EXHAUSTED (used ${count}/${tic.maxPerBook})`);
+      } else if (remaining <= 2) {
+        warnings.push(`- ${tic.name.replace(/_/g, ' ')}: LOW (${remaining} remaining)`);
+      }
+    }
+
+    if (warnings.length === 0) {
+      return '';
+    }
+
+    return `=== TIC BUDGET WARNING ===
+The following physical actions are nearing their limits:
+${warnings.join('\n')}
+
+Vary physical business. Use environment interaction instead of character tics.
+`;
+  }
+}
+
+/**
+ * Create a new tic usage tracker for a story
+ */
+export function createTicUsageTracker(bookId: string): TicUsageTracker {
+  return new TicUsageTracker(bookId);
 }
 
 /**
@@ -361,16 +502,18 @@ export function initializeEvolutionTracking(
 ): {
   discoveryTracker: DiscoveryTracker;
   characterArcTracker: CharacterArcTracker;
+  ticUsageTracker: TicUsageTracker;
 } {
   const discoveryTracker = createDiscoveryTracker(bookId, originalOutline, format);
   const characterArcTracker = createCharacterArcTracker(bookId, format);
+  const ticUsageTracker = createTicUsageTracker(bookId);
 
   // Initialize character arcs with format-specific data
   for (const char of characters) {
     characterArcTracker.initializeCharacter(char.name, char.role);
   }
 
-  return { discoveryTracker, characterArcTracker };
+  return { discoveryTracker, characterArcTracker, ticUsageTracker };
 }
 
 /**

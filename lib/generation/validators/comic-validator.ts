@@ -7,10 +7,203 @@
  * - Visual descriptions
  * - Page-turner hooks
  * - No internal monologue (unless thought bubbles)
+ * - Visual tic repetition (crossed arms, fist clench, etc.)
+ * - On-the-nose dialogue in speech bubbles
  */
 
 import { NarrativeValidator } from './narrative-validator';
 import { getFormatConfig } from '../atomic/format-config';
+
+// ============================================================================
+// VISUAL TIC PATTERNS - Detect overused visual actions in comics
+// ============================================================================
+
+export interface VisualTicPattern {
+  name: string;
+  pattern: RegExp;
+  maxPerPage: number;    // Per page limit
+  maxPerComic: number;   // Per entire comic limit
+}
+
+/**
+ * Visual tics that AI tends to overuse in comic panels.
+ * These are valid actions but become clichéd when repeated.
+ */
+export const COMIC_VISUAL_TICS: VisualTicPattern[] = [
+  // Body language tics
+  { name: 'crossed_arms', pattern: /(cross(es|ed|ing)?|fold(s|ed|ing)?)\s+(his|her|their)?\s*arms/gi, maxPerPage: 1, maxPerComic: 3 },
+  { name: 'fist_clench', pattern: /clench(es|ed|ing)?\s+(his|her|their)?\s*(fist|fists|hands)/gi, maxPerPage: 1, maxPerComic: 4 },
+  { name: 'arms_akimbo', pattern: /hands?\s+(on\s+)?(his|her|their)?\s*(hip|hips)/gi, maxPerPage: 1, maxPerComic: 2 },
+  { name: 'pointing', pattern: /point(s|ed|ing)?\s+(a\s+)?(his|her|their)?\s*(finger|accusingly|dramatically)/gi, maxPerPage: 1, maxPerComic: 3 },
+
+  // Facial expressions overused
+  { name: 'wide_eyes', pattern: /(eyes?\s+widen|wide[- ]eyed|eyes?\s+go\s+wide)/gi, maxPerPage: 1, maxPerComic: 4 },
+  { name: 'jaw_drop', pattern: /(jaw\s+drop|mouth\s+(hangs?\s+)?open|gaping)/gi, maxPerPage: 1, maxPerComic: 3 },
+  { name: 'gritted_teeth', pattern: /(grit(s|ted|ting)?\s+(his|her|their)?\s*teeth|teeth\s+gritted)/gi, maxPerPage: 1, maxPerComic: 3 },
+  { name: 'raised_eyebrow', pattern: /(raise[sd]?\s+(an?\s+)?eyebrow|eyebrow\s+raise[sd]?|arched?\s+eyebrow)/gi, maxPerPage: 1, maxPerComic: 3 },
+
+  // Manga-style visual clichés
+  { name: 'sweat_drop', pattern: /(sweat\s*drop|bead[s]?\s+of\s+sweat|sweating|sweat\s+(beads?|trickles?))/gi, maxPerPage: 1, maxPerComic: 2 },
+  { name: 'vein_pop', pattern: /(vein\s+(pop|throb|bulge)|anger\s+mark)/gi, maxPerPage: 1, maxPerComic: 2 },
+  { name: 'sparkle_eyes', pattern: /(eyes?\s+sparkle|sparkl(e|ing)\s+eyes?|starry[- ]eyed)/gi, maxPerPage: 1, maxPerComic: 2 },
+
+  // Pose clichés
+  { name: 'dramatic_pose', pattern: /(strikes?\s+a\s+pose|dramatic\s+pose|hero(ic)?\s+pose|power\s+pose)/gi, maxPerPage: 1, maxPerComic: 2 },
+  { name: 'back_turned', pattern: /(back\s+turned|turns?\s+(his|her|their)?\s*back|facing\s+away)/gi, maxPerPage: 1, maxPerComic: 3 },
+  { name: 'looking_away', pattern: /(look(s|ing)?\s+away|avert(s|ed|ing)?\s+(his|her|their)?\s*(gaze|eyes?))/gi, maxPerPage: 1, maxPerComic: 3 },
+
+  // Action clichés
+  { name: 'shadow_looms', pattern: /(shadow\s+(looms?|falls?)|looming\s+shadow|cast(s|ing)?\s+a\s+shadow)/gi, maxPerPage: 1, maxPerComic: 2 },
+  { name: 'slow_motion', pattern: /(slow[- ]motion|time\s+(slows?|freeze)|frozen\s+moment)/gi, maxPerPage: 1, maxPerComic: 2 },
+];
+
+/**
+ * On-the-nose dialogue patterns for comics.
+ * Characters stating emotions directly instead of showing through art.
+ */
+export const COMIC_ON_THE_NOSE_PATTERNS: RegExp[] = [
+  // Direct emotion statements
+  /I('m| am)\s+(so\s+)?(angry|mad|furious|scared|terrified|sad|happy|confused|shocked)/gi,
+  /I\s+feel\s+(so\s+)?(angry|sad|happy|scared|betrayed|hurt|confused)/gi,
+  /You\s+make\s+me\s+feel/gi,
+  /I('m| am)\s+feeling/gi,
+
+  // Explaining obvious actions
+  /I\s+(can't|cannot)\s+believe\s+(this|what|that)/gi,
+  /This\s+(can't|cannot)\s+be\s+happening/gi,
+  /What('s| is)\s+happening\s+to\s+me/gi,
+
+  // Mood exposition
+  /I\s+need\s+to\s+calm\s+down/gi,
+  /I('m| am)\s+(getting\s+)?(nervous|anxious|worried)/gi,
+  /My\s+heart\s+is\s+(racing|pounding)/gi,
+];
+
+export interface VisualTicReport {
+  found: boolean;
+  ticCounts: Record<string, number>;
+  violations: Array<{
+    tic: string;
+    count: number;
+    limit: number;
+    context: string;
+  }>;
+  severity: 'none' | 'warning' | 'hard_reject';
+}
+
+export interface OnTheNoseDialogueReport {
+  found: boolean;
+  instances: Array<{
+    pattern: string;
+    match: string;
+    context: string;
+  }>;
+  severity: 'none' | 'warning' | 'hard_reject';
+}
+
+/**
+ * Detect visual tics in comic content.
+ */
+export function detectVisualTics(
+  text: string,
+  cumulativeCounts?: Record<string, number>
+): VisualTicReport {
+  const ticCounts: Record<string, number> = {};
+  const violations: VisualTicReport['violations'] = [];
+
+  for (const tic of COMIC_VISUAL_TICS) {
+    // Reset regex lastIndex
+    tic.pattern.lastIndex = 0;
+
+    // Count occurrences
+    const matches = text.match(tic.pattern) || [];
+    const count = matches.length;
+    ticCounts[tic.name] = count;
+
+    // Check per-page limit
+    if (count > tic.maxPerPage) {
+      const contextMatch = tic.pattern.exec(text);
+      violations.push({
+        tic: tic.name,
+        count,
+        limit: tic.maxPerPage,
+        context: contextMatch ? contextMatch[0] : tic.name,
+      });
+    }
+
+    // Check cumulative limit (per-comic)
+    if (cumulativeCounts) {
+      const totalCount = (cumulativeCounts[tic.name] || 0) + count;
+      if (totalCount > tic.maxPerComic) {
+        violations.push({
+          tic: tic.name,
+          count: totalCount,
+          limit: tic.maxPerComic,
+          context: `Total across comic: ${totalCount}x "${tic.name}" (max ${tic.maxPerComic})`,
+        });
+      }
+    }
+  }
+
+  // Determine severity
+  let severity: 'none' | 'warning' | 'hard_reject' = 'none';
+  if (violations.length >= 3) {
+    severity = 'hard_reject';
+  } else if (violations.length > 0) {
+    severity = 'warning';
+  }
+
+  return {
+    found: violations.length > 0,
+    ticCounts,
+    violations,
+    severity,
+  };
+}
+
+/**
+ * Detect on-the-nose dialogue in comic speech bubbles.
+ */
+export function detectComicOnTheNoseDialogue(text: string): OnTheNoseDialogueReport {
+  const instances: OnTheNoseDialogueReport['instances'] = [];
+
+  // Extract dialogue from text (in quotes)
+  const dialogueMatches = text.match(/"[^"]+"/g) || [];
+  const dialogueText = dialogueMatches.join(' ');
+
+  for (const pattern of COMIC_ON_THE_NOSE_PATTERNS) {
+    // Reset regex
+    pattern.lastIndex = 0;
+
+    let match;
+    while ((match = pattern.exec(dialogueText)) !== null) {
+      // Get context around the match
+      const start = Math.max(0, match.index - 20);
+      const end = Math.min(dialogueText.length, match.index + match[0].length + 20);
+      const context = dialogueText.slice(start, end);
+
+      instances.push({
+        pattern: pattern.source,
+        match: match[0],
+        context: `...${context}...`,
+      });
+    }
+  }
+
+  // Determine severity
+  let severity: 'none' | 'warning' | 'hard_reject' = 'none';
+  if (instances.length >= 2) {
+    severity = 'hard_reject';
+  } else if (instances.length > 0) {
+    severity = 'warning';
+  }
+
+  return {
+    found: instances.length > 0,
+    instances,
+    severity,
+  };
+}
 
 export interface ComicValidationReport {
   isValid: boolean;
@@ -47,6 +240,21 @@ export interface ComicValidationReport {
     hasInternalMonologue: boolean;
     internalMonologueInstances: string[];
     hasExcessiveNarration: boolean;
+  };
+
+  // NEW: Visual tic detection
+  visualTics: {
+    found: boolean;
+    ticCounts: Record<string, number>;
+    violations: string[];
+    severity: 'none' | 'warning' | 'hard_reject';
+  };
+
+  // NEW: On-the-nose dialogue detection
+  onTheNoseDialogue: {
+    found: boolean;
+    instances: string[];
+    severity: 'none' | 'warning' | 'hard_reject';
   };
 
   loopDetected: boolean;
@@ -163,6 +371,47 @@ export function validateComicBeat(
     );
   }
 
+  // 7. Visual tic detection (NEW)
+  const visualTicReport = detectVisualTics(text);
+
+  if (visualTicReport.found) {
+    const ticViolations = visualTicReport.violations.map(v =>
+      `"${v.tic}" appears ${v.count}x (max ${v.limit})`
+    );
+
+    if (visualTicReport.severity === 'hard_reject') {
+      corrections.push(
+        `VISUAL TIC OVERLOAD (HARD REJECT): Multiple overused visual actions detected. ` +
+        `Issues: ${ticViolations.join(', ')}. Vary character poses and expressions.`
+      );
+    } else if (visualTicReport.severity === 'warning') {
+      corrections.push(
+        `VISUAL TIC WARNING: Overused visual actions: ${ticViolations.join(', ')}. ` +
+        `Consider varying character body language and expressions.`
+      );
+    }
+  }
+
+  // 8. On-the-nose dialogue detection (NEW)
+  const onTheNoseReport = detectComicOnTheNoseDialogue(text);
+
+  if (onTheNoseReport.found) {
+    const instances = onTheNoseReport.instances.map(i => `"${i.match}"`);
+
+    if (onTheNoseReport.severity === 'hard_reject') {
+      corrections.push(
+        `ON-THE-NOSE DIALOGUE (HARD REJECT): Characters directly state emotions. ` +
+        `Found: ${instances.slice(0, 3).join(', ')}. ` +
+        `Comics SHOW emotion through art. Use expressions, poses, and visual metaphors instead.`
+      );
+    } else if (onTheNoseReport.severity === 'warning') {
+      corrections.push(
+        `ON-THE-NOSE DIALOGUE WARNING: Found direct emotion statements: ${instances[0]}. ` +
+        `Let the art carry the emotion instead.`
+      );
+    }
+  }
+
   return {
     isValid: corrections.length === 0,
     format: 'comic',
@@ -172,6 +421,17 @@ export function validateComicBeat(
     visualMetrics,
     pageMetrics,
     narrativeIssues,
+    visualTics: {
+      found: visualTicReport.found,
+      ticCounts: visualTicReport.ticCounts,
+      violations: visualTicReport.violations.map(v => `${v.tic}: ${v.count}x (max ${v.limit})`),
+      severity: visualTicReport.severity,
+    },
+    onTheNoseDialogue: {
+      found: onTheNoseReport.found,
+      instances: onTheNoseReport.instances.map(i => i.match),
+      severity: onTheNoseReport.severity,
+    },
     loopDetected,
   };
 }
@@ -480,6 +740,7 @@ function checkComicLoop(panels: ComicPanel[], previousContent: string): boolean 
 
 /**
  * Quick validation for performance.
+ * Catches the most egregious issues without full validation.
  */
 export function quickValidateComic(
   text: string,
@@ -500,6 +761,21 @@ export function quickValidateComic(
       isValid: false,
       primaryIssue: `Too many panels: ${panelMatches.length}`,
     };
+  }
+
+  // Quick on-the-nose dialogue check (hard reject patterns only)
+  const onTheNoseHardReject = [
+    /I('m| am)\s+so\s+(angry|scared|sad|happy)/i,
+    /I\s+feel\s+so\s+(angry|scared|sad|happy|betrayed)/i,
+  ];
+
+  for (const pattern of onTheNoseHardReject) {
+    if (pattern.test(text)) {
+      return {
+        isValid: false,
+        primaryIssue: 'Contains on-the-nose dialogue (direct emotion statements)',
+      };
+    }
   }
 
   return { isValid: true, primaryIssue: null };

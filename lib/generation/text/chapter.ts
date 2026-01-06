@@ -556,6 +556,24 @@ ${data.chapterPlan}
   throw lastError || new Error(`Failed to generate chapter ${data.chapterNumber}`);
 }
 
+/**
+ * CausalBridge for prose chapters - prevents chapter-to-chapter drift
+ */
+export interface ProseChapterCausalBridge {
+  triggerEvent: string;
+  therefore: string;
+  but: string;
+  nextChapterMustAddress: string;
+}
+
+/**
+ * Extended chapter summary with CausalBridge for continuity
+ */
+export interface ChapterSummaryWithCausality {
+  summary: string;
+  causalBridge?: ProseChapterCausalBridge;
+}
+
 export async function summarizeChapter(chapterContent: string): Promise<string> {
   // Simplified, shorter prompt for faster generation
   const prompt = `Summarize this chapter in 100 words max. Include:
@@ -582,6 +600,90 @@ ${chapterContent}`;
     // Timeout or error - use smart fallback
     console.log(`[Summary] AI failed, using smart fallback`);
     return smartSummaryFallback(chapterContent);
+  }
+}
+
+/**
+ * Extended chapter summary that includes CausalBridge for preventing drift.
+ * Use this for fiction books to maintain narrative momentum.
+ */
+export async function summarizeChapterWithCausality(
+  chapterContent: string,
+  chapterNumber: number,
+  isLastChapter: boolean = false
+): Promise<ChapterSummaryWithCausality> {
+  // For the last chapter, we don't need causal bridge to next
+  if (isLastChapter) {
+    const summary = await summarizeChapter(chapterContent);
+    return { summary };
+  }
+
+  const prompt = `Summarize this chapter for continuity tracking.
+
+CHAPTER ${chapterNumber} CONTENT:
+${chapterContent.substring(0, 6000)}
+
+=== SUMMARY REQUIREMENTS ===
+Provide a 100-word summary with SPECIFIC events (not themes or feelings).
+
+=== CAUSAL BRIDGE (MANDATORY) ===
+Human stories use THEREFORE/BUT logic. AI uses AND THEN (which causes drift).
+
+You MUST provide:
+1. TRIGGER EVENT: The key event that ended this chapter
+2. THEREFORE: What the protagonist MUST do next as a result
+3. BUT: The obstacle preventing easy resolution
+4. NEXT CHAPTER MUST ADDRESS: The specific conflict to resolve
+
+EXAMPLE:
+- TRIGGER: "Maria discovered the forged documents"
+- THEREFORE: "Maria must confront her business partner"
+- BUT: "The partner controls the company finances and Maria's family depends on the income"
+- NEXT MUST ADDRESS: "Confrontation with partner about the forgery"
+
+This creates FORWARD MOMENTUM. Without it, chapters drift.
+
+Return JSON:
+{
+  "summary": "100-word summary with SPECIFIC events...",
+  "causalBridge": {
+    "triggerEvent": "The key event that ended this chapter",
+    "therefore": "What protagonist MUST do next",
+    "but": "The obstacle preventing easy resolution",
+    "nextChapterMustAddress": "The specific conflict for next chapter"
+  }
+}`;
+
+  const startTime = Date.now();
+  try {
+    const result = await withTimeout(
+      () => getGeminiFlashLight().generateContent(prompt),
+      FAST_TASK_TIMEOUT,
+      'Chapter summary with causality'
+    );
+    const response = result.response.text().trim();
+    const elapsed = Date.now() - startTime;
+
+    // Try to parse JSON response
+    try {
+      // Extract JSON from response (may be wrapped in markdown code blocks)
+      const jsonMatch = response.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const parsed = JSON.parse(jsonMatch[0]) as ChapterSummaryWithCausality;
+        console.log(`[Summary+Causality] SUCCESS in ${elapsed}ms`);
+        return parsed;
+      }
+    } catch {
+      // JSON parsing failed, fall back to basic summary
+      console.log(`[Summary+Causality] JSON parse failed, using basic summary`);
+    }
+
+    // Fallback: use the response as the summary
+    return { summary: response.substring(0, 500) };
+  } catch (error) {
+    // Timeout or error - use smart fallback
+    console.log(`[Summary+Causality] AI failed, using smart fallback`);
+    return { summary: smartSummaryFallback(chapterContent) };
   }
 }
 

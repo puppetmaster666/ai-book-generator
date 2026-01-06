@@ -12,6 +12,12 @@
  * - Loop Detection: Jaccard similarity with previous content
  */
 
+export interface OnTheNoseReport {
+  found: boolean;
+  patterns: Array<{ pattern: string; match: string; context: string }>;
+  severity: 'none' | 'warning' | 'hard_reject';
+}
+
 export interface ValidationReport {
   isValid: boolean;
   sentenceVariance: number;           // Standard deviation of sentence lengths
@@ -26,6 +32,7 @@ export interface ValidationReport {
   loopSimilarity: number;             // Jaccard similarity score
   sentenceLengths: number[];          // Word counts per sentence (for debugging)
   sensoryGrounding: SensoryGroundingReport;  // 4+1 Sensory Rule check
+  onTheNoseDialogue: OnTheNoseReport; // Direct emotion statements in dialogue
   corrections: string[];              // Surgical feedback for retry prompt
 }
 
@@ -59,6 +66,89 @@ const DEFAULT_THRESHOLDS: ValidationThresholds = {
   maxStaccatoRatio: 0.6,
   maxLoopSimilarity: 0.4,
 };
+
+/**
+ * On-the-Nose Dialogue Patterns
+ *
+ * Characters should NEVER directly state their emotions.
+ * This is a hallmark of AI writing and amateur screenwriting.
+ *
+ * BAD: "I feel betrayed" / "You make me angry" / "I'm scared"
+ * GOOD: "You knew. This whole time." / "Get out." / [backs against wall]
+ */
+export const ON_THE_NOSE_DIALOGUE_PATTERNS: RegExp[] = [
+  // Direct emotion statements
+  /I feel (so )?(angry|sad|happy|scared|betrayed|hurt|confused|frustrated|disappointed|lonely|anxious|worried)/gi,
+  /I('m| am) (so )?(angry|sad|happy|scared|confused|frustrated|disappointed|lonely|anxious|worried|jealous|proud)/gi,
+  /You make me feel/gi,
+  /You('re| are) making me (feel )?/gi,
+  /I need you to understand/gi,
+  /What I('m| am) trying to say is/gi,
+  /The truth is,? I/gi,
+  /I have to be honest/gi,
+  /Can I be honest with you/gi,
+  /I('m| am) feeling/gi,
+  /My feelings are/gi,
+
+  // Explaining emotions to listener
+  /I('m| am) hurt (by|that|because)/gi,
+  /I('m| am) angry (at|with|because|that)/gi,
+  /I('m| am) scared (of|that|because)/gi,
+  /I love you because/gi,
+  /I hate you because/gi,
+
+  // Meta-dialogue (characters explaining subtext)
+  /What I mean is/gi,
+  /What I('m| am) really saying is/gi,
+  /The point is/gi,
+  /Let me explain/gi,
+  /Here('s| is) the thing/gi,
+  /Let me be clear/gi,
+];
+
+/**
+ * Detect on-the-nose dialogue in fiction.
+ * Returns found patterns with context for reporting.
+ */
+export function detectOnTheNoseDialogue(text: string): {
+  found: boolean;
+  patterns: Array<{ pattern: string; match: string; context: string }>;
+  severity: 'none' | 'warning' | 'hard_reject';
+} {
+  const foundPatterns: Array<{ pattern: string; match: string; context: string }> = [];
+
+  for (const pattern of ON_THE_NOSE_DIALOGUE_PATTERNS) {
+    // Reset lastIndex for global regex
+    pattern.lastIndex = 0;
+    let match;
+    while ((match = pattern.exec(text)) !== null) {
+      // Get surrounding context (50 chars before and after)
+      const start = Math.max(0, match.index - 50);
+      const end = Math.min(text.length, match.index + match[0].length + 50);
+      const context = text.substring(start, end).replace(/\s+/g, ' ');
+
+      foundPatterns.push({
+        pattern: pattern.source.substring(0, 30) + '...',
+        match: match[0],
+        context: `...${context}...`,
+      });
+    }
+  }
+
+  // Determine severity
+  let severity: 'none' | 'warning' | 'hard_reject' = 'none';
+  if (foundPatterns.length >= 3) {
+    severity = 'hard_reject';
+  } else if (foundPatterns.length > 0) {
+    severity = 'warning';
+  }
+
+  return {
+    found: foundPatterns.length > 0,
+    patterns: foundPatterns,
+    severity,
+  };
+}
 
 // Common AI-telltale phrases to detect
 const BANNED_PHRASES = [
@@ -570,6 +660,23 @@ export class NarrativeValidator {
       );
     }
 
+    // 8. On-the-nose dialogue detection
+    const onTheNoseDialogue = detectOnTheNoseDialogue(text);
+    if (onTheNoseDialogue.severity === 'hard_reject') {
+      corrections.push(
+        `ON-THE-NOSE DIALOGUE: Found ${onTheNoseDialogue.patterns.length} instances of direct emotion statements. ` +
+        `Characters should NEVER directly state their feelings. ` +
+        `BAD: "I feel betrayed" / "I'm scared" / "You make me angry". ` +
+        `GOOD: Show emotion through ACTION ("She slammed the door") or SUBTEXT ("You knew. This whole time."). ` +
+        `Examples found: "${onTheNoseDialogue.patterns.slice(0, 2).map(p => p.match).join('", "')}"`
+      );
+    } else if (onTheNoseDialogue.severity === 'warning' && onTheNoseDialogue.patterns.length > 1) {
+      corrections.push(
+        `ON-THE-NOSE WARNING: Found ${onTheNoseDialogue.patterns.length} direct emotion statement(s). ` +
+        `Consider showing emotions through action instead of stating them.`
+      );
+    }
+
     const isValid = corrections.length === 0;
 
     return {
@@ -586,6 +693,7 @@ export class NarrativeValidator {
       loopSimilarity: similarity,
       sentenceLengths: lengths,
       sensoryGrounding,
+      onTheNoseDialogue,
       corrections,
     };
   }

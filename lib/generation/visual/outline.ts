@@ -260,6 +260,37 @@ Use natural, subtext-driven speech instead.
 - Include SFX where they add kinetic energy: CRASH!, WHOOSH!, ZAP!, THWACK!
 - Describe the typography style: "Jagged, electric-yellow 'ZAP!'", "Bold red 'CRASH!' with debris fragments"
 - SFX should integrate with the action, not float in corners.
+
+=== PANEL VARIETY ENFORCEMENT (CRITICAL) ===
+- NEVER use the same panel layout 3 times in a row
+- Vary panel counts across the comic: splash → three-panel → two-panel → four-panel
+- Action sequences should ACCELERATE panel count (2→3→4 panels)
+- Emotional moments should DECELERATE (4→2→splash)
+- Every 4-5 pages MUST include at least one splash page
+- Track your layout usage and vary it consciously
+
+=== VISUAL TIC WARNING (CODE ENFORCED) ===
+These physical actions are LIMITED across the comic:
+- Crossed arms: Max 3x total (AVOID - it's defensive and overused)
+- Clenched fists: Max 4x total
+- Pointing fingers: Max 3x total
+- Hands on hips: Max 3x total
+- Arms raised: Max 4x total (triumphant poses)
+
+Use VARIED body language:
+- Leaning, slouching, perching, crouching
+- Hands in pockets, touching hair, adjusting clothing
+- Interacting with environment: gripping railings, leaning on walls
+
+=== ON-THE-NOSE DIALOGUE (HARD REJECT) ===
+Characters NEVER state their feelings directly in speech bubbles:
+BAD: "I feel so angry!" / "I'm scared!" / "I am happy now!"
+GOOD: "You knew. This whole time." / "Just go." / [silent panel with trembling hands]
+
+If a character needs to EXPRESS emotion:
+- Show it in the ART (facial expression, body language)
+- Use SUBTEXT in dialogue (says something else, tone conveys emotion)
+- Use SILENCE (dramatic pause panels)
 `
     : `
 For each page, the "text" field contains the prose that appears under/around the image.

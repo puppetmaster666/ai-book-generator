@@ -33,6 +33,15 @@ import {
   type PostProcessingConfig,
 } from '@/lib/generation/post-processing';
 import { detectFormat, getFormatConfig } from '@/lib/generation/atomic/format-config';
+import { runScreenplayPostProcessing } from '@/lib/generation/screenplay/post-processing';
+import {
+  detectFictionBannedPhrases,
+  detectNonfictionClinicalPhrases,
+} from '@/lib/generation/shared/writing-quality';
+import { detectOnTheNoseDialogue } from '@/lib/generation/validators/narrative-validator';
+
+// Maximum regeneration attempts for hard reject patterns
+const MAX_REGENERATION_ATTEMPTS = 2;
 
 // Allow up to 5 minutes for chapter generation (Vercel Pro plan max: 300s)
 export const maxDuration = 300;
@@ -404,7 +413,70 @@ Pick up AFTER the last event and push toward the next beat sheet milestone.`,
         }
       }
 
-      // Flag excessive tics (last line of defense)
+      // === HARD REJECT LOOP (Code Fortress) ===
+      // Run post-processing pipeline with hard reject detection
+      // If patterns are too egregious, regenerate with surgical prompt
+      let regenerationAttempts = 0;
+      let needsPolish = false;
+
+      while (regenerationAttempts < MAX_REGENERATION_ATTEMPTS) {
+        const postProcessed = runScreenplayPostProcessing(
+          sequenceContent,
+          screenplayContext,
+          nextChapterNum,
+          screenplayContext.sequenceSummaries
+        );
+
+        if (postProcessed.hardReject) {
+          console.warn(`[HARD REJECT] Sequence ${nextChapterNum} (attempt ${regenerationAttempts + 1}): ${postProcessed.report.clinicalFound.length} clinical, ${postProcessed.report.onTheNoseFound.length} on-the-nose`);
+
+          try {
+            const regeneratedResult = await withTimeout(
+              generateScreenplaySequence({
+                beatSheet: screenplayOutline.beatSheet,
+                characters: screenplayOutline.characters,
+                sequenceNumber: nextChapterNum,
+                context: {
+                  ...screenplayContext,
+                  lastSequenceSummary: `${screenplayContext.lastSequenceSummary}
+
+${postProcessed.surgicalPrompt}`,
+                },
+                genre: book.genre,
+                title: book.title,
+                activeSubplots,
+              }),
+              CHAPTER_TIMEOUT_MS,
+              `Sequence ${nextChapterNum} hard reject regeneration`
+            );
+
+            sequenceContent = regeneratedResult.content;
+            regenerationAttempts++;
+            continue; // Check again
+          } catch (regenError) {
+            console.error(`[HARD REJECT] Regeneration failed:`, regenError);
+            needsPolish = true;
+            break; // Accept with flag
+          }
+        }
+
+        // Accept the processed content
+        sequenceContent = postProcessed.content;
+        screenplayContext = postProcessed.updatedContext;
+
+        // Log post-processing report
+        console.log(`[POST-PROCESS] Sequence ${nextChapterNum}: Variance=${postProcessed.report.varianceScore.toFixed(1)}, Sentences combined=${postProcessed.report.sentencesCombined}, Tics removed=${postProcessed.report.ticsRemoved.length}`);
+
+        break; // Success
+      }
+
+      if (regenerationAttempts >= MAX_REGENERATION_ATTEMPTS) {
+        console.warn(`[HARD REJECT] Sequence ${nextChapterNum} exceeded max regeneration attempts, flagging for polish`);
+        needsPolish = true;
+      }
+      // === END HARD REJECT LOOP ===
+
+      // Flag excessive tics (last line of defense - legacy check)
       const ticCheck = flagExcessiveTics(sequenceContent);
       if (ticCheck.warnings.length > 0) {
         console.warn(`[TIC WARNING] Sequence ${nextChapterNum}: ${ticCheck.warnings.join(', ')}`);
@@ -587,6 +659,92 @@ ${chapterPlan.summary}
 [This chapter is being regenerated. Please refresh in a moment.]`;
       console.log(`Created placeholder for chapter ${nextChapterNum} due to timeout`);
     }
+
+    // === HARD REJECT CHECK FOR PROSE (Code Fortress) ===
+    // Check for egregious patterns that require regeneration
+    let proseNeedsPolish = false;
+    let proseRegenerationAttempts = 0;
+
+    while (proseRegenerationAttempts < MAX_REGENERATION_ATTEMPTS) {
+      const hardRejectReasons: string[] = [];
+      const surgicalFixes: string[] = [];
+
+      // Check based on book type
+      if (book.bookType === 'non-fiction') {
+        // Non-fiction: Check for clinical/academic phrases
+        const clinicalCheck = detectNonfictionClinicalPhrases(chapterContent);
+        if (clinicalCheck.severity === 'hard_reject') {
+          hardRejectReasons.push(`Clinical phrases: ${clinicalCheck.patterns.slice(0, 3).join(', ')}`);
+          surgicalFixes.push(
+            `CRITICAL FIX: Your writing sounds like an AI textbook. Remove all clinical phrases like "${clinicalCheck.patterns[0]}". Write like a human expert explaining to a friend, not an academic paper.`
+          );
+        }
+      } else {
+        // Fiction: Check for banned phrases and on-the-nose dialogue
+        const bannedCheck = detectFictionBannedPhrases(chapterContent);
+        if (bannedCheck.patterns.length >= 3) {
+          hardRejectReasons.push(`Banned AI phrases: ${bannedCheck.patterns.slice(0, 3).join(', ')}`);
+          surgicalFixes.push(
+            `CRITICAL FIX: Remove all clichéd AI phrases like "${bannedCheck.patterns[0]}". Use fresh, specific language that fits your characters.`
+          );
+        }
+
+        const onTheNoseCheck = detectOnTheNoseDialogue(chapterContent);
+        if (onTheNoseCheck.severity === 'hard_reject') {
+          hardRejectReasons.push(`On-the-nose dialogue: ${onTheNoseCheck.patterns.slice(0, 2).map(p => p.match).join(', ')}`);
+          surgicalFixes.push(
+            `CRITICAL FIX: Characters must NEVER state their feelings directly ("I feel angry", "I'm scared"). Show emotion through ACTIONS and BEHAVIOR, not declarations.`
+          );
+        }
+      }
+
+      // If hard reject triggered, regenerate
+      if (hardRejectReasons.length > 0) {
+        console.warn(`[HARD REJECT] Chapter ${nextChapterNum} (attempt ${proseRegenerationAttempts + 1}): ${hardRejectReasons.join('; ')}`);
+
+        try {
+          chapterContent = await withTimeout(
+            generateChapter({
+              title: book.title,
+              genre: book.genre,
+              bookType: book.bookType,
+              writingStyle: book.writingStyle,
+              outline: outline,
+              storySoFar,
+              characterStates,
+              chapterNumber: chapterPlan.number,
+              chapterTitle: chapterPlan.title,
+              chapterPlan: chapterPlan.summary,
+              chapterPov: chapterPlan.pov,
+              targetWords: chapterPlan.targetWords,
+              chapterFormat: book.chapterFormat,
+              chapterKeyPoints: chapterPlan.keyPoints,
+              contentRating: (book.contentRating || 'general') as ContentRating,
+              totalChapters,
+              correctiveInstructions: surgicalFixes.join('\n\n'),
+            }),
+            CHAPTER_TIMEOUT_MS,
+            `Chapter ${nextChapterNum} hard reject regeneration`
+          );
+
+          proseRegenerationAttempts++;
+          continue; // Check again
+        } catch (regenError) {
+          console.error(`[HARD REJECT] Regeneration failed:`, regenError);
+          proseNeedsPolish = true;
+          break; // Accept with flag
+        }
+      }
+
+      // No hard reject issues, continue
+      break;
+    }
+
+    if (proseRegenerationAttempts >= MAX_REGENERATION_ATTEMPTS) {
+      console.warn(`[HARD REJECT] Chapter ${nextChapterNum} exceeded max regeneration attempts, flagging for polish`);
+      proseNeedsPolish = true;
+    }
+    // === END HARD REJECT CHECK ===
 
     // === POST-PROCESSING PIPELINE (Layer 2) ===
     // Pure code-based fixes: name→pronoun, sentence variety, burstiness, dialogue polish

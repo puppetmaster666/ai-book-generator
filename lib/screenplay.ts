@@ -77,6 +77,28 @@ export interface BeatSheet {
 }
 
 /**
+ * Causal Bridge - Forces THEREFORE/BUT logic instead of AND THEN
+ * This is the key to preventing sequence loops and story drift
+ */
+export interface CausalBridge {
+  triggerEvent: string;           // "Elias discovered the letter"
+  therefore: string;              // "He must confront Sarah"
+  but: string;                    // "She's already left for the airport"
+  nextSequenceMustAddress: string; // "The airport confrontation"
+}
+
+/**
+ * Anchor Context - Permanent reference to Sequence 1
+ * Prevents theme amnesia and character drift
+ */
+export interface AnchorContext {
+  openingImage: string;           // Visual from Seq 1
+  themeStated: string;            // Theme dialogue from Seq 1
+  setupSummary: string;           // 200-word Seq 1 summary
+  protagonistStartState: string;  // Where protagonist began emotionally
+}
+
+/**
  * Sequence summary for context continuity
  * Each sequence is ~12-15 pages
  */
@@ -95,6 +117,7 @@ export interface SequenceSummary {
   }>;
   plantedSetups: string[]; // Chekhov's guns planted in this sequence
   resolvedPayoffs: string[]; // Setups from earlier sequences paid off here
+  causalBridge?: CausalBridge; // NEW: Forces THEREFORE/BUT logic for next sequence
 }
 
 /**
@@ -124,6 +147,12 @@ export interface ScreenplayContext {
 
   // The last 200-word summary for context window
   lastSequenceSummary: string;
+
+  // NEW: Permanent anchor - never removed from context (prevents theme amnesia)
+  anchorContext?: AnchorContext;
+
+  // NEW: Track tic usage across entire screenplay (enforced limits)
+  ticCredits: Record<string, number>; // { 'glasses': 1, 'sigh': 2, etc. }
 }
 
 /**
@@ -265,6 +294,84 @@ export const SCREENPLAY_LIMITED_PARENTHETICALS = [
 ];
 
 /**
+ * Clinical vocabulary - triggers HARD REJECT when found in dialogue
+ * These make characters sound like robots, especially "Professor" archetype
+ */
+export const SCREENPLAY_CLINICAL_VOCABULARY = [
+  // Formal constructions (Professor archetype failure mode)
+  'it shall',
+  'it is imperative',
+  'highly irregular',
+  'sufficient for',
+  'I require',
+  'it would appear',
+  'one might suggest',
+  'most certainly',
+  'precisely so',
+  'in my estimation',
+  'spatial logistics',
+  // Robotic responses
+  'affirmative',
+  'negative',
+  'acknowledged',
+  'understood',
+  'that is correct',
+  // Overly formal speech
+  'I am aware',
+  'it shall subside',
+  'my stock is',
+  'ocular',
+  'commence',
+  'proceed with',
+  'indeed so',
+];
+
+/**
+ * Tic patterns with enforced limits per sequence
+ * Post-processing will REMOVE excess occurrences
+ */
+export const SCREENPLAY_TIC_PATTERNS: Array<{
+  name: string;
+  pattern: RegExp;
+  maxPerSequence: number;
+}> = [
+  { name: 'glasses', pattern: /(clean|wipe|polish|adjust|push|remove)s?\s+(his|her|their)\s*(glasses|spectacles)/gi, maxPerSequence: 1 },
+  { name: 'wrist', pattern: /rub(s|bing|bed)?\s+(his|her|their)\s+wrist/gi, maxPerSequence: 1 },
+  { name: 'throat', pattern: /clear(s|ing|ed)?\s+(his|her|their)\s+throat/gi, maxPerSequence: 1 },
+  { name: 'jaw', pattern: /clench(es|ing|ed)?\s+(his|her|their)\s+jaw/gi, maxPerSequence: 2 },
+  { name: 'fist', pattern: /ball(s|ing|ed)?\s+(his|her|their)\s+fist/gi, maxPerSequence: 2 },
+  { name: 'sigh', pattern: /\bsigh(s|ed|ing)?\b/gi, maxPerSequence: 2 },
+  { name: 'nod', pattern: /\bnod(s|ded|ding)?\b/gi, maxPerSequence: 3 },
+  { name: 'shrug', pattern: /\bshrug(s|ged|ging)?\b/gi, maxPerSequence: 2 },
+  { name: 'zippo', pattern: /(click|flip|snap)s?\s+(his|her|their)\s*(zippo|lighter)/gi, maxPerSequence: 1 },
+  { name: 'lighter', pattern: /(zippo|lighter)\s+(click|flip|snap)s?/gi, maxPerSequence: 1 },
+  { name: 'pen_click', pattern: /(click|tap)s?\s+(his|her|their)\s*(pen|pencil)/gi, maxPerSequence: 1 },
+  { name: 'finger_drum', pattern: /drum(s|ming|med)?\s+(his|her|their)\s*fingers/gi, maxPerSequence: 1 },
+  { name: 'deep_breath', pattern: /take(s)?\s+a\s+deep\s+breath/gi, maxPerSequence: 2 },
+  { name: 'eye_contact', pattern: /(break|avoid|hold)s?\s+(eye\s+)?contact/gi, maxPerSequence: 2 },
+  { name: 'runs_hand', pattern: /runs?\s+(a\s+)?(his|her|their)\s*hand\s+through/gi, maxPerSequence: 1 },
+];
+
+/**
+ * On-the-nose dialogue patterns - characters stating feelings directly
+ * Triggers HARD REJECT when found (emotion should be shown, not stated)
+ */
+export const SCREENPLAY_ON_THE_NOSE_PATTERNS: RegExp[] = [
+  /I feel (so )?(angry|sad|happy|scared|betrayed|hurt|confused|lost|alone)/gi,
+  /I('m| am) (so )?(angry|sad|happy|scared|confused|hurt|betrayed)/gi,
+  /You make me feel/gi,
+  /I need you to understand/gi,
+  /What I('m| am) trying to say is/gi,
+  /The truth is,? I/gi,
+  /I have to be honest/gi,
+  /Can I be honest with you/gi,
+  /I('m| am) feeling/gi,
+  /My feelings are/gi,
+  /I just want you to know (that )?I/gi,
+  /You need to know how I feel/gi,
+];
+
+/**
  * Initialize empty screenplay context
  */
 export function createInitialContext(targetPages: number = 100): ScreenplayContext {
@@ -281,6 +388,8 @@ export function createInitialContext(targetPages: number = 100): ScreenplayConte
     resolvedPayoffs: [],
     sequenceSummaries: [],
     lastSequenceSummary: '',
+    // anchorContext is undefined until Sequence 1 completes
+    ticCredits: {}, // Track tic usage across screenplay
   };
 }
 

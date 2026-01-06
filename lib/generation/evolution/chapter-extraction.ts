@@ -68,12 +68,26 @@ export interface ExtractedPanel {
   mood: string;
 }
 
+/**
+ * CausalBridge for comic pages - prevents page-to-page drift
+ * by forcing THEREFORE/BUT logic between pages
+ */
+export interface ComicPageCausalBridge {
+  pageEndedWith: string;      // "Hero discovers the traitor's identity"
+  nextPageMustShow: string;   // "Hero's confrontation with traitor"
+  visualHook: string;         // "Close-up of hero's shocked face as door opens"
+  emotionalMomentum: string;  // "Betrayal transforms to determination"
+}
+
 export interface ExtractedComicPage {
   pageNumber: number;
   panels: ExtractedPanel[];
   pageHook: string | null;  // Cliffhanger/hook for page turn
   visualFlow: 'action' | 'dialogue' | 'emotional' | 'establishing';
   locationChanges: boolean;
+
+  // NEW: CausalBridge for page continuity
+  causalBridge?: ComicPageCausalBridge;
 }
 
 export interface ComicVisualConsistency {
@@ -399,7 +413,13 @@ function buildComicExtractionAddendum(): string {
       ],
       "pageHook": "Cliffhanger or hook for page turn (null if none)",
       "visualFlow": "action|dialogue|emotional|establishing",
-      "locationChanges": true/false
+      "locationChanges": true/false,
+      "causalBridge": {
+        "pageEndedWith": "What key event or revelation ended this page",
+        "nextPageMustShow": "What the next page MUST address as a result",
+        "visualHook": "The visual that pulls readers to turn the page",
+        "emotionalMomentum": "How the emotion carries forward"
+      }
     }
   ],
 
@@ -426,6 +446,23 @@ COMIC-SPECIFIC EXTRACTION RULES:
 4. Panel descriptions should be clear enough for an artist
 5. Visual flow indicates what type of page it is (action-heavy vs dialogue)
 6. Location changes between panels affect pacing
+
+=== CAUSAL BRIDGE (MANDATORY FOR EACH PAGE) ===
+Human comics use THEREFORE/BUT logic to connect pages. AI uses AND THEN (which causes drift).
+
+For each page, you MUST provide:
+- pageEndedWith: The key visual/story moment that ended the page
+- nextPageMustShow: What MUST happen on the next page as a result
+- visualHook: The specific visual that makes readers turn the page
+- emotionalMomentum: How the emotion transforms (e.g., "fear to determination")
+
+EXAMPLE:
+- pageEndedWith: "Maya sees her mentor's face among the enemy soldiers"
+- nextPageMustShow: "Maya's confrontation with her mentor about the betrayal"
+- visualHook: "Close-up of Maya's eyes wide, tears forming, mentor in reflection"
+- emotionalMomentum: "Trust shatters into betrayal, then hardens into resolve"
+
+This creates FORWARD MOMENTUM and prevents page loops.
 
 Respond with ONLY the JSON object, no additional text.`;
 }
@@ -941,4 +978,90 @@ function summarizeArc(phases: string[]): string {
   } else {
     return 'Story has varied pacing';
   }
+}
+
+// ============================================================================
+// Comic CausalBridge Helpers
+// ============================================================================
+
+/**
+ * Get the CausalBridge from the last page of a comic extraction.
+ * Use this to provide continuity context for the next page generation.
+ */
+export function getLastPageCausalBridge(
+  extraction: ChapterExtraction
+): ComicPageCausalBridge | null {
+  if (extraction.format !== 'comic' || !extraction.pages || extraction.pages.length === 0) {
+    return null;
+  }
+
+  const lastPage = extraction.pages[extraction.pages.length - 1];
+  return lastPage.causalBridge || null;
+}
+
+/**
+ * Build comic continuity context from previous pages for next page generation.
+ * Includes the CausalBridge from the last page and visual consistency data.
+ */
+export function buildComicContinuityContext(
+  extraction: ChapterExtraction,
+  maxPreviousPages: number = 2
+): string {
+  if (extraction.format !== 'comic' || !extraction.pages) {
+    return '';
+  }
+
+  const parts: string[] = [];
+
+  // Get last page's CausalBridge
+  const causalBridge = getLastPageCausalBridge(extraction);
+  if (causalBridge) {
+    parts.push(`=== CAUSAL BRIDGE FROM PREVIOUS PAGE ===
+Because the last page ended with: ${causalBridge.pageEndedWith}
+THIS PAGE MUST SHOW: ${causalBridge.nextPageMustShow}
+Visual hook to continue: ${causalBridge.visualHook}
+Emotional momentum: ${causalBridge.emotionalMomentum}`);
+  }
+
+  // Get recent pages summary
+  const recentPages = extraction.pages.slice(-maxPreviousPages);
+  if (recentPages.length > 0) {
+    const pagesSummary = recentPages.map(page => {
+      const panelSummary = page.panels.slice(0, 3).map(p => p.description).join('; ');
+      return `Page ${page.pageNumber}: ${panelSummary}${page.panels.length > 3 ? '...' : ''}`;
+    }).join('\n');
+
+    parts.push(`=== RECENT PAGES (DO NOT REPEAT) ===
+${pagesSummary}`);
+  }
+
+  // Visual consistency reminders
+  if (extraction.visualConsistency) {
+    const charDetails = extraction.visualConsistency.characterAppearances
+      .slice(0, 5)
+      .map(c => `${c.name}: ${c.visualDetails.slice(0, 3).join(', ')}`)
+      .join('\n');
+
+    if (charDetails) {
+      parts.push(`=== CHARACTER VISUAL CONSISTENCY ===
+${charDetails}`);
+    }
+  }
+
+  return parts.join('\n\n');
+}
+
+/**
+ * Create a default CausalBridge for pages without one.
+ * Used when extraction fails or for fallback.
+ */
+export function createDefaultComicCausalBridge(
+  pageDescription: string
+): ComicPageCausalBridge {
+  return {
+    pageEndedWith: pageDescription || 'Page content',
+    nextPageMustShow: 'Continue the action from the previous page',
+    visualHook: 'Character reaction to previous events',
+    emotionalMomentum: 'Tension continues building',
+  };
 }
