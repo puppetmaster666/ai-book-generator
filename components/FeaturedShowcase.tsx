@@ -124,18 +124,17 @@ export default function FeaturedShowcase({ variant = 'full' }: FeaturedShowcaseP
                 <div className={`absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded text-[9px] font-medium ${getTypeColor()}`}>
                   {getTypeLabel(item.bookFormat)}
                 </div>
-                {/* Hover overlay */}
+                {/* Download button - always visible */}
                 {!isPlaceholder && 'samplePdfUrl' in item && item.samplePdfUrl && (
-                  <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                    <a
-                      href={item.samplePdfUrl}
-                      download={`${item.title.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`}
-                      className="px-2 py-1 bg-white text-neutral-900 rounded text-[10px] font-medium hover:bg-neutral-100 transition-colors flex items-center gap-1"
-                    >
-                      <Download className="h-3 w-3" />
-                      PDF
-                    </a>
-                  </div>
+                  <a
+                    href={item.samplePdfUrl}
+                    download={`${item.title.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`}
+                    className="absolute bottom-1.5 right-1.5 p-1.5 bg-white/90 backdrop-blur-sm text-neutral-700 rounded-md text-[10px] font-medium hover:bg-white transition-colors flex items-center gap-1 shadow-sm"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <Download className="h-3 w-3" />
+                    PDF
+                  </a>
                 )}
               </div>
               <div className="p-1.5">
@@ -218,18 +217,17 @@ export default function FeaturedShowcase({ variant = 'full' }: FeaturedShowcaseP
                     {getTypeLabel(item.bookFormat)}
                   </div>
 
-                  {/* Hover Overlay for real items with PDF */}
+                  {/* Download button - always visible */}
                   {!isPlaceholder && 'samplePdfUrl' in item && item.samplePdfUrl && (
-                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                      <a
-                        href={item.samplePdfUrl}
-                        download={`${item.title.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`}
-                        className="px-4 py-2 bg-white text-neutral-900 rounded-lg text-sm font-medium hover:bg-neutral-100 transition-colors flex items-center gap-2"
-                      >
-                        <Download className="h-4 w-4" />
-                        Download PDF
-                      </a>
-                    </div>
+                    <a
+                      href={item.samplePdfUrl}
+                      download={`${item.title.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`}
+                      className="absolute bottom-3 right-3 px-3 py-1.5 bg-white/90 backdrop-blur-sm text-neutral-700 rounded-lg text-xs font-medium hover:bg-white transition-colors flex items-center gap-1.5 shadow-sm"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <Download className="h-3.5 w-3.5" />
+                      PDF
+                    </a>
                   )}
 
                   {/* Placeholder CTA overlay */}
