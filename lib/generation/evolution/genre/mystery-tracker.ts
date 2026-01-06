@@ -225,7 +225,6 @@ export class MysteryTracker {
       const clue = this.addClue(
         {
           ...clueData,
-          id: '', // Will be assigned by addClue
           introducedChapter: chapterNumber,
           wasNoticed: true,
           connectionToOtherClues: [],

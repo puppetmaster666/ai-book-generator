@@ -387,7 +387,7 @@ export function quickValidateGenre(
   // Quick narrative check
   const narrativeCheck = NarrativeValidator.quickCheck(text, config.characterNames);
   if (!narrativeCheck.isValid) {
-    return narrativeCheck;
+    return { valid: narrativeCheck.isValid, primaryIssue: narrativeCheck.primaryIssue };
   }
 
   // Quick domain check (most critical)

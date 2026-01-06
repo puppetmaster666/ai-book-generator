@@ -27,6 +27,12 @@ import {
   flagExcessiveTics,
   validateSequenceContinuity,
 } from '@/lib/screenplay';
+import {
+  runPostProcessingPipeline,
+  extractCharacterInfo,
+  type PostProcessingConfig,
+} from '@/lib/generation/post-processing';
+import { detectFormat, getFormatConfig } from '@/lib/generation/atomic/format-config';
 
 // Allow up to 5 minutes for chapter generation (Vercel Pro plan max: 300s)
 export const maxDuration = 300;
@@ -581,6 +587,46 @@ ${chapterPlan.summary}
 [This chapter is being regenerated. Please refresh in a moment.]`;
       console.log(`Created placeholder for chapter ${nextChapterNum} due to timeout`);
     }
+
+    // === POST-PROCESSING PIPELINE (Layer 2) ===
+    // Pure code-based fixes: name→pronoun, sentence variety, burstiness, dialogue polish
+    // Zero extra AI tokens - all via regex and algorithms
+    try {
+      const format = detectFormat(book.bookType);
+
+      console.log(`[PostProcessing] Running pipeline for chapter ${nextChapterNum} (format: ${format})`);
+
+      // Run the pipeline - it uses default config based on format
+      const pipelineResult = await runPostProcessingPipeline(
+        chapterContent,
+        characters, // Pass raw character data, pipeline extracts info
+        { format }  // Format determines all config defaults
+      );
+
+      // Use processed content
+      chapterContent = pipelineResult.content;
+
+      // Log improvements
+      const { metrics } = pipelineResult;
+      if (metrics.totalChanges > 0) {
+        console.log(`[PostProcessing] Chapter ${nextChapterNum}: ${metrics.totalChanges} changes made in ${metrics.processingTimeMs}ms`);
+        if (metrics.nameFrequency) {
+          console.log(`[PostProcessing] Names: ${metrics.nameFrequency.originalNameCount} → ${metrics.nameFrequency.finalNameCount} (${metrics.nameFrequency.namesReplaced} replaced with pronouns)`);
+        }
+        if (metrics.burstiness) {
+          console.log(`[PostProcessing] Burstiness: ${metrics.burstiness.originalScore.toFixed(2)} → ${metrics.burstiness.finalScore.toFixed(2)}`);
+        }
+        if (metrics.dialoguePolish) {
+          console.log(`[PostProcessing] Dialogue: ${metrics.dialoguePolish.fancyTagsReplaced} fancy tags fixed, ${metrics.dialoguePolish.adverbsConverted} adverbs converted`);
+        }
+      } else {
+        console.log(`[PostProcessing] Chapter ${nextChapterNum}: No changes needed (${metrics.processingTimeMs}ms)`);
+      }
+    } catch (postProcessError) {
+      // Post-processing is an enhancement, not critical - continue with original content
+      console.error(`[PostProcessing] Failed for chapter ${nextChapterNum} (using original):`, postProcessError);
+    }
+    // === END POST-PROCESSING ===
 
     const wordCount = countWords(chapterContent);
     totalWords += wordCount;

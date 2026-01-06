@@ -83,7 +83,8 @@ export interface CharacterRequirements {
 
 export interface CharacterVarietySource {
   type: 'physical_appearance' | 'phone_call' | 'video_call' | 'memory' |
-        'hallucination' | 'voice' | 'letter' | 'found_media' | 'mention';
+        'hallucination' | 'voice' | 'letter' | 'found_media' | 'mention' |
+        'parallel_scene' | 'flashback' | 'ensemble_rotation';
   description: string;
   frequency: 'required_per_chapter' | 'every_few_chapters' | 'optional';
 }

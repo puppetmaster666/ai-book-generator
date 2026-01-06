@@ -748,7 +748,7 @@ export class DiscoveryTracker {
     }
 
     // 5. Check for pacing issues
-    const scenesWithSamePurpose = extraction.scenes.filter(s => s.purpose === extraction.scenes[0]?.purpose);
+    const scenesWithSamePurpose = extraction.scenes?.filter(s => s.purpose === extraction.scenes?.[0]?.purpose) || [];
     if (scenesWithSamePurpose.length > 3) {
       screenplayState.pacingIssues.push({
         sequenceNumber: extraction.chapterNumber,

@@ -507,7 +507,7 @@ export async function extractChapterElements(
     });
 
     // Parse the JSON response
-    const extraction = JSON.parse(response.trim());
+    const extraction = JSON.parse(response.text.trim());
 
     // Build base extraction
     const baseExtraction: ChapterExtraction = {

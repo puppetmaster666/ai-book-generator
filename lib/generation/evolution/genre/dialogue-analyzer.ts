@@ -118,7 +118,7 @@ export class DialogueAnalyzer {
     this.state.exchanges.push(newExchange);
 
     // Update patterns
-    this.updatePatterns(exchange);
+    this.updatePatterns(newExchange);
 
     return newExchange;
   }
@@ -151,7 +151,7 @@ export class DialogueAnalyzer {
   ): {
     subtextMomentsFound: SubtextMoment[];
     voiceObservations: { character: string; observation: string }[];
-    qualityUpdate: typeof this.state.dialogueQuality;
+    qualityUpdate: { subtextRatio: number; voiceConsistency: number; expositionBalance: number };
   } {
     const result = {
       subtextMomentsFound: [] as SubtextMoment[],

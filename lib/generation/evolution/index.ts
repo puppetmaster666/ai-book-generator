@@ -110,29 +110,24 @@
 
 export {
   extractChapterElements,
-  extractComicPageElements,
-  extractScreenplaySceneElements,
   findDeviations,
   mergeExtractions,
   type ContentFormat,
   type ChapterExtraction,
-  type ComicExtraction,
-  type ScreenplayExtraction,
-  type BookExtraction,
   type ExtractedEvent,
   type ExtractedCharacter,
   type ExtractedLocation,
   type ExtractedRelationship,
   type ExtractedThread,
   type ExtractedSurprise,
-  // Comic-specific types
   type ExtractedPanel,
-  type ExtractedVisualElement,
-  type ExtractedPageHook,
-  // Screenplay-specific types
+  type ExtractedComicPage,
+  type ComicVisualConsistency,
   type ExtractedScene,
-  type ExtractedVisualBeat,
-  type ExtractedDialogueExchange,
+  type ExtractedSequence,
+  type ScreenplayPacing,
+  type ExtractedProseElements,
+  type ChapterPacing,
 } from './chapter-extraction';
 
 // ============================================================================
@@ -156,8 +151,13 @@ export {
   type PageHookPattern,
   type VisualBeatPattern,
   type LocationUsage,
-  type ProseRhythm,
-  type ImageryPattern,
+  type ProsePattern,
+  type SymbolicElement,
+  type ComicDiscoveryState,
+  type ScreenplayDiscoveryState,
+  type BookDiscoveryState,
+  type CharacterVisualProfile,
+  type SceneStructurePattern,
 } from './discovery-tracker';
 
 // ============================================================================
@@ -231,8 +231,6 @@ import {
   ChapterExtraction,
   extractChapterElements,
   ContentFormat,
-  ComicExtraction,
-  ScreenplayExtraction,
 } from './chapter-extraction';
 import { DiscoveryTracker, createDiscoveryTracker, DiscoveryReport } from './discovery-tracker';
 import { CharacterArcTracker, createCharacterArcTracker, CharacterArcUpdate } from './character-arc';
@@ -250,7 +248,7 @@ import {
 } from './outline-revision';
 
 export interface EvolutionPipelineResult {
-  extraction: ChapterExtraction | ComicExtraction | ScreenplayExtraction;
+  extraction: ChapterExtraction;
   discoveryReport: DiscoveryReport;
   arcUpdates: CharacterArcUpdate[];
   shouldRevise: boolean;
@@ -317,14 +315,16 @@ export async function runEvolutionPipeline(
         revisions = await reviseUpcomingComicPages(
           upcomingPlans as ComicPagePlan[],
           discoveryTracker,
-          extraction
+          extraction,
+          totalChapters
         );
         break;
       case 'screenplay':
         revisions = await reviseUpcomingScreenplaySequences(
           upcomingPlans as ScreenplaySequencePlan[],
           discoveryTracker,
-          extraction
+          extraction,
+          totalChapters
         );
         break;
       default:
@@ -390,11 +390,8 @@ export function generateEvolutionContext(
     context += discoverySummary + '\n\n';
   }
 
-  // Add character arc summaries (format-specific)
-  // Use format-specific summary when available
-  const characterSummary = characterArcTracker.generateFormatSpecificSummary
-    ? characterArcTracker.generateFormatSpecificSummary(format)
-    : characterArcTracker.generateAllCharactersSummary();
+  // Add character arc summaries
+  const characterSummary = characterArcTracker.generateAllCharactersSummary();
 
   if (characterSummary.length > 50) {
     context += characterSummary;
@@ -420,15 +417,15 @@ export function generateDetailedEvolutionContext(
   switch (format) {
     case 'comic':
       context += '\n\n=== VISUAL CONTINUITY NOTES ===\n';
-      context += characterArcTracker.generateFormatSpecificSummary('comic');
+      context += characterArcTracker.generateAllCharactersSummary();
       break;
     case 'screenplay':
       context += '\n\n=== CHARACTER BREAKDOWN ===\n';
-      context += characterArcTracker.generateFormatSpecificSummary('screenplay');
+      context += characterArcTracker.generateAllCharactersSummary();
       break;
     case 'book':
       context += '\n\n=== PROSE STYLE NOTES ===\n';
-      context += characterArcTracker.generateFormatSpecificSummary('book');
+      context += characterArcTracker.generateAllCharactersSummary();
       break;
   }
 

@@ -274,7 +274,7 @@ function getFormatSpecificRevisionReasons(
       }
 
       // Check for weak page hooks
-      const weakHooks = comicState.pageHookPatterns.filter(ph => ph.effectiveness < 0.5);
+      const weakHooks = comicState.pageHookPatterns.filter(ph => ph.effectiveness === 'weak');
       if (weakHooks.length >= 2) {
         reasons.push('Multiple pages have weak page-turn hooks - reader engagement at risk');
         urgencyBoost += 1;
@@ -287,8 +287,9 @@ function getFormatSpecificRevisionReasons(
         urgencyBoost += 1;
       }
 
-      // Check panel pacing
-      if (comicState.visualPacing === 'monotonous') {
+      // Check panel pacing - if action/dialogue/establishing are too uniform
+      const pacing = comicState.visualPacing;
+      if (pacing.actionPagesPercent > 70 || pacing.dialoguePagesPercent > 70) {
         reasons.push('Panel pacing has become monotonous - need variety in layouts');
         urgencyBoost += 1;
       }
@@ -333,7 +334,7 @@ function getFormatSpecificRevisionReasons(
     if (bookState) {
       // Check for unfired Chekhov's guns (foreshadowing without payoff)
       const unfiredSetups = bookState.foreshadowingSetups.filter(
-        fs => fs.status === 'planted' && fs.urgency === 'soon'
+        fs => !fs.resolved
       );
       if (unfiredSetups.length > 0) {
         reasons.push(`${unfiredSetups.length} foreshadowing setup(s) need payoff soon`);
@@ -342,19 +343,19 @@ function getFormatSpecificRevisionReasons(
 
       // Check for prose pattern staleness
       const overusedPatterns = bookState.prosePatterns.filter(
-        pp => pp.occurrences > 5 && pp.effectiveness < 0.6
+        pp => pp.occurrences > 5 && pp.effectiveness === 'weak'
       );
       if (overusedPatterns.length > 0) {
         reasons.push('Some prose patterns are becoming stale - vary narrative approach');
         urgencyBoost += 1;
       }
 
-      // Check for weak chapter endings
-      const weakEndings = bookState.chapterEndingPatterns.filter(
-        ep => ep.effectiveness < 0.5
+      // Check for weak chapter endings (if any pattern is overused)
+      const overusedEndings = bookState.chapterEndingPatterns.filter(
+        ep => ep.occurrences > 3
       );
-      if (weakEndings.length >= 2) {
-        reasons.push('Recent chapter endings lack impact - strengthen hooks');
+      if (overusedEndings.length >= 2) {
+        reasons.push('Recent chapter endings lack variety - try different hooks');
         urgencyBoost += 1;
       }
     }
@@ -471,7 +472,7 @@ ${context.visualMotifs.filter(m => m.shouldRecur).map(m => `- ${m.name}: ${m.mea
 
 ${context.effectivePageHooks.length > 0 ? `
 EFFECTIVE PAGE HOOK PATTERNS:
-${context.effectivePageHooks.filter(h => h.effectiveness > 0.7).map(h => `- ${h.hookType}: ${h.description}`).join('\n')}
+${context.effectivePageHooks.filter(h => h.effectiveness === 'strong').map(h => `- ${h.hookType}: ${h.description}`).join('\n')}
 ` : ''}
 
 ${context.characterVisualConsistency.filter(c => c.issues.length > 0).length > 0 ? `
@@ -548,9 +549,9 @@ STORY CONTEXT:
 - Last sequence: ${context.lastChapterSummary}
 - Current dialogue/action ratio: ${(context.dialogueToActionRatio * 100).toFixed(0)}%
 
-${context.visualBeats.filter(vb => vb.effectiveness > 0.7).length > 0 ? `
+${context.visualBeats.filter(vb => vb.effectiveness === 'strong').length > 0 ? `
 EFFECTIVE VISUAL BEATS TO REFERENCE:
-${context.visualBeats.filter(vb => vb.effectiveness > 0.7).map(vb => `- ${vb.type}: ${vb.description}`).join('\n')}
+${context.visualBeats.filter(vb => vb.effectiveness === 'strong').map(vb => `- ${vb.type}: ${vb.description}`).join('\n')}
 ` : ''}
 
 ${context.locationUsage.filter(l => l.canReuse).length > 0 ? `
@@ -631,7 +632,7 @@ export async function reviseChapterPlan(
       temperature: 0.4,  // Some creativity, but mostly coherent
     });
 
-    const revision = JSON.parse(response.trim());
+    const revision = JSON.parse(response.text.trim());
 
     return {
       chapterNumber: originalPlan.chapterNumber,
@@ -685,7 +686,7 @@ export async function reviseComicPage(
       temperature: 0.4,
     });
 
-    const revision = JSON.parse(response.trim());
+    const revision = JSON.parse(response.text.trim());
 
     return {
       pageNumber: originalPlan.pageNumber,
@@ -744,7 +745,7 @@ export async function reviseScreenplaySequence(
       temperature: 0.4,
     });
 
-    const revision = JSON.parse(response.trim());
+    const revision = JSON.parse(response.text.trim());
 
     return {
       sequenceNumber: originalPlan.sequenceNumber,
@@ -942,10 +943,10 @@ function buildComicRevisionContext(
     lastChapterSummary: lastExtraction.oneLineSummary,
     format: 'comic',
     visualMotifs: comicState?.visualMotifs || [],
-    effectivePageHooks: comicState?.pageHookPatterns.filter(h => h.effectiveness > 0.6) || [],
+    effectivePageHooks: comicState?.pageHookPatterns.filter(h => h.effectiveness === 'strong') || [],
     characterVisualConsistency: comicState?.characterVisuals.map(cv => ({
       character: cv.characterName,
-      issues: cv.inconsistencies,
+      issues: cv.inconsistencies.map(inc => inc.detail),
     })) || [],
     panelPacingTrend,
   };
@@ -976,7 +977,7 @@ function buildScreenplayRevisionContext(
     visualBeats: screenplayState?.visualBeats || [],
     locationUsage: screenplayState?.locationUsage || [],
     dialogueToActionRatio: screenplayState?.dialogueToActionRatio || 0.5,
-    pacingIssues: screenplayState?.pacingIssues || [],
+    pacingIssues: screenplayState?.pacingIssues.map(p => p.issue) || [],
     subtextOpportunities: detectSubtextOpportunities(lastExtraction),
   };
 }
@@ -989,14 +990,14 @@ function detectSubtextOpportunities(extraction: ChapterExtraction): string[] {
 
   // Check for relationships with tension
   for (const rel of extraction.relationships) {
-    if (rel.dynamic === 'conflicted' || rel.dynamic === 'shifting') {
+    if (rel.change === 'complicated' || rel.change === 'worsened') {
       opportunities.push(`${rel.character1} and ${rel.character2} have unspoken tension that could be shown through action`);
     }
   }
 
-  // Check for characters with secrets
+  // Check for characters with emotional states that suggest conflict
   for (const char of extraction.characters) {
-    if (char.internalConflict) {
+    if (char.emotionalState && (char.emotionalState.includes('conflicted') || char.emotionalState.includes('torn'))) {
       opportunities.push(`${char.name}'s internal conflict could be shown through behavior, not stated`);
     }
   }
