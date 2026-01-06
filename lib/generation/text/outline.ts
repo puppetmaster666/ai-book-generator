@@ -120,10 +120,17 @@ WRITING QUALITY NOTES:
 - Vary chapter openings - never start multiple chapters the same way
 - Use ONLY the characters provided - do not invent major characters
 
+NAME USAGE IN SUMMARIES (CRITICAL - AI tends to spam names):
+- Use each character's name ONCE per summary, then switch to pronouns (he/she/they)
+- WRONG: "Elena discovers the letter. Elena reads it. Elena realizes the truth."
+- RIGHT: "Elena discovers the letter. She reads it and realizes the truth."
+- For scenes with multiple same-gender characters, use role/description: "the detective", "the younger woman"
+- Maximum 2 name mentions per character per summary - use pronouns for the rest
+
 Create an outline with exactly ${bookData.targetChapters} chapters. For each chapter provide:
 1. Chapter number
 2. Chapter title (engaging, evocative)
-3. 2-3 sentence summary of what happens
+3. 2-3 sentence summary of what happens (use pronouns after first name mention!)
 4. Which characters appear (for POV tracking)
 5. Approximate word count target (distribute ${bookData.targetWords} words across chapters)
 
@@ -303,6 +310,8 @@ ${bookData.originalIdea ? `- Original Vision: ${bookData.originalIdea}` : ''}
 
 Create a ${numActs}-act structure with ~${chaptersPerAct} chapters per act.
 
+NAME USAGE (CRITICAL): In summaries, use character names sparingly - once per summary, then pronouns.
+
 Output ONLY valid JSON:
 {
   "acts": [
@@ -388,6 +397,12 @@ Each chapter should:
 - Have a distinct tone and purpose
 - Move the plot forward
 - Target approximately ${data.wordsPerChapter} words
+
+NAME USAGE IN SUMMARIES (CRITICAL):
+- Use each character's name ONCE per summary, then switch to pronouns (he/she/they)
+- WRONG: "Marcus confronts Sarah. Marcus demands answers. Sarah tells Marcus the truth."
+- RIGHT: "Marcus confronts Sarah, demanding answers. She finally tells him the truth."
+- Maximum 2 name mentions per character per summary - pronouns for the rest
 
 Output ONLY valid JSON:
 {

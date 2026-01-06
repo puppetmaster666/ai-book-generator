@@ -462,6 +462,7 @@ IMPORTANT RULES:
 - Be wildly creative and completely original
 - Include specific character names, settings, and stakes
 - Make every sentence add new compelling information
+- NAMES: Use each character's name ONCE, then pronouns (he/she/they) - avoid repeating the same name
 
 MAXIMIZE VARIETY - Each generation should feel fresh:
 - Vary protagonist ages, backgrounds, and personalities
@@ -551,6 +552,13 @@ STRICT RULES:
 - Complete the entire JSON structure
 - IMPORTANT: Preserve specific details, names, plot points, and unique elements from the user's idea in the premise
 ${safetyGuidelines}
+NAME USAGE IN TEXT FIELDS (CRITICAL - AI tends to spam names):
+- Use each character's name ONCE per field, then switch to pronouns (he/she/they)
+- WRONG: "Elena discovers the truth. Elena confronts Marcus. Elena demands answers."
+- RIGHT: "Elena discovers the truth. She confronts Marcus and demands answers from him."
+- In premise/beginning/middle/ending fields: max 2 mentions of any name, then use pronouns
+- This prevents robotic, repetitive writing that readers hate
+
 CHARACTER VARIETY - Make each character unique and memorable:
 - Use diverse names from various cultures (not just Western names)
 - Each character should have a distinct visual appearance if this is a visual book
@@ -582,6 +590,11 @@ STRICT RULES:
 - Complete the entire JSON structure
 - bookType MUST be "non-fiction"
 ${safetyGuidelines}
+WRITING QUALITY (for biography/memoir with subjects):
+- If discussing a person, use their name once then switch to pronouns (he/she/they)
+- Avoid repetitive sentence structures
+- Vary how you refer to the subject: "the author", "readers", "learners"
+
 JSON format:
 {"title":"Title","genre":"selfhelp","bookType":"non-fiction","premise":"Detailed description of the book's content (up to 300 words)","characters":[],"beginning":"Introduction hook","middle":"Topic 1, Topic 2, Topic 3, Topic 4","ending":"Conclusion and takeaways","writingStyle":"informative","targetWords":50000,"targetChapters":15}`;
 
