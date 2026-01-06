@@ -1446,10 +1446,6 @@ function ReviewContent() {
                 <Check className="h-4 w-4 text-green-600 flex-shrink-0" />
                 Full commercial rights
               </div>
-              <div className="flex items-center gap-2 text-sm text-neutral-700">
-                <Check className="h-4 w-4 text-green-600 flex-shrink-0" />
-                30-day money-back guarantee
-              </div>
             </div>
           </div>
 

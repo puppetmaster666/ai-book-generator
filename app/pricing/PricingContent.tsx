@@ -135,8 +135,8 @@ export default function PricingContent() {
                 <p className="text-neutral-600">Yes! With the Author Plan, any unused credits roll over to the next month. Use them whenever you need them.</p>
               </div>
               <div className="bg-white p-6 rounded-xl border border-neutral-200">
-                <h3 className="font-medium mb-2">What if I am not satisfied?</h3>
-                <p className="text-neutral-600">We offer a 30-day money-back guarantee. If you are not happy with your book, contact us for a full refund.</p>
+                <h3 className="font-medium mb-2">How do I know if I will like my book?</h3>
+                <p className="text-neutral-600">Preview chapters are generated free so you can review the writing style and content before purchasing.</p>
               </div>
             </div>
           </div>

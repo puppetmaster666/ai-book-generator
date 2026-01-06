@@ -494,7 +494,7 @@ function CheckoutContent() {
             </button>
 
             <p className="text-xs text-center text-neutral-500 mt-4">
-              Secure payment powered by Stripe. 30-day money-back guarantee.
+              Secure payment powered by Stripe.
             </p>
           </div>
         </div>

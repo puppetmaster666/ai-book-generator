@@ -1465,9 +1465,6 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
                   <Zap className="h-5 w-5" />
                   Unlock Full Book - $9.99
                 </Link>
-                <p className="text-xs text-neutral-500 mt-4">
-                  30-day money-back guarantee
-                </p>
               </div>
             </div>
           )}
@@ -2073,9 +2070,6 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
               >
                 <Zap className="h-5 w-5" /> Unlock Full Book - $9.99
               </Link>
-              <p className="text-xs text-neutral-500 text-center">
-                30-day money-back guarantee
-              </p>
             </div>
           )}
 

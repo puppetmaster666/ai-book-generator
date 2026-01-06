@@ -79,7 +79,7 @@ const faqs = [
       },
       {
         q: 'What is your refund policy?',
-        a: 'We offer a 30-day money-back guarantee. If you are not satisfied with your book, contact us within 30 days of purchase for a full refund. No questions asked.'
+        a: 'Due to the AI generation costs involved, all sales are final. We encourage you to review the preview chapters before purchasing to ensure the book meets your expectations.'
       },
       {
         q: 'Can I cancel my subscription?',
