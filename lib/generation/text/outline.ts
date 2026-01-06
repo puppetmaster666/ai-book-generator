@@ -2,6 +2,7 @@ import { SAFETY_SETTINGS, sanitizeContentForSafety, isSafetyBlockError } from '.
 import { getGeminiPro, getGeminiFlash } from '../shared/api-client';
 import { parseJSONFromResponse } from '../shared/json-utils';
 import { detectLanguageInstruction } from '../shared/writing-quality';
+import { buildNameGuidancePrompt, BANNED_OVERUSED_NAMES } from '../shared/name-variety';
 
 // Threshold for chunked outline generation - books with more chapters use chunked approach
 const CHUNK_THRESHOLD = 16;
@@ -119,6 +120,8 @@ WRITING QUALITY NOTES:
 - Each chapter should have a distinct tone and pacing - avoid repetitive structure
 - Vary chapter openings - never start multiple chapters the same way
 - Use ONLY the characters provided - do not invent major characters
+
+${buildNameGuidancePrompt(bookData.premise, bookData.title, bookData.genre)}
 
 NAME USAGE IN SUMMARIES (CRITICAL - AI tends to spam names):
 - Use each character's name ONCE per summary, then switch to pronouns (he/she/they)
@@ -311,6 +314,8 @@ ${bookData.originalIdea ? `- Original Vision: ${bookData.originalIdea}` : ''}
 Create a ${numActs}-act structure with ~${chaptersPerAct} chapters per act.
 
 NAME USAGE (CRITICAL): In summaries, use character names sparingly - once per summary, then pronouns.
+
+BANNED OVERUSED NAMES (do not use): ${BANNED_OVERUSED_NAMES.slice(0, 20).join(', ')}
 
 Output ONLY valid JSON:
 {
@@ -506,7 +511,10 @@ ANTI-AI WRITING NOTES:
 - Do NOT use "Have you ever..." to open any chapters - this is the #1 AI tell
 - Each chapter must have a DIFFERENT opening style: fact, anecdote, bold statement, scene, etc.
 - Case study names must be DIVERSE and UNIQUE - never reuse names across chapters
-- Avoid generic names like Marcus, Sarah, David, Mark - use culturally diverse names
+
+=== BANNED OVERUSED NAMES (DO NOT USE FOR CASE STUDIES) ===
+${BANNED_OVERUSED_NAMES.slice(0, 30).join(', ')}
+Use fresh, unique names for any case studies or examples.
 
 For each chapter provide:
 1. Chapter number

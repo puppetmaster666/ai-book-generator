@@ -1,6 +1,7 @@
 import { getGeminiPro } from '../shared/api-client';
 import { parseJSONFromResponse } from '../shared/json-utils';
 import { ContentRating, getContentRatingInstructions, detectLanguageInstruction } from '../shared/writing-quality';
+import { buildNameGuidancePrompt, BANNED_OVERUSED_NAMES } from '../shared/name-variety';
 import { VisualChapter } from './types';
 
 // Step 1: Generate a complete narrative story FIRST
@@ -64,6 +65,8 @@ CRITICAL WRITING GUIDELINES:
 8. NO repetitive phrases or descriptions
 9. Every paragraph should move the story forward
 10. Include sensory details (sights, sounds, feelings)
+
+${buildNameGuidancePrompt(bookData.premise, bookData.title, bookData.genre)}
 
 ${isComicStyle ? `
 COMIC-STYLE REQUIREMENTS:

@@ -1,6 +1,7 @@
 import { getGeminiFlash, getGeminiFlashLight } from './shared/api-client';
 import { parseJSONFromResponse } from './shared/json-utils';
 import { truncateToWordLimit } from './shared/writing-quality';
+import { BANNED_OVERUSED_NAMES, buildNameGuidancePrompt } from './shared/name-variety';
 
 // Category types for idea generation
 export type IdeaCategory = 'novel' | 'childrens' | 'comic' | 'nonfiction' | 'screenplay' | 'adult_comic' | 'tv_series' | 'short_story' | 'random';
@@ -464,11 +465,23 @@ IMPORTANT RULES:
 - Make every sentence add new compelling information
 - NAMES: Use each character's name ONCE, then pronouns (he/she/they) - avoid repeating the same name
 
+=== BANNED OVERUSED NAMES - NEVER USE THESE ===
+${BANNED_OVERUSED_NAMES.slice(0, 40).join(', ')}
+These names are AI cliches. Use FRESH, UNIQUE names instead.
+
 MAXIMIZE VARIETY - Each generation should feel fresh:
 - Vary protagonist ages, backgrounds, and personalities
 - For visual stories: create distinct character designs that would look unique when illustrated
 - The goal is that if someone generates 10 ideas, all 10 should feel completely different from each other
 - Match character names to the story's setting and genre (Japanese names for manga, French names for European settings, etc.)
+
+=== CULTURAL AUTHENTICITY (CRITICAL) ===
+- If the story is set in Japan, use JAPANESE names and characters
+- If the story is set in France, use FRENCH names and characters
+- If the story is set in rural England, characters should be ENGLISH
+- Do NOT force random ethnic diversity into settings where it makes no sense
+- Let the SETTING dictate the demographics, not a diversity checklist
+- Authentic representation > tokenistic inclusion
 
 Example of the quality and length expected (but create something COMPLETELY DIFFERENT):
 "${randomExamples[0]}"
@@ -559,10 +572,23 @@ NAME USAGE IN TEXT FIELDS (CRITICAL - AI tends to spam names):
 - In premise/beginning/middle/ending fields: max 2 mentions of any name, then use pronouns
 - This prevents robotic, repetitive writing that readers hate
 
+=== BANNED OVERUSED NAMES - NEVER USE THESE ===
+${BANNED_OVERUSED_NAMES.slice(0, 40).join(', ')}
+These names are AI cliches. Pick FRESH, UNIQUE names instead.
+
+=== CULTURAL AUTHENTICITY (CRITICAL) ===
+- Match character names to the SETTING of the story
+- Japan setting = Japanese names (Haruto, Yuki, Sakura)
+- France setting = French names (Jean, Marie, Pierre)
+- Medieval Europe = Old English/Celtic names (Edmund, Gwyneth, Aldric)
+- Do NOT randomly mix ethnicities unless the setting justifies it
+- A story in rural Japan should have Japanese characters, not "diverse" tokenism
+- Authenticity to setting > diversity checkbox
+
 CHARACTER VARIETY - Make each character unique and memorable:
-- Use diverse names from various cultures (not just Western names)
+- Use names appropriate to the story's cultural setting
 - Each character should have a distinct visual appearance if this is a visual book
-- Vary body types, ages, ethnicities, fashion styles
+- Vary body types, ages, fashion styles within the cultural context
 - For powers/abilities: be creative and specific, not generic "elemental" powers
 - Character descriptions should paint a clear visual picture
 
