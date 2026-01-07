@@ -152,6 +152,82 @@ const RESET_PATTERNS = [
 ];
 
 // ============================================================================
+// AI DETECTION PATTERNS (Phase 4 - Harsh Mode)
+// ============================================================================
+
+// Purple prose patterns (overwrought metaphors that scream AI)
+const PURPLE_PROSE = [
+  /dust motes? (dance|float|drift|swirl)/gi,
+  /cathedral of/gi,
+  /velvet (hammer|voice|darkness|silence)/gi,
+  /silk(en|y)? (voice|tone|thread)/gi,
+  /(golden|amber|honey) (light|glow|hue)/gi,
+  /fingers? (of light|of shadow|of dawn|of dusk)/gi,
+  /tapestry of/gi,
+  /symphony of/gi,
+  /ballet of/gi,
+  /dance of (shadow|light|death|life)/gi,
+  /mosaic of/gi,
+  /kaleidoscope of/gi,
+  /with the grace of/gi,
+  /like a (wounded|dying|fallen) (animal|bird|angel)/gi,
+  /ocean of (emotion|feeling|grief|sorrow)/gi,
+  /weight of (the world|history|time|silence)/gi,
+  /ghost of a (smile|laugh|memory)/gi,
+  /pregnant (pause|silence|moment)/gi,
+  /deafening silence/gi,
+  /palpable tension/gi,
+  /electric (silence|tension|atmosphere)/gi,
+];
+
+// Excessive verbal tics (AI over-injection tells)
+const VERBAL_TIC_LIMITS = {
+  ellipsis: { pattern: /\.\.\./g, max: 25, weight: 0.5 },
+  stutterDash: { pattern: /--/g, max: 15, weight: 0.4 },
+  letterStutter: { pattern: /\b([a-zA-Z])-\1/gi, max: 10, weight: 0.3 },
+  falseStartNo: { pattern: /-- No\. /gi, max: 3, weight: 1.0 },
+};
+
+// Technobabble / code-like passages
+const TECHNOBABBLE = [
+  /\bif\s*\([^)]+\)\s*(then|{)/gi,
+  /\b(protocol|algorithm|subroutine|interface|parameter)\b/gi,
+  /\b(sync|hash|node|buffer|cache|loop)\b/gi,
+  /\b(execute|initialize|terminate|propagate)\b/gi,
+  /\*[A-Z_]+\*/g,  // *GHOST_PROTOCOL* style
+  /\b(recursion|asynchronous|recursiv)/gi,
+  /\b(the probability of|statistical likelihood)/gi,
+  /\b(cascade|propagation|iteration)\b/gi,
+];
+
+// Word repetition patterns (AI stutter)
+const WORD_REPETITION = [
+  /(\b\w+)\.\s*\1\./gi,  // "Fine. Fine." pattern
+  /(\b\w+)\s+\1\b/gi,    // "very very" pattern
+  /\b(I'm|I am)\s+\w+\.\s*(I'm|I am)\s+\w+\./gi,  // "I'm fine. I'm fine."
+];
+
+// AI summary endings (wrap-up phrases)
+const SUMMARY_ENDINGS = [
+  /,\s*which said everything/gi,
+  /--\s*not that it matter/gi,
+  /,\s*somehow\.?$/gm,
+  /\.\s*It was enough\.?/gi,
+  /\.\s*And that was that\.?/gi,
+  /,\s*in a way\.?$/gm,
+  /\.\s*But still\.?$/gm,
+  /,\s*for what it('s| is|was) worth/gi,
+  /\.\s*It meant everything\./gi,
+  /\.\s*It meant nothing\./gi,
+];
+
+// Lowercase after period (generation bug - instant AI tell)
+const LOWERCASE_AFTER_PERIOD = /[.!?]\s+[a-z]/g;
+
+// Double punctuation bugs
+const DOUBLE_PUNCTUATION = /[,.]\.|\.,/g;
+
+// ============================================================================
 // ANALYSIS FUNCTIONS
 // ============================================================================
 
@@ -406,6 +482,7 @@ function scoreBehavioralControl(content) {
 
 /**
  * Score AI fingerprint avoidance
+ * HARSH MODE - Most AI scripts are detectable, score reflects that
  */
 function scoreAIFingerprint(content) {
   const clinical = countPatternMatches(content, CLINICAL_PATTERNS);
@@ -420,15 +497,111 @@ function scoreAIFingerprint(content) {
   // Mundanity ratio (bangers / dialogue lines)
   const mundanityRatio = dialogueCount > 0 ? bangers.length / dialogueCount : 0;
 
-  // Calculate penalties
+  // ============================================================================
+  // NEW AI DETECTION (Phase 4 - Harsh Mode)
+  // ============================================================================
+  const aiIssues = [];
+  let aiPenalty = 0;
+
+  // Purple prose detection
+  let purpleProseCount = 0;
+  for (const pattern of PURPLE_PROSE) {
+    pattern.lastIndex = 0;
+    purpleProseCount += (content.match(pattern) || []).length;
+  }
+  if (purpleProseCount > 10) {
+    aiPenalty += 3;
+    aiIssues.push(`purple prose (${purpleProseCount})`);
+  } else if (purpleProseCount > 5) {
+    aiPenalty += 1.5;
+    aiIssues.push(`purple prose (${purpleProseCount})`);
+  }
+
+  // Excessive verbal tics (over-injection)
+  for (const [ticName, tic] of Object.entries(VERBAL_TIC_LIMITS)) {
+    tic.pattern.lastIndex = 0;
+    const count = (content.match(tic.pattern) || []).length;
+    if (count > tic.max * 3) {
+      aiPenalty += 2 * tic.weight;
+      aiIssues.push(`excessive ${ticName} (${count})`);
+    } else if (count > tic.max) {
+      aiPenalty += 1 * tic.weight;
+      aiIssues.push(`high ${ticName} (${count})`);
+    }
+  }
+
+  // Technobabble detection
+  let technobabbleCount = 0;
+  for (const pattern of TECHNOBABBLE) {
+    pattern.lastIndex = 0;
+    technobabbleCount += (content.match(pattern) || []).length;
+  }
+  if (technobabbleCount > 20) {
+    aiPenalty += 2;
+    aiIssues.push(`technobabble (${technobabbleCount})`);
+  } else if (technobabbleCount > 10) {
+    aiPenalty += 1;
+    aiIssues.push(`tech jargon (${technobabbleCount})`);
+  }
+
+  // Word repetition detection
+  let repetitionCount = 0;
+  for (const pattern of WORD_REPETITION) {
+    pattern.lastIndex = 0;
+    repetitionCount += (content.match(pattern) || []).length;
+  }
+  if (repetitionCount > 10) {
+    aiPenalty += 1.5;
+    aiIssues.push(`word repetition (${repetitionCount})`);
+  }
+
+  // Summary endings detection
+  let summaryEndingCount = 0;
+  for (const pattern of SUMMARY_ENDINGS) {
+    pattern.lastIndex = 0;
+    summaryEndingCount += (content.match(pattern) || []).length;
+  }
+  if (summaryEndingCount > 5) {
+    aiPenalty += 1.5;
+    aiIssues.push(`summary endings (${summaryEndingCount})`);
+  }
+
+  // Lowercase after period (HUGE tell - generation bug)
+  const lowercaseCount = (content.match(LOWERCASE_AFTER_PERIOD) || []).length;
+  if (lowercaseCount > 50) {
+    aiPenalty += 3;
+    aiIssues.push(`lowercase bug (${lowercaseCount})`);
+  } else if (lowercaseCount > 20) {
+    aiPenalty += 2;
+    aiIssues.push(`lowercase bug (${lowercaseCount})`);
+  } else if (lowercaseCount > 5) {
+    aiPenalty += 1;
+    aiIssues.push(`lowercase bug (${lowercaseCount})`);
+  }
+
+  // Double punctuation (generation bug)
+  const doublePunctCount = (content.match(DOUBLE_PUNCTUATION) || []).length;
+  if (doublePunctCount > 5) {
+    aiPenalty += 1;
+    aiIssues.push(`punctuation bugs (${doublePunctCount})`);
+  }
+
+  // ============================================================================
+  // ORIGINAL PENALTIES
+  // ============================================================================
   const clinicalPenalty = clinical.length * 0.5;
   const onTheNosePenalty = onTheNose.length * 0.3;
   const mundanityPenalty = mundanityRatio > 0.30 ? (mundanityRatio - 0.30) * 10 : 0;
 
-  // Verbal friction bonus (messiness is GOOD)
-  const messinessBonus = Math.min(2, messiness.total * 0.2);
+  // Verbal friction bonus (messiness is GOOD, but NOT if over-injected)
+  // Cap the bonus - too much messiness is an AI tell itself
+  const ellipsisCount = (content.match(/\.\.\./g) || []).length;
+  const dashCount = (content.match(/--/g) || []).length;
+  const isOverInjected = ellipsisCount > 50 || dashCount > 30;
+  const messinessBonus = isOverInjected ? 0 : Math.min(1.5, messiness.total * 0.1);
 
-  const score = Math.max(0, 10 - clinicalPenalty - onTheNosePenalty - mundanityPenalty + messinessBonus);
+  // Calculate final score (start at 10, subtract penalties)
+  const score = Math.max(0, 10 - clinicalPenalty - onTheNosePenalty - mundanityPenalty - aiPenalty + messinessBonus);
 
   return {
     score: Math.round(score * 10) / 10,
@@ -439,6 +612,13 @@ function scoreAIFingerprint(content) {
       messiness,
       mundanityRatio: Math.round(mundanityRatio * 100) / 100,
       dialogueCount,
+      aiIssues,
+      aiPenalty: Math.round(aiPenalty * 10) / 10,
+      purpleProse: purpleProseCount,
+      technobabble: technobabbleCount,
+      lowercaseBugs: lowercaseCount,
+      repetitions: repetitionCount,
+      summaryEndings: summaryEndingCount,
     },
   };
 }
@@ -609,6 +789,10 @@ function printReport(result) {
       console.log(`    - Banger/trailer-speak: ${cat.data.details.bangers.length}`);
       console.log(`    - Mundanity ratio: ${(cat.data.details.mundanityRatio * 100).toFixed(1)}%`);
       console.log(`    - Verbal messiness: ${cat.data.details.messiness.total} instances`);
+      if (cat.data.details.aiIssues && cat.data.details.aiIssues.length > 0) {
+        console.log(`    - AI Penalty: -${cat.data.details.aiPenalty} points`);
+        console.log(`    - AI Issues: ${cat.data.details.aiIssues.join(', ')}`);
+      }
     }
   }
 

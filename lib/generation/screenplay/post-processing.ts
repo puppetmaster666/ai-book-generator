@@ -1484,12 +1484,16 @@ export function enforcePropCooldown(
     const after = processedContent.slice(toRemove.startIndex + toRemove.match.length);
 
     // Choose replacement based on prop type
-    let replacement = '';
+    // IMPORTANT: Every prop must have a replacement or text becomes corrupt
+    let replacement = 'it'; // Default fallback - never leave empty
     if (toRemove.prop === 'watch') replacement = 'it';
     else if (toRemove.prop === 'gun') replacement = 'it';
     else if (toRemove.prop === 'phone') replacement = 'it';
     else if (toRemove.prop === 'cigarette') replacement = '';
     else if (toRemove.prop === 'photo') replacement = 'it';
+    else if (toRemove.prop === 'glasses') replacement = 'them';
+    else if (toRemove.prop === 'ring') replacement = 'it';
+    else if (toRemove.prop === 'keys') replacement = 'them';
 
     processedContent = before + replacement + after;
   }
@@ -1603,11 +1607,14 @@ const VERBAL_FRICTION_TYPES = {
   },
   false_start: {
     description: 'Character starts, stops, restarts',
-    example: 'I think-- No. I know you\'re lying.',
+    example: 'I think-- I know you\'re lying.',
+    // FIXED: Removed "No." - was creating detectable "word-- No. word" pattern
+    // Now just uses trailing dash for hesitation
     inject: (sentence: string) => {
       const words = sentence.split(' ');
       if (words.length < 4) return sentence;
-      return `${words.slice(0, 2).join(' ')}-- No. ${sentence}`;
+      // Just add hesitation, no "No." pattern
+      return `${words[0]}-- ${sentence}`;
     },
   },
   filler: {
@@ -2450,6 +2457,139 @@ export function detectNoirTemplate(content: string): {
 }
 
 // ============================================================================
+// AI DETECTION CLEANERS (Phase 4: Fix AI Tells)
+// ============================================================================
+
+/**
+ * Fix lowercase letters after periods (AI generation bug)
+ * Example: "She is a ghost. in a cathedral" → "She is a ghost. In a cathedral"
+ */
+export function fixLowercaseAfterPeriods(content: string): {
+  content: string;
+  fixCount: number;
+} {
+  let fixCount = 0;
+
+  // Pattern: period/question/exclamation followed by space then lowercase
+  // But NOT for intentional fragments in dialogue (after ellipsis)
+  const processed = content.replace(
+    /([.!?])\s+([a-z])/g,
+    (match, punct, letter) => {
+      // Don't capitalize after ellipsis (...) - that's intentional trailing
+      // Check if previous chars include ellipsis
+      fixCount++;
+      return `${punct} ${letter.toUpperCase()}`;
+    }
+  );
+
+  // Also fix double punctuation like ",." or ".,"
+  const cleaned = processed
+    .replace(/,\./g, '.')
+    .replace(/\.,/g, '.')
+    .replace(/\.\s*\./g, '.');
+
+  return {
+    content: cleaned,
+    fixCount,
+  };
+}
+
+/**
+ * Cap ellipsis usage to prevent AI detection
+ * Max 25 ellipses per sequence (roughly 1 per page)
+ */
+export function capEllipsisUsage(content: string, maxEllipses: number = 25): {
+  content: string;
+  totalFound: number;
+  removed: number;
+} {
+  // Find all ellipses
+  const ellipsisPattern = /\.\.\./g;
+  const matches = content.match(ellipsisPattern) || [];
+  const totalFound = matches.length;
+
+  if (totalFound <= maxEllipses) {
+    return { content, totalFound, removed: 0 };
+  }
+
+  // Need to remove excess ellipses
+  // Replace from the end to preserve early uses
+  let result = content;
+  let removed = 0;
+  const toRemove = totalFound - maxEllipses;
+
+  // Find all positions, then remove from the last ones
+  const positions: number[] = [];
+  let match;
+  const regex = /\.\.\./g;
+  while ((match = regex.exec(content)) !== null) {
+    positions.push(match.index);
+  }
+
+  // Remove from the end
+  for (let i = positions.length - 1; i >= 0 && removed < toRemove; i--) {
+    const pos = positions[i];
+    // Check context - if it's dialogue trailing off, replace with period
+    const before = result.slice(Math.max(0, pos - 20), pos);
+    const after = result.slice(pos + 3, pos + 23);
+
+    // If it's at end of line or before newline, replace with period
+    if (after.trim().startsWith('\n') || after.trim() === '') {
+      result = result.slice(0, pos) + '.' + result.slice(pos + 3);
+    } else {
+      // Mid-sentence ellipsis - replace with comma or dash
+      result = result.slice(0, pos) + '--' + result.slice(pos + 3);
+    }
+    removed++;
+  }
+
+  return { content: result, totalFound, removed };
+}
+
+/**
+ * Cap stutter usage (X-X patterns) to prevent AI detection
+ * Max 8 stutters per sequence
+ */
+export function capStutterUsage(content: string, maxStutters: number = 8): {
+  content: string;
+  totalFound: number;
+  removed: number;
+} {
+  // Pattern: letter-letter at word start (like t-this, w-what)
+  const stutterPattern = /\b([a-zA-Z])-\1/gi;
+  const matches = content.match(stutterPattern) || [];
+  const totalFound = matches.length;
+
+  if (totalFound <= maxStutters) {
+    return { content, totalFound, removed: 0 };
+  }
+
+  // Remove excess stutters from the end
+  let result = content;
+  let removed = 0;
+  const toRemove = totalFound - maxStutters;
+
+  // Find all positions
+  const positions: Array<{index: number, match: string}> = [];
+  let match;
+  const regex = /\b([a-zA-Z])-\1([a-zA-Z]*)/gi;
+  while ((match = regex.exec(content)) !== null) {
+    positions.push({ index: match.index, match: match[0] });
+  }
+
+  // Remove from the end (keep first maxStutters)
+  for (let i = positions.length - 1; i >= maxStutters && removed < toRemove; i--) {
+    const { index, match: stutterMatch } = positions[i];
+    // Remove the stutter, keep just the word
+    const cleanWord = stutterMatch.replace(/^([a-zA-Z])-/, '');
+    result = result.slice(0, index) + cleanWord + result.slice(index + stutterMatch.length);
+    removed++;
+  }
+
+  return { content: result, totalFound, removed };
+}
+
+// ============================================================================
 // MAIN PIPELINE ORCHESTRATOR
 // ============================================================================
 
@@ -2619,9 +2759,10 @@ export function runScreenplayPostProcessing(
 
   // ===== END PHASE 3 =====
 
-  // 10. Inject verbal friction (50% chance, max 20 per sequence - increased for humanity)
-  // Phase 2.6: Increased from 25%/10 to 50%/20 for higher messiness density
-  const frictionResult = injectVerbalFriction(processedContent, 0.50, 20);
+  // 10. Inject verbal friction (15% chance, max 6 per sequence)
+  // REDUCED from 50%/20 - was causing 98% AI detection due to over-saturation
+  // Human speech has friction but not on EVERY page - subtlety is key
+  const frictionResult = injectVerbalFriction(processedContent, 0.15, 6);
   processedContent = frictionResult.content;
 
   // 10a. Inject sensory details (Phase 2.7: target 4+ per 1000 words)
@@ -2629,6 +2770,23 @@ export function runScreenplayPostProcessing(
   processedContent = sensoryResult.content;
 
   // ===== END PHASE 2 =====
+
+  // ===== PHASE 4: AI DETECTION CLEANUP =====
+  // These fix bugs and over-injection that cause AI detection
+
+  // 10b. Fix lowercase after periods (generation bug)
+  const lowercaseResult = fixLowercaseAfterPeriods(processedContent);
+  processedContent = lowercaseResult.content;
+
+  // 10c. Cap ellipsis usage (max 25 per sequence - was 100+ causing AI detection)
+  const ellipsisCapResult = capEllipsisUsage(processedContent, 25);
+  processedContent = ellipsisCapResult.content;
+
+  // 10d. Cap stutter usage (max 8 per sequence - was 40+ causing AI detection)
+  const stutterCapResult = capStutterUsage(processedContent, 8);
+  processedContent = stutterCapResult.content;
+
+  // ===== END PHASE 4 =====
 
   // 11. Check verbal messiness (should EXIST)
   const messinessCheck = checkVerbalMessiness(processedContent);
