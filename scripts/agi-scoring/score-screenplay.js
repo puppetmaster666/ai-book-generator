@@ -142,11 +142,13 @@ const MESSINESS_PATTERNS = [
 
 // Reset patterns (BAD - story loops)
 const RESET_PATTERNS = [
-  /meanwhile/gi,
-  /back at/gi,
+  /meanwhile,?\s+(back\s+)?(at|in)/gi,  // "Meanwhile, back at the ranch"
+  /back at the (start|beginning|office|house|station)/gi,  // Actual location resets, not "looks back at"
   /let's go back/gi,
   /as we saw earlier/gi,
-  /returning to/gi,
+  /returning to (the|our)/gi,  // "Returning to the story" not "returning to normal"
+  /cut back to/gi,  // Screenplay-specific reset
+  /we return to/gi,  // Narrator reset
 ];
 
 // ============================================================================
