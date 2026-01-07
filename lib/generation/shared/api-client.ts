@@ -87,7 +87,7 @@ export function getGeminiFlashForReview(): GenerativeModel {
     _reviewKeyIndex = desiredKeyIndex;
     _reviewGenAI = null;
     _reviewFlash = getReviewGenAI().getGenerativeModel({
-      model: 'gemini-2.0-flash',
+      model: 'gemini-3.0-pro-preview',
       safetySettings: SAFETY_SETTINGS,
     });
   }
@@ -201,11 +201,11 @@ function getGenAI(): GoogleGenerativeAI {
   return _genAIInstances[_currentKeyIndex]!;
 }
 
-// Gemini 3 Flash for main generation (faster and cheaper, each chapter is independent)
+// Gemini 3 Pro for main generation (better reasoning and creativity for screenplays)
 export function getGeminiPro(): GenerativeModel {
   if (!_geminiPro) {
     _geminiPro = getGenAI().getGenerativeModel({
-      model: 'gemini-3-flash-preview',
+      model: 'gemini-3-pro-preview',
       safetySettings: SAFETY_SETTINGS,
       generationConfig: {
         temperature: 0.8,

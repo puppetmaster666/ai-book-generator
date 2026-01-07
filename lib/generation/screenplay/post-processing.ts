@@ -371,6 +371,76 @@ export function checkHardRejectPatterns(
     }
   }
 
+  // 5. Check for excessive semantic glue (AI-tell phrases)
+  // If too many, hard reject - indicates AI is ignoring instructions
+  const semanticGluePatterns = [
+    { pattern: /which said everything/gi, name: 'which said everything' },
+    { pattern: /not that it mattered/gi, name: 'not that it mattered' },
+    { pattern: /,\s*somehow\./gi, name: ', somehow.' },
+    { pattern: /,\s*barely\./gi, name: ', barely.' },
+    { pattern: /and it showed/gi, name: 'and it showed' },
+    { pattern: /if you could call it that/gi, name: 'if you could call it that' },
+    { pattern: /whatever that meant/gi, name: 'whatever that meant' },
+  ];
+
+  let totalGlueCount = 0;
+  const glueExamples: string[] = [];
+
+  for (const { pattern, name } of semanticGluePatterns) {
+    const matches = content.match(pattern) || [];
+    if (matches.length > 0) {
+      totalGlueCount += matches.length;
+      if (glueExamples.length < 3) {
+        glueExamples.push(`"${name}" (${matches.length}x)`);
+      }
+    }
+  }
+
+  // Hard reject threshold: 10+ semantic glue instances per sequence
+  if (totalGlueCount >= 10) {
+    reasons.push(`Excessive semantic glue: ${totalGlueCount} AI-tell phrases found`);
+    surgicalFixes.push(
+      `CRITICAL FIX: Remove all semantic glue phrases. Found ${totalGlueCount} instances including: ${glueExamples.join(', ')}. These phrases are AI tells that destroy authenticity. End sentences cleanly without trailing qualifiers.`
+    );
+  }
+
+  // 6. Check for voice homogeneity (all characters sound the same)
+  const voiceCheck = checkVoiceDistinctiveness(content);
+  if (!voiceCheck.pass) {
+    reasons.push(`Voice homogeneity: ${voiceCheck.issues.join('; ')}`);
+    surgicalFixes.push(
+      `CRITICAL FIX: Characters sound identical. ${voiceCheck.rejectReason}
+
+DIFFERENTIATE VOICES:
+- Vary sentence starters: "I don't" used ${voiceCheck.starterCounts['I don\'t'] || 0}x, "I can't" used ${voiceCheck.starterCounts['I can\'t'] || 0}x
+- Give each character unique rhythm (short vs. flowing sentences)
+- Blue-collar: punchy. Professional: precise. Elderly: trailing.
+- If you can swap character names and dialogue still works, you've FAILED.`
+    );
+  }
+
+  // 7. Check for excessive bangers (all-philosophical dialogue)
+  const mundanityCheck = checkMundanityRatio(content);
+  if (mundanityCheck.ratio > 0.50) {
+    // More than 50% bangers = hard reject
+    reasons.push(`All-banger dialogue: ${(mundanityCheck.ratio * 100).toFixed(0)}% philosophical`);
+    surgicalFixes.push(
+      `CRITICAL FIX: ${(mundanityCheck.ratio * 100).toFixed(0)}% of dialogue is profound/philosophical.
+Human conversations are 70% logistics, 30% meaningful.
+
+Examples of "banger" lines found:
+${mundanityCheck.bangerExamples.map(b => `- "${b}"`).join('\n')}
+
+ADD MUNDANE EXCHANGES:
+- "Coffee's cold." / "Sorry."
+- "Where'd you park?" / "Out back."
+- "You hungry?" / "I'm fine."
+
+These GROUND the profound moments. Without them, everything sounds like a TED talk.
+MAXIMUM 1 banger per sequence.`
+    );
+  }
+
   const mustRegenerate = reasons.length > 0;
   const surgicalPrompt = surgicalFixes.join('\n\n');
 
@@ -413,6 +483,140 @@ function checkForLoops(
   }
 
   return { isLooping: false, issue: '' };
+}
+
+/**
+ * Check that characters have distinct voices (Phase 3 humanity fix)
+ * Returns hard reject if dialogue is too homogeneous
+ */
+function checkVoiceDistinctiveness(content: string): {
+  pass: boolean;
+  issues: string[];
+  rejectReason: string | null;
+  starterCounts: Record<string, number>;
+} {
+  const issues: string[] = [];
+
+  // Extract character dialogue
+  const characterDialogue: Record<string, string[]> = {};
+  const lines = content.split('\n');
+  let currentCharacter: string | null = null;
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+
+    // Check for character name (all caps, less than 50 chars)
+    if (/^[A-Z][A-Z\s.'()-]+$/.test(trimmed) && trimmed.length < 50 && !trimmed.startsWith('INT.') && !trimmed.startsWith('EXT.')) {
+      currentCharacter = trimmed.replace(/\s*\([^)]+\)/, '').trim(); // Remove parentheticals like (V.O.)
+      if (!characterDialogue[currentCharacter]) {
+        characterDialogue[currentCharacter] = [];
+      }
+      continue;
+    }
+
+    // Skip scene headings and action lines
+    if (!trimmed || /^(INT\.|EXT\.)/.test(trimmed) || trimmed.startsWith('(')) {
+      currentCharacter = null;
+      continue;
+    }
+
+    // Collect dialogue
+    if (currentCharacter && !trimmed.startsWith('(')) {
+      characterDialogue[currentCharacter].push(trimmed);
+    }
+  }
+
+  // Track overused starters across ALL characters
+  const starterPatterns: Record<string, RegExp> = {
+    'I don\'t': /^I don'?t\b/i,
+    'I can\'t': /^I can'?t\b/i,
+    'I know': /^I know\b/i,
+    'I just': /^I just\b/i,
+    'I need': /^I need\b/i,
+    'I\'m': /^I'?m\b/i,
+  };
+
+  const starterCounts: Record<string, number> = {};
+  const starterLimits: Record<string, number> = {
+    'I don\'t': 6,
+    'I can\'t': 5,
+    'I know': 5,
+    'I just': 4,
+    'I need': 4,
+    'I\'m': 8,
+  };
+
+  // Count starters across all dialogue
+  for (const [character, dialogueLines] of Object.entries(characterDialogue)) {
+    for (const dialogueLine of dialogueLines) {
+      for (const [starter, pattern] of Object.entries(starterPatterns)) {
+        if (pattern.test(dialogueLine)) {
+          starterCounts[starter] = (starterCounts[starter] || 0) + 1;
+        }
+      }
+    }
+  }
+
+  // Check for overused starters (exceeding limits)
+  let overusedStarters = 0;
+  for (const [starter, count] of Object.entries(starterCounts)) {
+    const limit = starterLimits[starter] || 5;
+    if (count > limit) {
+      issues.push(`"${starter}" used ${count}x (limit: ${limit})`);
+      overusedStarters++;
+    }
+  }
+
+  // Check for voice homogeneity between characters
+  // Compare sentence length variance between pairs of characters
+  const characterStats: Record<string, { avgLength: number; shortCount: number; longCount: number }> = {};
+
+  for (const [character, dialogueLines] of Object.entries(characterDialogue)) {
+    if (dialogueLines.length < 3) continue; // Need enough samples
+
+    const lengths = dialogueLines.map(d => d.split(/\s+/).length);
+    const avgLength = lengths.reduce((a, b) => a + b, 0) / lengths.length;
+    const shortCount = lengths.filter(l => l <= 5).length;
+    const longCount = lengths.filter(l => l >= 15).length;
+
+    characterStats[character] = { avgLength, shortCount, longCount };
+  }
+
+  // Compare pairs of characters for similar patterns
+  const charNames = Object.keys(characterStats);
+  let similarPairs = 0;
+
+  for (let i = 0; i < charNames.length; i++) {
+    for (let j = i + 1; j < charNames.length; j++) {
+      const char1 = characterStats[charNames[i]];
+      const char2 = characterStats[charNames[j]];
+
+      // If both characters have very similar average sentence lengths, flag it
+      const avgDiff = Math.abs(char1.avgLength - char2.avgLength);
+      if (avgDiff < 2) {
+        similarPairs++;
+      }
+    }
+  }
+
+  // Hard reject if: too many similar pairs OR too many overused starters
+  const totalPairs = (charNames.length * (charNames.length - 1)) / 2;
+  const similarityRatio = totalPairs > 0 ? similarPairs / totalPairs : 0;
+
+  let rejectReason: string | null = null;
+
+  if (overusedStarters >= 2) {
+    rejectReason = `Multiple dialogue starters overused: ${Object.entries(starterCounts).filter(([s, c]) => c > (starterLimits[s] || 5)).map(([s, c]) => `"${s}"=${c}`).join(', ')}`;
+  } else if (similarityRatio > 0.7 && charNames.length >= 3) {
+    rejectReason = `${Math.round(similarityRatio * 100)}% of character pairs have identical speech rhythms`;
+  }
+
+  return {
+    pass: rejectReason === null,
+    issues,
+    rejectReason,
+    starterCounts,
+  };
 }
 
 // ============================================================================
@@ -1092,14 +1296,9 @@ export function enforceExtremeVariance(content: string): {
   let modifications = 0;
   let inDialogue = false;
 
-  const extensions = [
-    ', and it showed',
-    ', which said everything',
-    '-- not that it mattered',
-    ', if you could call it that',
-    ', somehow',
-    ', barely',
-  ];
+  // NOTE: Semantic glue extensions REMOVED (Phase 3 humanity fix)
+  // Previously injected ", somehow", ", barely", "which said everything" etc.
+  // These are AI tells that tank humanity scores. Natural variance preferred.
 
   for (const line of lines) {
     const trimmed = line.trim();
@@ -1130,24 +1329,17 @@ export function enforceExtremeVariance(content: string): {
       const wordCount = sentence.split(/\s+/).length;
 
       // Target "boring" medium-length sentences (8-14 words)
+      // Only shorten - NO extension with semantic glue
       if (wordCount >= 8 && wordCount <= 14) {
-        // 25% chance to modify
-        if (Math.random() < 0.25) {
-          if (Math.random() < 0.5) {
-            // Shorten: Break into fragments
-            const words = sentence.split(/\s+/);
-            const breakPoint = Math.floor(words.length / 2);
-            const newSentence = words.slice(0, breakPoint).join(' ') + '. ' +
-                               words.slice(breakPoint).join(' ');
-            modifiedSentences.push(newSentence);
-            modifications++;
-          } else {
-            // Extend: Add clause
-            const ext = extensions[Math.floor(Math.random() * extensions.length)];
-            const newSentence = sentence.replace(/([.!?]+)$/, ext + '$1');
-            modifiedSentences.push(newSentence);
-            modifications++;
-          }
+        // 15% chance to break into fragments (reduced from 25% since we removed extensions)
+        if (Math.random() < 0.15) {
+          // Shorten: Break into fragments
+          const words = sentence.split(/\s+/);
+          const breakPoint = Math.floor(words.length / 2);
+          const newSentence = words.slice(0, breakPoint).join(' ') + '. ' +
+                             words.slice(breakPoint).join(' ');
+          modifiedSentences.push(newSentence);
+          modifications++;
           continue;
         }
       }
@@ -1165,6 +1357,358 @@ export function enforceExtremeVariance(content: string): {
     originalStdDev: stats.stdDev,
     newStdDev: newStats.stdDev,
     sentencesModified: modifications,
+  };
+}
+
+// ============================================================================
+// SEMANTIC GLUE & ARTIFACT STRIPPING (Phase 3 Humanity Fix)
+// ============================================================================
+
+/**
+ * Remove AI-tell semantic glue phrases that tank humanity scores
+ * These phrases are overused and signal machine generation
+ */
+export function stripSemanticGlue(content: string): {
+  content: string;
+  patternsRemoved: number;
+  removedExamples: string[];
+} {
+  const gluePatterns: { pattern: RegExp; name: string }[] = [
+    { pattern: /,\s*which said everything\.?/gi, name: 'which said everything' },
+    { pattern: /--\s*not that it mattered\.?/gi, name: 'not that it mattered' },
+    { pattern: /,\s*somehow\.(?=\s|$)/gi, name: 'trailing somehow' },
+    { pattern: /,\s*barely\.(?=\s|$)/gi, name: 'trailing barely' },
+    { pattern: /,\s*and it showed\.?/gi, name: 'and it showed' },
+    { pattern: /,\s*if you could call it that\.?/gi, name: 'if you could call it that' },
+    { pattern: /,\s*or so (he|she|they) told (himself|herself|themselves)\.?/gi, name: 'or so X told X' },
+    { pattern: /,\s*whatever that meant\.?/gi, name: 'whatever that meant' },
+    { pattern: /\.\s*Or something like that\.?/gi, name: 'Or something like that' },
+  ];
+
+  let processed = content;
+  let totalRemoved = 0;
+  const removedExamples: string[] = [];
+
+  for (const { pattern, name } of gluePatterns) {
+    const matches = processed.match(pattern);
+    if (matches && matches.length > 0) {
+      totalRemoved += matches.length;
+      if (removedExamples.length < 5) {
+        removedExamples.push(`${name} (${matches.length}x)`);
+      }
+      processed = processed.replace(pattern, '.');
+    }
+  }
+
+  // Clean up any double periods or period-space-period
+  processed = processed.replace(/\.{2,}/g, '.').replace(/\.\s+\./g, '.');
+
+  return {
+    content: processed,
+    patternsRemoved: totalRemoved,
+    removedExamples,
+  };
+}
+
+/**
+ * Remove technical artifacts that leak through from generation
+ * These should never appear in final screenplay
+ */
+export function stripTechnicalArtifacts(content: string): {
+  content: string;
+  artifactsRemoved: number;
+  removedTypes: string[];
+} {
+  const artifactPatterns: { pattern: RegExp; name: string }[] = [
+    { pattern: /\s*\[SCENE (START|END)\]\s*/gi, name: 'SCENE markers' },
+    { pattern: /\s*\*?\*?END OF SEQUENCE \d+\*?\*?\s*/gi, name: 'END OF SEQUENCE' },
+    { pattern: /\s*BUTTON:\s*/gi, name: 'BUTTON:' },
+    { pattern: /\s*\[BUTTON\]\s*/gi, name: '[BUTTON]' },
+    { pattern: /\s*\[END\]\s*/gi, name: '[END]' },
+    { pattern: /\s*\[CONTINUE\]\s*/gi, name: '[CONTINUE]' },
+    { pattern: /\s*---+\s*$/gm, name: 'trailing dashes' },
+    { pattern: /^\s*\*\*\*+\s*$/gm, name: 'asterisk dividers' },
+  ];
+
+  let processed = content;
+  let totalRemoved = 0;
+  const removedTypes: string[] = [];
+
+  for (const { pattern, name } of artifactPatterns) {
+    const matches = processed.match(pattern);
+    if (matches && matches.length > 0) {
+      totalRemoved += matches.length;
+      if (!removedTypes.includes(name)) {
+        removedTypes.push(name);
+      }
+      processed = processed.replace(pattern, '\n\n');
+    }
+  }
+
+  // Clean up excessive newlines
+  processed = processed.replace(/\n{4,}/g, '\n\n\n');
+
+  return {
+    content: processed,
+    artifactsRemoved: totalRemoved,
+    removedTypes,
+  };
+}
+
+/**
+ * Limit ellipsis usage to prevent AI-tell overuse
+ * Target: ~2 per 1000 words (50 max for 25k screenplay)
+ * Priority: Keep ellipses in dialogue (trail-offs), reduce in action lines
+ */
+export function enforceEllipsisLimit(
+  content: string,
+  maxPerThousandWords: number = 2
+): {
+  content: string;
+  originalCount: number;
+  finalCount: number;
+  ellipsesRemoved: number;
+} {
+  const wordCount = content.split(/\s+/).length;
+  const maxEllipses = Math.ceil((wordCount / 1000) * maxPerThousandWords);
+
+  // Count current ellipses
+  const ellipsisPattern = /\.{3}|…/g;
+  const allMatches = content.match(ellipsisPattern) || [];
+  const originalCount = allMatches.length;
+
+  if (originalCount <= maxEllipses) {
+    return {
+      content,
+      originalCount,
+      finalCount: originalCount,
+      ellipsesRemoved: 0,
+    };
+  }
+
+  // Split content into lines to prioritize dialogue ellipses
+  const lines = content.split('\n');
+  const result: string[] = [];
+  let inDialogue = false;
+  let dialogueEllipses = 0;
+  let actionEllipses = 0;
+  let keptCount = 0;
+
+  // First pass: count dialogue vs action ellipses
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (/^[A-Z][A-Z\s.'()-]+$/.test(trimmed) && trimmed.length < 50) {
+      inDialogue = true;
+      continue;
+    }
+    if (!trimmed || /^(INT\.|EXT\.)/.test(trimmed)) {
+      inDialogue = false;
+      continue;
+    }
+
+    const ellipsesInLine = (line.match(ellipsisPattern) || []).length;
+    if (inDialogue) {
+      dialogueEllipses += ellipsesInLine;
+    } else {
+      actionEllipses += ellipsesInLine;
+    }
+  }
+
+  // Calculate how many action ellipses to remove
+  // Prioritize keeping dialogue ellipses (character trail-offs are natural)
+  const dialogueKeep = Math.min(dialogueEllipses, Math.floor(maxEllipses * 0.7));
+  const actionKeep = maxEllipses - dialogueKeep;
+  let actionRemoved = 0;
+  const actionToRemove = actionEllipses - actionKeep;
+
+  // Second pass: selectively remove ellipses from action lines
+  inDialogue = false;
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (/^[A-Z][A-Z\s.'()-]+$/.test(trimmed) && trimmed.length < 50) {
+      inDialogue = true;
+      result.push(line);
+      continue;
+    }
+    if (!trimmed || /^(INT\.|EXT\.)/.test(trimmed)) {
+      inDialogue = false;
+      result.push(line);
+      continue;
+    }
+
+    if (!inDialogue && actionToRemove > 0 && actionRemoved < actionToRemove) {
+      // Replace ellipses in action lines with periods or em-dashes
+      let processed = line;
+      const ellipsesInLine = (line.match(ellipsisPattern) || []).length;
+      const canRemove = Math.min(ellipsesInLine, actionToRemove - actionRemoved);
+
+      for (let i = 0; i < canRemove; i++) {
+        // Alternate between period and em-dash for variety
+        const replacement = i % 2 === 0 ? '.' : '—';
+        processed = processed.replace(ellipsisPattern, replacement);
+        actionRemoved++;
+      }
+      result.push(processed);
+    } else {
+      result.push(line);
+    }
+  }
+
+  const finalContent = result.join('\n');
+  const finalMatches = finalContent.match(ellipsisPattern) || [];
+
+  return {
+    content: finalContent,
+    originalCount,
+    finalCount: finalMatches.length,
+    ellipsesRemoved: originalCount - finalMatches.length,
+  };
+}
+
+// ============================================================================
+// SOMATIC MARKER INJECTION (Phase 3 Humanity Fix)
+// ============================================================================
+
+/**
+ * Somatic markers by emotion - physical sensations that convey feeling
+ * These replace "telling" action lines with "showing" body reactions
+ */
+const SOMATIC_MARKERS: Record<string, string[]> = {
+  fear: [
+    'stomach drops',
+    'blood runs cold',
+    'skin crawls',
+    'chest tightens',
+    'throat closes',
+    'legs go weak',
+    'hands won\'t stop shaking',
+    'heart hammers',
+  ],
+  anger: [
+    'jaw clenches',
+    'fists ball',
+    'heat rises in chest',
+    'pulse pounds in temples',
+    'vision narrows',
+    'teeth grind',
+    'muscles coil',
+  ],
+  grief: [
+    'chest hollows',
+    'throat thick',
+    'weight settles on shoulders',
+    'breath hitches',
+    'something breaks behind eyes',
+    'world goes grey',
+  ],
+  relief: [
+    'tension drains',
+    'shoulders unknot',
+    'breath releases',
+    'legs go rubbery',
+    'head lightens',
+  ],
+  surprise: [
+    'breath catches',
+    'eyes widen',
+    'body freezes',
+    'pulse stutters',
+  ],
+  disgust: [
+    'stomach turns',
+    'bile rises',
+    'skin prickles',
+    'nose wrinkles',
+  ],
+};
+
+/**
+ * Patterns that tell emotion instead of showing
+ * These get replaced with somatic markers
+ */
+const EMOTION_TELL_PATTERNS: Array<{
+  pattern: RegExp;
+  emotion: string;
+}> = [
+  { pattern: /\b(feels?|feeling)\s+(scared|afraid|terrified|frightened)\b/gi, emotion: 'fear' },
+  { pattern: /\b(feels?|feeling)\s+(angry|furious|enraged|mad)\b/gi, emotion: 'anger' },
+  { pattern: /\b(feels?|feeling)\s+(sad|grief|devastated|heartbroken)\b/gi, emotion: 'grief' },
+  { pattern: /\b(feels?|feeling)\s+(relieved|relief)\b/gi, emotion: 'relief' },
+  { pattern: /\b(feels?|feeling)\s+(shocked|surprised|stunned)\b/gi, emotion: 'surprise' },
+  { pattern: /\b(feels?|feeling)\s+(disgusted|revolted|sick)\b/gi, emotion: 'disgust' },
+  { pattern: /\bfear grips\b/gi, emotion: 'fear' },
+  { pattern: /\banger (rises|builds|wells)\b/gi, emotion: 'anger' },
+  { pattern: /\bpanic (sets in|takes over)\b/gi, emotion: 'fear' },
+];
+
+/**
+ * Replace "telling" emotion lines with somatic markers
+ * Transforms "He feels scared" into "His stomach drops"
+ */
+export function enforceSomaticMarkers(content: string): {
+  content: string;
+  replacementsMade: number;
+  replacements: string[];
+} {
+  let processed = content;
+  let replacementsMade = 0;
+  const replacements: string[] = [];
+
+  // Only process action lines (not dialogue)
+  const lines = processed.split('\n');
+  const result: string[] = [];
+  let inDialogue = false;
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+
+    // Track dialogue state
+    if (/^[A-Z][A-Z\s.'()-]+$/.test(trimmed) && trimmed.length < 50) {
+      inDialogue = true;
+      result.push(line);
+      continue;
+    }
+    if (!trimmed || /^(INT\.|EXT\.)/.test(trimmed)) {
+      inDialogue = false;
+      result.push(line);
+      continue;
+    }
+
+    // Skip dialogue and parentheticals
+    if (inDialogue || trimmed.startsWith('(')) {
+      result.push(line);
+      continue;
+    }
+
+    // This is an action line - check for emotion tells
+    let modifiedLine = line;
+
+    for (const { pattern, emotion } of EMOTION_TELL_PATTERNS) {
+      pattern.lastIndex = 0;
+      if (pattern.test(modifiedLine)) {
+        // Pick a random somatic marker for this emotion
+        const markers = SOMATIC_MARKERS[emotion];
+        if (markers && markers.length > 0) {
+          const marker = markers[Math.floor(Math.random() * markers.length)];
+
+          // Replace the tell with the somatic marker
+          modifiedLine = modifiedLine.replace(pattern, marker);
+          replacementsMade++;
+
+          if (replacements.length < 5) {
+            replacements.push(`${emotion}: ${marker}`);
+          }
+        }
+      }
+    }
+
+    result.push(modifiedLine);
+  }
+
+  return {
+    content: result.join('\n'),
+    replacementsMade,
+    replacements,
   };
 }
 
@@ -1438,6 +1982,11 @@ export function runScreenplayPostProcessing(
     bangerCount: number;
     verbalFrictionInjected: number;
     extremeVarianceApplied: boolean;
+    // Phase 3 metrics
+    semanticGlueRemoved: number;
+    technicalArtifactsRemoved: number;
+    ellipsesRemoved: number;
+    somaticMarkersInjected: number;
   };
 } {
   // 1. Check for hard reject patterns FIRST
@@ -1467,6 +2016,11 @@ export function runScreenplayPostProcessing(
         bangerCount: 0,
         verbalFrictionInjected: 0,
         extremeVarianceApplied: false,
+        // Phase 3 metrics
+        semanticGlueRemoved: 0,
+        technicalArtifactsRemoved: 0,
+        ellipsesRemoved: 0,
+        somaticMarkersInjected: 0,
       },
     };
   }
@@ -1514,8 +2068,28 @@ export function runScreenplayPostProcessing(
   processedContent = extremeVarianceResult.content;
   const extremeVarianceApplied = extremeVarianceResult.sentencesModified > 0;
 
-  // 10. Inject verbal friction (15% chance, max 4 per sequence)
-  const frictionResult = injectVerbalFriction(processedContent, 0.15, 4);
+  // ===== PHASE 3: HUMANITY FIXES =====
+
+  // 9a. Strip semantic glue (AI-tell phrases)
+  const glueResult = stripSemanticGlue(processedContent);
+  processedContent = glueResult.content;
+
+  // 9b. Strip technical artifacts ([SCENE END], BUTTON:, etc.)
+  const artifactResult = stripTechnicalArtifacts(processedContent);
+  processedContent = artifactResult.content;
+
+  // 9c. Enforce ellipsis limit (~2 per 1000 words)
+  const ellipsisResult = enforceEllipsisLimit(processedContent);
+  processedContent = ellipsisResult.content;
+
+  // 9d. Inject somatic markers (replace "feels scared" with physical sensations)
+  const somaticResult = enforceSomaticMarkers(processedContent);
+  processedContent = somaticResult.content;
+
+  // ===== END PHASE 3 =====
+
+  // 10. Inject verbal friction (25% chance, max 10 per sequence - increased for humanity)
+  const frictionResult = injectVerbalFriction(processedContent, 0.25, 10);
   processedContent = frictionResult.content;
 
   // ===== END PHASE 2 =====
@@ -1596,6 +2170,11 @@ export function runScreenplayPostProcessing(
       bangerCount: mundanityCheck.bangerCount,
       verbalFrictionInjected: frictionResult.injectionsCount,
       extremeVarianceApplied,
+      // Phase 3 metrics
+      semanticGlueRemoved: glueResult.patternsRemoved,
+      technicalArtifactsRemoved: artifactResult.artifactsRemoved,
+      ellipsesRemoved: ellipsisResult.ellipsesRemoved,
+      somaticMarkersInjected: somaticResult.replacementsMade,
     },
   };
 }

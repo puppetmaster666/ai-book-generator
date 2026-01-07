@@ -53,7 +53,10 @@
       "Bash(node scripts/fix-unverified-users.js:*)",
       "Bash(npx next build)",
       "Bash(del check-book.js fix-book.js)",
-      "Bash(npx prisma db pull:*)"
+      "Bash(npx prisma db pull:*)",
+      "Bash(findstr:*)",
+      "Bash(node scripts/agi-scoring/score-screenplay.js:*)",
+      "Bash(node:*)"
     ]
   }
 }

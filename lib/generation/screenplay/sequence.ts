@@ -220,6 +220,83 @@ OBJECT OVERUSE = AI DETECTION. The same prop action repeated = REJECTED.
 }
 
 /**
+ * Helper: Build voice differentiation section (Phase 3 humanity fix)
+ * Forces each character to sound distinct - different vocabulary, rhythm, starters
+ */
+function buildVoiceDifferentiationSection(characters: CharacterProfile[]): string {
+  if (!characters || characters.length < 2) {
+    return ''; // Need at least 2 characters for voice differentiation
+  }
+
+  // Build character voice profiles from their traits
+  const voiceProfiles = characters.map(c => {
+    const archetype = c.dialogueArchetype || 'The Reactor';
+    const vocabulary = c.voiceTraits?.vocabulary || 'casual';
+    const rhythm = c.voiceTraits?.rhythm || 'medium sentences';
+    const tics = c.voiceTraits?.tics || '';
+
+    // Determine speech characteristics from archetype
+    let speechPattern = '';
+    switch (archetype) {
+      case 'The Evader':
+        speechPattern = 'DEFLECTS with questions, changes subject, never directly answers';
+        break;
+      case 'The Steamroller':
+        speechPattern = 'DOMINATES with short declaratives, interrupts, rarely asks';
+        break;
+      case 'The Professor':
+        speechPattern = 'EXPLAINS with precision, uses data/facts, longer sentences';
+        break;
+      case 'The Reactor':
+      default:
+        speechPattern = 'RESPONDS emotionally, sentence length varies with emotion';
+        break;
+    }
+
+    return `- ${c.name.toUpperCase()}: ${vocabulary}, ${rhythm}. ${speechPattern}. Verbal tic: "${tics || 'none'}"`;
+  }).join('\n');
+
+  return `
+=== VOICE DIFFERENTIATION (HARD REJECT FOR HOMOGENEITY) ===
+Each character MUST sound DISTINCT. If readers can swap character names and
+the dialogue still works, you have FAILED. This sequence will be REJECTED.
+
+CHARACTER VOICE PROFILES (ENFORCE THESE):
+${voiceProfiles}
+
+FORBIDDEN PATTERNS (IMMEDIATE REJECTION):
+- Two characters using "I don't..." / "I can't..." starters in the same scene
+- All characters speaking in complete, grammatically perfect sentences
+- Characters with different backgrounds using identical vocabulary
+- Same sentence rhythm (all choppy OR all flowing) across characters
+
+VOICE DIFFERENTIATION EXAMPLES:
+
+BLUE-COLLAR CHARACTER (short, punchy):
+✓ "No way." / "Look--" / "What'd I tell you?"
+✗ "I find that to be an unreasonable assertion."
+
+PROFESSIONAL CHARACTER (precise, longer):
+✓ "The timeline doesn't support that interpretation."
+✗ "No way." / "That's dumb."
+
+ELDERLY CHARACTER (rhythmic, trailing):
+✓ "In my day, we... well. It doesn't matter now."
+✗ "That's statistically improbable based on current data."
+
+DIALOGUE STARTER LIMITS (PER SEQUENCE):
+- "I don't" - MAX 4 total across ALL characters
+- "I can't" - MAX 3 total across ALL characters
+- "I know" - MAX 3 total across ALL characters
+- "I just" - MAX 2 total across ALL characters
+
+Vary your starters: "Look," / "Here's the thing--" / "Wait." / "So what?"
+
+HOMOGENEOUS VOICES = AI DETECTION. Characters must be DISTINGUISHABLE by voice alone.
+`;
+}
+
+/**
  * Generate a single screenplay sequence (variable pages based on format)
  * Uses "Performance Mode" writing with subtext-driven dialogue
  */
@@ -454,6 +531,51 @@ VARY YOUR EXITS:
 The same exit type repeated = AI detection. Variety = human.
 `;
 
+  // Voice differentiation requirement (Phase 3 humanity fix)
+  const voiceDifferentiationSection = buildVoiceDifferentiationSection(data.characters);
+
+  // Mandatory mundanity requirement (Phase 3 humanity fix)
+  const mundanitySection = `
+=== MANDATORY MUNDANITY (HARD REJECT FOR ALL-BANGERS) ===
+Human conversations are 70% logistics, 30% meaning. If 100% of dialogue is
+profound/philosophical, the sequence will be REJECTED.
+
+EVERY SEQUENCE MUST INCLUDE:
+1. At least ONE "throwaway" exchange - meaningless logistics:
+   - "You want coffee?" / "Black."
+   - "Where'd you park?" / "Out back."
+   - "My phone's dead." / "Charger's in the drawer."
+   - "Did you eat?" / "I'm fine."
+   - "What time is it?" / "Late."
+
+2. At least ONE non-productive scene or beat:
+   - Characters waiting (drying a sock, watching rain, pacing)
+   - Small talk that reveals character (sports, weather, old memories)
+   - Physical task that says nothing about plot
+
+WHY THIS MATTERS:
+- Throwaway lines GROUND profound moments
+- Without mundane context, everything feels like a monologue
+- 100% meaningful dialogue = AI detection
+- Real people talk about nothing 70% of the time
+
+BAD (all bangers):
+"In the end, we're all just trying to survive."
+"Maybe that's what it means to be human."
+"I've waited my whole life for this moment."
+
+GOOD (mundane grounds the meaningful):
+"Coffee's cold."
+"Sorry. Forgot the cream."
+(beat)
+"I've waited my whole life for this."
+
+The mundane line makes the banger HIT HARDER.
+
+MAXIMUM 1 "profound insight" line per sequence.
+If you have more, your sequence will be REJECTED.
+`;
+
   // Genre-specific tone guidance
   const genreTone = getGenreToneGuidance(data.genre);
 
@@ -476,6 +598,8 @@ ${protagonistAgencySection}
 ${rhythmSection}
 ${verbalMessinessSection}
 ${exitVarietySection}
+${voiceDifferentiationSection}
+${mundanitySection}
 ${clinicalVocabBan}
 ${subtextEngine}
 ${ticBudget}
