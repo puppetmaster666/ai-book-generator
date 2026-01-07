@@ -639,6 +639,76 @@ ${characterPsychology}
 
 ${genreTone}
 
+=== PACING RULES (CRITICAL - FAILURE = REJECTION) ===
+FORBIDDEN DEVICES:
+- MONTAGE - NEVER use montages. They are lazy writing. Dramatize EVERY scene.
+  A montage says "I don't want to write these scenes" - UNACCEPTABLE.
+- Time jumps > 1 day: NO "THREE WEEKS LATER", "SIX MONTHS LATER", etc.
+  Allowed ONLY: "LATER THAT DAY", "THE NEXT MORNING" (max 2 per script)
+- If story requires time passage, SHOW it through changed circumstances:
+  Different clothes, grown beard, new furniture, holiday decorations
+  DO NOT use title cards as a crutch.
+
+SCENE DISCIPLINE:
+- Each scene must BREATHE (minimum 1.5 pages average)
+- Target: 50-70 scenes for full feature screenplay
+- NO rapid-fire scene hopping - let conversations DEVELOP
+
+=== LOCATION BALANCE (CINEMATIC REQUIREMENT) ===
+- Minimum 40% EXT. scenes - this is film, not TV
+- Each sequence must have at least 2 exterior locations
+- Avoid "apartment/office/bedroom" repetition - BORING
+- Production value = location variety = cinematic feel
+- If a conversation can happen outside, MOVE IT OUTSIDE
+
+=== THE FRICTION PROTOCOL (HUMANITY REQUIREMENT) ===
+
+1. ASYMMETRIC DIALOGUE:
+   Characters are FORBIDDEN from answering questions directly in first 2 lines.
+   Questions get deflected, ignored, or answered with unrelated information.
+   BAD: "Where were you?" → "I was at the store."
+   GOOD: "Where were you?" → "The milk's expired again."
+
+   Each line has a SECRET INTENT:
+   - "Avoid the topic" / "Start a fight" / "Beg for attention"
+   The dialogue serves the INTENT, not the conversation.
+
+2. THE DISPLACEMENT PROTOCOL:
+   Emotions through OBJECTS, never words.
+   - Anxiety: Picking at a loose thread on sleeve
+   - Guilt: Scrubbing a sink that's already clean
+   - Love: Straightening someone's collar without asking
+   - Grief: Opening fridge, seeing her yogurt, closing fridge
+
+   BANNED FEELING WORDS in dialogue:
+   NEVER have characters say: sad, happy, scared, afraid, angry, love, hate, miss, fear
+   If they MUST express emotion, they do it through:
+   1. A physical action with an object
+   2. A non-sequitur about something trivial
+   3. Silence that the other character fills wrong
+
+3. THE 20% MUNDANITY TAX:
+   One out of every five lines must be about a TRIVIAL physical detail:
+   - A tight shoe, a cold cup of coffee, a buzzing fly
+   - "Did you eat?" / "Traffic was hell." / "My phone's dead."
+   These have ZERO plot impact but GROUND the profound moments.
+   Without mundanity, everything sounds like a TED talk.
+
+4. THE ENTROPY PROTOCOL:
+   - Scenes start MID-ACTION (mid-argument, mid-task, mid-thought)
+   - Scenes end BEFORE the point is fully resolved
+   - Force the audience to fill gaps with their brain
+   BAD: Scene opens with character entering, ends with character leaving
+   GOOD: Scene opens mid-sentence, ends on an interrupted—
+
+5. NO SUMMARY ENDINGS:
+   Never end a sentence with phrases that "wrap up" the emotion:
+   - "which said everything" - BANNED
+   - "not that it mattered" - BANNED
+   - "somehow" at end of sentence - BANNED
+   - "And that was that" - BANNED
+   End sentences on PHYSICAL NOUNS, not emotional conclusions.
+
 === BANNED AI-ISMS (INSTANT FAILURE) ===
 DIALOGUE:
 - "I need you to understand" / "Here's the thing" / "Let me be clear"

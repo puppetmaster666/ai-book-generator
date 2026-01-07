@@ -315,6 +315,412 @@ export function enforceTicLimits(
 }
 
 // ============================================================================
+// HOLLYWOOD COMPLIANCE DETECTION (Phase 6: Pacing Killers)
+// ============================================================================
+
+/**
+ * Time jump patterns that destroy pacing
+ * Hollywood readers HATE these - they're lazy storytelling
+ */
+const TIME_JUMP_PATTERNS = [
+  /\b(THREE|FOUR|FIVE|SIX|SEVEN|EIGHT|NINE|TEN|SEVERAL|MANY)\s+(DAYS?|WEEKS?|MONTHS?|YEARS?)\s+LATER\b/gi,
+  /\bONE\s+(WEEK|MONTH|YEAR)\s+LATER\b/gi,
+  /\bTWO\s+(DAYS?|WEEKS?|MONTHS?|YEARS?)\s+LATER\b/gi,
+  /\bMONTHS?\s+PASS(ES)?\b/gi,
+  /\bTIME\s+PASSES?\b/gi,
+  /\bYEARS?\s+LATER\b/gi,
+  /\bA\s+(WEEK|MONTH|YEAR)\s+LATER\b/gi,
+];
+
+/**
+ * Montage patterns - the ultimate lazy device
+ * ANY montage = hard reject
+ */
+const MONTAGE_PATTERNS = [
+  /\bMONTAGE\b/gi,
+  /\bSERIES\s+OF\s+SHOTS\b/gi,
+  /\bQUICK\s+CUTS?\b/gi,
+  /\bRAPID\s+MONTAGE\b/gi,
+  /\bTIME\s+LAPSE\b/gi,
+];
+
+/**
+ * Detect time jumps in content
+ * Returns count and specific matches for surgical feedback
+ */
+export function detectTimeJumps(content: string): {
+  count: number;
+  matches: string[];
+  isHardReject: boolean;
+} {
+  const allMatches: string[] = [];
+
+  for (const pattern of TIME_JUMP_PATTERNS) {
+    pattern.lastIndex = 0;
+    const matches = content.match(pattern) || [];
+    allMatches.push(...matches);
+  }
+
+  // Deduplicate
+  const uniqueMatches = [...new Set(allMatches)];
+
+  return {
+    count: uniqueMatches.length,
+    matches: uniqueMatches,
+    isHardReject: uniqueMatches.length > 2, // More than 2 = lazy storytelling
+  };
+}
+
+/**
+ * Detect montages in content
+ * ANY montage = hard reject (dramatize instead)
+ */
+export function detectMontages(content: string): {
+  count: number;
+  matches: string[];
+  isHardReject: boolean;
+} {
+  const allMatches: string[] = [];
+
+  for (const pattern of MONTAGE_PATTERNS) {
+    pattern.lastIndex = 0;
+    const matches = content.match(pattern) || [];
+    allMatches.push(...matches);
+  }
+
+  const uniqueMatches = [...new Set(allMatches)];
+
+  return {
+    count: uniqueMatches.length,
+    matches: uniqueMatches,
+    isHardReject: uniqueMatches.length > 0, // ANY montage = reject
+  };
+}
+
+/**
+ * Count scenes (INT./EXT. sluglines)
+ * Target: 50-70 for feature, >100 = ADD editing
+ */
+export function countScenes(content: string): {
+  total: number;
+  interiors: number;
+  exteriors: number;
+  interiorRatio: number;
+  isOverScened: boolean;
+  isInteriorHeavy: boolean;
+} {
+  const interiorPattern = /^INT\./gm;
+  const exteriorPattern = /^EXT\./gm;
+
+  const interiors = (content.match(interiorPattern) || []).length;
+  const exteriors = (content.match(exteriorPattern) || []).length;
+  const total = interiors + exteriors;
+
+  const interiorRatio = total > 0 ? (interiors / total) * 100 : 0;
+
+  return {
+    total,
+    interiors,
+    exteriors,
+    interiorRatio,
+    isOverScened: total > 100, // >100 scenes = ADD editing
+    isInteriorHeavy: interiorRatio > 85, // >85% interiors = TV, not film
+  };
+}
+
+/**
+ * Detect generic dialogue responses
+ * Single-word "Yeah", "No", "Okay" = amateur writing
+ */
+const GENERIC_RESPONSE_PATTERNS = [
+  /^Yeah\.?$/gm,
+  /^No\.?$/gm,
+  /^Okay\.?$/gm,
+  /^Sure\.?$/gm,
+  /^Right\.?$/gm,
+  /^Fine\.?$/gm,
+  /^What\?$/gm,
+  /^Really\?$/gm,
+  /^I don't know\.?$/gmi,
+  /^I guess\.?$/gmi,
+];
+
+export function detectGenericResponses(content: string): {
+  count: number;
+  matches: string[];
+  isHardReject: boolean;
+} {
+  const allMatches: string[] = [];
+
+  // Extract dialogue only
+  const lines = content.split('\n');
+  let inDialogue = false;
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+
+    if (/^[A-Z][A-Z\s.'()-]+$/.test(trimmed) && trimmed.length < 50) {
+      inDialogue = true;
+      continue;
+    }
+    if (!trimmed || /^(INT\.|EXT\.)/.test(trimmed)) {
+      inDialogue = false;
+      continue;
+    }
+
+    if (inDialogue && !trimmed.startsWith('(')) {
+      for (const pattern of GENERIC_RESPONSE_PATTERNS) {
+        pattern.lastIndex = 0;
+        if (pattern.test(trimmed)) {
+          allMatches.push(trimmed);
+        }
+      }
+    }
+  }
+
+  return {
+    count: allMatches.length,
+    matches: allMatches.slice(0, 10), // First 10 examples
+    isHardReject: allMatches.length > 20, // >20 generic responses = too lazy
+  };
+}
+
+/**
+ * Kill summary endings (AI tells)
+ * "which said everything", "not that it mattered", "somehow"
+ */
+export function killSummaryEndings(content: string): {
+  content: string;
+  removedCount: number;
+} {
+  const summaryPatterns = [
+    { pattern: /,\s*which said everything\.?/gi, replacement: '.' },
+    { pattern: /--\s*not that it mattered\.?/gi, replacement: '.' },
+    { pattern: /,\s*somehow\.(?=\s|$)/gm, replacement: '.' },
+    { pattern: /\.\s*It was enough\.?/gi, replacement: '.' },
+    { pattern: /\.\s*And that was that\.?/gi, replacement: '.' },
+    { pattern: /,\s*in a way\.(?=\s|$)/gm, replacement: '.' },
+    { pattern: /\.\s*But still\.?/gi, replacement: '.' },
+    { pattern: /,\s*for what it was worth\.?/gi, replacement: '.' },
+    { pattern: /\.\s*Or something like that\.?/gi, replacement: '.' },
+    { pattern: /,\s*if that made sense\.?/gi, replacement: '.' },
+  ];
+
+  let processed = content;
+  let removedCount = 0;
+
+  for (const { pattern, replacement } of summaryPatterns) {
+    const matches = processed.match(pattern) || [];
+    removedCount += matches.length;
+    processed = processed.replace(pattern, replacement);
+  }
+
+  // Clean up double periods
+  processed = processed.replace(/\.{2,}/g, '.').replace(/\.\s+\./g, '.');
+
+  return { content: processed, removedCount };
+}
+
+// ============================================================================
+// SENSORY DETAIL INJECTION (Phase 2.7)
+// ============================================================================
+
+/**
+ * Sensory detail library - environmental details to inject after sluglines
+ * Grouped by sense type for variety
+ */
+const SENSORY_DETAILS = {
+  smell: [
+    'The smell of stale coffee hangs in the air.',
+    'Cigarette smoke curls from an ashtray somewhere.',
+    'The sharp bite of cleaning chemicals.',
+    'Something cooking. Garlic, maybe onions.',
+    'Rain-wet asphalt and exhaust fumes.',
+    'Old paper and dust. Filing cabinet smell.',
+    'Cheap air freshener barely masking something worse.',
+    'Fresh paint. Someone\'s been busy.',
+    'The copper tang of old pipes.',
+    'Burned toast. Nobody\'s watching the kitchen.',
+  ],
+  sound: [
+    'The AC rattles overhead.',
+    'Fluorescent lights buzz and flicker.',
+    'Traffic noise, muffled through glass.',
+    'A phone rings somewhere, unanswered.',
+    'Footsteps echo in the hallway outside.',
+    'Water drips from a leaky faucet.',
+    'Distant sirens. Getting closer or farther, hard to tell.',
+    'The soft tick of a wall clock.',
+    'Pipes groaning in the walls.',
+    'A radiator clanks to life.',
+  ],
+  touch: [
+    'Cold air seeps through the window frame.',
+    'The chair squeaks against linoleum.',
+    'Sticky residue on the table surface.',
+    'The floor creaks with each step.',
+    'Draft from under the door.',
+    'The seat cushion sags, well-worn.',
+    'Grit under shoe soles. Someone tracked in sand.',
+    'The metal handle is ice cold.',
+    'Humidity thick enough to taste.',
+    'The leather seat sighs as weight settles.',
+  ],
+  visual_texture: [
+    'Water stains spread across the ceiling tiles.',
+    'Paint peels near the baseboard.',
+    'Dust motes float in the light.',
+    'The window is foggy with condensation.',
+    'Cracks spider across the plaster.',
+    'Coffee rings overlap on the desk surface.',
+    'The carpet shows a worn path to the door.',
+    'Fingerprints smudge the glass partition.',
+    'Shadows pool in the corners.',
+    'One light bulb out of three is dead.',
+  ],
+};
+
+/**
+ * Count sensory details already present in content
+ */
+function countSensoryDetails(content: string): number {
+  const sensoryIndicators = [
+    // Smell words
+    /\b(smell|scent|odor|stench|aroma|whiff|reek)\b/gi,
+    // Sound words
+    /\b(buzz|hum|click|creak|rattle|tick|drip|echo|ring|clank)\b/gi,
+    // Touch/texture words
+    /\b(cold|warm|sticky|gritty|smooth|rough|damp|humid|draft)\b/gi,
+    // Sensory verbs
+    /\b(seeps|creaks|rattles|buzzes|drips|clanks|groans)\b/gi,
+  ];
+
+  let count = 0;
+  for (const pattern of sensoryIndicators) {
+    const matches = content.match(pattern) || [];
+    count += matches.length;
+  }
+  return count;
+}
+
+/**
+ * Pick a random sensory detail from a specific category
+ */
+function pickRandomSensoryDetail(): string {
+  const categories = Object.keys(SENSORY_DETAILS) as Array<keyof typeof SENSORY_DETAILS>;
+  const category = categories[Math.floor(Math.random() * categories.length)];
+  const details = SENSORY_DETAILS[category];
+  return details[Math.floor(Math.random() * details.length)];
+}
+
+/**
+ * Inject sensory details into screenplay after scene sluglines
+ * Target: 4+ sensory details per 1000 words
+ *
+ * @param content - The screenplay content
+ * @param targetDensity - Target sensory details per 1000 words (default: 4)
+ */
+export function injectSensoryDetails(
+  content: string,
+  targetDensity: number = 4
+): {
+  content: string;
+  originalDensity: number;
+  newDensity: number;
+  injectionsAdded: number;
+} {
+  const wordCount = content.split(/\s+/).filter(w => w.length > 0).length;
+  const currentCount = countSensoryDetails(content);
+  const currentDensity = (currentCount / wordCount) * 1000;
+
+  // If we already have enough sensory detail, don't inject
+  if (currentDensity >= targetDensity) {
+    return {
+      content,
+      originalDensity: currentDensity,
+      newDensity: currentDensity,
+      injectionsAdded: 0,
+    };
+  }
+
+  // Calculate how many details we need to add
+  const targetCount = Math.ceil((targetDensity * wordCount) / 1000);
+  const toAdd = Math.min(targetCount - currentCount, 15); // Cap at 15 additions
+
+  if (toAdd <= 0) {
+    return {
+      content,
+      originalDensity: currentDensity,
+      newDensity: currentDensity,
+      injectionsAdded: 0,
+    };
+  }
+
+  // Find all scene sluglines
+  const lines = content.split('\n');
+  const sluglineIndices: number[] = [];
+
+  for (let i = 0; i < lines.length; i++) {
+    if (/^\s*(INT\.|EXT\.)/i.test(lines[i])) {
+      sluglineIndices.push(i);
+    }
+  }
+
+  if (sluglineIndices.length === 0) {
+    return {
+      content,
+      originalDensity: currentDensity,
+      newDensity: currentDensity,
+      injectionsAdded: 0,
+    };
+  }
+
+  // Select random sluglines to inject after
+  const shuffledIndices = [...sluglineIndices].sort(() => Math.random() - 0.5);
+  const indicesToUse = shuffledIndices.slice(0, Math.min(toAdd, sluglineIndices.length));
+
+  // Track which lines to add after (offset increases as we insert)
+  const usedDetails = new Set<string>();
+  let injectionsAdded = 0;
+
+  // Sort in reverse order so insertions don't mess up indices
+  indicesToUse.sort((a, b) => b - a);
+
+  for (const sluglineIdx of indicesToUse) {
+    // Pick a unique sensory detail
+    let detail = pickRandomSensoryDetail();
+    let attempts = 0;
+    while (usedDetails.has(detail) && attempts < 20) {
+      detail = pickRandomSensoryDetail();
+      attempts++;
+    }
+    usedDetails.add(detail);
+
+    // Find the next line after slugline that's not empty
+    let insertIdx = sluglineIdx + 1;
+    while (insertIdx < lines.length && lines[insertIdx].trim() === '') {
+      insertIdx++;
+    }
+
+    // Insert the sensory detail as action line (with proper formatting)
+    lines.splice(insertIdx, 0, '', detail);
+    injectionsAdded++;
+  }
+
+  const newContent = lines.join('\n');
+  const newWordCount = newContent.split(/\s+/).filter(w => w.length > 0).length;
+  const newSensoryCount = countSensoryDetails(newContent);
+  const newDensity = (newSensoryCount / newWordCount) * 1000;
+
+  return {
+    content: newContent,
+    originalDensity: currentDensity,
+    newDensity,
+    injectionsAdded,
+  };
+}
+
+// ============================================================================
 // HARD REJECT DETECTION
 // ============================================================================
 
@@ -440,6 +846,111 @@ These GROUND the profound moments. Without them, everything sounds like a TED ta
 MAXIMUM 1 banger per sequence.`
     );
   }
+
+  // ===== HOLLYWOOD COMPLIANCE CHECKS (Phase 6) =====
+
+  // 8. Check for time jumps (pacing killer)
+  const timeJumpCheck = detectTimeJumps(content);
+  if (timeJumpCheck.isHardReject) {
+    reasons.push(`Too many time jumps: ${timeJumpCheck.count} found (${timeJumpCheck.matches.slice(0, 3).join(', ')})`);
+    surgicalFixes.push(
+      `CRITICAL FIX: ${timeJumpCheck.count} TIME JUMPS DETECTED - This is lazy storytelling.
+Hollywood readers HATE time jumps. They destroy pacing and momentum.
+
+Found: ${timeJumpCheck.matches.join(', ')}
+
+INSTEAD OF TIME JUMPS:
+- Show time passage through CHANGED CIRCUMSTANCES (different clothes, grown beard, new furniture)
+- Use scene details to imply time (weather change, holiday decorations, newspaper headlines)
+- If you MUST jump, keep it to ONE per act, and show the CONSEQUENCE of the time gap
+
+MAXIMUM: 2 time jumps per screenplay. You have ${timeJumpCheck.count}.
+REWRITE to eliminate at least ${timeJumpCheck.count - 2} time jumps.`
+    );
+  }
+
+  // 9. Check for montages (the ultimate lazy device)
+  const montageCheck = detectMontages(content);
+  if (montageCheck.isHardReject) {
+    reasons.push(`Montage detected: ${montageCheck.matches.join(', ')}`);
+    surgicalFixes.push(
+      `CRITICAL FIX: MONTAGE DETECTED - "${montageCheck.matches[0]}"
+Montages are FORBIDDEN. They are the ultimate lazy storytelling device.
+
+A montage says: "I don't want to write these scenes, so I'll summarize them."
+Hollywood readers see this as: "The writer gave up here."
+
+INSTEAD OF MONTAGE:
+- Pick the 2-3 most dramatic moments and WRITE THEM AS FULL SCENES
+- Let the audience EXPERIENCE the transformation, don't SUMMARIZE it
+- If training is important, show ONE pivotal training moment that changes everything
+
+REMOVE ALL MONTAGES. Dramatize every scene.`
+    );
+  }
+
+  // 10. Check scene count (ADD editing)
+  const sceneCheck = countScenes(content);
+  if (sceneCheck.isOverScened) {
+    reasons.push(`Too many scenes: ${sceneCheck.total} (max 100 for feature)`);
+    surgicalFixes.push(
+      `CRITICAL FIX: ${sceneCheck.total} SCENES DETECTED - This is ADD editing.
+Feature films should have 50-70 scenes. You have ${sceneCheck.total}.
+
+Symptoms: Rapid-fire scene hopping, no scene breathes, exhausting to watch.
+
+FIX:
+- CONSOLIDATE scenes in the same location into longer conversations
+- Let scenes BREATHE (minimum 1.5 pages average)
+- Cut establishing shots - jump into the action
+- Combine characters who serve the same function
+
+Target: Reduce to 50-70 scenes.`
+    );
+  }
+
+  // 11. Check interior/exterior ratio (TV vs film)
+  if (sceneCheck.isInteriorHeavy) {
+    reasons.push(`Too many interiors: ${sceneCheck.interiorRatio.toFixed(0)}% (max 85%)`);
+    surgicalFixes.push(
+      `CRITICAL FIX: ${sceneCheck.interiorRatio.toFixed(0)}% INTERIORS - This looks like a TV episode, not a film.
+Interior count: ${sceneCheck.interiors}
+Exterior count: ${sceneCheck.exteriors}
+
+Films need PRODUCTION VALUE. Exteriors = scope, spectacle, cinematic feel.
+
+FIX:
+- Move 2-3 conversations OUTSIDE (park bench, car, rooftop)
+- Add establishing exteriors to ground locations
+- If there's a chase or confrontation, move it outdoors
+- Target: At least 40% exteriors for cinematic feel
+
+Add ${Math.ceil(sceneCheck.interiors * 0.4 - sceneCheck.exteriors)} exterior scenes.`
+    );
+  }
+
+  // 12. Check generic dialogue responses
+  const genericCheck = detectGenericResponses(content);
+  if (genericCheck.isHardReject) {
+    reasons.push(`Too many generic responses: ${genericCheck.count} found`);
+    surgicalFixes.push(
+      `CRITICAL FIX: ${genericCheck.count} GENERIC RESPONSES - Amateur dialogue detected.
+Examples: ${genericCheck.matches.slice(0, 5).join(', ')}
+
+Single-word responses ("Yeah", "No", "Okay") are placeholder dialogue.
+Real characters have distinctive ways of saying yes and no.
+
+FIX - Character-specific alternatives:
+- Instead of "Yeah" → "If you say so" / "Works for me" / "Guess that's the play"
+- Instead of "No" → "Not a chance" / "Forget it" / "That's not happening"
+- Instead of "Okay" → "Fine" / "Whatever" / "If that's what you want"
+- Instead of "What?" → "I'm sorry?" / "Come again?" / "Excuse me?"
+
+Every response should reveal CHARACTER. If you can swap the character name, you've FAILED.`
+    );
+  }
+
+  // ===== END HOLLYWOOD COMPLIANCE =====
 
   const mustRegenerate = reasons.length > 0;
   const surgicalPrompt = surgicalFixes.join('\n\n');
@@ -1987,6 +2498,14 @@ export function runScreenplayPostProcessing(
     technicalArtifactsRemoved: number;
     ellipsesRemoved: number;
     somaticMarkersInjected: number;
+    // Phase 6: Hollywood compliance metrics
+    summaryEndingsRemoved: number;
+    timeJumpsDetected: number;
+    montagesDetected: number;
+    sceneCount: number;
+    interiorRatio: number;
+    genericResponsesDetected: number;
+    sensoryDetailsInjected: number;
   };
 } {
   // 1. Check for hard reject patterns FIRST
@@ -2021,6 +2540,14 @@ export function runScreenplayPostProcessing(
         technicalArtifactsRemoved: 0,
         ellipsesRemoved: 0,
         somaticMarkersInjected: 0,
+        // Phase 6: Hollywood compliance metrics
+        summaryEndingsRemoved: 0,
+        timeJumpsDetected: 0,
+        montagesDetected: 0,
+        sceneCount: 0,
+        interiorRatio: 0,
+        genericResponsesDetected: 0,
+        sensoryDetailsInjected: 0,
       },
     };
   }
@@ -2086,11 +2613,20 @@ export function runScreenplayPostProcessing(
   const somaticResult = enforceSomaticMarkers(processedContent);
   processedContent = somaticResult.content;
 
+  // 9e. Kill summary endings (AI tells like "which said everything", "somehow")
+  const summaryEndingResult = killSummaryEndings(processedContent);
+  processedContent = summaryEndingResult.content;
+
   // ===== END PHASE 3 =====
 
-  // 10. Inject verbal friction (25% chance, max 10 per sequence - increased for humanity)
-  const frictionResult = injectVerbalFriction(processedContent, 0.25, 10);
+  // 10. Inject verbal friction (50% chance, max 20 per sequence - increased for humanity)
+  // Phase 2.6: Increased from 25%/10 to 50%/20 for higher messiness density
+  const frictionResult = injectVerbalFriction(processedContent, 0.50, 20);
   processedContent = frictionResult.content;
+
+  // 10a. Inject sensory details (Phase 2.7: target 4+ per 1000 words)
+  const sensoryResult = injectSensoryDetails(processedContent, 4);
+  processedContent = sensoryResult.content;
 
   // ===== END PHASE 2 =====
 
@@ -2175,6 +2711,14 @@ export function runScreenplayPostProcessing(
       technicalArtifactsRemoved: artifactResult.artifactsRemoved,
       ellipsesRemoved: ellipsisResult.ellipsesRemoved,
       somaticMarkersInjected: somaticResult.replacementsMade,
+      // Phase 6: Hollywood compliance metrics
+      summaryEndingsRemoved: summaryEndingResult.removedCount,
+      timeJumpsDetected: detectTimeJumps(processedContent).count,
+      montagesDetected: detectMontages(processedContent).count,
+      sceneCount: countScenes(processedContent).total,
+      interiorRatio: countScenes(processedContent).interiorRatio,
+      genericResponsesDetected: detectGenericResponses(processedContent).count,
+      sensoryDetailsInjected: sensoryResult.injectionsAdded,
     },
   };
 }

@@ -385,6 +385,76 @@ export const SCREENPLAY_SCIENCE_IN_EMOTION = [
 ];
 
 /**
+ * Banned generic adjectives (Phase 6: Materiality Ban)
+ * AI uses these lazy descriptors instead of specific tactile details
+ */
+export const SCREENPLAY_BANNED_ADJECTIVES = [
+  'clean',
+  'dirty',
+  'sterile',
+  'gritty',
+  'dark',
+  'bright',
+  'beautiful',
+  'ugly',
+  'perfect',
+  'pristine',
+  'filthy',
+  'spotless',
+  'immaculate',
+  'grimy',
+  'lovely',
+  'nice',
+  'good',
+  'bad',
+];
+
+/**
+ * Banned feeling word declarations (Phase 6: Displacement Protocol)
+ * Characters should show emotion through objects, not declare feelings
+ */
+export const SCREENPLAY_BANNED_FEELING_WORDS = [
+  'sad',
+  'happy',
+  'scared',
+  'afraid',
+  'angry',
+  'love',
+  'hate',
+  'miss',
+  'fear',
+  'joy',
+  'grief',
+  'lonely',
+  'anxious',
+  'worried',
+  'terrified',
+  'furious',
+  'ecstatic',
+  'depressed',
+];
+
+/**
+ * Summary ending patterns (Phase 6: AI tells that wrap up emotion)
+ * These phrases "conclude" emotions instead of letting them breathe
+ */
+export const SCREENPLAY_SUMMARY_ENDINGS = [
+  ', which said everything',
+  '-- not that it mattered',
+  ', somehow',
+  '. It was enough.',
+  '. And that was that.',
+  ', in a way',
+  '. But still.',
+  ', for what it was worth',
+  '. Or something like that.',
+  ', if that made sense',
+  '. Which was something.',
+  ', in the end',
+  ". At least, that's what it felt like.",
+];
+
+/**
  * Banned AI-sounding action line starts
  */
 export const SCREENPLAY_BANNED_ACTION_STARTS = [

@@ -92,6 +92,128 @@ function detectStaccatoRhythm(content: string): {
 }
 
 /**
+ * Detect time jumps (Hollywood pacing killer)
+ */
+function detectTimeJumps(content: string): string[] {
+  const patterns = [
+    /\b(THREE|FOUR|FIVE|SIX|SEVEN|EIGHT|NINE|TEN|SEVERAL|MANY)\s+(DAYS?|WEEKS?|MONTHS?|YEARS?)\s+LATER\b/gi,
+    /\bONE\s+(WEEK|MONTH|YEAR)\s+LATER\b/gi,
+    /\bTWO\s+(DAYS?|WEEKS?|MONTHS?|YEARS?)\s+LATER\b/gi,
+    /\bMONTHS?\s+PASS(ES)?\b/gi,
+    /\bTIME\s+PASSES?\b/gi,
+    /\bYEARS?\s+LATER\b/gi,
+  ];
+
+  const found: string[] = [];
+  for (const pattern of patterns) {
+    const matches = content.match(pattern) || [];
+    found.push(...matches);
+  }
+  return found;
+}
+
+/**
+ * Detect montages (lazy storytelling)
+ */
+function detectMontages(content: string): string[] {
+  const patterns = [
+    /\bMONTAGE\b/gi,
+    /\bSERIES\s+OF\s+SHOTS\b/gi,
+    /\bQUICK\s+CUTS?\b/gi,
+  ];
+
+  const found: string[] = [];
+  for (const pattern of patterns) {
+    const matches = content.match(pattern) || [];
+    found.push(...matches);
+  }
+  return found;
+}
+
+/**
+ * Calculate interior/exterior ratio
+ */
+function calculateInteriorRatio(content: string): {
+  interiors: number;
+  exteriors: number;
+  ratio: number;
+} {
+  const intMatches = content.match(/^\s*INT\./gim) || [];
+  const extMatches = content.match(/^\s*EXT\./gim) || [];
+  const total = intMatches.length + extMatches.length;
+  return {
+    interiors: intMatches.length,
+    exteriors: extMatches.length,
+    ratio: total > 0 ? intMatches.length / total : 0,
+  };
+}
+
+/**
+ * Detect generic dialogue responses
+ */
+function detectGenericResponses(content: string): string[] {
+  const patterns = [
+    /^\s*Yeah\.?\s*$/gim,
+    /^\s*No\.?\s*$/gim,
+    /^\s*Okay\.?\s*$/gim,
+    /^\s*Sure\.?\s*$/gim,
+    /^\s*Right\.?\s*$/gim,
+    /^\s*Fine\.?\s*$/gim,
+    /^\s*What\?\s*$/gim,
+    /^\s*Really\?\s*$/gim,
+  ];
+
+  const found: string[] = [];
+  for (const pattern of patterns) {
+    const matches = content.match(pattern) || [];
+    found.push(...matches.map(m => m.trim()));
+  }
+  return found;
+}
+
+/**
+ * Detect feeling word declarations (should be displaced to objects)
+ */
+function detectFeelingWords(content: string): string[] {
+  const feelingPatterns = [
+    /\bI('m| am) (so )?(sad|happy|scared|afraid|angry|lonely|anxious|worried)\b/gi,
+    /\bI (feel|felt) (so )?(sad|happy|scared|afraid|angry|lonely|anxious|worried)\b/gi,
+    /\bI (love|hate|miss|fear) (you|her|him|them)\b/gi,
+  ];
+
+  const found: string[] = [];
+  for (const pattern of feelingPatterns) {
+    const matches = content.match(pattern) || [];
+    found.push(...matches);
+  }
+  return found;
+}
+
+/**
+ * Detect direct question-answer pairs (should be deflected)
+ */
+function detectDirectAnswers(content: string): number {
+  // Simple heuristic: count questions followed immediately by direct answers
+  const lines = content.split('\n').map(l => l.trim()).filter(l => l);
+  let directAnswers = 0;
+
+  for (let i = 0; i < lines.length - 1; i++) {
+    const line = lines[i];
+    const nextLine = lines[i + 1];
+
+    // If current line is a question
+    if (line.endsWith('?')) {
+      // Check if next non-empty, non-parenthetical line starts with direct answer
+      if (/^(Yes|No|Yeah|Okay|Sure|I did|I was|I am|It's|It is|Because|That's)/i.test(nextLine)) {
+        directAnswers++;
+      }
+    }
+  }
+
+  return directAnswers;
+}
+
+/**
  * Detect banned clichés and metaphors using regex
  */
 function detectBannedPatterns(content: string): string[] {
@@ -156,6 +278,14 @@ export async function reviewScreenplaySequence(
   // Detect banned clichés and metaphors
   const bannedPatterns = detectBannedPatterns(sequenceContent);
 
+  // Hollywood compliance detections (Phase 4)
+  const timeJumps = detectTimeJumps(sequenceContent);
+  const montages = detectMontages(sequenceContent);
+  const locationRatio = calculateInteriorRatio(sequenceContent);
+  const genericResponses = detectGenericResponses(sequenceContent);
+  const feelingWords = detectFeelingWords(sequenceContent);
+  const directAnswers = detectDirectAnswers(sequenceContent);
+
   // Build issues section
   let issuesSection = '';
 
@@ -178,6 +308,31 @@ ${bannedActions.length > 0 ? `Banned action starts: ${bannedActions.join(', ')}`
 
   if (bannedPatterns.length > 0) {
     issuesSection += `\n\n=== CLICHÉS/METAPHORS TO REPLACE ===\n${bannedPatterns.join('\n')}`;
+  }
+
+  // Hollywood compliance issues (Phase 4)
+  if (timeJumps.length > 0) {
+    issuesSection += `\n\n=== TIME JUMPS TO ELIMINATE ===\nFound: ${timeJumps.join(', ')}\nREWRITE to show time passage through changed details, not title cards.`;
+  }
+
+  if (montages.length > 0) {
+    issuesSection += `\n\n=== MONTAGES TO EXPAND ===\nFound: ${montages.join(', ')}\nEXPAND each into 2-3 actual dramatic scenes. Dramatize, don't summarize.`;
+  }
+
+  if (locationRatio.ratio > 0.80) {
+    issuesSection += `\n\n=== TOO MANY INTERIORS (${Math.round(locationRatio.ratio * 100)}%) ===\nAdd 2+ exterior scenes. Move conversations outside when possible. This looks like TV, not film.`;
+  }
+
+  if (genericResponses.length > 5) {
+    issuesSection += `\n\n=== GENERIC DIALOGUE DETECTED (${genericResponses.length} instances) ===\nExamples: ${genericResponses.slice(0, 5).join(', ')}\nReplace ALL with character-specific alternatives. No "Yeah", "No", "Okay".`;
+  }
+
+  if (feelingWords.length > 0) {
+    issuesSection += `\n\n=== FEELING DECLARATIONS TO DISPLACE ===\nFound: ${feelingWords.slice(0, 5).join(', ')}\nREPLACE with physical actions on OBJECTS. Characters show emotion, they don't declare it.`;
+  }
+
+  if (directAnswers > 3) {
+    issuesSection += `\n\n=== TOO MANY DIRECT ANSWERS (${directAnswers} found) ===\nCharacters DEFLECT questions in the first 1-2 lines. Questions get ignored, answered with non-sequiturs, or redirected.`;
   }
 
   // Calculate current word count - if already short, don't allow cutting
@@ -254,6 +409,44 @@ ${issuesSection}
     - GOOD: "She turns as the water bites, but she doesn't flinch."
     - Check pronoun starts: "She... She... She..." = REWRITE with varied subjects
     - Apply Gary Provost principle: writing should BREATHE, not tap like a metronome
+
+11. TIME JUMP ELIMINATION (HOLLYWOOD COMPLIANCE)
+    - Remove any "X WEEKS/MONTHS LATER" title cards
+    - REWRITE to show time passage through changed physical details:
+      * Different clothes, hair length, seasonal markers
+      * Reference to elapsed time in dialogue ("Since the hearing...")
+    - If time MUST pass, show it through a character's changed circumstances
+
+12. MONTAGE EXPANSION
+    - If ANY montage detected, EXPAND into 2-3 actual scenes
+    - Each moment in the montage becomes its own mini-scene
+    - Dramatize the process instead of summarizing it
+    - MONTAGES ARE LAZY WRITING. Delete the word entirely.
+
+13. INTERIOR ESCAPE (CINEMATIC REQUIREMENT)
+    - If sequence is 80%+ interiors, ADD 2 exterior scenes
+    - Move conversations outside when possible (walking, cars, rooftops)
+    - Interiors = TV. Exteriors = CINEMA. Make it look expensive.
+
+14. GENERIC DIALOGUE UPGRADE
+    - Replace ALL single-word responses with character-specific alternatives:
+      * "Yeah" → "If you say so" / "Guess that works" / "Sure, why not"
+      * "No" → "Not a chance" / "Forget it" / "Over my dead body"
+      * "Okay" → "Fine" / "Whatever you want" / "If that's what you need"
+    - Every response must reveal CHARACTER, not just information
+
+15. FEELING DISPLACEMENT
+    - Characters NEVER say how they feel directly
+    - BAD: "I'm scared." / "I miss her."
+    - GOOD: He opens the fridge. Her yogurt is still there. He closes the fridge.
+    - Replace feeling declarations with OBJECT INTERACTIONS that reveal the emotion
+
+16. DIALOGUE DEFLECTION
+    - When a question is asked, the answer should NOT come directly
+    - First 1-2 responses should AVOID the question (deflect, redirect, non-sequitur)
+    - BAD: "Where were you?" → "I was at the store."
+    - GOOD: "Where were you?" → "The milk's expired again."
+    - Humans protect themselves. They don't share information freely.
 
 === OUTPUT RULES ===
 - Return ONLY the polished screenplay sequence
