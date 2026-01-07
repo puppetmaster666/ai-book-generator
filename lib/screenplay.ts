@@ -495,27 +495,32 @@ export const SCREENPLAY_ON_THE_NOSE_PATTERNS: RegExp[] = [
  * Object-level tic tracking - Props that get overused across the ENTIRE screenplay
  * Unlike character tics (per-sequence), these are tracked GLOBALLY
  * Max values are for the ENTIRE screenplay, not per sequence
+ *
+ * IMPORTANT: Patterns must be comprehensive to catch ALL forms including:
+ * - Noun forms (the watch, a gun)
+ * - Verb forms (watches, watching, watched)
+ * - Action phrases (checks watch, grips gun)
  */
 export const SCREENPLAY_OBJECT_TICS: Array<{
   name: string;
   pattern: RegExp;
   maxPerScreenplay: number;
 }> = [
-  // Watch obsession (the "Second Breath" problem - 25+ mentions)
-  { name: 'watch_check', pattern: /\b(check(s|ed|ing)?|glance(s|d)?( at)?|look(s|ed|ing)?( at)?)\s+(his|her|their)\s+(watch|wristwatch)/gi, maxPerScreenplay: 4 },
-  { name: 'watch_mention', pattern: /\b(watch|wristwatch)\b(?!\s*(tower|man|woman|dog|out|over|your|my|the\s+movie))/gi, maxPerScreenplay: 8 },
-  // Gun/weapon fixation
-  { name: 'gun_check', pattern: /\b(check(s|ed|ing)?|touch(es|ed|ing)?|grip(s|ped|ping)?)\s+(his|her|their)\s+(gun|pistol|revolver|weapon|piece)/gi, maxPerScreenplay: 5 },
-  { name: 'gun_mention', pattern: /\b(gun|pistol|revolver|piece|weapon|firearm)\b/gi, maxPerScreenplay: 15 },
-  // Cigarette/smoking
-  { name: 'cigarette_action', pattern: /\b(light(s|ed|ing)?|smoke(s|d|ing)?|stub(s|bed|bing)?( out)?|flick(s|ed|ing)?)\s+(a\s+)?(his|her|their\s+)?(cigarette|cig|smoke|butt)/gi, maxPerScreenplay: 6 },
-  { name: 'cigarette_mention', pattern: /\b(cigarette|cig|smoke|ashtray|butt|nicotine)\b/gi, maxPerScreenplay: 12 },
-  // Phone/device
-  { name: 'phone_check', pattern: /\b(check(s|ed|ing)?|glance(s|d)?( at)?)\s+(his|her|their)\s+(phone|cell|mobile)/gi, maxPerScreenplay: 5 },
-  // Photo/picture obsession
-  { name: 'photo_stare', pattern: /\b(stare(s|d)?|look(s|ed|ing)?|gaze(s|d)?)\s+(at\s+)?(a\s+)?(the\s+)?(old\s+)?(photo|photograph|picture)/gi, maxPerScreenplay: 3 },
-  // Ring/jewelry fidget
-  { name: 'ring_fidget', pattern: /\b(twist(s|ed|ing)?|spin(s|ning)?|touch(es|ed|ing)?|fidget(s|ed|ing)?( with)?)\s+(his|her|their)\s+(ring|wedding\s+ring|band)/gi, maxPerScreenplay: 3 },
+  // Watch obsession (the "Second Breath" problem - 34 mentions)
+  // SINGULAR only - does NOT match "watches" because that's almost always a verb
+  // Excludes verb uses like "watch out", "watch over", "watch him"
+  // Combined into single pattern with strict limit (aligned with NA-AST scoring)
+  { name: 'watch', pattern: /\b(watch|wristwatch)\b(?!\s*(tower|man|woman|dog|out|over|your|my|the\s+movie|him|her|them|it|this|that|me|you|carefully|closely|for|as|while|what))/gi, maxPerScreenplay: 4 },
+  // Gun/weapon fixation - combined pattern with strict limit
+  { name: 'gun', pattern: /\b(gun(s)?|pistol(s)?|revolver(s)?|weapon(s)?|firearm(s)?)\b/gi, maxPerScreenplay: 6 },
+  // Cigarette/smoking - combined pattern
+  { name: 'cigarette', pattern: /\b(cigarette(s)?|cig(s)?|lighter(s)?|ash(es)?)\b(?!\s*(alarm|detector))/gi, maxPerScreenplay: 5 },
+  // Glasses cleaning tic
+  { name: 'glasses', pattern: /(clean|wipe|polish|adjust|push|remove)s?\s+(his|her|their)?\s*(glasses|spectacles)/gi, maxPerScreenplay: 8 },
+  // Sighing
+  { name: 'sigh', pattern: /\bsigh(s|ed|ing)?\b/gi, maxPerScreenplay: 16 },
+  // Nodding
+  { name: 'nod', pattern: /\bnod(s|ded|ding)?\b/gi, maxPerScreenplay: 24 },
 ];
 
 /**
@@ -583,16 +588,29 @@ export interface PropCooldown {
 /**
  * Prop cooldown settings with spatial-temporal enforcement
  * These track how far apart prop mentions must be
+ *
+ * IMPORTANT: Patterns must match the scoring script patterns exactly
+ * to ensure enforcement catches what scoring detects
  */
 export const SCREENPLAY_PROP_COOLDOWNS: PropCooldown[] = [
-  { name: 'watch', pattern: /\b(watch|wristwatch|timepiece)\b(?!\s*(tower|man|woman|dog|out|over|your|my|the\s+movie))/gi, maxGlobal: 4, cooldownWords: 2000 },
-  { name: 'gun', pattern: /\b(gun|pistol|revolver|weapon|firearm|piece)\b/gi, maxGlobal: 6, cooldownWords: 1500 },
-  { name: 'cigarette', pattern: /\b(cigarette|cig|smoke|lighter|ash|butt)\b/gi, maxGlobal: 5, cooldownWords: 1500 },
-  { name: 'phone', pattern: /\b(phone|cell|mobile|smartphone)\b/gi, maxGlobal: 6, cooldownWords: 1200 },
-  { name: 'photo', pattern: /\b(photo|photograph|picture|snapshot)\b/gi, maxGlobal: 3, cooldownWords: 2500 },
-  { name: 'ring', pattern: /\b(ring|wedding\s+ring|wedding\s+band|engagement\s+ring)\b/gi, maxGlobal: 3, cooldownWords: 2500 },
-  { name: 'keys', pattern: /\b(keys|car\s+keys|house\s+keys)\b/gi, maxGlobal: 4, cooldownWords: 2000 },
-  { name: 'glasses', pattern: /\b(glasses|spectacles|reading\s+glasses)\b/gi, maxGlobal: 4, cooldownWords: 1800 },
+  // Watch - SINGULAR only, excludes verb uses
+  // Does NOT match "watches" because that's almost always a verb
+  // maxGlobal aligned with SCREENPLAY_OBJECT_TICS and NA-AST scoring
+  { name: 'watch', pattern: /\b(watch|wristwatch|timepiece)\b(?!\s*(tower|man|woman|dog|out|over|your|my|the\s+movie|him|her|them|it|this|that|me|you|carefully|closely|for|as|while|what))/gi, maxGlobal: 4, cooldownWords: 2000 },
+  // Gun and weapon synonyms - aligned with scoring
+  { name: 'gun', pattern: /\b(gun(s)?|pistol(s)?|revolver(s)?|weapon(s)?|firearm(s)?)\b/gi, maxGlobal: 6, cooldownWords: 1500 },
+  // Cigarette and smoking props - aligned with scoring
+  { name: 'cigarette', pattern: /\b(cigarette(s)?|cig(s)?|lighter(s)?|ash(es)?)\b(?!\s*(alarm|detector|screen|signal))/gi, maxGlobal: 5, cooldownWords: 1500 },
+  // Phone and mobile devices
+  { name: 'phone', pattern: /\b(phone(s)?|cell(s)?|mobile(s)?|smartphone(s)?)\b/gi, maxGlobal: 6, cooldownWords: 1200 },
+  // Photo and picture props
+  { name: 'photo', pattern: /\b(photo(s)?|photograph(s)?|picture(s)?|snapshot(s)?)\b/gi, maxGlobal: 3, cooldownWords: 2500 },
+  // Ring and jewelry
+  { name: 'ring', pattern: /\b(ring(s)?|wedding\s+ring|wedding\s+band|engagement\s+ring)\b(?!\s*(tone|finger|around|leader))/gi, maxGlobal: 3, cooldownWords: 2500 },
+  // Keys
+  { name: 'keys', pattern: /\b(key(s)?|car\s+key(s)?|house\s+key(s)?)\b(?!\s*(to|point|moment|element|factor))/gi, maxGlobal: 4, cooldownWords: 2000 },
+  // Glasses/spectacles - aligned with OBJECT_TICS
+  { name: 'glasses', pattern: /\b(glasses|spectacles|reading\s+glasses)\b/gi, maxGlobal: 8, cooldownWords: 1800 },
 ];
 
 /**

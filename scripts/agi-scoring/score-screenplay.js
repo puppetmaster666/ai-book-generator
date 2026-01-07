@@ -101,14 +101,21 @@ const BANGER_PATTERNS = [
   /One (man|woman|person) must/gi,
 ];
 
-// Tic patterns
+// Tic patterns - MUST MATCH enforcement patterns in lib/screenplay.ts
+// Note: watch pattern ONLY matches singular "watch" (timepiece), not "watches" (verb)
+// This is because "watches" in screenplays is almost always a verb meaning "to observe"
 const TIC_PATTERNS = [
   { name: 'glasses', pattern: /(clean|wipe|polish|adjust|push|remove)s?\s+(his|her|their)?\s*(glasses|spectacles)/gi },
-  { name: 'watch', pattern: /\b(watch|wristwatch|timepiece)\b(?!\s*(tower|man|woman|out|over))/gi },
+  // Watch as a PROP (timepiece) - SINGULAR only
+  // Does NOT match "watches" because that's almost always a verb in screenplays
+  // Excludes: watch out, watch over, watch your, etc.
+  { name: 'watch', pattern: /\bwatch\b(?!\s*(tower|man|woman|dog|out|over|your|my|the\s+movie|him|her|them|it|this|that|me|you|carefully|closely|for|as|while|what))/gi },
   { name: 'sigh', pattern: /\bsigh(s|ed|ing)?\b/gi },
   { name: 'nod', pattern: /\bnod(s|ded|ding)?\b/gi },
-  { name: 'cigarette', pattern: /\b(cigarette|cig|smoke|lighter|ash)\b/gi },
-  { name: 'gun', pattern: /\b(gun|pistol|revolver|weapon|firearm)\b/gi },
+  // Cigarette - excludes smoke alarm/detector
+  { name: 'cigarette', pattern: /\b(cigarette(s)?|cig(s)?|lighter(s)?|ash(es)?)\b(?!\s*(alarm|detector))/gi },
+  // Gun and weapon synonyms
+  { name: 'gun', pattern: /\b(gun(s)?|pistol(s)?|revolver(s)?|weapon(s)?|firearm(s)?)\b/gi },
   { name: 'jaw_clench', pattern: /clench(es|ing|ed)?\s+(his|her|their)\s+jaw/gi },
   { name: 'fist_ball', pattern: /ball(s|ing|ed)?\s+(his|her|their)\s+fist/gi },
   { name: 'throat_clear', pattern: /clear(s|ing|ed)?\s+(his|her|their)\s+throat/gi },
@@ -271,13 +278,17 @@ function extractDialogue(content) {
 
 /**
  * Check prop clustering (cooldown violations)
+ * Patterns MUST MATCH enforcement patterns in lib/screenplay.ts
  */
 function checkPropClustering(content) {
   const violations = [];
   const propPatterns = [
-    { name: 'watch', pattern: /\b(watch|wristwatch|timepiece)\b/gi, cooldown: 2000 },
-    { name: 'gun', pattern: /\b(gun|pistol|revolver|weapon)\b/gi, cooldown: 1500 },
-    { name: 'phone', pattern: /\b(phone|cell|mobile)\b/gi, cooldown: 1200 },
+    // Watch as PROP (timepiece) - SINGULAR only, not "watches" (verb)
+    { name: 'watch', pattern: /\bwatch\b(?!\s*(tower|man|woman|dog|out|over|your|my|the\s+movie|him|her|them|it|this|that|me|you|carefully|closely|for|as|while|what))/gi, cooldown: 2000 },
+    // Gun and weapon synonyms
+    { name: 'gun', pattern: /\b(gun(s)?|pistol(s)?|revolver(s)?|weapon(s)?|firearm(s)?)\b/gi, cooldown: 1500 },
+    // Phone and mobile devices
+    { name: 'phone', pattern: /\b(phone(s)?|cell(s)?|mobile(s)?|smartphone(s)?)\b/gi, cooldown: 1200 },
   ];
 
   const words = content.split(/\s+/);
