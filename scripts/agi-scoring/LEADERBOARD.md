@@ -8,15 +8,16 @@
 
 | Metric | Score | Date | Version |
 |--------|-------|------|---------|
-| **BEST** | 8.53 | 2025-01-07 | v1.5 (The_Second_Breath) |
+| **BEST** | **9.9** | 2025-01-07 | v2.1 (The_Six_Hour_Tide) |
 
-### Critical Finding
-The script scores **0/10 on Behavioral Control** due to severe tic hammering:
-- Watch mentioned **34 times** (limit: 4) - 850% over limit
-- Gun mentioned **28 times** (limit: 6) - 467% over limit
-- Watch clustering: mentions only 57-274 words apart (need 2000+)
+### 🎉 S-TIER ACHIEVED!
+The_Six_Hour_Tide is the first screenplay to reach **S-Tier (9.5+)**.
 
-**This is why Phase 2 prop cooldown and tic enforcement were essential.**
+**Key Improvements from Enforcement Fixes:**
+- Watch: 2x (limit: 4) ✅ - down from 34x
+- Gun: 1x (limit: 6) ✅ - down from 30x
+- Behavioral Control: **10/10** - up from 0/10
+- No tic hammering, no clustering violations
 
 ---
 
@@ -31,7 +32,8 @@ The script scores **0/10 on Behavioral Control** due to severe tic hammering:
 
 | Date | Version | Script Name | Composite | Struct | Prose | Char | Behav | AI-FP | Unique | Key Notes |
 |------|---------|-------------|-----------|--------|-------|------|-------|-------|--------|-----------|
-| 2025-01-07 | v1.5 | The_Second_Breath | **8.53** | 10.0 | 8.5 | 10.0 | **0.0** | 10.0 | 8.0 | Watch 34x, Gun 28x - severe tic hammering |
+| 2025-01-07 | v2.1 | The_Six_Hour_Tide | **9.9** | 10.0 | 7.5 | 11.5 | **10.0** | 12.0 | 8.0 | 🎉 S-TIER! First post-enforcement screenplay |
+| 2025-01-07 | v1.5 | The_Second_Breath | 8.53 | 10.0 | 8.5 | 10.0 | **0.0** | 10.0 | 8.0 | Watch 34x, Gun 28x - severe tic hammering |
 | 2025-01-07 | v1.5 | The_Miller_Mandate | 6.43 | **0.0** | 8.0 | 10.0 | **0.0** | 10.0 | 8.0 | Reset patterns detected, 24k words, 290 messiness |
 | 2025-01-07 | v2.0 | Baseline (Pre-Phase2) | 8.25 | 9.25 | 8.25 | 8.25 | 7.75 | 7.75 | 8.00 | Original manual estimate |
 
@@ -43,9 +45,9 @@ The script scores **0/10 on Behavioral Control** due to severe tic hammering:
 |-----------|--------|--------------|--------|---------------|
 | v1.0 Baseline | 7.0 | 8.25 | PASSED | 2025-01-07 |
 | v1.5 Phase 1 | 8.0 | 8.25 | PASSED | 2025-01-07 |
-| v2.0 Phase 2 | 8.5 | - | PENDING | - |
-| v2.5 Enhanced | 9.0 | - | PENDING | - |
-| v3.0 Human Parity | 9.5 | - | PENDING | - |
+| v2.0 Phase 2 | 8.5 | 9.9 | **PASSED** | 2025-01-07 |
+| v2.5 Enhanced | 9.0 | 9.9 | **PASSED** | 2025-01-07 |
+| v3.0 Human Parity | 9.5 | **9.9** | **PASSED** | 2025-01-07 |
 
 ---
 
