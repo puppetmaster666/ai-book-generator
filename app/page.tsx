@@ -11,7 +11,6 @@ import TrafficWarning from '@/components/TrafficWarning';
 import Header from '@/components/Header';
 import Testimonials from '@/components/Testimonials';
 import FAQ from '@/components/FAQ';
-import SamplesSection from '@/components/SamplesSection';
 import ScreenplayAnimation from '@/components/ScreenplayAnimation';
 import FeaturedShowcase from '@/components/FeaturedShowcase';
 
@@ -791,8 +790,6 @@ export default function Home() {
       {/* Testimonials */}
       <Testimonials />
 
-      {/* Sample Downloads */}
-      <SamplesSection />
 
       {/* Showcase */}
       <section className="py-24 px-6 bg-neutral-900">
