@@ -32,6 +32,7 @@ The script scores **0/10 on Behavioral Control** due to severe tic hammering:
 | Date | Version | Script Name | Composite | Struct | Prose | Char | Behav | AI-FP | Unique | Key Notes |
 |------|---------|-------------|-----------|--------|-------|------|-------|-------|--------|-----------|
 | 2025-01-07 | v1.5 | The_Second_Breath | **8.53** | 10.0 | 8.5 | 10.0 | **0.0** | 10.0 | 8.0 | Watch 34x, Gun 28x - severe tic hammering |
+| 2025-01-07 | v1.5 | The_Miller_Mandate | 6.43 | **0.0** | 8.0 | 10.0 | **0.0** | 10.0 | 8.0 | Reset patterns detected, 24k words, 290 messiness |
 | 2025-01-07 | v2.0 | Baseline (Pre-Phase2) | 8.25 | 9.25 | 8.25 | 8.25 | 7.75 | 7.75 | 8.00 | Original manual estimate |
 
 ---
