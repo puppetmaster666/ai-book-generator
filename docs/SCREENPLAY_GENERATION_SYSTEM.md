@@ -2,20 +2,31 @@
 
 ## Overview
 
-The screenplay generation system creates feature-length screenplays (90-120 pages) using the **Save the Cat** beat sheet structure. Generation occurs in **8 sequences**, each targeting 14-18 pages (~3500-4500 words).
+The screenplay generation system creates screenplays of **variable lengths** using the **Save the Cat** beat sheet structure. Generation supports **5 format presets**:
+
+| Preset | Sequences | Target Pages | Use Case |
+|--------|-----------|--------------|----------|
+| `tv_pilot_comedy` | 3 | 30 | TV Comedy Pilot |
+| `short_screenplay` | 4 | 40 | Short Film |
+| `tv_pilot_drama` | 5 | 60 | TV Drama Pilot |
+| `screenplay` | 8 | 100 | Feature Film (default) |
+| `epic_screenplay` | 10 | 135 | Epic Feature |
+
+Each sequence targets a dynamically calculated page/word count based on the format.
 
 ---
 
 ## Table of Contents
 
 1. [Generation Flow](#generation-flow)
-2. [Beat Sheet & Structure](#beat-sheet--structure)
-3. [Character System](#character-system)
-4. [Continuity System](#continuity-system)
-5. [Humanization Systems](#humanization-systems)
-6. [Banned Patterns & Phrases](#banned-patterns--phrases)
-7. [Post-Processing Pipeline](#post-processing-pipeline)
-8. [Known Issues](#known-issues)
+2. [Format Presets & Dynamic Mapping](#format-presets--dynamic-mapping)
+3. [Beat Sheet & Structure](#beat-sheet--structure)
+4. [Character System](#character-system)
+5. [Continuity System](#continuity-system)
+6. [Humanization Systems](#humanization-systems)
+7. [Banned Patterns & Phrases](#banned-patterns--phrases)
+8. [Post-Processing Pipeline](#post-processing-pipeline)
+9. [Known Issues](#known-issues)
 
 ---
 
@@ -23,23 +34,38 @@ The screenplay generation system creates feature-length screenplays (90-120 page
 
 ### Step 1: Outline Generation (`lib/generation/screenplay/outline.ts`)
 
-When a screenplay book is created, the system first generates:
+When a screenplay book is created, the system:
 
-1. **Beat Sheet** - 15 Save the Cat beats
-2. **Character Profiles** - 3-5 characters with psychology
-3. **Subplots** - 1-2 secondary storylines
+1. **Reads Preset Configuration** from `lib/constants.ts`
+2. **Generates Beat Sheet** - 15 Save the Cat beats
+3. **Generates Character Profiles** - 3-5 characters with psychology
+4. **Creates Dynamic Sequence Mapping** - based on format
+5. **Initializes ScreenplayContext** - with target pages
 
 **API Route:** `app/api/books/[id]/generate/route.ts`
 
 ```
-User Input (premise, beginning, middle, ending)
-    ↓
+User Input (premise, beginning, middle, ending, preset)
+    |
+    v
+Read preset config (sequences, targetPages)
+    |
+    v
 generateScreenplayOutline()
-    ↓
+    |
+    v
 Returns: BeatSheet + CharacterProfile[] + Subplot[]
-    ↓
-Creates 8 chapter placeholders (sequences)
-    ↓
+    |
+    v
+generateSequenceToBeats(totalSequences, targetPages)
+    |
+    v
+Creates N chapter placeholders with dynamic targetWords
+    |
+    v
+Store outline with totalSequences + targetPages
+    |
+    v
 Initializes ScreenplayContext
 ```
 
@@ -47,21 +73,161 @@ Initializes ScreenplayContext
 
 **API Route:** `app/api/books/[id]/generate-next/route.ts`
 
-Each sequence is generated individually with rolling context:
+Each sequence is generated with:
+- Dynamic `totalSequences` and `targetPages` from outline
+- Rolling context from previous sequences
+- Format-aware length requirements
 
 ```
-For each sequence (1-8):
-    ↓
-generateScreenplaySequence()
-    ↓
+For each sequence (1 to totalSequences):
+    |
+    v
+Extract totalSequences, targetPages from outline
+    |
+    v
+getSequenceInfo(sequenceNumber, totalSequences, targetPages)
+    |
+    v
+generateScreenplaySequence({
+  ...
+  totalSequences,
+  targetPages,
+})
+    |
+    v
 Post-processing checks:
+  - runScreenplayPostProcessing() [Code Fortress]
   - detectSequenceLoop()
   - flagExcessiveTics()
   - validateSequenceContinuity()
-    ↓
-summarizeScreenplaySequence()
-    ↓
+    |
+    v
+Hard Reject Loop (max 2 attempts):
+  - Clinical vocabulary detection
+  - On-the-nose dialogue detection
+  - Sentence variance check
+    |
+    v
+Page Count Enforcement:
+  - If < MIN_PAGES_PER_SEQUENCE (10), regenerate
+    |
+    v
+summarizeScreenplaySequence({
+  totalSequences,
+  targetPages,
+})
+    |
+    v
 Update ScreenplayContext for next sequence
+```
+
+---
+
+## Format Presets & Dynamic Mapping
+
+### Location: `lib/screenplay.ts`
+
+### FORMAT_BEAT_DISTRIBUTIONS
+
+Maps sequence counts to beat distributions:
+
+```typescript
+export const FORMAT_BEAT_DISTRIBUTIONS: Record<number, { beats: string[]; actRatio: number[] }[]> = {
+  // 3 sequences - TV Comedy (30 pages, ~10 pages each)
+  3: [
+    { beats: ['openingImage', 'themeStated', 'setup', 'catalyst'], actRatio: [1] },
+    { beats: ['debate', 'breakIntoTwo', 'bStory', 'funAndGames', 'midpoint', 'badGuysCloseIn'], actRatio: [2] },
+    { beats: ['allIsLost', 'darkNightOfSoul', 'breakIntoThree', 'finale', 'finalImage'], actRatio: [3] },
+  ],
+
+  // 4 sequences - Short Film (40 pages, ~10 pages each)
+  4: [
+    { beats: ['openingImage', 'themeStated', 'setup', 'catalyst'], actRatio: [1] },
+    { beats: ['debate', 'breakIntoTwo', 'bStory', 'funAndGames'], actRatio: [2] },
+    { beats: ['midpoint', 'badGuysCloseIn', 'allIsLost', 'darkNightOfSoul'], actRatio: [2] },
+    { beats: ['breakIntoThree', 'finale', 'finalImage'], actRatio: [3] },
+  ],
+
+  // 5 sequences - TV Drama (50-60 pages, ~12 pages each)
+  5: [
+    { beats: ['openingImage', 'themeStated', 'setup', 'catalyst'], actRatio: [1] },
+    { beats: ['debate', 'breakIntoTwo', 'bStory'], actRatio: [2] },
+    { beats: ['funAndGames', 'midpoint', 'badGuysCloseIn'], actRatio: [2] },
+    { beats: ['allIsLost', 'darkNightOfSoul', 'breakIntoThree'], actRatio: [2, 3] },
+    { beats: ['finale', 'finalImage'], actRatio: [3] },
+  ],
+
+  // 8 sequences - Feature Film (100 pages) - DEFAULT
+  8: [
+    { beats: ['openingImage', 'themeStated', 'setup', 'catalyst'], actRatio: [1] },
+    { beats: ['debate', 'breakIntoTwo'], actRatio: [1] },
+    { beats: ['bStory', 'funAndGames'], actRatio: [2] },
+    { beats: ['funAndGames', 'midpoint'], actRatio: [2] },
+    { beats: ['badGuysCloseIn'], actRatio: [2] },
+    { beats: ['allIsLost', 'darkNightOfSoul'], actRatio: [2] },
+    { beats: ['breakIntoThree', 'finale'], actRatio: [3] },
+    { beats: ['finale', 'finalImage'], actRatio: [3] },
+  ],
+
+  // 10 sequences - Epic Film (135 pages, ~13-14 pages each)
+  10: [
+    { beats: ['openingImage', 'themeStated'], actRatio: [1] },
+    { beats: ['setup', 'catalyst'], actRatio: [1] },
+    { beats: ['debate', 'breakIntoTwo'], actRatio: [1] },
+    { beats: ['bStory'], actRatio: [2] },
+    { beats: ['funAndGames'], actRatio: [2] },
+    { beats: ['midpoint'], actRatio: [2] },
+    { beats: ['badGuysCloseIn'], actRatio: [2] },
+    { beats: ['allIsLost', 'darkNightOfSoul'], actRatio: [2] },
+    { beats: ['breakIntoThree', 'finale'], actRatio: [3] },
+    { beats: ['finalImage'], actRatio: [3] },
+  ],
+};
+```
+
+### Dynamic Page/Word Calculation
+
+```typescript
+export function generateSequenceToBeats(
+  totalSequences: number,
+  targetPages: number
+): Record<number, { beats: string[]; pageRange: string; act: number; targetWords: number }> {
+  const distribution = FORMAT_BEAT_DISTRIBUTIONS[totalSequences];
+  const pagesPerSequence = Math.floor(targetPages / totalSequences);
+  const wordsPerPage = 250; // Screenplay standard
+
+  const result: Record<number, {...}> = {};
+
+  let currentPage = 1;
+  for (let i = 0; i < distribution.length; i++) {
+    const seqInfo = distribution[i];
+    const endPage = Math.min(currentPage + pagesPerSequence - 1, targetPages);
+
+    result[i + 1] = {
+      beats: seqInfo.beats,
+      pageRange: `${currentPage}-${endPage}`,
+      act: seqInfo.actRatio[0],
+      targetWords: pagesPerSequence * wordsPerPage,
+    };
+
+    currentPage = endPage + 1;
+  }
+
+  return result;
+}
+```
+
+### getSequenceInfo Helper
+
+```typescript
+export function getSequenceInfo(
+  sequenceNumber: number,
+  totalSequences: number,
+  targetPages: number
+): { beats: string[]; pageRange: string; act: number; targetWords: number } | null {
+  const mapping = generateSequenceToBeats(totalSequences, targetPages);
+  return mapping[sequenceNumber] || null;
+}
 ```
 
 ---
@@ -83,24 +249,25 @@ Update ScreenplayContext for next sequence
 | 9 | Midpoint | 55 | False victory or false defeat |
 | 10 | Bad Guys Close In | 55-75 | External/internal pressure mounts |
 | 11 | All Is Lost | 75 | Lowest point, "whiff of death" |
-| 12 | Dark Night of the Soul | 75-85 | Protagonist reflects, nearly gives up |
+| 12 | Dark Night of Soul | 75-85 | Protagonist reflects, nearly gives up |
 | 13 | Break into Three | 85 | Solution discovered |
 | 14 | Finale | 85-110 | Climax, protagonist uses lessons learned |
 | 15 | Final Image | 110 | Mirror of opening, shows transformation |
 
-### Sequence-to-Beat Mapping
+### Dynamic Sequence-to-Beat Mapping
+
+The mapping is now **dynamically generated** based on format preset. Example for 8-sequence feature film (100 pages):
 
 ```typescript
-SEQUENCE_TO_BEATS = {
-  1: { act: 1, pageRange: '1-12',   beats: ['openingImage', 'themeStated', 'setup', 'catalyst'] },
-  2: { act: 1, pageRange: '12-25',  beats: ['debate', 'breakIntoTwo'] },
-  3: { act: 2, pageRange: '25-40',  beats: ['bStory', 'funAndGames'] },
-  4: { act: 2, pageRange: '40-55',  beats: ['funAndGames', 'midpoint'] },
-  5: { act: 2, pageRange: '55-70',  beats: ['badGuysCloseIn'] },
-  6: { act: 2, pageRange: '70-85',  beats: ['allIsLost', 'darkNightOfTheSoul'] },
-  7: { act: 3, pageRange: '85-100', beats: ['breakIntoThree', 'finale'] },
-  8: { act: 3, pageRange: '100-110', beats: ['finale', 'finalImage'] }
-}
+// Generated by getSequenceInfo(n, 8, 100)
+Sequence 1: { beats: ['openingImage', 'themeStated', 'setup', 'catalyst'], pageRange: '1-12', act: 1, targetWords: 3125 }
+Sequence 2: { beats: ['debate', 'breakIntoTwo'], pageRange: '13-25', act: 1, targetWords: 3125 }
+Sequence 3: { beats: ['bStory', 'funAndGames'], pageRange: '26-37', act: 2, targetWords: 3125 }
+Sequence 4: { beats: ['funAndGames', 'midpoint'], pageRange: '38-50', act: 2, targetWords: 3125 }
+Sequence 5: { beats: ['badGuysCloseIn'], pageRange: '51-62', act: 2, targetWords: 3125 }
+Sequence 6: { beats: ['allIsLost', 'darkNightOfSoul'], pageRange: '63-75', act: 2, targetWords: 3125 }
+Sequence 7: { beats: ['breakIntoThree', 'finale'], pageRange: '76-87', act: 3, targetWords: 3125 }
+Sequence 8: { beats: ['finale', 'finalImage'], pageRange: '88-100', act: 3, targetWords: 3125 }
 ```
 
 ---
@@ -132,28 +299,12 @@ interface CharacterProfile {
 
 ### Dialogue Archetypes
 
-The system assigns one of four archetypes to each character to differentiate speech patterns:
-
 | Archetype | Description | Example |
 |-----------|-------------|---------|
 | **The Evader** | Deflects with humor, changes subject, never straight answers | "Is that what we're calling it now?" |
 | **The Steamroller** | Bulldozes, interrupts, dominates through volume | "No. Listen to me. NO." |
-| **The Professor** | Uses technical precision as armor, cracks under pressure | "The statistical likelihood is—" |
+| **The Professor** | Uses technical precision as armor, cracks under pressure | "The statistical likelihood is..." |
 | **The Reactor** | Short bursts, emotional, often monosyllabic | "Yeah." / "No." / "What?" |
-
-### Archetype Description in Prompts
-
-```typescript
-function getArchetypeDescription(archetype: string): string {
-  const descriptions = {
-    'The Evader': 'deflects with humor, changes subject, never straight answers',
-    'The Steamroller': 'bulldozes, interrupts, dominates through volume',
-    'The Professor': 'uses technical precision as ARMOR, but cracks under pressure. When challenged, retreats into jargon. When emotionally cornered, precision FAILS and raw human speech breaks through',
-    'The Reactor': 'short bursts, emotional, often monosyllabic',
-  };
-  return descriptions[archetype] || descriptions['The Reactor'];
-}
-```
 
 ---
 
@@ -163,83 +314,70 @@ function getArchetypeDescription(archetype: string): string {
 
 AI models tend to "forget" what happened in previous sequences and restart the story. The system uses multiple mechanisms to prevent this.
 
-### ScreenplayContext Structure
+### Dual-Layer Context System (NEW)
+
+**Location:** `lib/generation/screenplay/sequence.ts`
+
+For sequences > 1, the prompt includes:
+
+1. **Anchor Layer** (Permanent) - Never removed from context:
+   - Opening Image from Sequence 1
+   - Theme Stated from Sequence 1
+   - Setup Summary from Sequence 1
+   - Protagonist's starting state
+
+2. **Momentum Layer** (Rolling) - Last 2 sequences:
+   - Recent sequence summaries
+   - Character state changes
+   - Causal bridges
+
+### CausalBridge System (NEW)
+
+Forces THEREFORE/BUT logic instead of AND THEN:
 
 ```typescript
-interface ScreenplayContext {
-  lastSequenceSummary: string;
-  characterStates: Record<string, string>;  // "Character": "emotional/physical state"
-  plantedSetups: string[];     // Chekhov's guns
-  resolvedPayoffs: string[];   // Paid-off setups
-  sequenceSummaries: SequenceSummary[];  // All previous summaries
+interface CausalBridge {
+  triggerEvent: string;      // "Elias discovered the letter"
+  therefore: string;         // "He must confront Sarah"
+  but: string;               // "She's already left for the airport"
+  nextSequenceMustAddress: string;  // "The airport confrontation"
 }
 ```
 
-### SequenceSummary Structure
+Prompt injection:
 
-```typescript
-interface SequenceSummary {
-  sequenceNumber: number;
-  pageRange: string;
-  actNumber: number;
-  beatsCovered: string[];
-  summary: string;           // 200-word summary with SPECIFIC events
-  closedLoops: string[];     // Events that CANNOT be repeated
-  characterStates: Record<string, string>;
-  characterExits: Array<{
-    character: string;
-    howExited: string;       // "drove away in red truck"
-    lastSeenLocation: string;
-  }>;
-  plantedSetups: string[];
-  resolvedPayoffs: string[];
-}
+```
+=== CAUSAL BRIDGE FROM PREVIOUS (MANDATORY PICKUP) ===
+Human stories use THEREFORE/BUT logic. AI uses AND THEN (which causes loops).
+
+Because: ${lastSummary.causalBridge.triggerEvent}
+THEREFORE: ${lastSummary.causalBridge.therefore}
+BUT: ${lastSummary.causalBridge.but}
+THIS SEQUENCE MUST ADDRESS: ${lastSummary.causalBridge.nextSequenceMustAddress}
+
+You MUST pick up from the THEREFORE/BUT above. Do NOT invent new setup.
 ```
 
-### CONTINUITY LOCK (Prompt Section)
+### Closed Loop Format (Improved)
 
-For sequences > 1, this is injected into the generation prompt:
+```
+=== CLOSED LOOPS FORMAT (MANDATORY) ===
+Each closed loop MUST follow this template:
+"[CHARACTER] [VERB-ED] [OBJECT/PERSON] at [LOCATION]. Result: [OUTCOME]. Scene ended: [HOW]."
+
+BAD (too vague - AI will restart):
+"Elias confronts his past"
+
+GOOD (specific - AI knows this is DONE):
+"Elias punched Malik in the cabin kitchen. Result: Malik's nose bled, left through back door. Scene ended: Elias alone, washing blood off knuckles."
+```
+
+### CONTINUITY LOCK (Dynamic)
 
 ```
 === CONTINUITY LOCK (CRITICAL - PREVENTS LOOPING) ===
-This is SEQUENCE ${sequenceNumber} of 8. The story CONTINUES - do NOT restart.
-
-EVENTS THAT HAVE ALREADY HAPPENED (NO-GO ZONE - DO NOT REWRITE THESE):
-- Seq 1: [summary]
-- Seq 2: [summary]
-...
-
-RULES:
-- DO NOT reintroduce characters as if meeting them for the first time
-- DO NOT restart conversations that already happened
-- NEVER write "FADE IN:" after Sequence 1
-- NEVER write exposition that "sets up" the world - it's already established
-- Pick up AFTER the last event from the previous sequence
-
-=== CHARACTER TRUTH (IMMUTABLE - DO NOT ALTER) ===
-- NAME: [character]
-  AGE: [age] (DO NOT CHANGE)
-  ROLE: [role]
-  CURRENT STATE: [state]
-  ARCHETYPE: [archetype]
-
-These are FACTS. If a character's age or appearance changes, you have FAILED.
+This is SEQUENCE ${sequenceNumber} of ${totalSequences}. The story CONTINUES - do NOT restart.
 ```
-
-### Loop Detection Function
-
-```typescript
-function detectSequenceLoop(
-  currentContent: string,
-  previousSummaries: SequenceSummary[],
-  sequenceNumber: number
-): { isLooping: boolean; issues: string[] }
-```
-
-Checks for:
-- "FADE IN:" appearing after sequence 1
-- Reintroduction patterns ("meet", "introduce", "for the first time")
-- Scene repetition from previous sequences
 
 ---
 
@@ -247,367 +385,225 @@ Checks for:
 
 ### 1. The Screenwriter's Manifesto
 
-Injected into every sequence generation prompt:
-
-```
-=== THE SCREENWRITER'S MANIFESTO ===
-
-1. NO ON-THE-NOSE DIALOGUE
-   Characters NEVER say what they feel. If sad, they talk about weather.
-   Every line has SURFACE meaning and TRUE meaning underneath.
-
-2. SUBTEXT IS KING
-   Dialogue is a WEAPON used to hide the "SECRET" listed above.
-   What characters DON'T say matters more than what they DO say.
-
-3. VERTICAL WRITING
-   Action paragraphs: MAX 3 LINES. Then white space.
-   One image per paragraph. Fast. Punchy. Readable.
-
-4. IN MEDIA RES
-   Start MID-ACTION. DELETE any "establishing" throat-clearing.
-   Jump directly into conflict. No "Character walks in and sits down."
-
-5. SENSORY ACTION
-   Use verbs that imply SOUND or FEELING:
-   ✓ "The floorboards GROAN" / "Glass SHATTERS" / "She FLINCHES"
-   ✗ "He walks quietly" / "She enters the room"
-
-6. PHYSICAL BEATS OVER PARENTHETICALS
-   Instead of: (beat) or (pause)
-   Write: "He adjusts his tie." / "She traces the rim of her glass."
-   Allowed parentheticals: (O.S.), (V.O.), (CONT'D), (into phone)
-```
+*(Unchanged - see prompt)*
 
 ### 2. Sentence Rhythm (Anti-Staccato)
 
-```
-=== SENTENCE RHYTHM (CRITICAL - ANTI-AI) ===
-DO NOT write in metronome rhythm. Vary sentence length using the 1-2-5 rule:
-- ONE short sentence for impact (under 6 words)
-- TWO medium sentences for detail (8-15 words)
-- ONE long, flowing sentence for atmosphere (20+ words with commas, dashes, or semicolons)
-
-BAD (AI metronome):
-"The water bites. She doesn't flinch. Sinks until the slurry meets her chin."
-
-GOOD (human breath):
-"The water bites—she doesn't flinch, just sinks slowly until the grey slurry meets her chin and the cold seeps into her bones like a living thing."
-
-NEVER start three consecutive sentences with the same pronoun (She, He, It, The).
-NEVER use more than two 2-word fragments in a row.
-```
+*(Unchanged - see prompt)*
 
 ### 3. Emotional Break-Points
 
-For characters with "Professor" or "Steamroller" archetypes:
+*(Unchanged - applies to Professor/Steamroller archetypes)*
 
-```
-=== EMOTIONAL BREAK-POINTS ===
-Every "Professor" or "Steamroller" character MUST have 1-2 moments where their verbal strategy FAILS:
-- Professor losing precision: "The statistical likelihood— God, I don't know. I just don't."
-- Steamroller going quiet: "[Character] opens mouth. Closes it. Nothing comes."
-- Evader finally direct: "Fine. Yes. I'm terrified. Happy now?"
+### 4. Protagonist Agency (Dynamic)
 
-This is MANDATORY for emotional authenticity. Consistent verbal strategy = robot.
-```
-
-### 4. Protagonist Agency (Sequences 7-8)
-
-```
-=== PROTAGONIST AGENCY (SEQUENCES 7-8 ONLY) ===
-The protagonist MUST take ACTIVE decisive action in the climax:
-- NOT: "Elias watches as Vance leaves" (passive)
-- YES: "Elias grabs Vance's arm. ELIAS: You don't get to walk away." (active)
-
-The protagonist's final choice must CAUSE the resolution, not witness it.
-
-=== SPATIAL COMPLETENESS ===
-Every character exit must be SHOWN:
-- HOW they leave (door, window, car, on foot)
-- Protagonist's REACTION to departure
-- NO "magic disappearances" - if character is gone, we see them go
-
-BAD: "Vance is gone. The cabin is empty."
-GOOD: "The truck engine growls. Vance's headlights sweep across the cabin as he backs out. Elias watches from the window until the taillights vanish into the pines."
-```
-
-### 5. Genre-Specific Tone Guidance
+Now activates for **last 2 sequences of any format**, not hardcoded sequences 7-8:
 
 ```typescript
-function getGenreToneGuidance(genre: string): string {
-  // Returns genre-appropriate writing guidance
-  // Examples:
+const protagonistAgencySection = (data.sequenceNumber >= data.totalSequences - 1)
+```
 
-  // NOIR/CRIME:
-  // "Deep shadows in description. Cynicism in dialogue.
-  //  Characters speak in clipped sentences. Trust no one.
-  //  Rain, smoke, neon. The city is a character."
+### 5. Dynamic Length Requirements (NEW)
 
-  // ACTION/THRILLER:
-  // "High kineticism. Fragmented sentences in action.
-  //  Dialogue during action: SHORT. Breathless. Interrupted.
-  //  Time pressure in every scene. Clock is always ticking."
+Length requirements are now calculated from format:
 
-  // HORROR:
-  // "Dread in the quiet moments. Less is more.
-  //  What we DON'T see is scarier. Imply, don't show.
-  //  Ordinary details made sinister. The familiar turned wrong."
-}
+```
+=== LENGTH REQUIREMENT (ABSOLUTE MINIMUM - FAILURE TO COMPLY = REJECTION) ===
+TARGET PAGES: ${sequenceInfo.pageRange} (${sequenceInfo.targetWords} words)
+MINIMUM: ${Math.floor(sequenceInfo.targetWords * 0.8)} words. TARGET: ${sequenceInfo.targetWords} words.
 ```
 
 ---
 
 ## Banned Patterns & Phrases
 
-### Location: `lib/screenplay.ts`
+### Clinical Vocabulary Ban (NEW)
 
-### SCREENPLAY_BANNED_PHRASES
-
-Dialogue that sounds artificial:
+**Location:** `lib/screenplay.ts`
 
 ```typescript
-export const SCREENPLAY_BANNED_PHRASES = [
-  "I need you to understand",
-  "Here's the thing",
-  "Let me be clear",
-  "With all due respect",
-  "To be honest",
-  "The thing is",
-  "I have to tell you something",
-  "We need to talk",
-  "Can we talk?",
-  "There's something you should know",
-  "I've been meaning to tell you",
-  "Look, I know this is hard",
-  "I know this isn't easy",
-  "You have to believe me",
-  "Trust me on this",
+export const SCREENPLAY_CLINICAL_VOCABULARY = [
+  // Formal constructions
+  "it shall", "it is imperative", "highly irregular",
+  "sufficient for", "I require", "it would appear",
+  "one might suggest", "most certainly", "ocular",
+  "spatial logistics", "in my estimation",
+  // Robotic responses
+  "affirmative", "negative", "acknowledged", "understood",
+  "that is correct", "precisely so",
 ];
 ```
 
-### SCREENPLAY_BANNED_METAPHORS
-
-Overused visual metaphors:
+### On-the-Nose Dialogue Patterns (NEW)
 
 ```typescript
-export const SCREENPLAY_BANNED_METAPHORS = [
-  "weight of the world",
-  "tip of the iceberg",
-  "light at the end of the tunnel",
-  "back against the wall",
-  "play with fire",
-  "blood runs cold",
-  "heart skips a beat",
-  "butterflies in stomach",
-  "walking on eggshells",
-  "elephant in the room",
+export const SCREENPLAY_ON_THE_NOSE_PATTERNS = [
+  /I feel (so )?(angry|sad|happy|scared|betrayed|hurt)/gi,
+  /I('m| am) (so )?(angry|sad|happy|scared|confused)/gi,
+  /You make me feel/gi,
+  /I need you to understand/gi,
+  /What I('m| am) trying to say is/gi,
+  /The truth is,? I/gi,
+  /I have to be honest/gi,
+  /Can I be honest with you/gi,
 ];
 ```
 
-### SCREENPLAY_BANNED_CLICHES
-
-Tired dialogue patterns:
+### Expanded Tic Patterns (NEW)
 
 ```typescript
-export const SCREENPLAY_BANNED_CLICHES = [
-  "It's not what it looks like",
-  "I can explain",
-  "You don't understand",
-  "It's complicated",
-  "We're not so different, you and I",
-  "I didn't sign up for this",
-  "What could possibly go wrong",
-  "I've got a bad feeling about this",
-  "There's no time to explain",
-  "You just don't get it",
+export const SCREENPLAY_TIC_PATTERNS = [
+  { name: 'glasses', pattern: /(clean|wipe|polish|adjust|push|remove)s?\s+(his|her|their)?\s*(glasses|spectacles)/gi, maxPerSequence: 1 },
+  { name: 'wrist', pattern: /rub(s|bing|bed)?\s+(his|her|their)\s+wrist/gi, maxPerSequence: 1 },
+  { name: 'throat', pattern: /clear(s|ing|ed)?\s+(his|her|their)\s+throat/gi, maxPerSequence: 1 },
+  { name: 'jaw', pattern: /clench(es|ing|ed)?\s+(his|her|their)\s+jaw/gi, maxPerSequence: 2 },
+  { name: 'fist', pattern: /ball(s|ing|ed)?\s+(his|her|their)\s+fist/gi, maxPerSequence: 2 },
+  { name: 'sigh', pattern: /\bsigh(s|ed|ing)?\b/gi, maxPerSequence: 2 },
+  { name: 'nod', pattern: /\bnod(s|ded|ding)?\b/gi, maxPerSequence: 3 },
+  { name: 'shrug', pattern: /\bshrug(s|ged|ging)?\b/gi, maxPerSequence: 2 },
+  { name: 'zippo', pattern: /(click|flip|snap)s?\s+(his|her|their)?\s*(zippo|lighter)/gi, maxPerSequence: 1 },
+  { name: 'pen_click', pattern: /(click|tap)s?\s+(his|her|their)?\s*(pen|pencil)/gi, maxPerSequence: 1 },
+  { name: 'finger_drum', pattern: /drum(s|ming|med)?\s+(his|her|their)?\s*fingers/gi, maxPerSequence: 1 },
+  { name: 'deep_breath', pattern: /take(s)?\s+a\s+deep\s+breath/gi, maxPerSequence: 2 },
+  { name: 'eye_contact', pattern: /(break|avoid|hold)s?\s+(eye\s+)?contact/gi, maxPerSequence: 2 },
+  { name: 'runs_hand', pattern: /runs?\s+(a\s+)?(his|her|their)?\s*hand\s+through/gi, maxPerSequence: 1 },
 ];
-```
-
-### SCREENPLAY_SCIENCE_IN_EMOTION
-
-Clinical language that breaks emotional scenes:
-
-```typescript
-export const SCREENPLAY_SCIENCE_IN_EMOTION = [
-  "statistically",
-  "probability",
-  "percentage",
-  "calculated",
-  "optimal",
-  "efficient",
-  "maximize",
-  "minimize",
-  "parameters",
-  "variables",
-];
-```
-
-### SCREENPLAY_BANNED_ACTION_STARTS
-
-Action lines should not start with character names:
-
-```typescript
-export const SCREENPLAY_BANNED_ACTION_STARTS = [
-  "We see",
-  "We hear",
-  "We watch",
-  "The camera",
-  "Camera",
-];
-```
-
-### Prompt Injection (Banned AI-isms)
-
-```
-=== BANNED AI-ISMS (INSTANT FAILURE) ===
-DIALOGUE:
-- "I need you to understand" / "Here's the thing" / "Let me be clear"
-- "With all due respect" / "To be honest" / "The thing is"
-- Characters explaining feelings: "I feel X because Y"
-
-ACTION LINES:
-- "We see" / "We hear" / "We watch" / "The camera"
-- Starting with character names: "John walks to the door"
-  Instead: "The door SLAMS. John stands in the frame."
 ```
 
 ---
 
 ## Post-Processing Pipeline
 
-### Location: `lib/generation/screenplay/review.ts`
+### Location: `lib/generation/screenplay/post-processing.ts`
 
-### 1. detectExcessiveTics()
+### Code Fortress: Pure-Code Enforcement (NEW)
 
-Checks for overused physical actions:
-
-```typescript
-const TIC_PATTERNS = [
-  { pattern: /clean(s|ing|ed)?\s+(his|her|their)\s+glasses/gi, name: 'glasses cleaning' },
-  { pattern: /rub(s|bing|bed)?\s+(his|her|their)\s+wrist/gi, name: 'wrist rubbing' },
-  { pattern: /clear(s|ing|ed)?\s+(his|her|their)\s+throat/gi, name: 'throat clearing' },
-  { pattern: /clench(es|ing|ed)?\s+(his|her|their)\s+jaw/gi, name: 'jaw clenching' },
-  { pattern: /ball(s|ing|ed)?\s+(his|her|their)\s+fist/gi, name: 'fist balling' },
-  { pattern: /sigh(s|ing|ed)?/gi, name: 'sighing' },
-  { pattern: /nod(s|ding|ded)?/gi, name: 'nodding' },
-  { pattern: /shrug(s|ging|ged)?/gi, name: 'shrugging' },
-];
-
-// Returns issues if any tic appears > 3 times
-```
-
-### 2. detectStaccatoRhythm()
-
-Checks for AI metronome writing:
+The screenplay system now uses a **pure-code post-processing pipeline** that runs WITHOUT AI tokens:
 
 ```typescript
-function detectStaccatoRhythm(content: string): { hasIssue: boolean; details: string[] } {
-  // Checks:
-  // 1. Metronome pattern: 4+ consecutive sentences of similar length (3-7 words)
-  // 2. Triple pronoun starts: 3+ consecutive sentences starting with same pronoun
-  // 3. Excessive fragments: More than 3 consecutive 2-word sentences
+export function runScreenplayPostProcessing(
+  content: string,
+  context: ScreenplayContext,
+  sequenceNumber: number,
+  previousSummaries: SequenceSummary[]
+): {
+  content: string;
+  updatedContext: ScreenplayContext;
+  hardReject: boolean;
+  surgicalPrompt: string | null;
+  report: {
+    varianceScore: number;
+    sentencesCombined: number;
+    ticsRemoved: string[];
+    clinicalFound: string[];
+    onTheNoseFound: string[];
+  };
 }
 ```
 
-### 3. detectBannedPatterns()
+### Pipeline Steps
 
-Scans for banned phrases, metaphors, clichés:
+1. **Sentence Variance Auditor**
+   - Calculates standard deviation of sentence lengths
+   - Target: stdDev > 4.5 (human-like)
+   - AI metronome: stdDev < 3.0
+   - Combines sentences to fix staccato rhythm
+
+2. **Tic Credit System**
+   - Enforces per-sequence limits from `SCREENPLAY_TIC_PATTERNS`
+   - Excess occurrences are REMOVED (not just warned)
+   - Replacement strategy: "He pauses." → "A beat." → DELETE
+
+3. **Clinical Dialogue Detection**
+   - Scans for `SCREENPLAY_CLINICAL_VOCABULARY`
+   - 3+ instances in emotional scenes = hard reject
+
+4. **On-the-Nose Dialogue Detection**
+   - Scans for `SCREENPLAY_ON_THE_NOSE_PATTERNS`
+   - 2+ instances = hard reject
+
+5. **Hard Reject Handling**
+   - If hard reject triggered, regenerate with surgical prompt
+   - Max 2 regeneration attempts
+   - If still failing, flag `needsPolish: true`
+
+### Hard Reject Loop in generate-next
 
 ```typescript
-function detectBannedPatterns(content: string): {
-  hasBannedPhrases: boolean;
-  hasBannedMetaphors: boolean;
-  hasBannedCliches: boolean;
-  hasScientificEmotion: boolean;
-  details: string[];
+while (regenerationAttempts < MAX_REGENERATION_ATTEMPTS) {
+  const postProcessed = runScreenplayPostProcessing(
+    sequenceContent,
+    screenplayContext,
+    nextChapterNum,
+    screenplayContext.sequenceSummaries
+  );
+
+  if (postProcessed.hardReject) {
+    console.warn(`[HARD REJECT] Sequence ${nextChapterNum}: ${postProcessed.surgicalPrompt}`);
+
+    sequenceContent = await generateScreenplaySequence({
+      ...originalParams,
+      context: {
+        ...screenplayContext,
+        lastSequenceSummary: `${screenplayContext.lastSequenceSummary}\n\n${postProcessed.surgicalPrompt}`,
+      },
+    });
+
+    regenerationAttempts++;
+    continue;
+  }
+
+  // Accept
+  sequenceContent = postProcessed.content;
+  break;
 }
 ```
 
-### 4. reviewScreenplaySequence()
-
-Full AI-powered editorial pass:
+### Page Count Enforcement
 
 ```typescript
-async function reviewScreenplaySequence(data: {
-  sequenceContent: string;
-  sequenceNumber: number;
-  characters: CharacterProfile[];
-}): Promise<{
-  revisedContent: string;
-  issues: string[];
-  improvements: string[];
-}>
-```
+const MIN_PAGES_PER_SEQUENCE = 10;
+let lengthRegenerationAttempts = 0;
+const MAX_LENGTH_ATTEMPTS = 2;
 
-Prompt includes 10 editing tasks:
-1. On-the-nose dialogue → add subtext
-2. Long action blocks → break into 3 lines max
-3. Generic verbs → sensory verbs
-4. Parentheticals → physical beats
-5. Bland sluglines → specific locations
-6. Pronoun repetition → vary sentence starts
-7. Metronome rhythm → vary sentence lengths
-8. Same-y dialogue → differentiate by archetype
-9. Excessive tics → vary physical business
-10. Passive protagonist → active choices
+while (pageCount < MIN_PAGES_PER_SEQUENCE && lengthRegenerationAttempts < MAX_LENGTH_ATTEMPTS) {
+  const minPagesForFormat = Math.floor(targetPages / totalSequences);
+  const minWordsForFormat = minPagesForFormat * 250;
+
+  // Regenerate with LENGTH ERROR prompt
+  sequenceContent = await generateScreenplaySequence({
+    ...params,
+    context: {
+      ...context,
+      lastSequenceSummary: `CRITICAL LENGTH ERROR: Only ${pageCount} pages. MINIMUM: ${MIN_PAGES_PER_SEQUENCE}.`,
+    },
+  });
+
+  lengthRegenerationAttempts++;
+}
+```
 
 ---
 
 ## Known Issues
 
-### 1. Sequence Amnesia (Looping)
+### Resolved Issues
 
-**Problem:** AI resets to sequence 1 material mid-screenplay.
+| Issue | Status | Solution |
+|-------|--------|----------|
+| Clinical "Professor" dialogue | **RESOLVED** | `SCREENPLAY_CLINICAL_VOCABULARY` ban + hard reject |
+| On-the-nose dialogue | **RESOLVED** | `SCREENPLAY_ON_THE_NOSE_PATTERNS` detection + hard reject |
+| Tic hammering | **RESOLVED** | Tic credit system with per-sequence limits + removal |
+| Staccato rhythm | **RESOLVED** | Sentence variance auditor + combination |
+| Fixed 8-sequence format | **RESOLVED** | Dynamic `FORMAT_BEAT_DISTRIBUTIONS` |
+| Review pass skipping | **MITIGATED** | `needsPolish` flag for background processing |
 
-**Current Mitigation:** CONTINUITY LOCK prompt section, `detectSequenceLoop()` function.
+### Remaining Issues
 
-**Weakness:** `closedLoops` in summaries are often too abstract (e.g., "Elias confronts his past" instead of specific events).
-
-### 2. Robotic "Professor" Dialogue
-
-**Problem:** Characters with "Professor" archetype produce clinical speech:
-- "My stock is sufficient for a fourteen-day event"
-- "It shall subside"
-- "That is highly irregular"
-
-**Current Mitigation:** Emotional break-point requirement in prompt.
-
-**Weakness:** No clinical vocabulary ban list exists. The `SCREENPLAY_SCIENCE_IN_EMOTION` list only covers math/science terms, not overly formal speech patterns.
-
-### 3. Staccato Rhythm
-
-**Problem:** AI writes in metronome rhythm:
-- "The water bites. She doesn't flinch. Sinks until the slurry meets her chin."
-
-**Current Mitigation:** `detectStaccatoRhythm()` function, 1-2-5 rule in prompt.
-
-**Weakness:** Detection runs post-generation but may not trigger rewrite. The rhythm section is in the prompt but often ignored.
-
-### 4. Tic Hammering
-
-**Problem:** Same physical actions repeated excessively (glasses cleaning 15+ times).
-
-**Current Mitigation:** `flagExcessiveTics()` only checks 5 patterns and only **warns** (doesn't remove or rewrite).
-
-**Weakness:**
-- Missing common tics: Zippo/lighter clicking, throat clearing, pen clicking
-- Function doesn't enforce removal, just logs warnings
-- Threshold of 3 is too high for some tics
-
-### 5. Review Pass Skipping
-
-**Problem:** If generation takes too long, review pass may be skipped to avoid timeout.
-
-**Current Mitigation:** None.
-
-### 6. On-the-Nose Dialogue
-
-**Problem:** Characters state feelings directly: "I feel betrayed because you lied."
-
-**Current Mitigation:** Rule #1 in Screenwriter's Manifesto.
-
-**Weakness:** No detection function exists to flag on-the-nose dialogue post-generation.
+| Issue | Description | Mitigation |
+|-------|-------------|------------|
+| Sequence amnesia | AI may still restart material | Dual-layer context + CausalBridge |
+| Context window limits | Very long screenplays may exceed context | Rolling 2-sequence momentum |
 
 ---
 
@@ -615,27 +611,39 @@ Prompt includes 10 editing tasks:
 
 | File | Purpose |
 |------|---------|
-| `lib/screenplay.ts` | Types, constants, validation functions |
+| `lib/screenplay.ts` | Types, constants, dynamic beat mapping, validation functions |
 | `lib/generation/screenplay/outline.ts` | Beat sheet + character generation |
-| `lib/generation/screenplay/sequence.ts` | Main sequence generation |
-| `lib/generation/screenplay/review.ts` | Post-processing pipeline |
+| `lib/generation/screenplay/sequence.ts` | Main sequence generation (dynamic format) |
+| `lib/generation/screenplay/post-processing.ts` | Code Fortress pipeline |
+| `lib/generation/screenplay/review.ts` | AI-powered editorial pass |
 | `lib/generation/screenplay/index.ts` | Re-exports |
-| `app/api/books/[id]/generate/route.ts` | Initial outline generation |
-| `app/api/books/[id]/generate-next/route.ts` | Sequential sequence generation |
+| `app/api/books/[id]/generate/route.ts` | Initial outline generation (format-aware) |
+| `app/api/books/[id]/generate-next/route.ts` | Sequential sequence generation (format-aware) |
+| `lib/constants.ts` | Preset configurations (sequences, targetPages) |
 
 ---
 
 ## Generation Parameters
 
-| Parameter | Value | Location |
-|-----------|-------|----------|
-| Temperature | 0.9 | sequence.ts |
-| Max Output Tokens | 16000 | sequence.ts |
-| Timeout | 180000ms (3 min) | sequence.ts |
-| Target Pages/Sequence | 14-18 | prompt |
-| Target Words/Sequence | 3500-4500 | prompt |
-| Model | Gemini Flash | api-client.ts |
+| Parameter | Value | Location | Notes |
+|-----------|-------|----------|-------|
+| Temperature | 0.9 | sequence.ts | Higher for creative dialogue |
+| Max Output Tokens | 16000 | sequence.ts | Supports 14-18 pages |
+| Timeout | 180000ms (3 min) | sequence.ts | Per sequence |
+| Min Pages/Sequence | 10 | generate-next/route.ts | Hard floor |
+| Max Regeneration Attempts | 2 | generate-next/route.ts | For hard rejects |
+| Model | Gemini Flash | api-client.ts | Fast, cost-effective |
+
+### Format-Specific Parameters
+
+| Format | Sequences | Target Pages | Pages/Sequence | Words/Sequence |
+|--------|-----------|--------------|----------------|----------------|
+| tv_pilot_comedy | 3 | 30 | ~10 | ~2500 |
+| short_screenplay | 4 | 40 | ~10 | ~2500 |
+| tv_pilot_drama | 5 | 60 | ~12 | ~3000 |
+| screenplay | 8 | 100 | ~12-13 | ~3125 |
+| epic_screenplay | 10 | 135 | ~13-14 | ~3375 |
 
 ---
 
-*Document generated for planning purposes. No code changes made.*
+*Last updated: January 2026 - Added dynamic format support, Code Fortress post-processing, and dual-layer continuity system.*

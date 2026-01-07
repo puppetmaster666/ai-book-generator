@@ -10,6 +10,7 @@ interface GeneratingBook {
   totalChapters: number;
   totalWords: number;
   isVisualBook: boolean;
+  bookFormat?: string;
 }
 
 interface GeneratingBookContextType {
@@ -83,6 +84,7 @@ export function GeneratingBookProvider({ children }: { children: ReactNode }) {
           totalChapters: status.totalChapters,
           totalWords: status.totalWords,
           isVisualBook,
+          bookFormat: status.bookFormat,
         });
 
         // If completed or failed, clear after a delay

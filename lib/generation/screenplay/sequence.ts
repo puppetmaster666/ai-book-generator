@@ -5,7 +5,7 @@ import {
   SequenceSummary,
   Subplot,
   CausalBridge,
-  SEQUENCE_TO_BEATS,
+  getSequenceInfo,
   estimatePageCount,
   SCREENPLAY_CLINICAL_VOCABULARY,
   SCREENPLAY_TIC_PATTERNS,
@@ -202,13 +202,15 @@ USE: Interacting with props, environment, other characters physically.
 }
 
 /**
- * Generate a single screenplay sequence (10-15 pages)
+ * Generate a single screenplay sequence (variable pages based on format)
  * Uses "Performance Mode" writing with subtext-driven dialogue
  */
 export async function generateScreenplaySequence(data: {
   beatSheet: BeatSheet;
   characters: CharacterProfile[];
   sequenceNumber: number;
+  totalSequences: number; // e.g., 3, 4, 5, 8, or 10 based on format
+  targetPages: number; // Total screenplay target (e.g., 30, 40, 100, 135)
   context: ScreenplayContext;
   genre: string;
   title: string;
@@ -218,9 +220,9 @@ export async function generateScreenplaySequence(data: {
   content: string;
   pageCount: number;
 }> {
-  const sequenceInfo = SEQUENCE_TO_BEATS[data.sequenceNumber];
+  const sequenceInfo = getSequenceInfo(data.sequenceNumber, data.totalSequences, data.targetPages);
   if (!sequenceInfo) {
-    throw new Error(`Invalid sequence number: ${data.sequenceNumber}`);
+    throw new Error(`Invalid sequence number: ${data.sequenceNumber} for ${data.totalSequences}-sequence format`);
   }
 
   // Build CHARACTER PSYCHOLOGY reference (the key to subtext)
@@ -258,7 +260,7 @@ export async function generateScreenplaySequence(data: {
   const continuityLock = data.sequenceNumber > 1
     ? `
 === CONTINUITY LOCK (CRITICAL - PREVENTS LOOPING) ===
-This is SEQUENCE ${data.sequenceNumber} of 8. The story CONTINUES - do NOT restart.
+This is SEQUENCE ${data.sequenceNumber} of ${data.totalSequences}. The story CONTINUES - do NOT restart.
 
 EVENTS THAT HAVE ALREADY HAPPENED (NO-GO ZONE - DO NOT REWRITE THESE):
 ${allSummaries.map(s => {
@@ -305,10 +307,10 @@ This is MANDATORY for emotional authenticity. Consistent verbal strategy = robot
 `
     : '';
 
-  // Protagonist agency requirements for climax sequences (7-8)
-  const protagonistAgencySection = (data.sequenceNumber >= 7)
+  // Protagonist agency requirements for climax sequences (last 2 sequences of any format)
+  const protagonistAgencySection = (data.sequenceNumber >= data.totalSequences - 1)
     ? `
-=== PROTAGONIST AGENCY (SEQUENCES 7-8 ONLY) ===
+=== PROTAGONIST AGENCY (FINAL SEQUENCES) ===
 The protagonist MUST take ACTIVE decisive action in the climax:
 - NOT: "Elias watches as Vance leaves" (passive)
 - YES: "Elias grabs Vance's arm. ELIAS: You don't get to walk away." (active)
@@ -351,7 +353,7 @@ NEVER use more than two 2-word fragments in a row.
   // Genre-specific tone guidance
   const genreTone = getGenreToneGuidance(data.genre);
 
-  const prompt = `You are an elite Hollywood screenwriter. Write SEQUENCE ${data.sequenceNumber} of 8.
+  const prompt = `You are an elite Hollywood screenwriter. Write SEQUENCE ${data.sequenceNumber} of ${data.totalSequences}.
 
 MOVIE: "${data.title}" (${data.genre})
 LOGLINE: ${data.beatSheet.logline}
@@ -420,9 +422,27 @@ ACTION LINES:
 - Character names: ALL CAPS before dialogue
 - Transitions: Use sparingly (CUT TO:, FADE OUT.)
 
-=== LENGTH REQUIREMENT (CRITICAL) ===
-This sequence MUST be 14-18 pages (approximately 3500-4500 words).
+=== LENGTH REQUIREMENT (ABSOLUTE MINIMUM - FAILURE TO COMPLY = REJECTION) ===
+TARGET PAGES: ${sequenceInfo.pageRange} (${sequenceInfo.targetWords} words)
+MINIMUM: ${Math.floor(sequenceInfo.targetWords * 0.8)} words. TARGET: ${sequenceInfo.targetWords} words.
 A page of screenplay = ~250 words in proper format.
+
+CRITICAL: Do NOT stop early. A short sequence will be REJECTED and regenerated.
+You have 16000 tokens available - USE THEM.
+
+LENGTH CHECKLIST (VERIFY BEFORE FINISHING):
+- Did you write AT LEAST ${Math.floor(sequenceInfo.targetWords * 0.8)} words? If not, add more scenes.
+- Does each beat have 3-5 full scenes? If not, expand.
+- Are dialogue exchanges substantial (10+ lines per major scene)? If not, deepen conversations.
+- Do action paragraphs paint vivid pictures (not just "He walks in")? If not, add sensory detail.
+
+TO REACH PROPER LENGTH:
+1. Add a B-STORY scene in this sequence (even if brief)
+2. Include at least ONE scene transition with establishing shots
+3. Let tense conversations BREATHE - pauses, looks, physical business
+4. Add a quiet REFLECTION moment between high-intensity scenes
+5. Include specific environmental details that set mood
+
 DO NOT rush. Include FULL scenes with proper action lines, dialogue exchanges, and transitions.
 Each beat should have 3-5 scenes minimum.
 
@@ -492,9 +512,11 @@ OUTPUT: Industry-standard screenplay format ONLY. No commentary.`;
 export async function summarizeScreenplaySequence(data: {
   sequenceContent: string;
   sequenceNumber: number;
+  totalSequences: number;
+  targetPages: number;
   characters: CharacterProfile[];
 }): Promise<SequenceSummary> {
-  const sequenceInfo = SEQUENCE_TO_BEATS[data.sequenceNumber];
+  const sequenceInfo = getSequenceInfo(data.sequenceNumber, data.totalSequences, data.targetPages);
 
   const prompt = `Summarize this screenplay sequence for continuity tracking.
 

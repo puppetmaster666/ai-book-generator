@@ -23,7 +23,7 @@ import {
   type PanelLayout,
   type ContentRating,
 } from '@/lib/gemini';
-import { createInitialContext, type BeatSheet, type CharacterProfile } from '@/lib/screenplay';
+import { createInitialContext, generateSequenceToBeats, type BeatSheet, type CharacterProfile } from '@/lib/screenplay';
 import { countWords } from '@/lib/epub';
 import { BOOK_FORMATS, ART_STYLES, ILLUSTRATION_DIMENSIONS, BOOK_PRESETS, type BookFormatKey, type ArtStyleKey, type BookPresetKey } from '@/lib/constants';
 import { sendEmail, getBookReadyEmail } from '@/lib/email';
@@ -691,58 +691,79 @@ export async function POST(
     if (!outline) {
       // Check if this is a screenplay
       if (bookFormat === 'screenplay') {
+        // Get format-specific settings from preset
+        const presetKey = (book.bookPreset as BookPresetKey) || 'screenplay';
+        const preset = BOOK_PRESETS[presetKey] || BOOK_PRESETS.screenplay;
+        const targetPages = 'targetPages' in preset ? preset.targetPages : 100;
+        const totalSequences = 'sequences' in preset ? preset.sequences : 8;
+
+        console.log(`Generating ${presetKey} screenplay: ${totalSequences} sequences, ${targetPages} pages target`);
+
         // Use screenplay outline with beat sheet structure
-        console.log('Generating screenplay beat sheet outline...');
         const screenplayResult = await withTimeout(
           generateScreenplayOutline({
             idea: book.premise,
             genre: book.genre,
             title: book.title,
-            targetPages: 100, // Feature film standard
+            targetPages,
           }),
           OUTLINE_TIMEOUT_MS,
           'Screenplay outline generation'
         );
 
-        // Store beat sheet and characters in outline
+        // Store beat sheet and characters in outline, plus format info for generate-next
         outline = {
-          chapters: [], // Will be populated with 8 sequences
+          chapters: [], // Will be populated with sequences
           beatSheet: screenplayResult.beatSheet,
           characters: screenplayResult.characters,
-        } as { chapters: Array<{ number: number; title: string; summary: string; pov?: string; targetWords: number }>; beatSheet?: BeatSheet; characters?: CharacterProfile[] };
+          totalSequences, // For dynamic sequence generation
+          targetPages, // For dynamic page targets
+        } as { chapters: Array<{ number: number; title: string; summary: string; pov?: string; targetWords: number }>; beatSheet?: BeatSheet; characters?: CharacterProfile[]; totalSequences?: number; targetPages?: number };
 
-        // Create 8 sequence placeholders based on beat sheet
-        const sequenceNames = [
-          'Opening & Setup',
-          'Catalyst & Debate',
-          'B-Story & Fun and Games (Part 1)',
-          'Fun and Games (Part 2) & Midpoint',
-          'Bad Guys Close In',
-          'All Is Lost & Dark Night',
-          'Break Into Three & Finale (Part 1)',
-          'Finale (Part 2) & Final Image',
-        ];
+        // Generate dynamic sequence mapping based on format
+        const beatSheet = screenplayResult.beatSheet;
+        const sequenceMapping = generateSequenceToBeats(totalSequences, targetPages);
 
-        for (let i = 1; i <= 8; i++) {
+        // Extract story-specific title from beat description
+        const extractTitle = (text: string): string => {
+          const cleaned = text
+            .replace(/^Pages?\s+\d+[-–]\d+\s*[-–:]\s*/i, '')
+            .replace(/^Page\s+\d+\s*[-–:]\s*/i, '')
+            .split(/[.!?]/)[0]
+            .trim();
+          const words = cleaned.split(/\s+/).slice(0, 6);
+          return words.join(' ').replace(/[,;:]$/, '');
+        };
+
+        // Create sequence placeholders with STORY-SPECIFIC titles
+        for (let i = 1; i <= totalSequences; i++) {
+          const seqInfo = sequenceMapping[i];
+          // Get title from first beat in this sequence
+          const firstBeat = seqInfo.beats[0] as keyof typeof beatSheet.beats;
+          const beatContent = beatSheet.beats[firstBeat] || '';
+          const storyTitle = extractTitle(beatContent) || `Act ${seqInfo.act} - Part ${i}`;
+
           outline.chapters.push({
             number: i,
-            title: `Sequence ${i}: ${sequenceNames[i - 1]}`,
-            summary: `Act ${i <= 2 ? 1 : i <= 6 ? 2 : 3} - ${sequenceNames[i - 1]}`,
-            targetWords: 3000, // ~12 pages per sequence
+            title: `Sequence ${i}: ${storyTitle}`,
+            summary: beatContent || `Act ${seqInfo.act} sequence covering: ${seqInfo.beats.join(', ')}`,
+            targetWords: seqInfo.targetWords,
           });
         }
 
-        // Initialize screenplay context
-        const screenplayContext = createInitialContext(100);
+        // Initialize screenplay context with target pages
+        const screenplayContext = createInitialContext(targetPages);
         await prisma.book.update({
           where: { id },
           data: {
             outline: outline as object,
-            totalChapters: 8,
+            totalChapters: totalSequences,
             status: 'generating',
             screenplayContext: screenplayContext as object,
           },
         });
+
+        console.log(`Created ${totalSequences} sequence placeholders for ${presetKey} (${targetPages} pages)`);
       } else if (useVisualFlow && dialogueStyle) {
         // Use enhanced illustrated outline for visual books
         // Use the preset's panel count from targetChapters (20 for picture books, 24 for comics)

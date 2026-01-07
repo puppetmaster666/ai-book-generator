@@ -134,7 +134,7 @@ export default function LivePreview({
         <div className="flex items-center gap-2">
           <Sparkles className={`h-4 w-4 animate-pulse ${isOutlining ? 'text-blue-400' : 'text-lime-400'}`} />
           <span className="text-sm font-medium text-white">
-            {isOutlining ? 'Planning Outline' : `Chapter ${currentChapter + 1}`}
+            {isOutlining ? 'Planning Outline' : `${bookFormat === 'screenplay' || bookFormat === 'tv_series' ? 'Sequence' : 'Chapter'} ${currentChapter + 1}`}
           </span>
           {isActive && (
             <span className={`flex items-center gap-1 text-xs ${isOutlining ? 'text-blue-400' : 'text-lime-400'}`}>

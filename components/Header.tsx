@@ -219,7 +219,7 @@ export default function Header({ variant = 'default' }: HeaderProps) {
                     <div className="mb-3">
                       <p className="font-medium text-sm text-neutral-900 truncate">{generatingBook.title}</p>
                       <p className="text-xs text-neutral-500 mt-0.5">
-                        {isGenerating && `Chapter ${generatingBook.currentChapter} of ${generatingBook.totalChapters}`}
+                        {isGenerating && `${generatingBook.bookFormat === 'screenplay' || generatingBook.bookFormat === 'tv_series' ? 'Sequence' : 'Chapter'} ${generatingBook.currentChapter} of ${generatingBook.totalChapters}`}
                         {isCompleted && 'Generation complete!'}
                         {isFailed && 'Generation failed - click to retry'}
                       </p>

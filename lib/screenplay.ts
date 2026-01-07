@@ -176,7 +176,7 @@ export interface ParsedElement {
 }
 
 /**
- * Sequence mapping to beats (Save the Cat structure)
+ * Sequence mapping to beats (Save the Cat structure) - DEFAULT 8 sequences
  */
 export const SEQUENCE_TO_BEATS: Record<number, { beats: string[]; pageRange: string; act: number }> = {
   1: { beats: ['openingImage', 'themeStated', 'setup'], pageRange: '1-12', act: 1 },
@@ -188,6 +188,114 @@ export const SEQUENCE_TO_BEATS: Record<number, { beats: string[]; pageRange: str
   7: { beats: ['breakIntoThree', 'finale'], pageRange: '86-100', act: 3 },
   8: { beats: ['finale', 'finalImage'], pageRange: '101-110', act: 3 },
 };
+
+/**
+ * Format-specific beat distribution configurations
+ * Maps number of sequences to how beats should be distributed
+ */
+export const FORMAT_BEAT_DISTRIBUTIONS: Record<number, { beats: string[]; actRatio: number[] }[]> = {
+  // 3 sequences - TV Comedy (30 pages, ~10 pages each)
+  3: [
+    { beats: ['openingImage', 'themeStated', 'setup', 'catalyst'], actRatio: [1] },
+    { beats: ['debate', 'breakIntoTwo', 'bStory', 'funAndGames', 'midpoint', 'badGuysCloseIn'], actRatio: [2] },
+    { beats: ['allIsLost', 'darkNightOfSoul', 'breakIntoThree', 'finale', 'finalImage'], actRatio: [3] },
+  ],
+  // 4 sequences - Short Film (40 pages, ~10 pages each)
+  4: [
+    { beats: ['openingImage', 'themeStated', 'setup', 'catalyst'], actRatio: [1] },
+    { beats: ['debate', 'breakIntoTwo', 'bStory', 'funAndGames'], actRatio: [2] },
+    { beats: ['midpoint', 'badGuysCloseIn', 'allIsLost', 'darkNightOfSoul'], actRatio: [2] },
+    { beats: ['breakIntoThree', 'finale', 'finalImage'], actRatio: [3] },
+  ],
+  // 5 sequences - TV Drama (50-60 pages, ~10-12 pages each)
+  5: [
+    { beats: ['openingImage', 'themeStated', 'setup', 'catalyst'], actRatio: [1] },
+    { beats: ['debate', 'breakIntoTwo', 'bStory'], actRatio: [1, 2] },
+    { beats: ['funAndGames', 'midpoint', 'badGuysCloseIn'], actRatio: [2] },
+    { beats: ['allIsLost', 'darkNightOfSoul', 'breakIntoThree'], actRatio: [2, 3] },
+    { beats: ['finale', 'finalImage'], actRatio: [3] },
+  ],
+  // 8 sequences - Feature Film (100 pages, ~12-14 pages each) - DEFAULT
+  8: [
+    { beats: ['openingImage', 'themeStated', 'setup'], actRatio: [1] },
+    { beats: ['catalyst', 'debate', 'breakIntoTwo'], actRatio: [1] },
+    { beats: ['bStory', 'funAndGames'], actRatio: [2] },
+    { beats: ['funAndGames', 'midpoint'], actRatio: [2] },
+    { beats: ['badGuysCloseIn'], actRatio: [2] },
+    { beats: ['allIsLost', 'darkNightOfSoul'], actRatio: [2] },
+    { beats: ['breakIntoThree', 'finale'], actRatio: [3] },
+    { beats: ['finale', 'finalImage'], actRatio: [3] },
+  ],
+  // 10 sequences - Epic Film (135 pages, ~13-14 pages each)
+  10: [
+    { beats: ['openingImage', 'themeStated'], actRatio: [1] },
+    { beats: ['setup', 'catalyst'], actRatio: [1] },
+    { beats: ['debate', 'breakIntoTwo'], actRatio: [1] },
+    { beats: ['bStory', 'funAndGames'], actRatio: [2] },
+    { beats: ['funAndGames'], actRatio: [2] },
+    { beats: ['midpoint', 'badGuysCloseIn'], actRatio: [2] },
+    { beats: ['badGuysCloseIn', 'allIsLost'], actRatio: [2] },
+    { beats: ['darkNightOfSoul', 'breakIntoThree'], actRatio: [2, 3] },
+    { beats: ['finale'], actRatio: [3] },
+    { beats: ['finale', 'finalImage'], actRatio: [3] },
+  ],
+};
+
+/**
+ * Generate sequence-to-beats mapping dynamically based on format
+ * @param totalSequences - Number of sequences (3, 4, 5, 8, or 10)
+ * @param targetPages - Total target page count
+ * @returns Dynamic sequence-to-beats mapping
+ */
+export function generateSequenceToBeats(
+  totalSequences: number,
+  targetPages: number
+): Record<number, { beats: string[]; pageRange: string; act: number; targetWords: number }> {
+  const distribution = FORMAT_BEAT_DISTRIBUTIONS[totalSequences];
+
+  if (!distribution) {
+    // Fallback to 8-sequence distribution if format not found
+    console.warn(`No beat distribution found for ${totalSequences} sequences, falling back to 8`);
+    return generateSequenceToBeats(8, targetPages);
+  }
+
+  const pagesPerSequence = Math.round(targetPages / totalSequences);
+  const wordsPerSequence = pagesPerSequence * 250; // 250 words per screenplay page
+  const result: Record<number, { beats: string[]; pageRange: string; act: number; targetWords: number }> = {};
+
+  let currentPage = 1;
+  for (let i = 0; i < distribution.length; i++) {
+    const seqConfig = distribution[i];
+    const seqNum = i + 1;
+    const endPage = Math.min(currentPage + pagesPerSequence - 1, targetPages);
+
+    // Determine act (use first value from actRatio for primary act)
+    const act = seqConfig.actRatio[0];
+
+    result[seqNum] = {
+      beats: seqConfig.beats,
+      pageRange: `${currentPage}-${endPage}`,
+      act,
+      targetWords: wordsPerSequence,
+    };
+
+    currentPage = endPage + 1;
+  }
+
+  return result;
+}
+
+/**
+ * Get the appropriate sequence info for a given sequence number and format
+ */
+export function getSequenceInfo(
+  sequenceNumber: number,
+  totalSequences: number,
+  targetPages: number
+): { beats: string[]; pageRange: string; act: number; targetWords: number } | null {
+  const mapping = generateSequenceToBeats(totalSequences, targetPages);
+  return mapping[sequenceNumber] || null;
+}
 
 /**
  * Banned AI-sounding phrases for dialogue

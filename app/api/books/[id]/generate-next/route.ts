@@ -268,14 +268,20 @@ export async function POST(
 
     // SCREENPLAY GENERATION FLOW
     if (book.bookFormat === 'screenplay') {
-      console.log(`Generating screenplay sequence ${nextChapterNum}/8 for book ${id}`);
+      console.log(`Generating screenplay sequence ${nextChapterNum} for book ${id}`);
 
-      // Get outline with beat sheet and characters
+      // Get outline with beat sheet, characters, and format info
       const screenplayOutline = outline as {
         chapters: Array<{ number: number; title: string; summary: string; targetWords: number }>;
         beatSheet?: BeatSheet;
         characters?: CharacterProfile[];
+        totalSequences?: number; // Dynamic sequence count from preset
+        targetPages?: number; // Dynamic page target from preset
       };
+
+      // Get dynamic format values (defaults for backward compatibility)
+      const totalSequences = screenplayOutline.totalSequences || totalChapters;
+      const targetPages = screenplayOutline.targetPages || 100;
 
       if (!screenplayOutline.beatSheet || !screenplayOutline.characters) {
         return NextResponse.json({
@@ -341,6 +347,8 @@ export async function POST(
         }
       };
 
+      console.log(`Generating sequence ${nextChapterNum}/${totalSequences} (${targetPages} pages target)`);
+
       // Generate the next sequence with streaming for live preview
       let sequenceResult: { content: string; pageCount: number };
       try {
@@ -348,6 +356,8 @@ export async function POST(
           beatSheet: screenplayOutline.beatSheet,
           characters: screenplayOutline.characters,
           sequenceNumber: nextChapterNum,
+          totalSequences, // Dynamic sequence count
+          targetPages, // Dynamic page target
           context: screenplayContext,
           genre: book.genre,
           title: book.title,
@@ -367,7 +377,69 @@ export async function POST(
       }
 
       let sequenceContent = sequenceResult.content;
-      const pageCount = sequenceResult.pageCount;
+      let pageCount = sequenceResult.pageCount;
+
+      // === PAGE COUNT ENFORCEMENT (Code Fortress) ===
+      // Minimum 10 pages per sequence (2500 words). Target is 14-18 pages.
+      // If too short, regenerate with emphasis on length
+      const MIN_PAGES_PER_SEQUENCE = 10;
+      let lengthRegenerationAttempts = 0;
+      const MAX_LENGTH_ATTEMPTS = 2;
+
+      while (pageCount < MIN_PAGES_PER_SEQUENCE && lengthRegenerationAttempts < MAX_LENGTH_ATTEMPTS) {
+        console.warn(`[SHORT SEQUENCE] Sequence ${nextChapterNum} only ${pageCount} pages (minimum: ${MIN_PAGES_PER_SEQUENCE}). Regenerating...`);
+
+        try {
+          // Calculate minimum words based on format
+          const minPagesForFormat = Math.floor(targetPages / totalSequences);
+          const minWordsForFormat = minPagesForFormat * 250;
+
+          const extendedResult = await generateScreenplaySequence({
+            beatSheet: screenplayOutline.beatSheet,
+            characters: screenplayOutline.characters,
+            sequenceNumber: nextChapterNum,
+            totalSequences,
+            targetPages,
+            context: {
+              ...screenplayContext,
+              lastSequenceSummary: `${screenplayContext.lastSequenceSummary}
+
+CRITICAL LENGTH ERROR: Your previous output was only ${pageCount} pages. This is UNACCEPTABLE.
+MINIMUM REQUIREMENT: ${MIN_PAGES_PER_SEQUENCE} pages (${minWordsForFormat}+ words).
+TARGET: ${minPagesForFormat}-${minPagesForFormat + 4} pages.
+
+TO FIX:
+1. Expand EVERY scene with more dialogue exchanges (10+ lines per scene)
+2. Add sensory details to action lines (sounds, textures, lighting)
+3. Include at least ONE additional scene per beat
+4. Let moments BREATHE - add pauses, reactions, physical business
+5. Add a B-story moment even if brief
+
+DO NOT STOP until you have written AT LEAST ${minWordsForFormat} words.`,
+            },
+            genre: book.genre,
+            title: book.title,
+            activeSubplots,
+            onProgress: onScreenplayProgress,
+          });
+
+          sequenceContent = extendedResult.content;
+          pageCount = extendedResult.pageCount;
+          lengthRegenerationAttempts++;
+
+          if (pageCount >= MIN_PAGES_PER_SEQUENCE) {
+            console.log(`[LENGTH FIXED] Sequence ${nextChapterNum} now ${pageCount} pages after ${lengthRegenerationAttempts} attempt(s)`);
+          }
+        } catch (extendError) {
+          console.error(`[LENGTH] Failed to extend sequence ${nextChapterNum}:`, extendError);
+          break;
+        }
+      }
+
+      if (pageCount < MIN_PAGES_PER_SEQUENCE) {
+        console.warn(`[LENGTH WARNING] Sequence ${nextChapterNum} still only ${pageCount} pages after ${lengthRegenerationAttempts} attempts. Proceeding anyway.`);
+      }
+      // === END PAGE COUNT ENFORCEMENT ===
 
       // Loop detection - check if AI is rehashing previous sequences
       if (nextChapterNum > 1 && screenplayContext.sequenceSummaries.length > 0) {
@@ -395,6 +467,8 @@ Pick up AFTER the last event and push toward the next beat sheet milestone.`,
               beatSheet: screenplayOutline.beatSheet,
               characters: screenplayOutline.characters,
               sequenceNumber: nextChapterNum,
+              totalSequences,
+              targetPages,
               context: correctiveContext,
               genre: book.genre,
               title: book.title,
@@ -450,6 +524,8 @@ Pick up AFTER the last event and push toward the next beat sheet milestone.`,
               beatSheet: screenplayOutline.beatSheet,
               characters: screenplayOutline.characters,
               sequenceNumber: nextChapterNum,
+              totalSequences,
+              targetPages,
               context: {
                 ...screenplayContext,
                 lastSequenceSummary: `${screenplayContext.lastSequenceSummary}
@@ -513,6 +589,8 @@ ${postProcessed.surgicalPrompt}`,
         sequenceSummary = await summarizeScreenplaySequence({
           sequenceContent,
           sequenceNumber: nextChapterNum,
+          totalSequences,
+          targetPages,
           characters: screenplayOutline.characters,
         });
 

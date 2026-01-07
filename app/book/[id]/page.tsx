@@ -2230,7 +2230,11 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
                       </div>
                       <div>
                         <p className="font-medium text-neutral-900">
-                          {isScreenplay ? 'Sequence' : 'Chapter'} {chapter.number}: {chapter.title}
+                          {isScreenplay
+                            ? (chapter.title.startsWith('Sequence ')
+                                ? chapter.title
+                                : `Sequence ${chapter.number}: ${chapter.title}`)
+                            : `Chapter ${chapter.number}: ${chapter.title}`}
                         </p>
                         <p className="text-sm text-neutral-500">
                           {isScreenplay ? `~${Math.ceil(chapter.wordCount / 250)} pages` : `${chapter.wordCount.toLocaleString()} words`}
