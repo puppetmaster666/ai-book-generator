@@ -8,7 +8,15 @@
 
 | Metric | Score | Date | Version |
 |--------|-------|------|---------|
-| **BEST** | TBD | - | - |
+| **BEST** | 8.53 | 2025-01-07 | v1.5 (The_Second_Breath) |
+
+### Critical Finding
+The script scores **0/10 on Behavioral Control** due to severe tic hammering:
+- Watch mentioned **34 times** (limit: 4) - 850% over limit
+- Gun mentioned **28 times** (limit: 6) - 467% over limit
+- Watch clustering: mentions only 57-274 words apart (need 2000+)
+
+**This is why Phase 2 prop cooldown and tic enforcement were essential.**
 
 ---
 
@@ -23,7 +31,8 @@
 
 | Date | Version | Script Name | Composite | Struct | Prose | Char | Behav | AI-FP | Unique | Key Notes |
 |------|---------|-------------|-----------|--------|-------|------|-------|-------|--------|-----------|
-| 2025-01-07 | v2.0 | Baseline (Pre-Phase2) | 8.25 | 9.25 | 8.25 | 8.25 | 7.75 | 7.75 | 8.00 | Reference: "The Second Breath" analysis |
+| 2025-01-07 | v1.5 | The_Second_Breath | **8.53** | 10.0 | 8.5 | 10.0 | **0.0** | 10.0 | 8.0 | Watch 34x, Gun 28x - severe tic hammering |
+| 2025-01-07 | v2.0 | Baseline (Pre-Phase2) | 8.25 | 9.25 | 8.25 | 8.25 | 7.75 | 7.75 | 8.00 | Original manual estimate |
 
 ---
 
@@ -45,12 +54,12 @@
 
 | Category | Best Score | Script | Date | Key Factor |
 |----------|------------|--------|------|------------|
-| Structural Integrity | 9.25 | The Second Breath | 2025-01-07 | Strong THEREFORE/BUT chain |
-| Prose Mechanics | 8.25 | The Second Breath | 2025-01-07 | Good variance, rich sensory |
-| Character Dynamics | 8.25 | The Second Breath | 2025-01-07 | Distinct voices |
-| Behavioral Control | 7.75 | The Second Breath | 2025-01-07 | Watch tic issue (28x) |
-| AI Fingerprint | 7.75 | The Second Breath | 2025-01-07 | Some trailer-speak |
-| Cross-Project | 8.00 | The Second Breath | 2025-01-07 | First generation |
+| Structural Integrity | **10.0** | The_Second_Breath | 2025-01-07 | Zero reset patterns detected |
+| Prose Mechanics | 8.5 | The_Second_Breath | 2025-01-07 | σ=4.81, 140 sensory refs |
+| Character Dynamics | **10.0** | The_Second_Breath | 2025-01-07 | Zero on-the-nose dialogue |
+| Behavioral Control | **0.0** | The_Second_Breath | 2025-01-07 | Watch 34x, Gun 28x, severe clustering |
+| AI Fingerprint | **10.0** | The_Second_Breath | 2025-01-07 | 91 messiness instances, 0 bangers |
+| Cross-Project | 8.0 | The_Second_Breath | 2025-01-07 | First generation |
 
 ---
 
