@@ -153,6 +153,18 @@ export interface ScreenplayContext {
 
   // NEW: Track tic usage across entire screenplay (enforced limits)
   ticCredits: Record<string, number>; // { 'glasses': 1, 'sigh': 2, etc. }
+
+  // NEW: Track object prop usage across entire screenplay (global limits)
+  objectCredits: Record<string, number>; // { 'watch_check': 2, 'gun_mention': 5, etc. }
+
+  // NEW: Track exit cliché usage across entire screenplay
+  exitCredits: Record<string, number>; // { 'rain_exit': 1, 'door_close': 2, etc. }
+
+  // NEW Phase 2: Track last word position of each prop for cooldown enforcement
+  propLastPosition: Record<string, number>; // { 'watch': 1500, 'gun': 3200, etc. }
+
+  // NEW Phase 2: Running word count across screenplay for cooldown calculation
+  totalWordCount: number;
 }
 
 /**
@@ -480,6 +492,314 @@ export const SCREENPLAY_ON_THE_NOSE_PATTERNS: RegExp[] = [
 ];
 
 /**
+ * Object-level tic tracking - Props that get overused across the ENTIRE screenplay
+ * Unlike character tics (per-sequence), these are tracked GLOBALLY
+ * Max values are for the ENTIRE screenplay, not per sequence
+ */
+export const SCREENPLAY_OBJECT_TICS: Array<{
+  name: string;
+  pattern: RegExp;
+  maxPerScreenplay: number;
+}> = [
+  // Watch obsession (the "Second Breath" problem - 25+ mentions)
+  { name: 'watch_check', pattern: /\b(check(s|ed|ing)?|glance(s|d)?( at)?|look(s|ed|ing)?( at)?)\s+(his|her|their)\s+(watch|wristwatch)/gi, maxPerScreenplay: 4 },
+  { name: 'watch_mention', pattern: /\b(watch|wristwatch)\b(?!\s*(tower|man|woman|dog|out|over|your|my|the\s+movie))/gi, maxPerScreenplay: 8 },
+  // Gun/weapon fixation
+  { name: 'gun_check', pattern: /\b(check(s|ed|ing)?|touch(es|ed|ing)?|grip(s|ped|ping)?)\s+(his|her|their)\s+(gun|pistol|revolver|weapon|piece)/gi, maxPerScreenplay: 5 },
+  { name: 'gun_mention', pattern: /\b(gun|pistol|revolver|piece|weapon|firearm)\b/gi, maxPerScreenplay: 15 },
+  // Cigarette/smoking
+  { name: 'cigarette_action', pattern: /\b(light(s|ed|ing)?|smoke(s|d|ing)?|stub(s|bed|bing)?( out)?|flick(s|ed|ing)?)\s+(a\s+)?(his|her|their\s+)?(cigarette|cig|smoke|butt)/gi, maxPerScreenplay: 6 },
+  { name: 'cigarette_mention', pattern: /\b(cigarette|cig|smoke|ashtray|butt|nicotine)\b/gi, maxPerScreenplay: 12 },
+  // Phone/device
+  { name: 'phone_check', pattern: /\b(check(s|ed|ing)?|glance(s|d)?( at)?)\s+(his|her|their)\s+(phone|cell|mobile)/gi, maxPerScreenplay: 5 },
+  // Photo/picture obsession
+  { name: 'photo_stare', pattern: /\b(stare(s|d)?|look(s|ed|ing)?|gaze(s|d)?)\s+(at\s+)?(a\s+)?(the\s+)?(old\s+)?(photo|photograph|picture)/gi, maxPerScreenplay: 3 },
+  // Ring/jewelry fidget
+  { name: 'ring_fidget', pattern: /\b(twist(s|ed|ing)?|spin(s|ning)?|touch(es|ed|ing)?|fidget(s|ed|ing)?( with)?)\s+(his|her|their)\s+(ring|wedding\s+ring|band)/gi, maxPerScreenplay: 3 },
+];
+
+/**
+ * Character exit clichés - Repetitive ways characters leave scenes
+ * AI tends to use the same 3-4 exit patterns throughout
+ */
+export const SCREENPLAY_EXIT_CLICHES: Array<{
+  name: string;
+  pattern: RegExp;
+  maxPerScreenplay: number;
+}> = [
+  // "Walking into the rain/night"
+  { name: 'rain_exit', pattern: /\b(walk(s|ed|ing)?|step(s|ped|ping)?|disappear(s|ed|ing)?)\s+(out\s+)?(into|through)\s+(the\s+)?(rain|downpour|storm)/gi, maxPerScreenplay: 1 },
+  { name: 'night_exit', pattern: /\b(walk(s|ed|ing)?|disappear(s|ed|ing)?|vanish(es|ed|ing)?)\s+(into|through)\s+(the\s+)?(night|darkness)/gi, maxPerScreenplay: 1 },
+  // "Without looking back"
+  { name: 'no_look_back', pattern: /\b(without|never)\s+(once\s+)?(look(s|ed|ing)?|glanc(e|es|ed|ing)?)\s+back/gi, maxPerScreenplay: 1 },
+  // "Leaves them standing there"
+  { name: 'leaves_standing', pattern: /\bleav(e|es|ing)\s+(him|her|them)\s+(just\s+)?standing\s+(there|alone)/gi, maxPerScreenplay: 1 },
+  // "Door closes behind"
+  { name: 'door_close', pattern: /\b(door|gate)\s+(close(s|d)?|shut(s)?|slam(s|med)?)\s+(softly\s+)?(behind|after)\s+(him|her|them)/gi, maxPerScreenplay: 2 },
+  // "Sunset/silhouette" exits
+  { name: 'sunset_exit', pattern: /\b(silhouette(d)?|outline(d)?)\s+(against|by)\s+(the\s+)?(setting\s+sun|sunset|horizon|sky)/gi, maxPerScreenplay: 1 },
+  // "Fades into distance"
+  { name: 'fade_distance', pattern: /\b(fade(s|d)?|disappear(s|ed)?|dwindle(s|d)?)\s+(into\s+)?(the\s+)?distance/gi, maxPerScreenplay: 1 },
+];
+
+/**
+ * Verbal messiness patterns - Signs of HUMAN dialogue
+ * These should APPEAR in the screenplay to pass AI detection
+ * Post-processing will flag if NONE of these appear in a sequence
+ */
+export const SCREENPLAY_VERBAL_MESSINESS: Array<{
+  name: string;
+  pattern: RegExp;
+  description: string;
+}> = [
+  // Self-interruption (em-dash mid-sentence)
+  { name: 'self_interrupt', pattern: /\w+\s*--\s*\w+/g, description: 'Character cuts themselves off mid-thought' },
+  // Filler words in dialogue
+  { name: 'filler_words', pattern: /\b(um|uh|look,|I mean,|you know,|anyway,|so,|well,|okay so,|right,|like,)\b/gi, description: 'Natural hesitation and filler' },
+  // Trailing off (ellipsis)
+  { name: 'trail_off', pattern: /\w+\.\.\.\s*$/gm, description: 'Dialogue trails off, unfinished' },
+  // Repeated word stammer
+  { name: 'stammer', pattern: /\b(\w+)\s+\1\b/gi, description: 'Word repetition showing stress' },
+  // Abrupt topic change
+  { name: 'topic_change', pattern: /\.\s+(Wait|Actually|Anyway|Never mind|Forget it|Whatever)/gi, description: 'Sudden redirect in conversation' },
+  // False start
+  { name: 'false_start', pattern: /^(I|He|She|They|We|You)\s*--\s*(I|He|She|They|We|You)/gmi, description: 'Starts sentence, restarts' },
+  // Contradicting self
+  { name: 'self_contradict', pattern: /\.\s+(No|Actually|Wait),?\s+(that's not|I didn't mean|forget that)/gi, description: 'Character corrects themselves' },
+];
+
+/**
+ * Prop Cooldown - Spatial-temporal enforcement for prop mentions
+ * Not just counting, but ensuring minimum word distance between mentions
+ * Prevents clustering like "watch... watch... watch" in 500 words
+ */
+export interface PropCooldown {
+  name: string;
+  pattern: RegExp;
+  maxGlobal: number;        // Max across entire screenplay
+  cooldownWords: number;    // Minimum words between mentions
+}
+
+/**
+ * Prop cooldown settings with spatial-temporal enforcement
+ * These track how far apart prop mentions must be
+ */
+export const SCREENPLAY_PROP_COOLDOWNS: PropCooldown[] = [
+  { name: 'watch', pattern: /\b(watch|wristwatch|timepiece)\b(?!\s*(tower|man|woman|dog|out|over|your|my|the\s+movie))/gi, maxGlobal: 4, cooldownWords: 2000 },
+  { name: 'gun', pattern: /\b(gun|pistol|revolver|weapon|firearm|piece)\b/gi, maxGlobal: 6, cooldownWords: 1500 },
+  { name: 'cigarette', pattern: /\b(cigarette|cig|smoke|lighter|ash|butt)\b/gi, maxGlobal: 5, cooldownWords: 1500 },
+  { name: 'phone', pattern: /\b(phone|cell|mobile|smartphone)\b/gi, maxGlobal: 6, cooldownWords: 1200 },
+  { name: 'photo', pattern: /\b(photo|photograph|picture|snapshot)\b/gi, maxGlobal: 3, cooldownWords: 2500 },
+  { name: 'ring', pattern: /\b(ring|wedding\s+ring|wedding\s+band|engagement\s+ring)\b/gi, maxGlobal: 3, cooldownWords: 2500 },
+  { name: 'keys', pattern: /\b(keys|car\s+keys|house\s+keys)\b/gi, maxGlobal: 4, cooldownWords: 2000 },
+  { name: 'glasses', pattern: /\b(glasses|spectacles|reading\s+glasses)\b/gi, maxGlobal: 4, cooldownWords: 1800 },
+];
+
+/**
+ * Banger patterns - Profound/philosophical dialogue that AI overuses
+ * Human dialogue is 70% mundane, 30% meaningful
+ * Too many "bangers" makes it sound like an AI motivational speech
+ */
+export const SCREENPLAY_BANGER_PATTERNS: RegExp[] = [
+  // Profound statements
+  /The (truth|reality|problem) is[,.]?/gi,
+  /What (really )?matters (most )?is/gi,
+  /In the end,/gi,
+  /When you (really )?think about it/gi,
+  /Life is (about|like|just)/gi,
+  /The thing about .+ is/gi,
+  /That's (the|what) life is (really )?about/gi,
+  // Philosophical questions
+  /What does it (even )?mean to/gi,
+  /Who are we (really|truly)/gi,
+  /What makes us (truly )?human/gi,
+  /Isn't that what .+ is (all )?about/gi,
+  // Dramatic declarations
+  /Everything (has )?changed/gi,
+  /Nothing will ever be the same/gi,
+  /This changes everything/gi,
+  /There's no going back/gi,
+  /We can never go back/gi,
+  /Some things you can't (take back|undo)/gi,
+  // Movie trailer speak
+  /In a world where/gi,
+  /When all hope (seems|is) lost/gi,
+  /One (man|woman|person) must/gi,
+  /The only one who can/gi,
+];
+
+/**
+ * Mundane dialogue templates - What real humans say 70% of the time
+ * AI underuses these logistical, everyday exchanges
+ */
+export const MUNDANE_DIALOGUE_TEMPLATES: string[] = [
+  "You want some coffee?",
+  "Did you eat?",
+  "Traffic was hell.",
+  "I need to pee.",
+  "What time is it?",
+  "My back is killing me.",
+  "Where'd you park?",
+  "I forgot my wallet.",
+  "Is that decaf?",
+  "My phone's dead.",
+  "You got a charger?",
+  "This chair sucks.",
+  "I'm starving.",
+  "It's cold in here.",
+  "Did you feed the dog?",
+  "Hold on, I got a text.",
+  "My feet are killing me.",
+  "Is there more wine?",
+  "I gotta use the bathroom.",
+  "What's the wifi password?",
+  "My Uber's here.",
+  "Can you grab my keys?",
+  "I forgot to call my mom.",
+  "Did we pay the check?",
+  "I can't find my glasses.",
+  "Is it raining?",
+  "What channel?",
+  "Did you lock the door?",
+  "I need another drink.",
+  "My allergies are acting up.",
+];
+
+/**
+ * Professor archetype humanization requirements
+ * When a character has 'The Professor' archetype, they need these elements
+ */
+export const PROFESSOR_HUMANIZATION_ELEMENTS = [
+  // Mundane hobbies (mentioned at least once)
+  'crossword', 'gardening', 'cooking', 'fishing', 'chess', 'baseball', 'poker', 'golf',
+  'stamp collecting', 'birdwatching', 'woodworking', 'hiking', 'old movies', 'jazz', 'vinyl',
+  // Physical imperfections (mentioned at least once)
+  'bad knee', 'reading glasses', 'coffee stain', 'worn shoes', 'loose button', 'messy desk',
+  'chipped mug', 'old sweater', 'wrinkled shirt', 'scuffed briefcase',
+  // Contradictory traits (at least one moment of "armor cracking")
+  'actually laughs', 'admits he doesn\'t know', 'forgets the word', 'mispronounces',
+  'spills', 'drops', 'stumbles over', 'loses train of thought', 'blushes',
+];
+
+/**
+ * Scene Constraint - "What You Can't Say"
+ * Forces subtext by banning explicit emotion words from dialogue
+ * If a scene is about fear, characters CANNOT say "scared" or "afraid"
+ */
+export interface SceneConstraint {
+  sceneDescription: string;  // Brief scene description
+  emotion: string;           // Core emotion of the scene
+  bannedWords: string[];     // Words banned from dialogue
+  mustConveyThrough: string; // How emotion must be shown instead
+}
+
+/**
+ * Emotion to Banned Words mapping
+ * When a scene is about emotion X, characters cannot SAY words related to X
+ * This forces subtext - emotion must be conveyed through action/behavior
+ */
+export const EMOTION_TO_BANNED_WORDS: Record<string, string[]> = {
+  'fear': ['scared', 'afraid', 'terrified', 'frightened', 'fear', 'fearful', 'terrifying', 'frightening', 'scary'],
+  'love': ['love', 'adore', 'cherish', 'beloved', 'heart', 'loving', 'adoration', 'devotion', 'loving'],
+  'anger': ['angry', 'furious', 'mad', 'rage', 'hate', 'hatred', 'enraged', 'livid', 'wrathful', 'irate'],
+  'grief': ['sad', 'grief', 'mourn', 'mourning', 'loss', 'devastated', 'heartbroken', 'sorrow', 'sorrowful'],
+  'betrayal': ['betray', 'betrayed', 'betrayal', 'traitor', 'trust', 'lied', 'deceive', 'deceived', 'backstab'],
+  'guilt': ['guilty', 'guilt', 'fault', 'blame', 'sorry', 'forgive', 'forgiveness', 'ashamed', 'shame'],
+  'jealousy': ['jealous', 'envious', 'envy', 'jealousy', 'covet', 'resentful', 'resentment'],
+  'loneliness': ['lonely', 'alone', 'isolated', 'loneliness', 'solitude', 'abandoned', 'forsaken'],
+  'hope': ['hope', 'hopeful', 'hopeless', 'optimistic', 'optimism', 'expectation', 'wishing'],
+  'despair': ['despair', 'despairing', 'hopeless', 'futile', 'pointless', 'giving up', 'defeated'],
+  'pride': ['proud', 'pride', 'prideful', 'arrogant', 'arrogance', 'ego', 'conceited'],
+  'shame': ['shame', 'ashamed', 'embarrassed', 'humiliated', 'disgrace', 'disgraced', 'mortified'],
+  'anxiety': ['anxious', 'anxiety', 'worried', 'worry', 'nervous', 'nervousness', 'stressed', 'panic'],
+  'joy': ['happy', 'happiness', 'joy', 'joyful', 'elated', 'ecstatic', 'thrilled', 'delighted'],
+  'confusion': ['confused', 'confusion', 'bewildered', 'perplexed', 'puzzled', 'lost', 'unsure'],
+  'regret': ['regret', 'regretful', 'wish I hadn\'t', 'if only', 'mistake', 'wrong choice'],
+};
+
+/**
+ * Generate scene constraints from beat sheet emotional context
+ * @param beat - The story beat (e.g., 'allIsLost', 'midpoint')
+ * @param sequenceNumber - Which sequence we're in
+ * @returns Scene constraints with banned words
+ */
+export function generateSceneConstraints(
+  beat: string,
+  _sequenceNumber?: number
+): SceneConstraint[] {
+  const constraints: SceneConstraint[] = [];
+
+  // Map beats to primary emotions
+  const beatEmotions: Record<string, { emotion: string; description: string }> = {
+    'openingImage': { emotion: 'loneliness', description: 'Establishing protagonist\'s initial state' },
+    'themeStated': { emotion: 'hope', description: 'Theme introduction' },
+    'setup': { emotion: 'anxiety', description: 'World establishment' },
+    'catalyst': { emotion: 'fear', description: 'Inciting incident' },
+    'debate': { emotion: 'confusion', description: 'Protagonist questions the call' },
+    'breakIntoTwo': { emotion: 'hope', description: 'Protagonist commits to journey' },
+    'bStory': { emotion: 'love', description: 'B-story relationship begins' },
+    'funAndGames': { emotion: 'joy', description: 'Promise of premise' },
+    'midpoint': { emotion: 'pride', description: 'False victory or false defeat' },
+    'badGuysCloseIn': { emotion: 'fear', description: 'Pressure mounts' },
+    'allIsLost': { emotion: 'despair', description: 'Lowest point' },
+    'darkNightOfSoul': { emotion: 'grief', description: 'Protagonist processes loss' },
+    'breakIntoThree': { emotion: 'hope', description: 'Epiphany moment' },
+    'finale': { emotion: 'anger', description: 'Final confrontation' },
+    'finalImage': { emotion: 'joy', description: 'Transformation complete' },
+  };
+
+  const beatConfig = beatEmotions[beat];
+  if (beatConfig) {
+    const bannedWords = EMOTION_TO_BANNED_WORDS[beatConfig.emotion] || [];
+    constraints.push({
+      sceneDescription: beatConfig.description,
+      emotion: beatConfig.emotion,
+      bannedWords,
+      mustConveyThrough: 'ACTION and SUBTEXT - characters cannot name their feelings',
+    });
+  }
+
+  return constraints;
+}
+
+/**
+ * Build scene constraints section for sequence generation prompt
+ */
+export function buildSceneConstraintsSection(beats: string[]): string {
+  const allConstraints: SceneConstraint[] = [];
+
+  for (const beat of beats) {
+    const constraints = generateSceneConstraints(beat, 1);
+    allConstraints.push(...constraints);
+  }
+
+  if (allConstraints.length === 0) {
+    return '';
+  }
+
+  const constraintLines = allConstraints.map(c => {
+    return `SCENE: ${c.sceneDescription} (${c.emotion.toUpperCase()})
+  BANNED FROM DIALOGUE: ${c.bannedWords.join(', ')}
+  SHOW THROUGH: ${c.mustConveyThrough}`;
+  }).join('\n\n');
+
+  return `
+=== SCENE CONSTRAINTS: WHAT YOU CAN'T SAY ===
+For each scene, certain emotion words are BANNED from dialogue.
+The audience must FEEL the emotion through behavior, not hear it stated.
+
+${constraintLines}
+
+EXAMPLE:
+If scene emotion is FEAR, characters CANNOT say:
+✗ "I'm scared" / "I'm afraid" / "This is terrifying"
+✓ [Character backs against wall] / "We need to go. Now." / [hands shake]
+
+Violating these constraints will trigger regeneration.
+`;
+}
+
+/**
  * Initialize empty screenplay context
  */
 export function createInitialContext(targetPages: number = 100): ScreenplayContext {
@@ -498,6 +818,10 @@ export function createInitialContext(targetPages: number = 100): ScreenplayConte
     lastSequenceSummary: '',
     // anchorContext is undefined until Sequence 1 completes
     ticCredits: {}, // Track tic usage across screenplay
+    objectCredits: {}, // Track object prop usage globally
+    exitCredits: {}, // Track exit cliché usage globally
+    propLastPosition: {}, // Track last word position of each prop for cooldown
+    totalWordCount: 0, // Running word count for cooldown calculation
   };
 }
 

@@ -23,6 +23,7 @@ export * from './visual/consistency';
 export * from './screenplay/outline';
 export * from './screenplay/sequence';
 export * from './screenplay/review';
+export * from './screenplay/post-processing';
 
 // Shared assets (cover, marketing, ideas)
 export * from './cover';

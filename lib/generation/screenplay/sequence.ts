@@ -10,10 +10,12 @@ import {
   SCREENPLAY_CLINICAL_VOCABULARY,
   SCREENPLAY_TIC_PATTERNS,
   SCREENPLAY_ON_THE_NOSE_PATTERNS,
+  buildSceneConstraintsSection,
 } from '@/lib/screenplay';
 import { SAFETY_SETTINGS } from '../shared/safety';
 import { getGeminiFlash, withTimeout } from '../shared/api-client';
 import { parseJSONFromResponse } from '../shared/json-utils';
+import { getDNABlacklist, generateBlacklistPromptSection, type DNAEntry } from '@/lib/dna-blacklist';
 
 /**
  * Helper: Get description for dialogue archetype
@@ -198,6 +200,22 @@ Excess tics will be AUTOMATICALLY REMOVED by post-processing.
 Vary your physical business. Use the environment instead of character tics.
 AVOID: glasses cleaning, throat clearing, jaw clenching repeated.
 USE: Interacting with props, environment, other characters physically.
+
+=== OBJECT PROP BUDGET (GLOBAL LIMITS - ENTIRE SCREENPLAY) ===
+Props should NOT become obsessions. Track usage across the whole screenplay:
+- Watch/wristwatch checking: MAX 4x total
+- Gun mentions: MAX 15x total
+- Cigarette actions: MAX 6x total
+- Photo staring: MAX 3x total
+
+If a prop feels thematic, show it ONCE prominently, then vary with other actions.
+Example: Instead of 5 "checks his watch" moments, use:
+- Checks watch (1x)
+- Glances at clock on wall (1x)
+- Phone screen shows 2:47 AM (1x)
+- "We're out of time" dialogue (subtext)
+
+OBJECT OVERUSE = AI DETECTION. The same prop action repeated = REJECTED.
 `;
 }
 
@@ -216,6 +234,7 @@ export async function generateScreenplaySequence(data: {
   title: string;
   activeSubplots?: Subplot[]; // Subplots active in this sequence
   onProgress?: (text: string) => void; // Live preview callback
+  dnaBlacklist?: DNAEntry[]; // Cross-project DNA blacklist to avoid
 }): Promise<{
   content: string;
   pageCount: number;
@@ -291,10 +310,24 @@ These are FACTS. If a character's age or appearance changes, you have FAILED.
   const subtextEngine = buildSubtextEngine();
   const ticBudget = buildTicBudgetWarning();
 
+  // NEW Phase 2: Scene constraints (What You Can't Say)
+  const sceneConstraintsSection = buildSceneConstraintsSection(sequenceInfo.beats);
+
+  // NEW Phase 2: DNA Blacklist (Cross-project uniqueness)
+  const dnaBlacklistSection = data.dnaBlacklist && data.dnaBlacklist.length > 0
+    ? generateBlacklistPromptSection(data.dnaBlacklist)
+    : '';
+
   // Emotional break-point requirement for Professor/Steamroller archetypes
-  const hasProfessorOrSteamroller = data.characters.some(c =>
-    c.dialogueArchetype === 'The Professor' || c.dialogueArchetype === 'The Steamroller'
-  );
+  const hasProfessor = data.characters.some(c => c.dialogueArchetype === 'The Professor');
+  const hasSteamroller = data.characters.some(c => c.dialogueArchetype === 'The Steamroller');
+  const hasProfessorOrSteamroller = hasProfessor || hasSteamroller;
+
+  const professorNames = data.characters
+    .filter(c => c.dialogueArchetype === 'The Professor')
+    .map(c => c.name)
+    .join(', ');
+
   const emotionalBreakSection = hasProfessorOrSteamroller
     ? `
 === EMOTIONAL BREAK-POINTS ===
@@ -304,6 +337,32 @@ Every "Professor" or "Steamroller" character MUST have 1-2 moments where their v
 - Evader finally direct: "Fine. Yes. I'm terrified. Happy now?"
 
 This is MANDATORY for emotional authenticity. Consistent verbal strategy = robot.
+`
+    : '';
+
+  // Professor humanization requirement (mundane details, armor-cracking)
+  const professorHumanizationSection = hasProfessor
+    ? `
+=== PROFESSOR ARCHETYPE HUMANIZATION (${professorNames}) ===
+"Professor" characters MUST feel HUMAN, not robotic. Include AT LEAST ONE of:
+
+MUNDANE HOBBY MENTION:
+- "The crossword sits half-finished by his coffee."
+- "Fishing photos on the desk. A bad catch, but he's grinning."
+- "An old vinyl record sleeve peeks from his bag."
+
+PHYSICAL IMPERFECTION:
+- "Coffee stain on his tie he hasn't noticed."
+- "Scuffed shoes. The right one untied."
+- "Glasses askew. Reading glasses, not his usual."
+
+ARMOR-CRACKING MOMENT:
+- "[Professor] forgets the word. Opens mouth. Closes it. Tries again."
+- "[Professor] actually laughs—surprised by his own reaction."
+- "[Professor] admits: 'I don't know. I really don't know.'"
+
+Without these, the Professor reads as AI-generated lecture-bot.
+MANDATORY: At least one humanizing detail per Professor character per sequence.
 `
     : '';
 
@@ -350,6 +409,51 @@ NEVER start three consecutive sentences with the same pronoun (She, He, It, The)
 NEVER use more than two 2-word fragments in a row.
 `;
 
+  // Verbal messiness requirement (anti-AI detection)
+  const verbalMessinessSection = `
+=== VERBAL MESSINESS (MANDATORY - ANTI-AI DETECTION) ===
+Your dialogue is TOO POLISHED if it lacks these human speech patterns.
+EVERY SEQUENCE must include AT LEAST 2 of these:
+
+1. SELF-INTERRUPTION: "I just-- I don't know what to--"
+2. FILLER WORDS: "Look, it's... um... it's complicated."
+3. TRAILING OFF: "If you could just..."
+4. WORD REPETITION: "I'm fine, I'm fine."
+5. ABRUPT TOPIC CHANGE: "Wait. Actually, forget that."
+6. CONTRADICTING SELF: "No, that's not what I meant."
+
+EXAMPLES OF HUMAN MESSINESS:
+✓ "I'm not-- look, I never said that."
+✓ "So what, you just... you just leave?"
+✓ "The thing is-- no, forget it."
+
+TOO POLISHED (AI TELLS):
+✗ "I understand your position perfectly."
+✗ "Allow me to explain the situation."
+✗ Every line is grammatically complete and eloquent.
+
+Characters under stress do NOT speak in perfect sentences.
+`;
+
+  // Exit variety requirement
+  const exitVarietySection = `
+=== CHARACTER EXIT VARIETY (MANDATORY) ===
+Characters leave scenes in DIFFERENT ways. Avoid these clichés:
+- "Walks into the rain/night" - MAX 1x per ENTIRE screenplay
+- "Without looking back" - MAX 1x per ENTIRE screenplay
+- "Door closes behind them" - MAX 2x per ENTIRE screenplay
+- "Silhouetted against the sunset" - FORBIDDEN
+
+VARY YOUR EXITS:
+- Physical action: "Slams door, picture frame rattles"
+- Mundane detail: "Grabs keys from the bowl"
+- Other character's reaction: "SARAH watches him go. Doesn't breathe until his footsteps fade."
+- Sound-first: "Engine starts. Gravel crunches. Then silence."
+- Incomplete exit: "Hand on door handle. Hesitates. Opens it. Closes it again."
+
+The same exit type repeated = AI detection. Variety = human.
+`;
+
   // Genre-specific tone guidance
   const genreTone = getGenreToneGuidance(data.genre);
 
@@ -367,11 +471,16 @@ ${characterStatesSection}
 ${dualLayerContext}
 ${continuityLock}
 ${emotionalBreakSection}
+${professorHumanizationSection}
 ${protagonistAgencySection}
 ${rhythmSection}
+${verbalMessinessSection}
+${exitVarietySection}
 ${clinicalVocabBan}
 ${subtextEngine}
 ${ticBudget}
+${sceneConstraintsSection}
+${dnaBlacklistSection}
 
 === CHARACTER PSYCHOLOGY (MANDATORY FOR EVERY LINE) ===
 ${characterPsychology}
@@ -503,6 +612,81 @@ OUTPUT: Industry-standard screenplay format ONLY. No commentary.`;
   const pageCount = estimatePageCount(content);
 
   return { content, pageCount };
+}
+
+/**
+ * Extend an existing screenplay sequence to reach target length
+ * Instead of regenerating from scratch, this appends new scenes
+ */
+export async function extendScreenplaySequence(data: {
+  existingContent: string;
+  currentWordCount: number;
+  targetWordCount: number;
+  sequenceNumber: number;
+  totalSequences: number;
+  beatSheet: BeatSheet;
+  characters: CharacterProfile[];
+  genre: string;
+}): Promise<{ content: string; pageCount: number }> {
+  const wordsNeeded = data.targetWordCount - data.currentWordCount;
+  const pagesNeeded = Math.ceil(wordsNeeded / 250);
+
+  // Extract the last scene from existing content for continuity
+  const lines = data.existingContent.split('\n');
+  const lastSluglineIndex = lines.findLastIndex(line => /^(INT\.|EXT\.)/.test(line.trim()));
+  const lastScene = lastSluglineIndex >= 0 ? lines.slice(lastSluglineIndex).join('\n') : lines.slice(-20).join('\n');
+
+  const prompt = `You are extending a screenplay sequence that is TOO SHORT.
+
+CURRENT STATE:
+- Sequence ${data.sequenceNumber} of ${data.totalSequences}
+- Current word count: ${data.currentWordCount} words (${Math.round(data.currentWordCount / 250)} pages)
+- Target word count: ${data.targetWordCount} words (${Math.round(data.targetWordCount / 250)} pages)
+- WORDS NEEDED: ${wordsNeeded} more words (${pagesNeeded} more pages)
+
+LAST SCENE WRITTEN:
+${lastScene}
+
+CHARACTERS:
+${data.characters.map(c => `- ${c.name}: ${c.want}`).join('\n')}
+
+YOUR TASK:
+Write ${pagesNeeded} MORE PAGES of screenplay that continue from the last scene above.
+
+REQUIREMENTS:
+1. Pick up IMMEDIATELY after the last scene (no recap, no restart)
+2. Add 2-3 NEW SCENES that develop the story
+3. Include substantial dialogue exchanges (10+ lines per scene)
+4. Add sensory action lines between dialogue
+5. Build tension toward the sequence's climax
+
+WRITE AT LEAST ${wordsNeeded} MORE WORDS.
+
+=== FORMAT ===
+- Sluglines: INT./EXT. LOCATION - DAY/NIGHT
+- Character names: ALL CAPS before dialogue
+- Action paragraphs: Max 3 lines each
+
+OUTPUT: Industry-standard screenplay format ONLY. Start with a slugline.`;
+
+  const result = await withTimeout(
+    () => getGeminiFlash().generateContent({
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      generationConfig: {
+        temperature: 0.9,
+        maxOutputTokens: 8000,
+      },
+      safetySettings: SAFETY_SETTINGS,
+    }),
+    120000,
+    `extendScreenplaySequence_${data.sequenceNumber}`
+  );
+
+  const extension = result.response.text();
+  const combinedContent = data.existingContent + '\n\n' + extension;
+  const pageCount = estimatePageCount(combinedContent);
+
+  return { content: combinedContent, pageCount };
 }
 
 /**

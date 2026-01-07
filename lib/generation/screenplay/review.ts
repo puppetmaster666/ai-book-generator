@@ -180,7 +180,19 @@ ${bannedActions.length > 0 ? `Banned action starts: ${bannedActions.join(', ')}`
     issuesSection += `\n\n=== CLICHÉS/METAPHORS TO REPLACE ===\n${bannedPatterns.join('\n')}`;
   }
 
-  const prompt = `You are a RUTHLESS Hollywood Script Doctor. Your job: CUT 20% OF THE FLUFF.
+  // Calculate current word count - if already short, don't allow cutting
+  const currentWordCount = sequenceContent.split(/\s+/).filter(w => w.length > 0).length;
+  const isAlreadyShort = currentWordCount < 2500; // Less than 10 pages
+
+  const cuttingInstruction = isAlreadyShort
+    ? `PRESERVE LENGTH - This sequence is only ${currentWordCount} words (${Math.round(currentWordCount / 250)} pages).
+DO NOT cut content. Focus only on IMPROVING quality while maintaining length.
+If anything, EXPAND weak sections with better dialogue and sensory detail.`
+    : `If scenes feel bloated, tighten them. Remove redundant dialogue.`;
+
+  const prompt = `You are a Hollywood Script Doctor. Polish this sequence for professional quality.
+
+${cuttingInstruction}
 
 SEQUENCE ${sequenceNumber || '?'} TO EDIT:
 ${sequenceContent}

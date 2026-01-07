@@ -264,3 +264,19 @@ model SiteSettings {
   trafficWarningEnabled Boolean  @default(false)
   updatedAt             DateTime @updatedAt
 }
+
+model DNABlacklist {
+  id              String   @id @default(cuid())
+  userId          String
+  type            String   // character_name, location, organization, catchphrase, title
+  value           String   // Original value
+  normalizedValue String   // Lowercase, trimmed for matching
+  projectId       String   // Source project ID
+  projectTitle    String   // Source project title for display
+  createdAt       DateTime @default(now())
+
+  @@unique([userId, normalizedValue]) // Prevent duplicates per user
+  @@index([userId])
+  @@index([projectId])
+  @@index([normalizedValue])
+}

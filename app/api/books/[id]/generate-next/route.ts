@@ -7,6 +7,7 @@ import {
   generateCoverPrompt,
   generateCoverImage,
   generateScreenplaySequence,
+  extendScreenplaySequence,
   summarizeScreenplaySequence,
   reviewScreenplaySequence,
   generateMetadataAndMarketing,
@@ -39,6 +40,7 @@ import {
   detectNonfictionClinicalPhrases,
 } from '@/lib/generation/shared/writing-quality';
 import { detectOnTheNoseDialogue } from '@/lib/generation/validators/narrative-validator';
+import { getDNABlacklist } from '@/lib/dna-blacklist';
 
 // Maximum regeneration attempts for hard reject patterns
 const MAX_REGENERATION_ATTEMPTS = 2;
@@ -349,6 +351,20 @@ export async function POST(
 
       console.log(`Generating sequence ${nextChapterNum}/${totalSequences} (${targetPages} pages target)`);
 
+      // Fetch DNA blacklist for cross-project uniqueness (only for logged-in users)
+      let dnaBlacklist: Awaited<ReturnType<typeof getDNABlacklist>> = [];
+      if (book.userId) {
+        try {
+          dnaBlacklist = await getDNABlacklist(book.userId, id);
+          if (dnaBlacklist.length > 0) {
+            console.log(`[DNA BLACKLIST] Loaded ${dnaBlacklist.length} entries to avoid`);
+          }
+        } catch (dnaError) {
+          console.warn(`[DNA BLACKLIST] Failed to load:`, dnaError);
+          // Non-critical, continue without blacklist
+        }
+      }
+
       // Generate the next sequence with streaming for live preview
       let sequenceResult: { content: string; pageCount: number };
       try {
@@ -363,6 +379,7 @@ export async function POST(
           title: book.title,
           activeSubplots, // Inject active subplots for this sequence
           onProgress: onScreenplayProgress, // Live preview streaming callback
+          dnaBlacklist, // Cross-project DNA blacklist
         });
       } catch (timeoutError) {
         console.error(`Sequence ${nextChapterNum} generation timed out:`, timeoutError);
@@ -380,33 +397,35 @@ export async function POST(
       let pageCount = sequenceResult.pageCount;
 
       // === PAGE COUNT ENFORCEMENT (Code Fortress) ===
-      // Minimum 10 pages per sequence (2500 words). Target is 14-18 pages.
-      // If too short, regenerate with emphasis on length
-      const MIN_PAGES_PER_SEQUENCE = 10;
+      // Dynamic minimum based on format - each sequence must hit its target
+      // For 100-page/8-sequence: min = 10 pages (2500 words), target = 12.5 pages (3125 words)
+      const minPagesForFormat = Math.floor(targetPages / totalSequences);
+      const MIN_PAGES_PER_SEQUENCE = Math.max(10, minPagesForFormat - 2); // At least 80% of target
       let lengthRegenerationAttempts = 0;
-      const MAX_LENGTH_ATTEMPTS = 2;
+      const MAX_LENGTH_ATTEMPTS = 3; // Increased from 2 to 3
 
       while (pageCount < MIN_PAGES_PER_SEQUENCE && lengthRegenerationAttempts < MAX_LENGTH_ATTEMPTS) {
-        console.warn(`[SHORT SEQUENCE] Sequence ${nextChapterNum} only ${pageCount} pages (minimum: ${MIN_PAGES_PER_SEQUENCE}). Regenerating...`);
+        const currentWordCount = sequenceContent.split(/\s+/).filter(w => w.length > 0).length;
+        const targetWordCount = minPagesForFormat * 250;
 
-        try {
-          // Calculate minimum words based on format
-          const minPagesForFormat = Math.floor(targetPages / totalSequences);
-          const minWordsForFormat = minPagesForFormat * 250;
+        // First attempt: Try regenerating with stricter instructions
+        // Subsequent attempts: EXTEND existing content instead of regenerating
+        if (lengthRegenerationAttempts === 0) {
+          console.warn(`[SHORT SEQUENCE] Sequence ${nextChapterNum} only ${pageCount} pages (${currentWordCount} words). Regenerating with stricter length...`);
 
-          const extendedResult = await generateScreenplaySequence({
-            beatSheet: screenplayOutline.beatSheet,
-            characters: screenplayOutline.characters,
-            sequenceNumber: nextChapterNum,
-            totalSequences,
-            targetPages,
-            context: {
-              ...screenplayContext,
-              lastSequenceSummary: `${screenplayContext.lastSequenceSummary}
+          try {
+            const regeneratedResult = await generateScreenplaySequence({
+              beatSheet: screenplayOutline.beatSheet,
+              characters: screenplayOutline.characters,
+              sequenceNumber: nextChapterNum,
+              totalSequences,
+              targetPages,
+              context: {
+                ...screenplayContext,
+                lastSequenceSummary: `${screenplayContext.lastSequenceSummary}
 
-CRITICAL LENGTH ERROR: Your previous output was only ${pageCount} pages. This is UNACCEPTABLE.
-MINIMUM REQUIREMENT: ${MIN_PAGES_PER_SEQUENCE} pages (${minWordsForFormat}+ words).
-TARGET: ${minPagesForFormat}-${minPagesForFormat + 4} pages.
+CRITICAL LENGTH ERROR: Your previous output was only ${currentWordCount} words (${pageCount} pages). This is UNACCEPTABLE.
+MINIMUM REQUIREMENT: ${targetWordCount} words (${MIN_PAGES_PER_SEQUENCE} pages).
 
 TO FIX:
 1. Expand EVERY scene with more dialogue exchanges (10+ lines per scene)
@@ -415,24 +434,48 @@ TO FIX:
 4. Let moments BREATHE - add pauses, reactions, physical business
 5. Add a B-story moment even if brief
 
-DO NOT STOP until you have written AT LEAST ${minWordsForFormat} words.`,
-            },
-            genre: book.genre,
-            title: book.title,
-            activeSubplots,
-            onProgress: onScreenplayProgress,
-          });
+YOU HAVE WRITTEN: 0/${targetWordCount} words. KEEP WRITING.`,
+              },
+              genre: book.genre,
+              title: book.title,
+              activeSubplots,
+              onProgress: onScreenplayProgress,
+            });
 
-          sequenceContent = extendedResult.content;
-          pageCount = extendedResult.pageCount;
-          lengthRegenerationAttempts++;
-
-          if (pageCount >= MIN_PAGES_PER_SEQUENCE) {
-            console.log(`[LENGTH FIXED] Sequence ${nextChapterNum} now ${pageCount} pages after ${lengthRegenerationAttempts} attempt(s)`);
+            sequenceContent = regeneratedResult.content;
+            pageCount = regeneratedResult.pageCount;
+          } catch (regenError) {
+            console.error(`[LENGTH] Regeneration failed:`, regenError);
+            break;
           }
-        } catch (extendError) {
-          console.error(`[LENGTH] Failed to extend sequence ${nextChapterNum}:`, extendError);
-          break;
+        } else {
+          // EXTEND existing content instead of regenerating from scratch
+          console.warn(`[SHORT SEQUENCE] Attempt ${lengthRegenerationAttempts + 1}: Extending existing ${currentWordCount} words to reach ${targetWordCount}...`);
+
+          try {
+            const extendedResult = await extendScreenplaySequence({
+              existingContent: sequenceContent,
+              currentWordCount,
+              targetWordCount,
+              sequenceNumber: nextChapterNum,
+              totalSequences,
+              beatSheet: screenplayOutline.beatSheet,
+              characters: screenplayOutline.characters,
+              genre: book.genre,
+            });
+
+            sequenceContent = extendedResult.content;
+            pageCount = extendedResult.pageCount;
+          } catch (extendError) {
+            console.error(`[LENGTH] Extension failed:`, extendError);
+            break;
+          }
+        }
+
+        lengthRegenerationAttempts++;
+
+        if (pageCount >= MIN_PAGES_PER_SEQUENCE) {
+          console.log(`[LENGTH FIXED] Sequence ${nextChapterNum} now ${pageCount} pages after ${lengthRegenerationAttempts} attempt(s)`);
         }
       }
 
@@ -513,7 +556,8 @@ Pick up AFTER the last event and push toward the next beat sheet milestone.`,
           sequenceContent,
           screenplayContext,
           nextChapterNum,
-          screenplayContext.sequenceSummaries
+          screenplayContext.sequenceSummaries,
+          screenplayOutline.characters // Pass characters for Professor humanization check
         );
 
         if (postProcessed.hardReject) {
@@ -555,6 +599,28 @@ ${postProcessed.surgicalPrompt}`,
         // Log post-processing report
         console.log(`[POST-PROCESS] Sequence ${nextChapterNum}: Variance=${postProcessed.report.varianceScore.toFixed(1)}, Sentences combined=${postProcessed.report.sentencesCombined}, Tics removed=${postProcessed.report.ticsRemoved.length}`);
 
+        // Log new AI detection metrics
+        if (postProcessed.report.objectTicsWarnings.length > 0) {
+          console.warn(`[OBJECT TIC] ${postProcessed.report.objectTicsWarnings.join(', ')}`);
+        }
+        if (postProcessed.report.exitClicheWarnings.length > 0) {
+          console.warn(`[EXIT CLICHE] ${postProcessed.report.exitClicheWarnings.join(', ')}`);
+        }
+        if (postProcessed.report.verbalMessinessScore < 30) {
+          console.warn(`[VERBAL MESSINESS] Score only ${postProcessed.report.verbalMessinessScore}% - dialogue may be too polished`);
+        }
+        if (postProcessed.report.noirTemplateWarnings.length > 0) {
+          console.warn(`[NOIR TEMPLATE] ${postProcessed.report.noirTemplateWarnings.join(', ')}`);
+        }
+        if (postProcessed.report.professorWarnings.length > 0) {
+          console.warn(`[PROFESSOR] ${postProcessed.report.professorWarnings.join(', ')}`);
+        }
+
+        // If surgical prompt was generated (messiness/noir/professor issues), add to context for next sequence
+        if (postProcessed.surgicalPrompt) {
+          console.log(`[SURGICAL PROMPT] Adding feedback for next sequence regeneration if needed`);
+        }
+
         break; // Success
       }
 
@@ -570,14 +636,28 @@ ${postProcessed.surgicalPrompt}`,
         console.warn(`[TIC WARNING] Sequence ${nextChapterNum}: ${ticCheck.warnings.join(', ')}`);
       }
 
-      // Review and polish - ALWAYS runs (ruthless pacing editor)
+      // Review and polish - but preserve length
+      const preReviewContent = sequenceContent;
+      const preReviewWordCount = preReviewContent.split(/\s+/).filter(w => w.length > 0).length;
+
       try {
         sequenceContent = await reviewScreenplaySequence(
           sequenceContent,
           screenplayOutline.characters,
           nextChapterNum
         );
-        console.log(`Sequence ${nextChapterNum} polished by script doctor`);
+
+        // Post-review length check - revert if review cut too much
+        const postReviewWordCount = sequenceContent.split(/\s+/).filter(w => w.length > 0).length;
+        const wordLoss = preReviewWordCount - postReviewWordCount;
+        const lossPercent = (wordLoss / preReviewWordCount) * 100;
+
+        if (wordLoss > 500 || lossPercent > 15) {
+          console.warn(`[REVIEW CUT TOO MUCH] Lost ${wordLoss} words (${lossPercent.toFixed(1)}%). Reverting to pre-review content.`);
+          sequenceContent = preReviewContent;
+        } else {
+          console.log(`Sequence ${nextChapterNum} polished by script doctor (${wordLoss >= 0 ? '-' : '+'}${Math.abs(wordLoss)} words)`);
+        }
       } catch (reviewError) {
         console.error(`Failed to review sequence ${nextChapterNum}:`, reviewError);
         // Continue with unreviewed content

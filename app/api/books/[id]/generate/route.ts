@@ -24,6 +24,7 @@ import {
   type ContentRating,
 } from '@/lib/gemini';
 import { createInitialContext, generateSequenceToBeats, type BeatSheet, type CharacterProfile } from '@/lib/screenplay';
+import { extractAndBlacklistFromCharacters } from '@/lib/dna-blacklist';
 import { countWords } from '@/lib/epub';
 import { BOOK_FORMATS, ART_STYLES, ILLUSTRATION_DIMENSIONS, BOOK_PRESETS, type BookFormatKey, type ArtStyleKey, type BookPresetKey } from '@/lib/constants';
 import { sendEmail, getBookReadyEmail } from '@/lib/email';
@@ -764,6 +765,26 @@ export async function POST(
         });
 
         console.log(`Created ${totalSequences} sequence placeholders for ${presetKey} (${targetPages} pages)`);
+
+        // Extract DNA (character names) to blacklist for cross-project uniqueness
+        if (book.userId && screenplayResult.characters) {
+          try {
+            const blacklistedCount = await extractAndBlacklistFromCharacters(
+              book.userId,
+              id,
+              book.title,
+              screenplayResult.characters.map(c => ({
+                name: c.name,
+                archetype: c.dialogueArchetype,
+                background: c.backstory,
+              }))
+            );
+            console.log(`[DNA BLACKLIST] Extracted ${blacklistedCount} entries from screenplay characters`);
+          } catch (dnaError) {
+            console.warn(`[DNA BLACKLIST] Failed to extract DNA:`, dnaError);
+            // Non-critical, continue generation
+          }
+        }
       } else if (useVisualFlow && dialogueStyle) {
         // Use enhanced illustrated outline for visual books
         // Use the preset's panel count from targetChapters (20 for picture books, 24 for comics)
