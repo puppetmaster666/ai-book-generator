@@ -2943,11 +2943,11 @@ export function runScreenplayPostProcessing(
 
   // ===== END PHASE 3 =====
 
-  // 10. Inject verbal friction (5% chance, max 2 per sequence)
-  // REDUCED from 15%/6 - prompts already ask for verbal messiness, so post-processing
-  // injection was creating DOUBLE messiness ("Right. Right. Just.", excessive stutters)
-  // Now minimal injection since prompts handle the heavy lifting
-  const frictionResult = injectVerbalFriction(processedContent, 0.05, 2);
+  // 10. Inject verbal friction (10% chance, max 4 per sequence)
+  // BALANCED: Prompts ask for verbal messiness but AI doesn't always comply
+  // Too low (5%/2) = "too polished" warnings, too high (15%/6) = double messiness
+  // This rate supplements AI generation without over-injecting
+  const frictionResult = injectVerbalFriction(processedContent, 0.10, 4);
   processedContent = frictionResult.content;
 
   // 10a. Inject sensory details (Phase 2.7: target 4+ per 1000 words)

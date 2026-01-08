@@ -335,19 +335,18 @@ ${bannedActions.length > 0 ? `Banned action starts: ${bannedActions.join(', ')}`
     issuesSection += `\n\n=== TOO MANY DIRECT ANSWERS (${directAnswers} found) ===\nCharacters DEFLECT questions in the first 1-2 lines. Questions get ignored, answered with non-sequiturs, or redirected.`;
   }
 
-  // Calculate current word count - if already short, don't allow cutting
+  // Calculate current word count - STRICT length preservation
   const currentWordCount = sequenceContent.split(/\s+/).filter(w => w.length > 0).length;
-  const isAlreadyShort = currentWordCount < 2500; // Less than 10 pages
-
-  const cuttingInstruction = isAlreadyShort
-    ? `PRESERVE LENGTH - This sequence is only ${currentWordCount} words (${Math.round(currentWordCount / 250)} pages).
-DO NOT cut content. Focus only on IMPROVING quality while maintaining length.
-If anything, EXPAND weak sections with better dialogue and sensory detail.`
-    : `If scenes feel bloated, tighten them. Remove redundant dialogue.`;
+  const minOutputWords = Math.floor(currentWordCount * 0.85); // Max 15% reduction
+  const maxOutputWords = Math.ceil(currentWordCount * 1.10); // Max 10% increase
 
   const prompt = `You are a Hollywood Script Doctor. Polish this sequence for professional quality.
 
-${cuttingInstruction}
+=== CRITICAL LENGTH CONSTRAINT ===
+Input: ${currentWordCount} words
+Your output MUST be between ${minOutputWords} and ${maxOutputWords} words.
+DO NOT cut more than 15%. REPLACE weak content with better content, don't delete it.
+If you need to remove something, ADD something else of equal length.
 
 SEQUENCE ${sequenceNumber || '?'} TO EDIT:
 ${sequenceContent}
@@ -363,19 +362,19 @@ ${issuesSection}
    - Other characters should interrupt, react, or the speaker should pause for action
    - Long speeches = amateur writing. Fix them.
 
-2. EXPOSITION REMOVAL
-   - DELETE any lines where characters explain the plot to each other
-   - "As you know..." = DELETE
-   - Characters explaining their own backstory = DELETE or convert to subtext
+2. EXPOSITION CONVERSION
+   - REWRITE lines where characters explain plot into subtext or conflict
+   - "As you know..." = REWRITE as character-specific dialogue
+   - Characters explaining backstory = CONVERT to action or subtext (don't delete, transform)
 
 3. BEAT CHECK
    - First paragraph: Must be a VISUAL HOOK (action, not description)
    - Last paragraph: Must be a BUTTON (sharp ending, not trailing off)
    - If either is weak, REWRITE it
 
-4. RECAP PURGE
-   - If the FIRST PARAGRAPH summarizes the previous sequence, DELETE IT
-   - Start in the action, not in the setup
+4. RECAP TRANSFORMATION
+   - If the FIRST PARAGRAPH summarizes previous events, REWRITE it as action
+   - Transform setup into a visual hook - don't delete, convert to showing
 
 5. PARENTHETICAL CLEANUP
    - Replace EVERY (beat), (pause), (a moment) with a physical action
@@ -410,18 +409,18 @@ ${issuesSection}
     - Check pronoun starts: "She... She... She..." = REWRITE with varied subjects
     - Apply Gary Provost principle: writing should BREATHE, not tap like a metronome
 
-11. TIME JUMP ELIMINATION (HOLLYWOOD COMPLIANCE)
-    - Remove any "X WEEKS/MONTHS LATER" title cards
-    - REWRITE to show time passage through changed physical details:
+11. TIME JUMP REWRITE (HOLLYWOOD COMPLIANCE)
+    - REPLACE any "X WEEKS/MONTHS LATER" title cards with visual time indicators
+    - Show time passage through changed physical details:
       * Different clothes, hair length, seasonal markers
       * Reference to elapsed time in dialogue ("Since the hearing...")
-    - If time MUST pass, show it through a character's changed circumstances
+    - Convert title cards to action descriptions showing changed circumstances
 
 12. MONTAGE EXPANSION
     - If ANY montage detected, EXPAND into 2-3 actual scenes
-    - Each moment in the montage becomes its own mini-scene
+    - Each moment in the montage becomes its own mini-scene with dialogue
     - Dramatize the process instead of summarizing it
-    - MONTAGES ARE LAZY WRITING. Delete the word entirely.
+    - Replace MONTAGE label with actual INT./EXT. sluglines and scenes
 
 13. INTERIOR ESCAPE (CINEMATIC REQUIREMENT)
     - If sequence is 80%+ interiors, ADD 2 exterior scenes
@@ -450,8 +449,9 @@ ${issuesSection}
 
 === OUTPUT RULES ===
 - Return ONLY the polished screenplay sequence
-- Same scenes, same story beats
-- Just TIGHTER and MORE PROFESSIONAL
+- CRITICAL: Output MUST be ${minOutputWords}-${maxOutputWords} words (±15% of input)
+- Same scenes, same story beats - DO NOT DELETE SCENES
+- REPLACE weak content, don't just cut it
 - No commentary or notes`;
 
   const result = await withTimeout(

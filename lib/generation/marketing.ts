@@ -133,6 +133,20 @@ Output ONLY valid JSON with no markdown formatting:
       jsonStr = jsonMatch[0];
     }
 
+    // Sanitize common JSON issues from AI responses
+    // Fix unescaped newlines inside string values
+    jsonStr = jsonStr.replace(/("(?:[^"\\]|\\.)*")|[\n\r]/g, (match, group1) => {
+      if (group1) return group1; // Keep string content as-is
+      return '\\n'; // Escape stray newlines
+    });
+
+    // Fix unescaped quotes inside strings (common AI mistake)
+    // This is a best-effort fix - look for patterns like: "text "quoted" text"
+    jsonStr = jsonStr.replace(/"([^"]*)"([^":,}\]]*)"([^"]*)":/g, '"$1\\"$2\\"$3":');
+
+    // Remove control characters except common whitespace
+    jsonStr = jsonStr.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '');
+
     const parsed = JSON.parse(jsonStr);
 
     return {
