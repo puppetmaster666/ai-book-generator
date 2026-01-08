@@ -24,7 +24,7 @@ function getArchetypeDescription(archetype: string): string {
   const descriptions: Record<string, string> = {
     'The Evader': 'deflects with humor, changes subject, never straight answers',
     'The Steamroller': 'bulldozes, interrupts, dominates through volume',
-    'The Professor': 'uses technical precision as ARMOR, but cracks under pressure. When challenged, retreats into jargon. When emotionally cornered, precision FAILS and raw human speech breaks through',
+    'The Professor': 'uses technical precision as armor, but cracks under pressure. When challenged, retreats into jargon. When emotionally cornered, their composure breaks and raw human speech emerges',
     'The Reactor': 'short bursts, emotional, often monosyllabic',
   };
   return descriptions[archetype] || descriptions['The Reactor'];
@@ -147,13 +147,13 @@ These phrases trigger automatic regeneration:
 ${examples}...
 
 Even "Professor" archetype characters speak like HUMANS under stress.
-When precision FAILS, raw speech emerges:
+When their composure breaks, raw speech emerges:
 - "The statistical— God. I don't know."
 - "It's not— I can't—" [trails off]
 - "Just... just stop."
 
 CONSTRAINT: Every Professor character must have 1-2 moments where
-their verbal armor SHATTERS into messy, human fragments.
+their composed exterior gives way to vulnerable, human speech.
 `;
 }
 
@@ -408,16 +408,16 @@ These are FACTS. If a character's age or appearance changes, you have FAILED.
   const emotionalBreakSection = hasProfessorOrSteamroller
     ? `
 === EMOTIONAL BREAK-POINTS ===
-Every "Professor" or "Steamroller" character MUST have 1-2 moments where their verbal strategy FAILS:
-- Professor losing precision: "The statistical likelihood— God, I don't know. I just don't."
-- Steamroller going quiet: "[Character] opens mouth. Closes it. Nothing comes."
-- Evader finally direct: "Fine. Yes. I'm terrified. Happy now?"
+Characters with defensive speech patterns should have 1-2 moments where they DROP THE ACT:
+- The precise character stumbles: "The statistical likelihood— God. I don't know."
+- The loud character goes quiet: Opens mouth. Closes it. Has nothing.
+- The evasive character gets direct: "Fine. Yes. I'm terrified."
 
-This is MANDATORY for emotional authenticity. Consistent verbal strategy = robot.
+Show these through dialogue and action, never through parenthetical instructions.
 `
     : '';
 
-  // Professor humanization requirement (mundane details, armor-cracking)
+  // Professor humanization requirement (mundane details)
   const professorHumanizationSection = hasProfessor
     ? `
 === PROFESSOR ARCHETYPE HUMANIZATION (${professorNames}) ===
@@ -433,10 +433,10 @@ PHYSICAL IMPERFECTION:
 - "Scuffed shoes. The right one untied."
 - "Glasses askew. Reading glasses, not his usual."
 
-ARMOR-CRACKING MOMENT:
-- "[Professor] forgets the word. Opens mouth. Closes it. Tries again."
-- "[Professor] actually laughs—surprised by his own reaction."
-- "[Professor] admits: 'I don't know. I really don't know.'"
+VULNERABILITY MOMENT:
+- Forgets the word. Opens mouth. Closes it. Tries again.
+- Actually laughs—surprised by the reaction.
+- Admits: "I don't know. I really don't know."
 
 Without these, the Professor reads as AI-generated lecture-bot.
 MANDATORY: At least one humanizing detail per Professor character per sequence.
@@ -488,28 +488,28 @@ NEVER use more than two 2-word fragments in a row.
 
   // Verbal messiness requirement (anti-AI detection)
   const verbalMessinessSection = `
-=== VERBAL MESSINESS (MANDATORY - ANTI-AI DETECTION) ===
-Your dialogue is TOO POLISHED if it lacks these human speech patterns.
-EVERY SEQUENCE must include AT LEAST 2 of these:
+=== VERBAL MESSINESS (SUBTLE - ANTI-AI DETECTION) ===
+Dialogue should feel natural, not rehearsed. Include 1-2 SUBTLE human speech patterns
+per sequence - but DO NOT force them. They should feel organic, not performative.
 
-1. SELF-INTERRUPTION: "I just-- I don't know what to--"
-2. FILLER WORDS: "Look, it's... um... it's complicated."
-3. TRAILING OFF: "If you could just..."
-4. WORD REPETITION: "I'm fine, I'm fine."
-5. ABRUPT TOPIC CHANGE: "Wait. Actually, forget that."
-6. CONTRADICTING SELF: "No, that's not what I meant."
+NATURAL SPEECH PATTERNS (use sparingly):
+- Self-interruption: Character changes thought mid-sentence
+- Trailing off: Sentence left incomplete when words fail
+- Topic deflection: Avoiding the real subject
 
-EXAMPLES OF HUMAN MESSINESS:
-✓ "I'm not-- look, I never said that."
-✓ "So what, you just... you just leave?"
-✓ "The thing is-- no, forget it."
+CRITICAL: Do NOT copy these examples verbatim. Create your own natural variations.
+The goal is SUBTLETY - a single well-placed hesitation is more effective than
+constant stuttering. If dialogue sounds like someone trying to sound messy, it fails.
 
-TOO POLISHED (AI TELLS):
+AVOID AI TELLS:
 ✗ "I understand your position perfectly."
 ✗ "Allow me to explain the situation."
 ✗ Every line is grammatically complete and eloquent.
 
-Characters under stress do NOT speak in perfect sentences.
+ALSO AVOID OVERCORRECTION:
+✗ Excessive stuttering on every page
+✗ The same repetition pattern used multiple times
+✗ Forced "messiness" that reads as artificial
 `;
 
   // Exit variety requirement
@@ -719,6 +719,42 @@ ACTION LINES:
 - "We see" / "We hear" / "We watch" / "The camera"
 - Starting with character names: "John walks to the door"
   Instead: "The door SLAMS. John stands in the frame."
+
+=== PURPLE PROSE BAN (AI DETECTION TRIGGER) ===
+NEVER USE these AI clichés in action lines:
+- "dust motes dance/float/drift" - BANNED
+- "cathedral of [trees/light/anything]" - BANNED
+- "velvet [voice/silence/darkness]" - BANNED
+- "golden/amber/honey light" - BANNED
+- "fingers of light/shadow" - BANNED
+- "tapestry of" / "symphony of" / "mosaic of" - BANNED
+- "weight of the world/history/time" - BANNED
+- "ghost of a smile/laugh" - BANNED
+- "pregnant pause/silence" - BANNED
+- "deafening silence" / "palpable tension" - BANNED
+
+Write FUNCTIONAL action lines, not poetry.
+BAD: "Golden light filters through the cathedral of trees"
+GOOD: "Late sun. Long shadows. She squints."
+A camera can't film metaphors. Write what you SEE.
+
+=== WORD REPETITION BAN (AI DETECTION TRIGGER) ===
+NEVER repeat the same word/phrase for emphasis:
+- "Fine. Fine." - BANNED (sounds like a broken AI)
+- "I'm scared. I'm scared." - BANNED
+- "No. No. No." - BANNED
+- "What? What?" - BANNED
+If you need emphasis, use DIFFERENT words:
+"Fine. Just fine." or "I'm scared. Terrified, actually."
+
+=== GENERIC DIALOGUE BAN (AI DETECTION TRIGGER) ===
+NEVER use standalone single-word responses:
+- "Yeah." / "No." / "Okay." / "Sure." / "What?" / "Really?" - ALL BANNED
+Every response must reveal CHARACTER:
+- Instead of "Yeah" → "If you say so" / "Guess that works"
+- Instead of "No" → "Not a chance" / "Forget it" / "That's not happening"
+- Instead of "What?" → "I'm sorry?" / "Come again?" / "Excuse me?"
+If you can swap the character name, you've FAILED.
 
 === FORMAT ===
 - Sluglines: INT./EXT. LOCATION - DAY/NIGHT

@@ -124,10 +124,12 @@ export default function FeaturedShowcase({ variant = 'full' }: FeaturedShowcaseP
                 <div className={`absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded text-[9px] font-medium ${getTypeColor()}`}>
                   {getTypeLabel(item.bookFormat)}
                 </div>
-                {/* Download button - always visible */}
-                {!isPlaceholder && 'samplePdfUrl' in item && item.samplePdfUrl && (
+                {/* Download button - use samplePdfUrl if available, otherwise on-demand generation */}
+                {!isPlaceholder && (
                   <a
-                    href={item.samplePdfUrl}
+                    href={'samplePdfUrl' in item && item.samplePdfUrl
+                      ? item.samplePdfUrl
+                      : `/api/books/${item.id}/download?format=pdf`}
                     download={`${item.title.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`}
                     className="absolute bottom-1.5 right-1.5 p-1.5 bg-white/90 backdrop-blur-sm text-neutral-700 rounded-md text-[10px] font-medium hover:bg-white transition-colors flex items-center gap-1 shadow-sm"
                     onClick={(e) => e.stopPropagation()}
@@ -217,10 +219,12 @@ export default function FeaturedShowcase({ variant = 'full' }: FeaturedShowcaseP
                     {getTypeLabel(item.bookFormat)}
                   </div>
 
-                  {/* Download button - always visible */}
-                  {!isPlaceholder && 'samplePdfUrl' in item && item.samplePdfUrl && (
+                  {/* Download button - use samplePdfUrl if available, otherwise on-demand generation */}
+                  {!isPlaceholder && (
                     <a
-                      href={item.samplePdfUrl}
+                      href={'samplePdfUrl' in item && item.samplePdfUrl
+                        ? item.samplePdfUrl
+                        : `/api/books/${item.id}/download?format=pdf`}
                       download={`${item.title.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`}
                       className="absolute bottom-3 right-3 px-3 py-1.5 bg-white/90 backdrop-blur-sm text-neutral-700 rounded-lg text-xs font-medium hover:bg-white transition-colors flex items-center gap-1.5 shadow-sm"
                       onClick={(e) => e.stopPropagation()}

@@ -521,6 +521,127 @@ export function killSummaryEndings(content: string): {
   return { content: processed, removedCount };
 }
 
+/**
+ * Detect word repetition patterns (AI tells)
+ * "Fine. Fine." - "I'm scared. I'm scared." - repetitive patterns
+ * >8 instances = hard reject
+ */
+const WORD_REPETITION_PATTERNS = [
+  /(\b\w{3,})\.\s*\1\./gi,  // "Fine. Fine." (words 3+ chars)
+  /(\b\w{3,})\?\s*\1\?/gi,  // "What? What?"
+  /\b(I'm|I am)\s+\w+\.\s*(I'm|I am)\s+\w+\./gi,  // "I'm fine. I'm fine."
+  /(\b\w+)\s+\1\s+\1\b/gi,  // "very very very"
+  /\b(no|yes|yeah|okay|fine)\b[,.]?\s*\b\1\b[,.]?\s*\b\1\b/gi,  // "no, no, no"
+];
+
+export function detectWordRepetition(content: string): {
+  count: number;
+  examples: string[];
+  isHardReject: boolean;
+} {
+  const allMatches: string[] = [];
+
+  for (const pattern of WORD_REPETITION_PATTERNS) {
+    pattern.lastIndex = 0;
+    const matches = content.match(pattern) || [];
+    allMatches.push(...matches);
+  }
+
+  // Deduplicate
+  const uniqueMatches = [...new Set(allMatches)];
+
+  return {
+    count: uniqueMatches.length,
+    examples: uniqueMatches.slice(0, 10), // First 10 examples
+    isHardReject: uniqueMatches.length > 8, // >8 = lazy AI writing
+  };
+}
+
+/**
+ * Detect purple prose patterns (AI tells)
+ * "dust motes dance", "cathedral of trees", "velvet silence"
+ * >5 instances = hard reject
+ */
+const PURPLE_PROSE_PATTERNS = [
+  /dust motes? (dance|float|drift|swirl|hang)/gi,
+  /cathedral of/gi,
+  /velvet (hammer|voice|darkness|silence|night)/gi,
+  /(golden|amber|honey|honeyed) (light|glow|hue|sunlight)/gi,
+  /fingers? of (light|shadow|dawn|dusk|darkness)/gi,
+  /tapestry of/gi,
+  /symphony of/gi,
+  /weight of (the world|history|time|silence|eternity)/gi,
+  /ghost of a (smile|laugh|memory|thought)/gi,
+  /pregnant (pause|silence|moment)/gi,
+  /deafening silence/gi,
+  /palpable tension/gi,
+  /ocean of (emotion|feeling|sorrow|grief)/gi,
+  /cascade of (emotion|feeling|thought|memory)/gi,
+  /kaleidoscope of/gi,
+  /mosaic of/gi,
+  /dance of (shadow|light|flame)/gi,
+  /canvas of/gi,
+  /blanket of (silence|darkness|snow|mist)/gi,
+  /river of (tears|emotion|time)/gi,
+];
+
+export function detectPurpleProse(content: string): {
+  count: number;
+  examples: string[];
+  isHardReject: boolean;
+} {
+  const allMatches: string[] = [];
+
+  for (const pattern of PURPLE_PROSE_PATTERNS) {
+    pattern.lastIndex = 0;
+    const matches = content.match(pattern) || [];
+    allMatches.push(...matches);
+  }
+
+  const uniqueMatches = [...new Set(allMatches)];
+
+  return {
+    count: uniqueMatches.length,
+    examples: uniqueMatches.slice(0, 10),
+    isHardReject: uniqueMatches.length > 5, // >5 = purple AI prose
+  };
+}
+
+/**
+ * Replace generic dialogue responses with character-specific alternatives
+ * Auto-replacement (not just detection) - transforms the output
+ */
+const GENERIC_REPLACEMENTS: { pattern: RegExp; replacements: string[] }[] = [
+  { pattern: /^Yeah\.$/gm, replacements: ['If you say so.', 'Guess so.', 'Works for me.', 'Sure.'] },
+  { pattern: /^No\.$/gm, replacements: ['Not a chance.', 'Forget it.', "That's not happening.", 'I don\'t think so.'] },
+  { pattern: /^Okay\.$/gm, replacements: ['Fine.', 'Whatever.', 'If that\'s what you want.', 'I suppose.'] },
+  { pattern: /^What\?$/gm, replacements: ['I\'m sorry?', 'Come again?', 'Excuse me?', 'Say that again.'] },
+  { pattern: /^Really\?$/gm, replacements: ['You\'re serious.', 'You\'re kidding.', 'Is that right.', 'No kidding.'] },
+  { pattern: /^Sure\.$/gm, replacements: ['If you say so.', 'I guess.', 'Why not.', 'Works for me.'] },
+  { pattern: /^Right\.$/gm, replacements: ['Obviously.', 'Exactly.', 'Of course.', 'Makes sense.'] },
+];
+
+export function replaceGenericResponses(content: string): {
+  content: string;
+  replacementsCount: number;
+} {
+  let processed = content;
+  let replacementsCount = 0;
+
+  for (const { pattern, replacements } of GENERIC_REPLACEMENTS) {
+    pattern.lastIndex = 0;
+
+    // Replace each match with a random alternative
+    processed = processed.replace(pattern, () => {
+      replacementsCount++;
+      // Pick a random replacement from the list
+      return replacements[Math.floor(Math.random() * replacements.length)];
+    });
+  }
+
+  return { content: processed, replacementsCount };
+}
+
 // ============================================================================
 // SENSORY DETAIL INJECTION (Phase 2.7)
 // ============================================================================
@@ -947,6 +1068,47 @@ FIX - Character-specific alternatives:
 - Instead of "What?" → "I'm sorry?" / "Come again?" / "Excuse me?"
 
 Every response should reveal CHARACTER. If you can swap the character name, you've FAILED.`
+    );
+  }
+
+  // 13. Check for word repetition (AI tell)
+  const wordRepetitionCheck = detectWordRepetition(content);
+  if (wordRepetitionCheck.isHardReject) {
+    reasons.push(`Too much word repetition: ${wordRepetitionCheck.count} instances found`);
+    surgicalFixes.push(
+      `CRITICAL FIX: ${wordRepetitionCheck.count} WORD REPETITION PATTERNS - AI writing detected.
+Examples: ${wordRepetitionCheck.examples.slice(0, 5).join(', ')}
+
+Patterns like "Fine. Fine." or "I'm scared. I'm scared." are AI tells.
+Humans don't repeat themselves like broken records.
+
+FIX:
+- Remove duplicate phrases entirely
+- If emphasis needed, use DIFFERENT words: "Fine. Just fine." or "I'm scared. Terrified, actually."
+- Vary sentence structure instead of repeating
+
+Maximum: 5 repetition patterns. You have ${wordRepetitionCheck.count}.`
+    );
+  }
+
+  // 14. Check for purple prose (AI tell)
+  const purpleProseCheck = detectPurpleProse(content);
+  if (purpleProseCheck.isHardReject) {
+    reasons.push(`Too much purple prose: ${purpleProseCheck.count} instances found`);
+    surgicalFixes.push(
+      `CRITICAL FIX: ${purpleProseCheck.count} PURPLE PROSE PATTERNS - AI writing detected.
+Examples: ${purpleProseCheck.examples.slice(0, 5).join(', ')}
+
+Phrases like "dust motes dancing", "cathedral of trees", "velvet silence" are AI clichés.
+Real screenwriters use FUNCTIONAL action lines, not poetry.
+
+FIX:
+- Replace with concrete, specific details
+- BAD: "Golden light filters through the cathedral of trees"
+- GOOD: "Late sun. Long shadows. She squints."
+- Write what a CAMERA sees, not what a novelist describes
+
+Maximum: 3 purple phrases. You have ${purpleProseCheck.count}.`
     );
   }
 
@@ -1940,12 +2102,21 @@ export function stripTechnicalArtifacts(content: string): {
   const artifactPatterns: { pattern: RegExp; name: string }[] = [
     { pattern: /\s*\[SCENE (START|END)\]\s*/gi, name: 'SCENE markers' },
     { pattern: /\s*\*?\*?END OF SEQUENCE \d+\*?\*?\s*/gi, name: 'END OF SEQUENCE' },
+    { pattern: /\s*\[START OF SEQUENCE \d+\]\s*/gi, name: 'START OF SEQUENCE' },
+    { pattern: /\s*\[SEQUENCE \d+( (START|END|BEGINS|ENDS))?\]\s*/gi, name: 'SEQUENCE markers' },
+    { pattern: /\s*SEQUENCE \d+ (START|END|BEGINS|ENDS)\s*/gi, name: 'SEQUENCE text markers' },
     { pattern: /\s*BUTTON:\s*/gi, name: 'BUTTON:' },
     { pattern: /\s*\[BUTTON\]\s*/gi, name: '[BUTTON]' },
     { pattern: /\s*\[END\]\s*/gi, name: '[END]' },
     { pattern: /\s*\[CONTINUE\]\s*/gi, name: '[CONTINUE]' },
     { pattern: /\s*---+\s*$/gm, name: 'trailing dashes' },
     { pattern: /^\s*\*\*\*+\s*$/gm, name: 'asterisk dividers' },
+    // AI-generated meta-parentheticals that leak through
+    { pattern: /\(Precision failing\)/gi, name: 'meta-parenthetical' },
+    { pattern: /\(Armor cracking\)/gi, name: 'meta-parenthetical' },
+    { pattern: /\(Composure breaking\)/gi, name: 'meta-parenthetical' },
+    { pattern: /\(Breaking down\)/gi, name: 'meta-parenthetical' },
+    { pattern: /\(Losing control\)/gi, name: 'meta-parenthetical' },
   ];
 
   let processed = content;
@@ -2349,24 +2520,24 @@ export function checkProfessorHumanization(
     const imperfections = ['coffee stain', 'worn shoes', 'messy desk', 'chipped mug'];
     const hasImperfection = imperfections.some(i => lowerContent.includes(i));
 
-    // Check for armor-cracking moments (character name + breaking patterns)
+    // Check for vulnerability moments (character name + breaking patterns)
     const profNameLower = prof.name.toLowerCase();
-    const armorCracks = [
+    const vulnerabilityPatterns = [
       new RegExp(`${profNameLower}.*actually laughs`, 'i'),
       new RegExp(`${profNameLower}.*admits.*doesn't know`, 'i'),
       new RegExp(`${profNameLower}.*forgets.*word`, 'i'),
       new RegExp(`${profNameLower}.*stumbles`, 'i'),
       new RegExp(`${profNameLower}.*blushes`, 'i'),
     ];
-    const hasArmorCrack = armorCracks.some(pattern => pattern.test(content));
+    const hasVulnerability = vulnerabilityPatterns.some(pattern => pattern.test(content));
 
-    if (!hasHobbyMention && !hasImperfection && !hasArmorCrack) {
+    if (!hasHobbyMention && !hasImperfection && !hasVulnerability) {
       warnings.push(`${prof.name} (Professor archetype) lacks humanizing details`);
       suggestions.push(
         `Add ONE of these for ${prof.name}:
         - Mundane hobby mention (crossword, gardening, old movies)
         - Physical imperfection (coffee stain on tie, messy desk)
-        - Armor-cracking moment (forgets a word, admits uncertainty, actually laughs)`
+        - Vulnerability moment (forgets a word, admits uncertainty, actually laughs)`
       );
     }
   }
@@ -2645,6 +2816,9 @@ export function runScreenplayPostProcessing(
     sceneCount: number;
     interiorRatio: number;
     genericResponsesDetected: number;
+    genericResponsesReplaced: number;
+    wordRepetitionDetected: number;
+    purpleProseDetected: number;
     sensoryDetailsInjected: number;
   };
 } {
@@ -2687,6 +2861,9 @@ export function runScreenplayPostProcessing(
         sceneCount: 0,
         interiorRatio: 0,
         genericResponsesDetected: 0,
+        genericResponsesReplaced: 0,
+        wordRepetitionDetected: 0,
+        purpleProseDetected: 0,
         sensoryDetailsInjected: 0,
       },
     };
@@ -2759,10 +2936,11 @@ export function runScreenplayPostProcessing(
 
   // ===== END PHASE 3 =====
 
-  // 10. Inject verbal friction (15% chance, max 6 per sequence)
-  // REDUCED from 50%/20 - was causing 98% AI detection due to over-saturation
-  // Human speech has friction but not on EVERY page - subtlety is key
-  const frictionResult = injectVerbalFriction(processedContent, 0.15, 6);
+  // 10. Inject verbal friction (5% chance, max 2 per sequence)
+  // REDUCED from 15%/6 - prompts already ask for verbal messiness, so post-processing
+  // injection was creating DOUBLE messiness ("Right. Right. Just.", excessive stutters)
+  // Now minimal injection since prompts handle the heavy lifting
+  const frictionResult = injectVerbalFriction(processedContent, 0.05, 2);
   processedContent = frictionResult.content;
 
   // 10a. Inject sensory details (Phase 2.7: target 4+ per 1000 words)
@@ -2785,6 +2963,10 @@ export function runScreenplayPostProcessing(
   // 10d. Cap stutter usage (max 8 per sequence - was 40+ causing AI detection)
   const stutterCapResult = capStutterUsage(processedContent, 8);
   processedContent = stutterCapResult.content;
+
+  // 10e. Replace generic dialogue responses (Yeah/No/Okay → character-specific alternatives)
+  const genericReplacementResult = replaceGenericResponses(processedContent);
+  processedContent = genericReplacementResult.content;
 
   // ===== END PHASE 4 =====
 
@@ -2876,6 +3058,9 @@ export function runScreenplayPostProcessing(
       sceneCount: countScenes(processedContent).total,
       interiorRatio: countScenes(processedContent).interiorRatio,
       genericResponsesDetected: detectGenericResponses(processedContent).count,
+      genericResponsesReplaced: genericReplacementResult.replacementsCount,
+      wordRepetitionDetected: detectWordRepetition(processedContent).count,
+      purpleProseDetected: detectPurpleProse(processedContent).count,
       sensoryDetailsInjected: sensoryResult.injectionsAdded,
     },
   };
