@@ -563,6 +563,7 @@ export function detectWordRepetition(content: string): {
  * >5 instances = hard reject
  */
 const PURPLE_PROSE_PATTERNS = [
+  // Core AI clichés
   /dust motes? (dance|float|drift|swirl|hang)/gi,
   /cathedral of/gi,
   /velvet (hammer|voice|darkness|silence|night)/gi,
@@ -579,10 +580,16 @@ const PURPLE_PROSE_PATTERNS = [
   /cascade of (emotion|feeling|thought|memory)/gi,
   /kaleidoscope of/gi,
   /mosaic of/gi,
-  /dance of (shadow|light|flame)/gi,
+  /dance of (shadow|light|flame|death|life)/gi,
   /canvas of/gi,
   /blanket of (silence|darkness|snow|mist)/gi,
   /river of (tears|emotion|time)/gi,
+  // Additional patterns from scorer
+  /silk(en|y)? (voice|tone|thread)/gi,
+  /ballet of/gi,
+  /with the grace of/gi,
+  /like a (wounded|dying|fallen) (animal|bird|angel)/gi,
+  /electric (silence|tension|atmosphere)/gi,
 ];
 
 export function detectPurpleProse(content: string): {
@@ -2956,8 +2963,9 @@ export function runScreenplayPostProcessing(
   const lowercaseResult = fixLowercaseAfterPeriods(processedContent);
   processedContent = lowercaseResult.content;
 
-  // 10c. Cap ellipsis usage (max 25 per sequence - was 100+ causing AI detection)
-  const ellipsisCapResult = capEllipsisUsage(processedContent, 25);
+  // 10c. Cap ellipsis usage (max 10 per sequence = ~80 total for 8 sequences)
+  // Scorer flags >25 TOTAL as "high ellipsis", so keeping per-sequence low
+  const ellipsisCapResult = capEllipsisUsage(processedContent, 10);
   processedContent = ellipsisCapResult.content;
 
   // 10d. Cap stutter usage (max 8 per sequence - was 40+ causing AI detection)
