@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
+import { auth } from '@/lib/auth';
 
 export async function GET(
   request: NextRequest,
@@ -54,6 +55,8 @@ export async function GET(
     }
 
     // Check if user is eligible for free book or has credits
+    // IMPORTANT: Check the SESSION user's credits, not just book.userId
+    // This handles the case where a logged-in user is viewing an unclaimed book
     let freeBookEligible = false;
     let canClaimFreePreview = false; // Free sample (limited preview)
     let hasGiftedCredits = false; // Admin gifted credits (full book access)
@@ -61,9 +64,22 @@ export async function GET(
     let userCredits = 0;
     let userPlan = 'free';
     let isFirstCompletedBook = false;
-    if (book.userId) {
+
+    // Get the session user (the person viewing the page)
+    const session = await auth();
+    const sessionUserId = session?.user?.id;
+
+    // Determine which user to check for credits:
+    // - If book has an owner and viewer is the owner, use owner's credits
+    // - If book has no owner but viewer is logged in, use viewer's credits (they can claim it)
+    // - If book has an owner but viewer is different, don't show credits (not their book)
+    const userIdToCheck = book.userId
+      ? (book.userId === sessionUserId ? book.userId : null) // Only show credits if it's their book
+      : sessionUserId; // Book has no owner, show viewer's credits
+
+    if (userIdToCheck) {
       const user = await prisma.user.findUnique({
-        where: { id: book.userId },
+        where: { id: userIdToCheck },
         select: { freeBookUsed: true, freeCredits: true, credits: true, plan: true },
       });
       if (user) {
@@ -78,7 +94,7 @@ export async function GET(
       }
 
       // Check if this is user's first completed book (for discount popup)
-      if (book.status === 'completed') {
+      if (book.status === 'completed' && book.userId) {
         const completedBooksCount = await prisma.book.count({
           where: {
             userId: book.userId,
