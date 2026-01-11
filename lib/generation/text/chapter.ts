@@ -168,6 +168,109 @@ function removeDuplicateChapterHeadingGeneric(content: string): string {
   return content;
 }
 
+// Clean up markdown formatting (stars, bold, etc.)
+function cleanMarkdownFormatting(content: string): string {
+  return content
+    // Remove bold markdown (**text** or __text__)
+    .replace(/\*\*([^*]+)\*\*/g, '$1')
+    .replace(/__([^_]+)__/g, '$1')
+    // Remove italic markdown (*text* or _text_) but preserve asterisks in lists
+    .replace(/(?<!\*)\*([^*\n]+)\*(?!\*)/g, '$1')
+    // Remove stray asterisks at start of lines (except bullet points)
+    .replace(/^\*\s*(?!\s)/gm, '')
+    // Remove excessive asterisks
+    .replace(/\*{3,}/g, '')
+    // Clean up bullet points to be consistent
+    .replace(/^\*\s+/gm, '• ')
+    .replace(/^-\s+/gm, '• ');
+}
+
+// Fix common AI typos and word truncations
+function fixCommonTypos(content: string): string {
+  return content
+    // Word truncation fixes
+    .replace(/\blegary\b/gi, 'legendary')
+    .replace(/\bLeg of Zelda\b/g, 'Legend of Zelda')
+    .replace(/\bsurrer\b/gi, 'surrender')
+    .replace(/\bsurrering\b/gi, 'surrendering')
+    .replace(/\bsurrered\b/gi, 'surrendered')
+    .replace(/\brecomm\b/gi, 'recommend')
+    .replace(/\brecommation\b/gi, 'recommendation')
+    .replace(/\borphins\b/gi, 'endorphins')
+    .replace(/\binted\b/gi, 'intended')
+    .replace(/\bintions\b/gi, 'intentions')
+    .replace(/\bdesced\b/gi, 'descended')
+    .replace(/\bsusped\b/gi, 'suspended')
+    .replace(/\bNinto\b/g, 'Nintendo')
+    // Common AI spelling errors
+    .replace(/\bsps\b/g, 'spends')
+    .replace(/\bfris\b/g, 'friends')
+    .replace(/\bfri\b(?=\s)/g, 'friend')
+    .replace(/\bdependcy\b/gi, 'dependency')
+    .replace(/\bconnectd\b/gi, 'connected')
+    .replace(/\bconnectng\b/gi, 'connecting')
+    .replace(/\bbeggining\b/gi, 'beginning')
+    .replace(/\boccured\b/gi, 'occurred')
+    .replace(/\brecieve\b/gi, 'receive')
+    .replace(/\bbelive\b/gi, 'believe')
+    .replace(/\buntill\b/gi, 'until')
+    .replace(/\bthier\b/gi, 'their')
+    .replace(/\bteh\b/gi, 'the')
+    .replace(/\badn\b/gi, 'and')
+    .replace(/\bwoudl\b/gi, 'would')
+    .replace(/\bcoudl\b/gi, 'could')
+    .replace(/\bshoudl\b/gi, 'should')
+    // Space before word fragments (AI truncation)
+    .replace(/\bsp\s+(\w)/g, 'spend $1')
+    .replace(/\bbl\s+(\w)/g, 'blend $1')
+    .replace(/\bpr\s+(\w)/g, 'prepare $1');
+}
+
+// Cap overused words/phrases to prevent AI detection
+function capOverusedWords(content: string): string {
+  // Words/phrases that get overused and their max allowed per chapter
+  const overusedPatterns: { pattern: RegExp; max: number; replacement?: string }[] = [
+    { pattern: /\bsigh(s|ed|ing)?\b/gi, max: 2 },
+    { pattern: /\bAfter a moment,?\s*/gi, max: 1, replacement: '' },
+    { pattern: /\bWithout hesitation,?\s*/gi, max: 1, replacement: '' },
+    { pattern: /\bSlowly,?\s*/gi, max: 2, replacement: '' },
+    { pattern: /\bQuietly,?\s*/gi, max: 2, replacement: '' },
+    { pattern: /\bFinally,?\s*/gi, max: 2 },
+    { pattern: /\bSuddenly,?\s*/gi, max: 1 },
+    { pattern: /\bCarefully,?\s*/gi, max: 2, replacement: '' },
+  ];
+
+  let result = content;
+
+  for (const { pattern, max, replacement } of overusedPatterns) {
+    const matches = result.match(pattern);
+    if (matches && matches.length > max) {
+      // Keep first N occurrences, remove or replace the rest
+      let count = 0;
+      result = result.replace(pattern, (match) => {
+        count++;
+        if (count <= max) {
+          return match;
+        }
+        // For sentence starters, just remove them
+        if (replacement !== undefined) {
+          return replacement;
+        }
+        // For other words, need context-aware replacement
+        // For now, just remove with capitalization fix if at sentence start
+        return '';
+      });
+
+      // Fix any double spaces or capitalization issues
+      result = result
+        .replace(/\s{2,}/g, ' ')
+        .replace(/\.\s+([a-z])/g, (_, letter) => '. ' + letter.toUpperCase());
+    }
+  }
+
+  return result;
+}
+
 // Smart fallback: extract meaningful summary when AI times out
 function smartSummaryFallback(chapterContent: string): string {
   // Split into paragraphs
@@ -495,7 +598,7 @@ Write the chapter now:`;
         content = result.response.text();
       }
 
-      // Quick cleanup of obvious AI artifacts and word truncation errors
+      // Quick cleanup of obvious AI artifacts
       content = content
         .replace(/\*?\*?\[?(THE )?END( OF BOOK| OF CHAPTER)?\]?\*?\*?/gi, '')
         .replace(/\*\*\[END OF BOOK\]\*\*/gi, '')
@@ -503,23 +606,12 @@ Write the chapter now:`;
         .replace(/–/g, ', ')
         .replace(/ , /g, ', ')
         .replace(/,\s*,/g, ',')
-        // Fix common AI word truncation artifacts
-        .replace(/\blegary\b/gi, 'legendary')
-        .replace(/\bLeg of Zelda\b/g, 'Legend of Zelda')
-        .replace(/\bsurrer\b/gi, 'surrender')
-        .replace(/\bsurrering\b/gi, 'surrendering')
-        .replace(/\bsurrered\b/gi, 'surrendered')
-        .replace(/\brecomm\b/gi, 'recommend')
-        .replace(/\brecommation\b/gi, 'recommendation')
-        .replace(/\bsp\s+(\w)/g, 'spend $1')
-        .replace(/\bbl\s+(\w)/g, 'blend $1')
-        .replace(/\borphins\b/gi, 'endorphins')
-        .replace(/\binted\b/gi, 'intended')
-        .replace(/\bintions\b/gi, 'intentions')
-        .replace(/\bdesced\b/gi, 'descended')
-        .replace(/\bsusped\b/gi, 'suspended')
-        .replace(/\bNinto\b/g, 'Nintendo')
         .trim();
+
+      // Apply comprehensive post-processing
+      content = cleanMarkdownFormatting(content);  // Remove ** stars and markdown
+      content = fixCommonTypos(content);            // Fix typos like "sps" → "spends"
+      content = capOverusedWords(content);          // Cap "sigh", "After a moment", etc.
 
       // Remove duplicate chapter titles (AI sometimes outputs title twice - ALL CAPS then Title Case)
       content = removeDuplicateChapterHeading(content, data.chapterNumber, data.chapterTitle);
