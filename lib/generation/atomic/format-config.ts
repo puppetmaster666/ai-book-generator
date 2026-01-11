@@ -463,6 +463,7 @@ export function getFormatConfig(format: BookFormat | string): FormatConfig {
     book: 'novel',
     fiction_book: 'fiction',
     nonfiction: 'non-fiction',
+    non_fiction: 'non-fiction', // normalized from "non-fiction" (hyphen → underscore)
     script: 'screenplay',
     movie_script: 'screenplay',
     tv_script: 'screenplay',
