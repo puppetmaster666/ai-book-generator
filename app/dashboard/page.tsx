@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, Suspense } from 'react';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -9,6 +9,22 @@ import Footer from '@/components/Footer';
 import { BookOpen, Plus, Download, Clock, Check, AlertCircle, Zap, Star } from 'lucide-react';
 import { trackRedditPurchase } from '@/lib/reddit-pixel';
 import { PRICING } from '@/lib/constants';
+
+// Component to handle search params (must be wrapped in Suspense)
+function PurchaseTracker() {
+  const searchParams = useSearchParams();
+  const success = searchParams.get('success');
+  const purchaseTrackedRef = useRef(false);
+
+  useEffect(() => {
+    if (success === 'true' && !purchaseTrackedRef.current) {
+      purchaseTrackedRef.current = true;
+      trackRedditPurchase(PRICING.MONTHLY.price / 100, 'USD', 1);
+    }
+  }, [success]);
+
+  return null;
+}
 
 interface Book {
   id: string;
@@ -39,18 +55,6 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const { data: session, status: sessionStatus } = useSession();
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const success = searchParams.get('success');
-
-  // Track Reddit purchase conversion for subscription signups
-  const purchaseTrackedRef = useRef(false);
-  useEffect(() => {
-    if (success === 'true' && !purchaseTrackedRef.current) {
-      purchaseTrackedRef.current = true;
-      // Monthly subscription price
-      trackRedditPurchase(PRICING.MONTHLY.price / 100, 'USD', 1);
-    }
-  }, [success]);
 
   useEffect(() => {
     // Redirect to login if not authenticated
@@ -141,6 +145,9 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-white">
+      <Suspense fallback={null}>
+        <PurchaseTracker />
+      </Suspense>
       <Header />
 
       <main className="py-16 px-6">
