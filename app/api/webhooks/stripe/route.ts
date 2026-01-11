@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { prisma } from '@/lib/db';
+import { trackServerPurchase } from '@/lib/reddit-conversions-api';
 
 function getStripe() {
   const secretKey = process.env.STRIPE_SECRET_KEY;
@@ -44,6 +45,15 @@ export async function POST(request: NextRequest) {
             bookId: bookId || null,
           },
         });
+
+        // Track purchase conversion server-side (Reddit Conversions API)
+        // This is more reliable than client-side pixel (works with ad blockers)
+        trackServerPurchase({
+          email: session.customer_email || session.customer_details?.email || undefined,
+          value: (session.amount_total || 0) / 100, // Convert cents to dollars
+          currency: session.currency?.toUpperCase() || 'USD',
+          conversionId: session.id, // Use Stripe session ID for deduplication
+        }).catch(err => console.error('Reddit conversion tracking failed:', err));
 
         // Handle one-time purchase
         if (productType === 'one-time' && bookId) {
