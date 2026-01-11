@@ -3,6 +3,7 @@ import Script from "next/script";
 import "./globals.css";
 import Providers from "@/components/Providers";
 import CookieConsent from "@/components/CookieConsent";
+import RedditPixel from "@/components/RedditPixel";
 
 const GA_MEASUREMENT_ID = 'G-14TXZWW3NZ';
 
@@ -238,7 +239,10 @@ export default function RootLayout({
         </Script>
       </head>
       <body className={`antialiased`}>
-        <Providers>{children}</Providers>
+        <Providers>
+          <RedditPixel />
+          {children}
+        </Providers>
         <CookieConsent />
       </body>
     </html>

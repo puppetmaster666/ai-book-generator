@@ -29,6 +29,12 @@ export default function CookieConsent() {
         'analytics_storage': granted ? 'granted' : 'denied',
       });
     }
+    // Reddit Pixel consent - disable first-party cookies if denied
+    if (typeof window !== 'undefined' && typeof window.rdt === 'function') {
+      if (!granted) {
+        window.rdt('disableFirstPartyCookies');
+      }
+    }
   };
 
   const handleAccept = () => {

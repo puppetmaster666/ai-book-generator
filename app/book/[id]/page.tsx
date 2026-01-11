@@ -11,6 +11,8 @@ import { useGeneratingBook } from '@/contexts/GeneratingBookContext';
 import Link from 'next/link';
 import FirstBookDiscountPopup from '@/components/FirstBookDiscountPopup';
 import LivePreview from '@/components/LivePreview';
+import { trackRedditPurchase } from '@/lib/reddit-pixel';
+import { PRICING } from '@/lib/constants';
 
 interface Chapter {
   id: string;
@@ -203,6 +205,19 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
     };
     claimBookForUser();
   }, [claimBook, session, id, router, bookClaimed]);
+
+  // Track Reddit purchase conversion when landing from successful checkout
+  const purchaseTrackedRef = useRef(false);
+  useEffect(() => {
+    if (success === 'true' && book && !purchaseTrackedRef.current) {
+      purchaseTrackedRef.current = true;
+      // Determine price based on book format
+      const price = book.bookFormat === 'picture_book'
+        ? PRICING.VISUAL.price / 100
+        : PRICING.ONE_TIME.price / 100;
+      trackRedditPurchase(price, 'USD', 1);
+    }
+  }, [success, book]);
 
   // Check if this is a visual book (should use parallel panel generation page)
   const isVisualBook = book?.bookFormat === 'picture_book' || book?.dialogueStyle === 'bubbles' || book?.bookPreset === 'comic_story' || book?.bookPreset === 'childrens_picture';

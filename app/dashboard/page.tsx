@@ -1,12 +1,14 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { BookOpen, Plus, Download, Clock, Check, AlertCircle, Zap, Star } from 'lucide-react';
+import { trackRedditPurchase } from '@/lib/reddit-pixel';
+import { PRICING } from '@/lib/constants';
 
 interface Book {
   id: string;
@@ -37,6 +39,18 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const { data: session, status: sessionStatus } = useSession();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const success = searchParams.get('success');
+
+  // Track Reddit purchase conversion for subscription signups
+  const purchaseTrackedRef = useRef(false);
+  useEffect(() => {
+    if (success === 'true' && !purchaseTrackedRef.current) {
+      purchaseTrackedRef.current = true;
+      // Monthly subscription price
+      trackRedditPurchase(PRICING.MONTHLY.price / 100, 'USD', 1);
+    }
+  }, [success]);
 
   useEffect(() => {
     // Redirect to login if not authenticated
