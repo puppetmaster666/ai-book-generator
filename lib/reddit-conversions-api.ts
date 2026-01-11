@@ -1,12 +1,13 @@
-// Reddit Conversions API - Server-side conversion tracking
+// Reddit Conversions API v3 - Server-side conversion tracking
 // More reliable than client-side pixel (works with ad blockers, no browser required)
 
 const REDDIT_PIXEL_ID = 'a2_i9bj8x87t8ki';
-const REDDIT_CONVERSIONS_API_URL = `https://ads-api.reddit.com/api/v2.0/conversions/events/${REDDIT_PIXEL_ID}`;
+const REDDIT_CONVERSIONS_API_URL = `https://ads-api.reddit.com/api/v3/pixels/${REDDIT_PIXEL_ID}/conversion_events`;
 
-interface RedditConversionEvent {
-  event_at: string; // ISO 8601 timestamp
-  event_type: {
+interface RedditConversionEventV3 {
+  event_at: number; // Unix epoch timestamp in milliseconds
+  action_source: 'web' | 'app' | 'offline';
+  type: {
     tracking_type: 'Purchase' | 'SignUp' | 'Lead' | 'AddToCart' | 'PageVisit';
   };
   user?: {
@@ -34,7 +35,7 @@ async function hashEmail(email: string): Promise<string> {
 }
 
 /**
- * Send a conversion event to Reddit's Conversions API (server-side)
+ * Send a conversion event to Reddit's Conversions API v3 (server-side)
  */
 export async function trackRedditConversion({
   eventType,
@@ -63,9 +64,10 @@ export async function trackRedditConversion({
   }
 
   try {
-    const event: RedditConversionEvent = {
-      event_at: new Date().toISOString(),
-      event_type: {
+    const event: RedditConversionEventV3 = {
+      event_at: Date.now(), // Unix epoch timestamp in milliseconds
+      action_source: 'web',
+      type: {
         tracking_type: eventType,
       },
     };
@@ -105,8 +107,9 @@ export async function trackRedditConversion({
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        events: [event],
-        test_mode: process.env.NODE_ENV !== 'production',
+        data: {
+          events: [event],
+        },
       }),
     });
 
