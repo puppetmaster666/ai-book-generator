@@ -147,6 +147,7 @@ export async function generateCharacterPortraits(data: {
     }>;
     styleNotes: string;
   };
+  faceOnly?: boolean; // If true, skip full body portraits (saves ~50% time for previews)
 }): Promise<Array<{
   characterName: string;
   facePortrait: string;  // Base64 data URL
@@ -154,7 +155,8 @@ export async function generateCharacterPortraits(data: {
 }>> {
   const portraits = [];
 
-  console.log(`[Portrait Gen] Generating ${data.characterVisualGuide.characters.length} character portraits...`);
+  const modeLabel = data.faceOnly ? '(face only mode)' : '(face + full body)';
+  console.log(`[Portrait Gen] Generating ${data.characterVisualGuide.characters.length} character portraits ${modeLabel}...`);
 
   for (const character of data.characterVisualGuide.characters) {
     console.log(`[Portrait Gen] Creating portraits for "${character.name}"...`);
@@ -194,6 +196,16 @@ CRITICAL REQUIREMENTS:
     }
 
     console.log(`[Portrait Gen] Face portrait for "${character.name}"`);
+
+    // Skip full body portrait if faceOnly mode (saves ~20 seconds per character)
+    if (data.faceOnly) {
+      portraits.push({
+        characterName: character.name,
+        facePortrait: faceResult.imageUrl,
+        fullBodyPortrait: faceResult.imageUrl, // Use face as fallback for full body
+      });
+      continue;
+    }
 
     // Generate full body portrait (standing pose, neutral stance)
     const fullBodyScene = `Professional character reference sheet - FULL BODY shot showing character from head to toe, standing in neutral pose, facing forward, clean solid color background.

@@ -1011,25 +1011,23 @@ export async function POST(
         });
 
         // Generate character portraits for consistency (AFTER visual guide is created)
-        // Skip for unpaid previews - saves 2+ minutes and they only see 5 panels anyway
+        // For unpaid previews: generate face-only portraits (saves ~1 min vs full portraits)
+        // For paid books: generate full portraits (face + full body)
+        console.log('Generating character portrait references...');
         let characterPortraits = null;
-        if (isPaid) {
-          console.log('Generating character portrait references...');
-          try {
-            characterPortraits = await generateCharacterPortraits({
-              title: book.title,
-              genre: book.genre,
-              artStyle: book.artStyle,
-              bookFormat: book.bookFormat,
-              characterVisualGuide,
-            });
-            console.log(`Generated ${characterPortraits.length} character portraits`);
-          } catch (portraitError) {
-            console.error('Failed to generate character portraits:', portraitError);
-            // Continue without portraits - will fall back to first appearance references
-          }
-        } else {
-          console.log('Skipping character portraits for unpaid preview (saves ~2 min)');
+        try {
+          characterPortraits = await generateCharacterPortraits({
+            title: book.title,
+            genre: book.genre,
+            artStyle: book.artStyle,
+            bookFormat: book.bookFormat,
+            characterVisualGuide,
+            faceOnly: !isPaid, // Face-only for previews, full portraits for paid
+          });
+          console.log(`Generated ${characterPortraits.length} character portraits`);
+        } catch (portraitError) {
+          console.error('Failed to generate character portraits:', portraitError);
+          // Continue without portraits - will fall back to first appearance references
         }
 
         // Store the guides and portraits in the database
