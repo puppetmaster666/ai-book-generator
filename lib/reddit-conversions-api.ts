@@ -29,6 +29,13 @@ interface RedditConversionEventV3 {
   };
 }
 
+interface RedditConversionRequest {
+  data: {
+    events: RedditConversionEventV3[];
+    test_id?: string; // For test mode - events won't count toward reporting
+  };
+}
+
 /**
  * Hash email using SHA256 for Reddit's advanced matching
  */
@@ -54,6 +61,7 @@ export async function trackRedditConversion({
   userAgent,
   productName,
   productCategory,
+  testId,
 }: {
   eventType: 'Purchase' | 'SignUp' | 'Lead' | 'AddToCart';
   email?: string;
@@ -65,6 +73,7 @@ export async function trackRedditConversion({
   userAgent?: string;
   productName?: string;
   productCategory?: string;
+  testId?: string; // For test mode - use your test_id from Reddit Events Manager
 }): Promise<boolean> {
   const token = process.env.REDDIT_CONVERSIONS_TOKEN;
 
@@ -114,17 +123,24 @@ export async function trackRedditConversion({
       }];
     }
 
+    const requestBody: RedditConversionRequest = {
+      data: {
+        events: [event],
+      },
+    };
+
+    // Add test_id for test mode (events won't count toward reporting)
+    if (testId) {
+      requestBody.data.test_id = testId;
+    }
+
     const response = await fetch(REDDIT_CONVERSIONS_API_URL, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        data: {
-          events: [event],
-        },
-      }),
+      body: JSON.stringify(requestBody),
     });
 
     if (!response.ok) {
