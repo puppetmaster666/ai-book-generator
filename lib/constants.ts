@@ -215,8 +215,8 @@ export const BOOK_PRESETS = {
     estimatedTime: '~12 min',
   },
   adult_comic: {
-    label: 'Adult Comic',
-    description: '24 panels, mature themes, PDF download',
+    label: 'Graphic Novel',
+    description: '24 panels, dramatic themes, PDF download',
     icon: 'Skull',
     format: 'picture_book',
     artStyle: 'noir',
@@ -376,8 +376,8 @@ export const CONTENT_RATINGS = {
     allowRomance: 'mild', // "they kissed"
   },
   mature: {
-    label: 'Mature (18+)',
-    description: 'Adult themes, dark humor, edgy content',
+    label: 'Mature',
+    description: 'Dark themes, edgy content, intense drama',
     allowSwearing: true,
     allowViolence: 'suggested', // "the gun fired, blood dripped from his chest"
     allowRomance: 'suggested', // "they fell into bed together, kissing passionately"

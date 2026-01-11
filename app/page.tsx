@@ -32,7 +32,7 @@ const IDEA_CATEGORY_GROUPS: { label: string; categories: { value: IdeaCategory; 
     categories: [
       { value: 'childrens', label: "Children's", emoji: '🧒' },
       { value: 'comic', label: 'Comic', emoji: '💥' },
-      { value: 'adult_comic', label: 'Adult Comic (18+)', emoji: '🔥' },
+      { value: 'adult_comic', label: 'Graphic Novel', emoji: '📓' },
     ],
   },
   {
