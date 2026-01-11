@@ -1011,20 +1011,25 @@ export async function POST(
         });
 
         // Generate character portraits for consistency (AFTER visual guide is created)
-        console.log('Generating character portrait references...');
+        // Skip for unpaid previews - saves 2+ minutes and they only see 5 panels anyway
         let characterPortraits = null;
-        try {
-          characterPortraits = await generateCharacterPortraits({
-            title: book.title,
-            genre: book.genre,
-            artStyle: book.artStyle,
-            bookFormat: book.bookFormat,
-            characterVisualGuide,
-          });
-          console.log(`Generated ${characterPortraits.length} character portraits`);
-        } catch (portraitError) {
-          console.error('Failed to generate character portraits:', portraitError);
-          // Continue without portraits - will fall back to first appearance references
+        if (isPaid) {
+          console.log('Generating character portrait references...');
+          try {
+            characterPortraits = await generateCharacterPortraits({
+              title: book.title,
+              genre: book.genre,
+              artStyle: book.artStyle,
+              bookFormat: book.bookFormat,
+              characterVisualGuide,
+            });
+            console.log(`Generated ${characterPortraits.length} character portraits`);
+          } catch (portraitError) {
+            console.error('Failed to generate character portraits:', portraitError);
+            // Continue without portraits - will fall back to first appearance references
+          }
+        } else {
+          console.log('Skipping character portraits for unpaid preview (saves ~2 min)');
         }
 
         // Store the guides and portraits in the database
