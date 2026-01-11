@@ -6,19 +6,25 @@
  * @param value - Purchase amount in dollars (e.g., 9.99)
  * @param currency - Currency code (default: 'USD')
  * @param itemCount - Number of items purchased (default: 1)
+ * @param conversionId - Unique ID for deduplication (e.g., Stripe session_id)
  */
 export function trackRedditPurchase(
   value: number,
   currency: string = 'USD',
-  itemCount: number = 1
+  itemCount: number = 1,
+  conversionId?: string
 ) {
   if (typeof window !== 'undefined' && window.rdt) {
-    window.rdt('track', 'Purchase', {
+    const eventData: Record<string, unknown> = {
       value,
       currency,
       itemCount,
-    });
-    console.log('[Reddit Pixel] Purchase tracked:', { value, currency, itemCount });
+    };
+    if (conversionId) {
+      eventData.conversionId = conversionId;
+    }
+    window.rdt('track', 'Purchase', eventData);
+    console.log('[Reddit Pixel] Purchase tracked:', { value, currency, itemCount, conversionId });
   }
 }
 

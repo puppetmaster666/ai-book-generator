@@ -148,6 +148,7 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
   const router = useRouter();
   const { data: session } = useSession();
   const success = searchParams.get('success');
+  const sessionId = searchParams.get('session_id');
   const claimBook = searchParams.get('claimBook');
 
   const [book, setBook] = useState<Book | null>(null);
@@ -209,15 +210,15 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
   // Track Reddit purchase conversion when landing from successful checkout
   const purchaseTrackedRef = useRef(false);
   useEffect(() => {
-    if (success === 'true' && book && !purchaseTrackedRef.current) {
+    if (success === 'true' && sessionId && book && !purchaseTrackedRef.current) {
       purchaseTrackedRef.current = true;
       // Determine price based on book format
       const price = book.bookFormat === 'picture_book'
         ? PRICING.VISUAL.price / 100
         : PRICING.ONE_TIME.price / 100;
-      trackRedditPurchase(price, 'USD', 1);
+      trackRedditPurchase(price, 'USD', 1, sessionId);
     }
-  }, [success, book]);
+  }, [success, sessionId, book]);
 
   // Check if this is a visual book (should use parallel panel generation page)
   const isVisualBook = book?.bookFormat === 'picture_book' || book?.dialogueStyle === 'bubbles' || book?.bookPreset === 'comic_story' || book?.bookPreset === 'childrens_picture';

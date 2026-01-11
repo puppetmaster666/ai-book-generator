@@ -14,14 +14,15 @@ import { PRICING } from '@/lib/constants';
 function PurchaseTracker() {
   const searchParams = useSearchParams();
   const success = searchParams.get('success');
+  const sessionId = searchParams.get('session_id');
   const purchaseTrackedRef = useRef(false);
 
   useEffect(() => {
-    if (success === 'true' && !purchaseTrackedRef.current) {
+    if (success === 'true' && sessionId && !purchaseTrackedRef.current) {
       purchaseTrackedRef.current = true;
-      trackRedditPurchase(PRICING.MONTHLY.price / 100, 'USD', 1);
+      trackRedditPurchase(PRICING.MONTHLY.price / 100, 'USD', 1, sessionId);
     }
-  }, [success]);
+  }, [success, sessionId]);
 
   return null;
 }
