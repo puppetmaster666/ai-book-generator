@@ -14,12 +14,18 @@ interface RedditConversionEventV3 {
     email?: string; // SHA256 hashed
     ip_address?: string;
     user_agent?: string;
+    external_id?: string;
   };
-  event_metadata?: {
+  metadata?: {
     item_count?: number;
-    value_decimal?: number;
+    value?: number;
     currency?: string;
     conversion_id?: string;
+    products?: Array<{
+      id?: string;
+      name?: string;
+      category?: string;
+    }>;
   };
 }
 
@@ -46,6 +52,8 @@ export async function trackRedditConversion({
   conversionId,
   ipAddress,
   userAgent,
+  productName,
+  productCategory,
 }: {
   eventType: 'Purchase' | 'SignUp' | 'Lead' | 'AddToCart';
   email?: string;
@@ -55,6 +63,8 @@ export async function trackRedditConversion({
   conversionId?: string;
   ipAddress?: string;
   userAgent?: string;
+  productName?: string;
+  productCategory?: string;
 }): Promise<boolean> {
   const token = process.env.REDDIT_CONVERSIONS_TOKEN;
 
@@ -86,18 +96,22 @@ export async function trackRedditConversion({
       }
     }
 
-    // Add event metadata
-    if (value !== undefined || conversionId) {
-      event.event_metadata = {
-        currency,
-        item_count: itemCount,
-      };
-      if (value !== undefined) {
-        event.event_metadata.value_decimal = value;
-      }
-      if (conversionId) {
-        event.event_metadata.conversion_id = conversionId;
-      }
+    // Add metadata (required fields for deduplication with pixel)
+    event.metadata = {
+      currency,
+      item_count: itemCount,
+    };
+    if (value !== undefined) {
+      event.metadata.value = value;
+    }
+    if (conversionId) {
+      event.metadata.conversion_id = conversionId;
+    }
+    if (productName || productCategory) {
+      event.metadata.products = [{
+        name: productName,
+        category: productCategory,
+      }];
     }
 
     const response = await fetch(REDDIT_CONVERSIONS_API_URL, {
@@ -137,6 +151,8 @@ export async function trackServerPurchase({
   conversionId,
   ipAddress,
   userAgent,
+  productName,
+  productCategory,
 }: {
   email?: string;
   value: number;
@@ -144,6 +160,8 @@ export async function trackServerPurchase({
   conversionId?: string;
   ipAddress?: string;
   userAgent?: string;
+  productName?: string;
+  productCategory?: string;
 }) {
   return trackRedditConversion({
     eventType: 'Purchase',
@@ -154,5 +172,7 @@ export async function trackServerPurchase({
     conversionId,
     ipAddress,
     userAgent,
+    productName,
+    productCategory,
   });
 }
