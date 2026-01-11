@@ -87,7 +87,7 @@ export function getGeminiFlashForReview(): GenerativeModel {
     _reviewKeyIndex = desiredKeyIndex;
     _reviewGenAI = null;
     _reviewFlash = getReviewGenAI().getGenerativeModel({
-      model: 'gemini-3.0-pro-preview',
+      model: 'gemini-3-pro-preview',
       safetySettings: SAFETY_SETTINGS,
     });
   }
