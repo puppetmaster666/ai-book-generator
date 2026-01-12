@@ -438,22 +438,26 @@ function reducePronounStarts(
 
 /**
  * Add variety opener to sentence.
+ * IMPORTANT: Avoid AI clichés like "With a sigh," "After a moment," etc.
+ * These are immediate AI tells and make text worse, not better.
+ * Instead, use neutral transitions or restructure the sentence.
  */
 function addVarietyOpener(sentence: SentenceInfo): string {
   const text = sentence.text;
 
-  // Try various openers
+  // GOOD openers that don't scream AI
+  // These are neutral, human-sounding transitions
   const openers = [
-    'With a sigh,',
-    'After a moment,',
-    'Without hesitation,',
-    'Slowly,',
-    'Quietly,',
-    'At last,',
-    'Finally,',
-    'Then,',
-    'Still,',
-    'Once more,',
+    'Then,',           // Simple, neutral
+    'Still,',          // Continuation
+    'Now,',            // Immediacy
+    'Yet,',            // Contrast
+    'Soon,',           // Time progression
+    'There,',          // Location shift
+    'Here,',           // Location anchor
+    'Again,',          // Repetition
+    'Once,',           // Past reference
+    'So,',             // Causation (informal)
   ];
 
   // Pick based on position for consistency

@@ -121,6 +121,22 @@ export const FICTION_BANNED_PHRASES: (string | RegExp)[] = [
   /something inside .* shifted/i,
   /despite .* best efforts/i,
 
+  // AI OPENER CLICHÉS (extremely common AI tells) - CRITICAL TO DETECT
+  /^With a sigh,/im,
+  /^After a moment,/im,
+  /^Without hesitation,/im,
+  /^Slowly,/im,
+  /^Quietly,/im,
+  /^Finally,/im,
+  /^At last,/im,
+  /\. With a sigh,/i,
+  /\. After a moment,/i,
+  /\. Without hesitation,/i,
+  /\. Slowly,/i,
+  /\. Quietly,/i,
+  /\. Finally,/i,
+  /\. At last,/i,
+
   // Academic/essay transitions in fiction
   'moreover',
   'furthermore',

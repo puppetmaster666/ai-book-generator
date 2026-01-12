@@ -68,3 +68,13 @@ export {
   type DialoguePolishResult,
   type DialogueChange,
 } from './dialogue-polish';
+
+// AI Cliché removal
+export {
+  removeAICliches,
+  countAICliches,
+  AI_CLICHE_REMOVER_DEFAULTS,
+  type AIClicheRemoverConfig,
+  type AIClicheRemoverResult,
+  type AIClicheChange,
+} from './ai-cliche-remover';

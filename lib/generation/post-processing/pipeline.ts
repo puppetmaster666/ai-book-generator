@@ -38,12 +38,23 @@ import {
   type DialoguePolishConfig,
   type DialoguePolishResult,
 } from './dialogue-polish';
+import {
+  removeAICliches,
+  type AIClicheRemoverResult,
+} from './ai-cliche-remover';
 import { getFormatConfig, type BookFormat } from '../atomic/format-config';
 import { restoreGrit } from '../atomic/heat-scale';
 
 // Pipeline configuration
 export interface PostProcessingConfig {
   format: BookFormat;
+
+  aiClicheRemover: {
+    enabled: boolean;
+    removeOpeners: boolean;
+    removeTransitions: boolean;
+    removeFillers: boolean;
+  };
 
   nameFrequency: {
     enabled: boolean;
@@ -81,6 +92,14 @@ export interface PostProcessingResult {
     // Overall
     processingTimeMs: number;
     totalChanges: number;
+
+    // AI Cliché removal
+    aiClicheRemover?: {
+      totalRemoved: number;
+      openers: number;
+      transitions: number;
+      fillers: number;
+    };
 
     // Name frequency
     nameFrequency?: NameEnforcerResult['metrics'];
@@ -128,6 +147,12 @@ export function getDefaultPostProcessingConfig(format: BookFormat): PostProcessi
 
   return {
     format,
+    aiClicheRemover: {
+      enabled: true,  // ALWAYS enabled - critical for AI detection
+      removeOpeners: true,
+      removeTransitions: true,
+      removeFillers: true,
+    },
     nameFrequency: {
       enabled: pp.nameFrequency.enabled,
       targetWordsPerMention: pp.nameFrequency.targetWordsPerMention,
@@ -255,6 +280,27 @@ export async function runPostProcessingPipeline(
   const analysis = analyzeContent(processedContent, characterInfo, fullConfig);
 
   // Run pipeline in order
+
+  // 0. AI Cliché removal FIRST (clean slate before other processing)
+  if (fullConfig.aiClicheRemover.enabled) {
+    const result = removeAICliches(processedContent, {
+      removeOpeners: fullConfig.aiClicheRemover.removeOpeners,
+      removeTransitions: fullConfig.aiClicheRemover.removeTransitions,
+      removeFillers: fullConfig.aiClicheRemover.removeFillers,
+    });
+    processedContent = result.text;
+    metrics.aiClicheRemover = {
+      totalRemoved: result.totalRemoved,
+      openers: result.categories.openers,
+      transitions: result.categories.transitions,
+      fillers: result.categories.fillers,
+    };
+    metrics.totalChanges += result.totalRemoved;
+
+    if (result.totalRemoved > 0) {
+      console.log(`[PostProcessing] Removed ${result.totalRemoved} AI clichés (${result.categories.openers} openers, ${result.categories.transitions} transitions, ${result.categories.fillers} fillers)`);
+    }
+  }
 
   // 1. Sentence variety (structural changes first)
   if (fullConfig.sentenceVariety.enabled) {
