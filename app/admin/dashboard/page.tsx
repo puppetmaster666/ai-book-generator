@@ -59,6 +59,7 @@ interface AdminStats {
     plan: string;
     freeBookUsed: boolean;
     freeCredits: number;
+    credits: number;
     createdAt: string;
     booksCount: number;
     authMethod: 'email' | 'google';
@@ -1744,7 +1745,7 @@ export default function AdminDashboard() {
                     <th className="text-left py-3 px-2 font-medium text-neutral-500">Verified</th>
                     <th className="text-left py-3 px-2 font-medium text-neutral-500">Plan</th>
                     <th className="text-left py-3 px-2 font-medium text-neutral-500">Free Used</th>
-                    <th className="text-left py-3 px-2 font-medium text-neutral-500">Credits</th>
+                    <th className="text-left py-3 px-2 font-medium text-neutral-500">Credits (Sub/Gift)</th>
                     <th className="text-left py-3 px-2 font-medium text-neutral-500">Books</th>
                     <th className="text-left py-3 px-2 font-medium text-neutral-500">Joined</th>
                   </tr>
@@ -1802,13 +1803,23 @@ export default function AdminDashboard() {
                         )}
                       </td>
                       <td className="py-3 px-2 text-neutral-600">
-                        {user.freeCredits > 0 ? (
-                          <span className="px-2 py-1 rounded-full text-xs font-medium bg-neutral-700 text-white">
-                            {user.freeCredits}
-                          </span>
-                        ) : (
-                          <span className="text-neutral-400">0</span>
-                        )}
+                        <div className="flex gap-1 items-center">
+                          {user.credits > 0 ? (
+                            <span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-600 text-white" title="Subscription credits">
+                              {user.credits}
+                            </span>
+                          ) : (
+                            <span className="text-neutral-400">0</span>
+                          )}
+                          <span className="text-neutral-400">/</span>
+                          {user.freeCredits > 0 ? (
+                            <span className="px-2 py-1 rounded-full text-xs font-medium bg-neutral-700 text-white" title="Gifted credits">
+                              {user.freeCredits}
+                            </span>
+                          ) : (
+                            <span className="text-neutral-400">0</span>
+                          )}
+                        </div>
                       </td>
                       <td className="py-3 px-2 text-neutral-600">
                         {user.booksCount}

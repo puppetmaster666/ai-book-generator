@@ -112,6 +112,7 @@ export async function GET(request: NextRequest) {
           plan: true,
           freeBookUsed: true,
           freeCredits: true,
+          credits: true,
           passwordHash: true, // To determine auth method (email vs Google)
           createdAt: true,
           _count: { select: { books: true } },
@@ -251,6 +252,7 @@ export async function GET(request: NextRequest) {
         plan: u.plan,
         freeBookUsed: u.freeBookUsed,
         freeCredits: u.freeCredits,
+        credits: u.credits,
         createdAt: u.createdAt,
         booksCount: u._count.books,
         authMethod: u.passwordHash ? 'email' : 'google', // Determine based on password presence
