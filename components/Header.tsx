@@ -32,7 +32,7 @@ export default function Header({ variant = 'default' }: HeaderProps) {
   const genDropdownRef = useRef<HTMLDivElement>(null);
   const notifDropdownRef = useRef<HTMLDivElement>(null);
   const { data: session, status } = useSession();
-  const { generatingBook } = useGeneratingBook();
+  const { generatingBook, clearGeneratingBook } = useGeneratingBook();
 
   // Check if user is admin and fetch notifications
   useEffect(() => {
@@ -238,6 +238,12 @@ if (genDropdownRef.current && !genDropdownRef.current.contains(event.target as N
                     >
                       {isCompleted ? 'View Book' : 'View Progress'}
                     </Link>
+                    <button
+                      onClick={() => { clearGeneratingBook(); setGenDropdownOpen(false); }}
+                      className="block w-full text-center py-2 px-4 text-neutral-500 text-xs hover:text-neutral-700 transition-colors mt-2"
+                    >
+                      Dismiss
+                    </button>
                   </div>
                 )}
               </div>

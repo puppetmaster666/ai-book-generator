@@ -87,13 +87,19 @@ export function GeneratingBookProvider({ children }: { children: ReactNode }) {
           bookFormat: status.bookFormat,
         });
 
-        // If completed or failed, clear after a delay
-        if (status.status === 'completed' || status.status === 'failed') {
+        // If completed, show briefly then clear. If failed, clear immediately.
+        if (status.status === 'failed') {
+          localStorage.removeItem(STORAGE_KEY);
+          setBookId(null);
+          setGeneratingBook(null);
+          return;
+        }
+        if (status.status === 'completed') {
           setTimeout(() => {
             localStorage.removeItem(STORAGE_KEY);
             setBookId(null);
             setGeneratingBook(null);
-          }, 10000); // Keep showing for 10 seconds after completion
+          }, 10000);
         }
       } catch (err) {
         console.error('Error fetching generating book status:', err);
