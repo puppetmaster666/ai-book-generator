@@ -1,8 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
+import { auth } from '@/lib/auth';
 
 export async function POST(request: NextRequest) {
   try {
+    // Require authentication
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+    }
+
     const { bookId, email } = await request.json();
 
     if (!bookId) {
@@ -21,6 +28,11 @@ export async function POST(request: NextRequest) {
 
     if (!book.userId) {
       return NextResponse.json({ error: 'Book not associated with a user' }, { status: 400 });
+    }
+
+    // Verify the authenticated user owns this book
+    if (book.userId !== session.user.id) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     if (book.paymentStatus === 'completed') {

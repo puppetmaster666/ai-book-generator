@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { X, Sparkles, Copy, Check } from 'lucide-react';
 import Link from 'next/link';
 
-const PROMO_CODE = 'SECOND50';
+const PROMO_CODE = 'IMFREE99';
 
 interface FirstBookDiscountPopupProps {
   onDismiss: () => void;

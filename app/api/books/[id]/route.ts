@@ -136,6 +136,22 @@ export async function PATCH(
 ) {
   try {
     const { id } = await params;
+
+    // Check ownership: book must belong to the authenticated user or have no owner
+    const existingBook = await prisma.book.findUnique({
+      where: { id },
+      select: { userId: true },
+    });
+    if (!existingBook) {
+      return NextResponse.json({ error: 'Book not found' }, { status: 404 });
+    }
+    if (existingBook.userId) {
+      const session = await auth();
+      if (!session?.user?.id || session.user.id !== existingBook.userId) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      }
+    }
+
     const body = await request.json();
     const { email, authorName, title, premise, beginning, middle, ending, characters, targetWords, targetChapters } = body;
     // Only allow updating certain fields
@@ -170,18 +186,35 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params;
-    // Verify the book exists
+
+    // Require authentication
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+    }
+
+    // Verify the book exists and check ownership
     const book = await prisma.book.findUnique({
       where: { id },
-      select: { id: true, title: true },
+      select: { id: true, title: true, userId: true },
     });
     if (!book) {
       return NextResponse.json({ error: 'Book not found' }, { status: 404 });
     }
+
+    // Only the owner or admin can delete
+    if (book.userId && book.userId !== session.user.id) {
+      const adminUser = await prisma.user.findUnique({
+        where: { id: session.user.id },
+        select: { isAdmin: true },
+      });
+      if (!adminUser?.isAdmin) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      }
+    }
+
     // Delete all related data (illustrations, chapters) then the book
-    // Prisma should handle cascading deletes based on schema, but let's be explicit
     await prisma.$transaction([
-      // Delete illustrations (both direct and chapter-linked)
       prisma.illustration.deleteMany({
         where: {
           OR: [
@@ -190,11 +223,9 @@ export async function DELETE(
           ],
         },
       }),
-      // Delete chapters
       prisma.chapter.deleteMany({
         where: { bookId: id },
       }),
-      // Delete the book
       prisma.book.delete({
         where: { id },
       }),

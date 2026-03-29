@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { rateLimit, getClientIP } from '@/lib/rate-limit';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { ART_STYLES, ILLUSTRATION_DIMENSIONS, type ArtStyleKey } from '@/lib/constants';
 import {
@@ -106,6 +107,13 @@ const NO_TEXT_INSTRUCTION = `CRITICAL: Do NOT include any text, words, letters, 
 
 export async function POST(request: NextRequest) {
   try {
+    // Rate limit: 50 image generations per day per IP
+    const ip = getClientIP(request.headers);
+    const { limited } = rateLimit(`illustration:${ip}`, 50, 24 * 60 * 60 * 1000);
+    if (limited) {
+      return NextResponse.json({ error: 'Daily limit reached. Please try again tomorrow.' }, { status: 429 });
+    }
+
     const {
       scene,
       artStyle,

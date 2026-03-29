@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { rateLimit, getClientIP } from '@/lib/rate-limit';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { prisma } from '@/lib/db';
 import { ART_STYLES, ILLUSTRATION_DIMENSIONS, type ArtStyleKey } from '@/lib/constants';
@@ -115,6 +116,13 @@ Text placement and style:
 
 export async function POST(request: NextRequest) {
   try {
+    // Rate limit: 50 panel generations per day per IP
+    const ip = getClientIP(request.headers);
+    const { limited } = rateLimit(`panel:${ip}`, 50, 24 * 60 * 60 * 1000);
+    if (limited) {
+      return NextResponse.json({ error: 'Daily limit reached. Please try again tomorrow.' }, { status: 429 });
+    }
+
     const {
       bookId,
       panelNumber,

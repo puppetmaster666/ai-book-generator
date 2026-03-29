@@ -1,8 +1,18 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
+import { rateLimit, getClientIP } from '@/lib/rate-limit';
+import { headers } from 'next/headers';
 
 export async function GET() {
   try {
+    // Rate limit: 30 requests per minute per IP
+    const headersList = await headers();
+    const ip = getClientIP(headersList);
+    const { limited } = rateLimit(`stats:${ip}`, 30, 60 * 1000);
+    if (limited) {
+      return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
+    }
+
     // Get real counts from database
     const [userCount, bookCount, completedBooks] = await Promise.all([
       prisma.user.count(),

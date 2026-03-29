@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { SAFETY_SETTINGS } from '@/lib/gemini';
+import { auth } from '@/lib/auth';
+import { prisma } from '@/lib/db';
 
 // Lazy initialization
 let genAI: GoogleGenerativeAI | null = null;
@@ -26,6 +28,19 @@ const ASPECT_RATIO_CONFIGS: Record<string, { width: number; height: number }> = 
 
 export async function POST(request: NextRequest) {
   try {
+    // Require admin authentication
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    const adminUser = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { isAdmin: true },
+    });
+    if (!adminUser?.isAdmin) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
     const { prompt, aspectRatio, style } = await request.json();
 
     if (!prompt) {

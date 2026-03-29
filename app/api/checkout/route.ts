@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
   try {
     const stripe = getStripe();
     const body = await request.json();
-    const { bookId, email, productType, promoCode } = body;
+    const { bookId, email, productType, promoCode, applyDiscount } = body;
 
     if (!email || !productType) {
       return NextResponse.json(
@@ -84,6 +84,11 @@ export async function POST(request: NextRequest) {
         }
         appliedPromo = code;
       }
+    }
+
+    // Apply one-time 15% idle discount (only if no promo code was applied)
+    if (!appliedPromo && applyDiscount) {
+      amount = Math.round(amount * 0.85);
     }
 
     // Create Stripe checkout session

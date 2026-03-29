@@ -1,20 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-
-function getClientIP(request: NextRequest): string {
-  const forwarded = request.headers.get('x-forwarded-for');
-  if (forwarded) {
-    return forwarded.split(',')[0].trim();
-  }
-  const realIp = request.headers.get('x-real-ip');
-  if (realIp) {
-    return realIp;
-  }
-  return 'unknown';
-}
+import { rateLimit, getClientIP } from '@/lib/rate-limit';
 
 export async function POST(request: NextRequest) {
   try {
+    // Rate limit: 10 free order attempts per minute per IP
+    const ip = getClientIP(request.headers);
+    const { limited } = rateLimit(`free-order:${ip}`, 10, 60 * 1000);
+    if (limited) {
+      return NextResponse.json({ error: 'Too many attempts. Please try again later.' }, { status: 429 });
+    }
+
     const { bookId, promoCode, email } = await request.json();
 
     if (!bookId) {
@@ -26,7 +22,7 @@ export async function POST(request: NextRequest) {
     }
 
     const code = promoCode.toUpperCase();
-    const clientIP = getClientIP(request);
+    const clientIP = getClientIP(request.headers);
 
     // Check promo code in database
     const dbPromo = await prisma.promoCode.findUnique({
@@ -46,6 +42,19 @@ export async function POST(request: NextRequest) {
     }
 
     if (dbPromo.currentUses >= dbPromo.maxUses) {
+      return NextResponse.json({ error: 'Promo code has reached its usage limit' }, { status: 400 });
+    }
+
+    // Atomically check-and-increment to prevent race conditions
+    const updated = await prisma.promoCode.updateMany({
+      where: {
+        code,
+        currentUses: { lt: dbPromo.maxUses },
+        isActive: true,
+      },
+      data: { currentUses: { increment: 1 } },
+    });
+    if (updated.count === 0) {
       return NextResponse.json({ error: 'Promo code has reached its usage limit' }, { status: 400 });
     }
 
@@ -83,12 +92,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Book not found' }, { status: 404 });
     }
 
-    // Atomically increment promo usage, track usage, and update book
+    // Track usage and update book (promo already incremented atomically above)
     await prisma.$transaction([
-      prisma.promoCode.update({
-        where: { code },
-        data: { currentUses: { increment: 1 } },
-      }),
       prisma.promoCodeUsage.create({
         data: {
           promoCodeId: dbPromo.id,

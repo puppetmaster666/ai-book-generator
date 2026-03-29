@@ -8,20 +8,14 @@ export async function POST(
 ) {
   try {
     const { id } = await params;
-    const body = await request.json();
-
-    // Get userId from body or from session
-    let userId = body.userId;
-
-    if (!userId) {
-      const session = await auth();
-      userId = session?.user?.id;
-    }
+    // Require authentication - userId must come from session, not request body
+    const session = await auth();
+    const userId = session?.user?.id;
 
     if (!userId) {
       return NextResponse.json(
-        { error: 'User ID required' },
-        { status: 400 }
+        { error: 'Authentication required' },
+        { status: 401 }
       );
     }
 

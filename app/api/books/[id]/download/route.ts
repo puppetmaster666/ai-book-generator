@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
+import { auth } from '@/lib/auth';
 import { generateEpub } from '@/lib/epub';
 import { generatePdf } from '@/lib/pdf';
 import { generateTextPdf } from '@/lib/pdf-text';
@@ -159,6 +160,25 @@ export async function GET(
 
     if (!book) {
       return NextResponse.json({ error: 'Book not found' }, { status: 404 });
+    }
+
+    // Ownership check: if book has an owner, only the owner can download
+    if (book.userId) {
+      const session = await auth();
+      if (!session?.user?.id || session.user.id !== book.userId) {
+        // Allow admin override
+        if (session?.user?.id) {
+          const adminUser = await prisma.user.findUnique({
+            where: { id: session.user.id },
+            select: { isAdmin: true },
+          });
+          if (!adminUser?.isAdmin) {
+            return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+          }
+        } else {
+          return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+        }
+      }
     }
 
     // Allow download for completed books AND preview books (free samples)

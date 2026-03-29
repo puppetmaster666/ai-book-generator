@@ -1,22 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
+import { rateLimit, getClientIP } from '@/lib/rate-limit';
 
-// Fallback hardcoded codes (for codes not in DB)
-const HARDCODED_PROMOS: Record<string, { discount: number; validUntil: Date; description: string }> = {
-  'NY26': {
-    discount: 0.50,
-    validUntil: new Date('2026-01-02T00:00:00Z'),
-    description: 'New Year 2026 Special - 50% Off',
-  },
-  'SECOND50': {
-    discount: 0.50,
-    validUntil: new Date('2030-01-01T00:00:00Z'),
-    description: '50% Off Your Second Book',
-  },
-};
+// No hardcoded promos - all promo codes must be in the database
 
 export async function POST(request: NextRequest) {
   try {
+    // Rate limit: 20 attempts per minute per IP to prevent brute-forcing
+    const ip = getClientIP(request.headers);
+    const { limited } = rateLimit(`promo:${ip}`, 20, 60 * 1000);
+    if (limited) {
+      return NextResponse.json(
+        { valid: false, error: 'Too many attempts. Please try again later.' },
+        { status: 429 }
+      );
+    }
+
     const { promoCode } = await request.json();
 
     if (!promoCode) {
@@ -68,23 +67,7 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Fallback to hardcoded promos
-    const promo = HARDCODED_PROMOS[code];
-
-    if (!promo) {
-      return NextResponse.json({ valid: false, error: 'Invalid promo code' });
-    }
-
-    if (new Date() > promo.validUntil) {
-      return NextResponse.json({ valid: false, error: 'Promo code has expired' });
-    }
-
-    return NextResponse.json({
-      valid: true,
-      discount: promo.discount,
-      discountPercent: Math.round(promo.discount * 100),
-      description: promo.description,
-    });
+    return NextResponse.json({ valid: false, error: 'Invalid promo code' });
   } catch (error) {
     console.error('Error validating promo:', error);
     return NextResponse.json({ valid: false, error: 'Failed to validate promo code' });

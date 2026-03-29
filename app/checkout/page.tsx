@@ -127,9 +127,11 @@ function CheckoutContent() {
     }
   };
 
-  // Discount popup after 30 seconds of inactivity (only if no promo applied)
+  // Discount popup after 30 seconds of inactivity (only if no promo applied, only once ever)
   useEffect(() => {
-    if (promoDiscount) return; // Don't show idle discount if promo is applied
+    if (promoDiscount) return;
+    // Never show again if user already saw it (accepted or dismissed)
+    if (typeof window !== 'undefined' && localStorage.getItem('checkout_discount_shown') === 'true') return;
 
     const interval = setInterval(() => {
       setIdleTime(prev => prev + 1);
@@ -137,6 +139,8 @@ function CheckoutContent() {
 
     if (idleTime >= 30 && !showDiscount && !applyDiscount) {
       setShowDiscount(true);
+      // Mark as shown so it never appears again
+      localStorage.setItem('checkout_discount_shown', 'true');
     }
 
     return () => clearInterval(interval);

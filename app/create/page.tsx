@@ -113,6 +113,7 @@ export default function CreateBook() {
   const [idea, setIdea] = useState('');
   const [hasIdeaFromHomepage, setHasIdeaFromHomepage] = useState(false);
   const [isGeneratingIdea, setIsGeneratingIdea] = useState(false);
+  const [ideasRemaining, setIdeasRemaining] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [ideaCategory, setIdeaCategory] = useState<IdeaCategory>('random');
@@ -126,6 +127,14 @@ export default function CreateBook() {
 
   // Storage key for form state
   const FORM_STATE_KEY = 'createBookFormState';
+
+  // Fetch remaining idea generations on mount
+  useEffect(() => {
+    fetch('/api/generate-idea')
+      .then(res => res.json())
+      .then(data => setIdeasRemaining(data.remaining ?? null))
+      .catch(() => {});
+  }, []);
 
   // Load saved form state on mount
   useEffect(() => {
@@ -190,6 +199,10 @@ export default function CreateBook() {
   };
 
   const handleGenerateIdea = async () => {
+    if (ideasRemaining !== null && ideasRemaining <= 0) {
+      setError('You\'ve used all 5 free idea generations this month. Type your own idea instead!');
+      return;
+    }
     setIsGeneratingIdea(true);
     setError('');
     try {
@@ -198,9 +211,14 @@ export default function CreateBook() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ category: ideaCategory }),
       });
-      if (!response.ok) throw new Error('Failed to generate idea');
       const data = await response.json();
+      if (!response.ok) {
+        setError(data.error || 'Failed to generate idea');
+        if (data.remaining !== undefined) setIdeasRemaining(data.remaining);
+        return;
+      }
       setIdea(data.idea);
+      if (data.remaining !== undefined) setIdeasRemaining(data.remaining);
     } catch {
       setError('Failed to generate idea. Please try again.');
     } finally {
@@ -728,15 +746,16 @@ export default function CreateBook() {
                     <button
                       type="button"
                       onClick={handleGenerateIdea}
-                      disabled={isGeneratingIdea || isSubmitting}
+                      disabled={isGeneratingIdea || isSubmitting || (ideasRemaining !== null && ideasRemaining <= 0)}
                       className="flex items-center gap-2 text-neutral-500 hover:text-neutral-900 disabled:opacity-50 px-3 py-2 rounded-lg hover:bg-neutral-100 transition-colors"
+                      title={ideasRemaining !== null ? `${ideasRemaining} free idea${ideasRemaining !== 1 ? 's' : ''} remaining this month` : undefined}
                     >
                       {isGeneratingIdea ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
                       ) : (
                         <Sparkles className="h-4 w-4" />
                       )}
-                      {isGeneratingIdea ? 'Generating...' : 'Surprise me'}
+                      {isGeneratingIdea ? 'Generating...' : ideasRemaining !== null && ideasRemaining <= 0 ? 'No ideas left' : `Surprise me${ideasRemaining !== null ? ` (${ideasRemaining}/5)` : ''}`}
                     </button>
 
                     {/* Category Dropdown */}
