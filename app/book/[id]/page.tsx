@@ -13,6 +13,7 @@ import Link from 'next/link';
 import FirstBookDiscountPopup from '@/components/FirstBookDiscountPopup';
 import LivePreview from '@/components/LivePreview';
 import { trackRedditPurchase } from '@/lib/reddit-pixel';
+import { trackPurchase as trackGAPurchase } from '@/lib/gtag';
 import { PRICING } from '@/lib/constants';
 
 interface Chapter {
@@ -218,6 +219,8 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
         ? PRICING.VISUAL.price / 100
         : PRICING.ONE_TIME.price / 100;
       trackRedditPurchase(price, 'USD', 1, sessionId);
+      // GA4 purchase conversion
+      trackGAPurchase(price, sessionId);
     }
   }, [success, sessionId, book]);
 

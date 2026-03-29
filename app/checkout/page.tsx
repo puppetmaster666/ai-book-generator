@@ -8,6 +8,7 @@ import ToastModal from '@/components/ToastModal';
 import Link from 'next/link';
 import { Check, CreditCard, Loader2, Tag, X, Gift, ArrowRight, User } from 'lucide-react';
 import { PRICING } from '@/lib/constants';
+import { trackBeginCheckout } from '@/lib/gtag';
 
 interface BookDetails {
   title: string;
@@ -82,6 +83,13 @@ function CheckoutContent() {
       validatePromoCode(urlPromoCode);
     }
   }, [urlPromoCode]);
+
+  // GA4: track begin_checkout conversion on mount
+  useEffect(() => {
+    if (!isLoadingBook) {
+      trackBeginCheckout(finalPrice);
+    }
+  }, [isLoadingBook]);
 
   const validatePromoCode = async (code: string) => {
     if (!code.trim()) {

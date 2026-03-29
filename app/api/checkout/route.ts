@@ -3,13 +3,7 @@ import Stripe from 'stripe';
 import { prisma } from '@/lib/db';
 import { PRICING } from '@/lib/constants';
 
-// Fallback hardcoded promos (for codes not in DB)
-const HARDCODED_PROMOS: Record<string, { discount: number; validUntil: Date }> = {
-  'NY26': {
-    discount: 0.50,
-    validUntil: new Date('2026-01-02T00:00:00Z'),
-  },
-};
+// No hardcoded promos - all promo codes must be in the database
 
 function getStripe() {
   const secretKey = process.env.STRIPE_SECRET_KEY;
@@ -23,7 +17,7 @@ export async function POST(request: NextRequest) {
   try {
     const stripe = getStripe();
     const body = await request.json();
-    const { bookId, email, productType, applyDiscount, promoCode } = body;
+    const { bookId, email, productType, promoCode } = body;
 
     if (!email || !productType) {
       return NextResponse.json(
@@ -89,16 +83,7 @@ export async function POST(request: NextRequest) {
           amount = Math.round(amount * (1 - dbPromo.discount));
         }
         appliedPromo = code;
-      } else if (HARDCODED_PROMOS[code] && new Date() <= HARDCODED_PROMOS[code].validUntil) {
-        // Fallback to hardcoded promos
-        amount = Math.round(amount * (1 - HARDCODED_PROMOS[code].discount));
-        appliedPromo = code;
       }
-    }
-
-    if (!appliedPromo && applyDiscount) {
-      // Apply 15% idle discount if no promo code
-      amount = Math.round(amount * 0.85);
     }
 
     // Create Stripe checkout session
@@ -132,10 +117,11 @@ export async function POST(request: NextRequest) {
       metadata: {
         bookId: bookId || '',
         productType,
-        applyDiscount: applyDiscount ? 'true' : 'false',
         promoCode: appliedPromo,
       },
     });
+
+    // Promo usage is incremented in the Stripe webhook after payment confirms
 
     // Don't create payment record here - wait for webhook to confirm actual payment
     // This prevents "pending" payments from cluttering admin when users abandon checkout

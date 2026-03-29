@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import Head from 'next/head';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { ArrowRight, Sparkles, BookOpen, PenTool, Download, Check, FileText, Layers } from 'lucide-react';
@@ -54,14 +53,7 @@ export default function NovelWriterContent() {
   };
 
   return (
-    <>
-      <Head>
-        <title>AI Novel Writer - Write Books with Artificial Intelligence</title>
-        <meta name="description" content="Write complete novels with AI. Our AI novel writer generates full-length books with compelling characters, plot development, and professional formatting. All genres supported." />
-        <meta name="keywords" content="AI novel writer, AI book writer, write novel with AI, AI story generator, AI fiction writer, book writing AI, novel generator" />
-        <link rel="canonical" href="https://draftmybook.com/ai-novel-writer" />
-      </Head>
-      <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white">
         <Header />
 
         {/* Hero Section */}
@@ -256,6 +248,5 @@ export default function NovelWriterContent() {
 
         <Footer />
       </div>
-    </>
   );
 }

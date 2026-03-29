@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
-import Head from 'next/head';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { ArrowRight, Sparkles, BookOpen, Palette, Download, Check, Zap, Layers } from 'lucide-react';
@@ -53,14 +52,7 @@ export default function ComicBookContent() {
   };
 
   return (
-    <>
-      <Head>
-        <title>AI Comic Book Maker - Create Comics with AI Art Generator</title>
-        <meta name="description" content="Create stunning comic books with AI. Generate professional comics with AI-powered story writing and illustration. Multiple art styles including manga, superhero, and indie." />
-        <meta name="keywords" content="AI comic book maker, comic generator, AI comic creator, manga generator, superhero comic maker, comic book generator, AI art comic" />
-        <link rel="canonical" href="https://draftmybook.com/ai-comic-book-maker" />
-      </Head>
-      <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white">
         <Header />
 
         {/* Hero Section */}
@@ -217,6 +209,5 @@ export default function ComicBookContent() {
 
         <Footer />
       </div>
-    </>
   );
 }

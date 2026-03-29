@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { signIn, useSession } from 'next-auth/react';
 import Header from '@/components/Header';
 import { Loader2 } from 'lucide-react';
+import { trackSignUp } from '@/lib/gtag';
 
 function SignupContent() {
   const router = useRouter();
@@ -130,6 +131,7 @@ function SignupContent() {
       if (result?.error) {
         setError('Account created but failed to sign in. Please try logging in.');
       } else {
+        trackSignUp('credentials');
         router.refresh();
       }
     } catch (err) {

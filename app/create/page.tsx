@@ -14,6 +14,7 @@ import {
   type BookPresetKey,
   type ArtStyleKey,
 } from '@/lib/constants';
+import { trackGenerateLead } from '@/lib/gtag';
 
 // Main category types
 type CategoryType = 'text' | 'image' | 'screenplay';
@@ -430,6 +431,7 @@ export default function CreateBook() {
       }
 
       const { bookId } = data;
+      trackGenerateLead(bookId);
       clearFormState();
       router.push(`/review?bookId=${bookId}`);
     } catch (err) {

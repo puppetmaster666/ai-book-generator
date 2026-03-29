@@ -13,7 +13,7 @@ interface HeaderProps {
 export default function Header({ variant = 'default' }: HeaderProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
-  const [navDropdownOpen, setNavDropdownOpen] = useState(false);
+
   const [genDropdownOpen, setGenDropdownOpen] = useState(false);
   const [notifDropdownOpen, setNotifDropdownOpen] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -28,7 +28,7 @@ export default function Header({ variant = 'default' }: HeaderProps) {
   const [unreadCount, setUnreadCount] = useState(0);
   const [freeCredits, setFreeCredits] = useState(0);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const navDropdownRef = useRef<HTMLDivElement>(null);
+
   const genDropdownRef = useRef<HTMLDivElement>(null);
   const notifDropdownRef = useRef<HTMLDivElement>(null);
   const { data: session, status } = useSession();
@@ -67,10 +67,7 @@ export default function Header({ variant = 'default' }: HeaderProps) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setDropdownOpen(false);
       }
-      if (navDropdownRef.current && !navDropdownRef.current.contains(event.target as Node)) {
-        setNavDropdownOpen(false);
-      }
-      if (genDropdownRef.current && !genDropdownRef.current.contains(event.target as Node)) {
+if (genDropdownRef.current && !genDropdownRef.current.contains(event.target as Node)) {
         setGenDropdownOpen(false);
       }
       if (notifDropdownRef.current && !notifDropdownRef.current.contains(event.target as Node)) {
@@ -126,47 +123,38 @@ export default function Header({ variant = 'default' }: HeaderProps) {
           : 'relative bg-white'
       }`}>
         <div className="max-w-7xl mx-auto flex items-center justify-between">
-          {/* Left Nav - Hamburger Menu */}
+          {/* Left Nav - Inline Links (desktop) */}
           <div className="hidden md:flex items-center gap-8 flex-1">
-            <div className="relative" ref={navDropdownRef}>
-              <button
-                onClick={() => setNavDropdownOpen(!navDropdownOpen)}
-                className={`flex items-center gap-2 text-sm transition-colors ${
-                  variant === 'transparent'
-                    ? 'text-white/80 hover:text-white'
-                    : 'text-neutral-600 hover:text-neutral-900'
-                }`}
-              >
-                <Menu className="h-5 w-5" />
-                <span>Menu</span>
-              </button>
-
-              {navDropdownOpen && (
-                <div className="absolute left-0 mt-2 w-48 bg-white rounded-xl border border-neutral-200 shadow-lg py-2 z-50">
-                  <Link
-                    href="/how-it-works"
-                    className="block px-4 py-2.5 text-sm text-neutral-700 hover:bg-neutral-50 transition-colors"
-                    onClick={() => setNavDropdownOpen(false)}
-                  >
-                    How it works
-                  </Link>
-                  <Link
-                    href="/pricing"
-                    className="block px-4 py-2.5 text-sm text-neutral-700 hover:bg-neutral-50 transition-colors"
-                    onClick={() => setNavDropdownOpen(false)}
-                  >
-                    Pricing
-                  </Link>
-                  <Link
-                    href="/faq"
-                    className="block px-4 py-2.5 text-sm text-neutral-700 hover:bg-neutral-50 transition-colors"
-                    onClick={() => setNavDropdownOpen(false)}
-                  >
-                    FAQ
-                  </Link>
-                </div>
-              )}
-            </div>
+            <Link
+              href="/how-it-works"
+              className={`text-sm transition-colors ${
+                variant === 'transparent'
+                  ? 'text-white/80 hover:text-white'
+                  : 'text-neutral-600 hover:text-neutral-900'
+              }`}
+            >
+              How It Works
+            </Link>
+            <Link
+              href="/pricing"
+              className={`text-sm transition-colors ${
+                variant === 'transparent'
+                  ? 'text-white/80 hover:text-white'
+                  : 'text-neutral-600 hover:text-neutral-900'
+              }`}
+            >
+              Pricing
+            </Link>
+            <Link
+              href="/faq"
+              className={`text-sm transition-colors ${
+                variant === 'transparent'
+                  ? 'text-white/80 hover:text-white'
+                  : 'text-neutral-600 hover:text-neutral-900'
+              }`}
+            >
+              FAQ
+            </Link>
           </div>
 
           {/* Center Logo */}

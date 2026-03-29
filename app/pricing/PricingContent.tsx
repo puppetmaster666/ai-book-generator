@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
-import { Check, ArrowRight } from 'lucide-react';
+import { Check, ArrowRight, Zap, BookOpen, Sparkles, Crown } from 'lucide-react';
 
 export default function PricingContent() {
   const router = useRouter();
@@ -15,7 +15,7 @@ export default function PricingContent() {
       <Header />
 
       <main className="py-16 px-6">
-        <div className="max-w-5xl mx-auto">
+        <div className="max-w-6xl mx-auto">
           <div className="text-center mb-16">
             <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-6" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>
               Simple, Transparent Pricing
@@ -26,85 +26,148 @@ export default function PricingContent() {
           </div>
 
           {/* Pricing Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-5 max-w-6xl mx-auto">
+
+            {/* Free Tier */}
+            <button
+              onClick={() => router.push(session ? '/create' : '/signup')}
+              className="group bg-white rounded-2xl p-6 border-2 border-lime-400 hover:border-lime-500 hover:shadow-lg transition-all text-left cursor-pointer flex flex-col"
+            >
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 bg-lime-400 rounded-lg flex items-center justify-center">
+                  <Zap className="h-5 w-5 text-neutral-900" />
+                </div>
+              </div>
+              <h3 className="text-xl font-semibold mb-1" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>Free</h3>
+              <div className="flex items-baseline gap-1 mb-2">
+                <span className="text-4xl font-bold">$0</span>
+              </div>
+              <p className="text-sm text-neutral-500 mb-4">Try it out - no credit card</p>
+              <ul className="space-y-2 text-sm text-neutral-600 mb-6 flex-grow">
+                <li className="flex items-center gap-2">
+                  <Check className="h-4 w-4 text-lime-600 flex-shrink-0" />
+                  Free sample preview
+                </li>
+                <li className="flex items-center gap-2">
+                  <Check className="h-4 w-4 text-lime-600 flex-shrink-0" />
+                  1 chapter or 5 panels
+                </li>
+                <li className="flex items-center gap-2">
+                  <Check className="h-4 w-4 text-lime-600 flex-shrink-0" />
+                  Upgrade to unlock full book
+                </li>
+              </ul>
+              <div className="w-full bg-lime-400 text-neutral-900 py-3 rounded-xl text-sm font-medium text-center group-hover:bg-lime-500 transition-colors">
+                Start Free
+              </div>
+            </button>
 
             {/* Single Generation */}
-            <div className="bg-white rounded-2xl border border-neutral-200 p-8 hover:shadow-lg transition-shadow flex flex-col">
-              <h3 className="text-xl font-semibold mb-2" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>
-                Single Generation
-              </h3>
-              <div className="mb-4">
-                <span className="text-5xl font-bold tracking-tight" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>$9.99</span>
+            <button
+              onClick={() => router.push('/create')}
+              className="group bg-white rounded-2xl p-6 border-2 border-neutral-200 hover:border-neutral-900 hover:shadow-lg transition-all text-left cursor-pointer flex flex-col"
+            >
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 bg-neutral-100 rounded-lg flex items-center justify-center group-hover:bg-neutral-900 transition-colors">
+                  <BookOpen className="h-5 w-5 text-neutral-700 group-hover:text-white transition-colors" />
+                </div>
               </div>
-              <p className="text-neutral-500 mb-6">One-time purchase</p>
-              <ul className="space-y-4 flex-grow">
-                <li className="flex items-start gap-3 text-neutral-600">
-                  <Check className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
-                  <span>Novel, comic, or picture book</span>
+              <h3 className="text-xl font-semibold mb-1" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>Single Generation</h3>
+              <div className="flex items-baseline gap-1 mb-2">
+                <span className="text-4xl font-bold">$9.99</span>
+              </div>
+              <p className="text-sm text-neutral-500 mb-4">Novel, Comic, Screenplay, or Picture Book</p>
+              <ul className="space-y-2 text-sm text-neutral-600 mb-6 flex-grow">
+                <li className="flex items-center gap-2">
+                  <Check className="h-4 w-4 text-neutral-400 flex-shrink-0" />
+                  Any book type
                 </li>
-                <li className="flex items-start gap-3 text-neutral-600">
-                  <Check className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
-                  <span>AI-generated professional cover</span>
+                <li className="flex items-center gap-2">
+                  <Check className="h-4 w-4 text-neutral-400 flex-shrink-0" />
+                  AI cover + formatting
                 </li>
-                <li className="flex items-start gap-3 text-neutral-600">
-                  <Check className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
-                  <span>EPUB or PDF download</span>
-                </li>
-                <li className="flex items-start gap-3 text-neutral-600">
-                  <Check className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
-                  <span>Full commercial rights</span>
+                <li className="flex items-center gap-2">
+                  <Check className="h-4 w-4 text-neutral-400 flex-shrink-0" />
+                  EPUB or PDF
                 </li>
               </ul>
-              <button
-                onClick={() => router.push('/create')}
-                className="w-full bg-white text-neutral-900 py-3 rounded-full border-2 border-neutral-900 hover:bg-neutral-900 hover:text-white transition-colors font-medium mt-8"
-              >
+              <div className="w-full bg-neutral-900 text-white py-3 rounded-xl text-sm font-medium text-center group-hover:bg-neutral-800 transition-colors">
                 Create Book
-              </button>
-            </div>
+              </div>
+            </button>
 
             {/* Author Plan */}
-            <div className="bg-white rounded-2xl border-2 border-neutral-900 p-8 relative hover:shadow-lg transition-shadow flex flex-col">
-              <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-neutral-900 text-white px-4 py-1 rounded-full text-sm font-medium">
+            <button
+              onClick={() => router.push(session ? '/checkout?plan=monthly' : '/signup?plan=monthly')}
+              className="group bg-neutral-900 text-white rounded-2xl p-6 border-2 border-neutral-900 hover:shadow-lg transition-all text-left cursor-pointer relative flex flex-col"
+            >
+              <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-lime-400 text-neutral-900 px-3 py-1 rounded-full text-xs font-medium">
                 Best Value
               </div>
-              <h3 className="text-xl font-semibold mb-2" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>
-                Author Plan
-              </h3>
-              <div className="mb-4">
-                <span className="text-5xl font-bold tracking-tight" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>$39</span>
-                <span className="text-neutral-500">/month</span>
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 bg-white/10 rounded-lg flex items-center justify-center">
+                  <Sparkles className="h-5 w-5 text-white" />
+                </div>
               </div>
-              <p className="text-neutral-500 mb-6">$7.80 per generation</p>
-              <ul className="space-y-4 flex-grow">
-                <li className="flex items-start gap-3 text-neutral-600">
-                  <Check className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
-                  <span><strong>5 generations per month</strong> (any type)</span>
+              <h3 className="text-xl font-semibold mb-1" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>Author Plan</h3>
+              <div className="flex items-baseline gap-1 mb-2">
+                <span className="text-4xl font-bold">$39</span>
+                <span className="text-neutral-400 text-sm">/mo</span>
+              </div>
+              <p className="text-sm text-neutral-300 mb-4">5 generations per month</p>
+              <ul className="space-y-2 text-sm text-neutral-200 mb-6 flex-grow">
+                <li className="flex items-center gap-2">
+                  <Check className="h-4 w-4 text-neutral-400 flex-shrink-0" />
+                  $7.80 per generation
                 </li>
-                <li className="flex items-start gap-3 text-neutral-600">
-                  <Check className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
-                  <span><strong>Unused credits roll over</strong></span>
+                <li className="flex items-center gap-2">
+                  <Check className="h-4 w-4 text-neutral-400 flex-shrink-0" />
+                  Unused credits roll over
                 </li>
-                <li className="flex items-start gap-3 text-neutral-600">
-                  <Check className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
-                  <span>AI-generated covers for all books</span>
-                </li>
-                <li className="flex items-start gap-3 text-neutral-600">
-                  <Check className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
-                  <span>Full commercial rights</span>
-                </li>
-                <li className="flex items-start gap-3 text-neutral-600">
-                  <Check className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
-                  <span>Cancel anytime</span>
+                <li className="flex items-center gap-2">
+                  <Check className="h-4 w-4 text-neutral-400 flex-shrink-0" />
+                  Cancel anytime
                 </li>
               </ul>
-              <button
-                onClick={() => router.push(session ? '/checkout?plan=monthly' : '/signup?plan=monthly')}
-                className="w-full bg-neutral-900 text-white py-3 rounded-full hover:bg-neutral-800 transition-colors font-medium mt-8"
-              >
+              <div className="w-full bg-white text-neutral-900 py-3 rounded-xl text-sm font-medium text-center group-hover:bg-neutral-100 transition-colors">
                 Subscribe
-              </button>
-            </div>
+              </div>
+            </button>
+
+            {/* Yearly Plan */}
+            <button
+              onClick={() => router.push(session ? '/checkout?plan=yearly' : '/signup?plan=yearly')}
+              className="group bg-white rounded-2xl p-6 border-2 border-neutral-200 hover:border-neutral-900 hover:shadow-lg transition-all text-left cursor-pointer flex flex-col"
+            >
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 bg-neutral-100 rounded-lg flex items-center justify-center group-hover:bg-neutral-900 transition-colors">
+                  <Crown className="h-5 w-5 text-neutral-700 group-hover:text-white transition-colors" />
+                </div>
+              </div>
+              <h3 className="text-xl font-semibold mb-1" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>Yearly Plan</h3>
+              <div className="flex items-baseline gap-1 mb-2">
+                <span className="text-4xl font-bold">$299</span>
+                <span className="text-neutral-400 text-sm">/yr</span>
+              </div>
+              <p className="text-sm text-neutral-500 mb-4">50 books per year</p>
+              <ul className="space-y-2 text-sm text-neutral-600 mb-6 flex-grow">
+                <li className="flex items-center gap-2">
+                  <Check className="h-4 w-4 text-neutral-400 flex-shrink-0" />
+                  $5.98 per book
+                </li>
+                <li className="flex items-center gap-2">
+                  <Check className="h-4 w-4 text-neutral-400 flex-shrink-0" />
+                  Use anytime within year
+                </li>
+                <li className="flex items-center gap-2">
+                  <Check className="h-4 w-4 text-neutral-400 flex-shrink-0" />
+                  Best for power users
+                </li>
+              </ul>
+              <div className="w-full bg-neutral-900 text-white py-3 rounded-xl text-sm font-medium text-center group-hover:bg-neutral-800 transition-colors">
+                Get Yearly
+              </div>
+            </button>
           </div>
 
           {/* Free Preview Note */}

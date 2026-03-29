@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
-import Head from 'next/head';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { ArrowRight, Sparkles, BookOpen, PenTool, Download, Check, FileText, Palette, Layers, Zap } from 'lucide-react';
@@ -87,14 +86,7 @@ export default function BookGeneratorContent() {
   };
 
   return (
-    <>
-      <Head>
-        <title>AI Book Generator - Create Complete Books with AI in Minutes</title>
-        <meta name="description" content="Generate complete books with AI. Create novels, children's books, comics, and non-fiction with AI-powered writing and illustrations. Free to try, no credit card required." />
-        <meta name="keywords" content="AI book generator, AI book writer, book generator, AI writing, generate book with AI, AI author, book creation AI, write book with AI" />
-        <link rel="canonical" href="https://draftmybook.com/ai-book-generator" />
-      </Head>
-      <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white">
         <Header />
 
         {/* Hero Section */}
@@ -325,6 +317,5 @@ export default function BookGeneratorContent() {
 
         <Footer />
       </div>
-    </>
   );
 }
