@@ -213,6 +213,77 @@ function GiftByEmailCard() {
   );
 }
 
+// Blog Article Generator component
+function BlogGeneratorCard() {
+  const [count, setCount] = useState(1);
+  const [generating, setGenerating] = useState(false);
+  const [progress, setProgress] = useState('');
+  const [result, setResult] = useState<{ success: boolean; message: string; articles?: { title: string; url: string }[] } | null>(null);
+
+  const handleGenerate = async () => {
+    setGenerating(true);
+    setResult(null);
+    setProgress(`Generating ${count} article${count > 1 ? 's' : ''} with cover images... This takes 1-2 min per article.`);
+    try {
+      const res = await fetch('/api/blog/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ count }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed');
+      setResult({
+        success: true,
+        message: `Generated ${data.generated} article${data.generated > 1 ? 's' : ''}${data.failed > 0 ? ` (${data.failed} failed)` : ''}`,
+        articles: data.articles,
+      });
+    } catch (err) {
+      setResult({ success: false, message: err instanceof Error ? err.message : 'Failed' });
+    } finally {
+      setGenerating(false);
+      setProgress('');
+    }
+  };
+
+  return (
+    <div className="bg-white rounded-xl border border-neutral-200 p-6 mb-6">
+      <div className="flex items-center gap-2 mb-4">
+        <BookOpen className="h-5 w-5 text-neutral-700" />
+        <h3 className="text-base font-semibold text-neutral-900">Blog Article Generator</h3>
+        <span className="text-xs bg-neutral-100 text-neutral-600 px-2 py-0.5 rounded-full">SEO + Cover Image</span>
+      </div>
+      <div className="flex items-end gap-3 mb-3">
+        <div className="w-24">
+          <label className="block text-xs font-medium text-neutral-500 mb-1">Articles</label>
+          <input type="number" min={1} max={5} value={count} onChange={e => setCount(Math.min(5, Math.max(1, parseInt(e.target.value) || 1)))} className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:ring-2 focus:ring-neutral-900 focus:border-transparent" />
+        </div>
+        <button onClick={handleGenerate} disabled={generating} className="flex items-center gap-2 px-4 py-2 bg-neutral-900 text-white rounded-lg text-sm font-medium hover:bg-neutral-800 disabled:opacity-50 transition-colors">
+          {generating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+          {generating ? 'Generating...' : `Generate ${count} Article${count > 1 ? 's' : ''}`}
+        </button>
+      </div>
+      <p className="text-xs text-neutral-400">Auto-picks the least-covered SEO keyword. Each article gets a magazine-style cover image with title. Topics rotate across: AI book generator, comic maker, novel writer, script writer, self-publishing.</p>
+      {progress && <p className="text-xs text-amber-600 mt-2">{progress}</p>}
+      {result && (
+        <div className={`mt-3 p-3 rounded-lg text-sm ${result.success ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
+          <p>{result.message}</p>
+          {result.articles && result.articles.length > 0 && (
+            <ul className="mt-2 space-y-1">
+              {result.articles.map((a, i) => (
+                <li key={i}>
+                  <a href={a.url} target="_blank" rel="noopener noreferrer" className="underline hover:text-green-900">
+                    {a.title}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // Simplified neutral color palette
 const statusColors: Record<string, string> = {
   completed: 'bg-neutral-900 text-white',
@@ -1802,6 +1873,9 @@ export default function AdminDashboard() {
 
           {/* Gift Credits by Email - works for non-users too */}
           <GiftByEmailCard />
+
+          {/* Blog Article Generator */}
+          <BlogGeneratorCard />
 
           {stats.users.length > 0 ? (
             <div className="overflow-x-auto">
