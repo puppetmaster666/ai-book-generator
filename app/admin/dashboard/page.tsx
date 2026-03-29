@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { useEffect, useState, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import {
   Users,
@@ -28,6 +28,7 @@ import {
   ExternalLink,
   Star,
   Upload,
+  Sparkles,
 } from 'lucide-react';
 import Image from 'next/image';
 import ConfirmModal from '@/components/ConfirmModal';
@@ -309,8 +310,151 @@ const paymentMethodStyles: Record<string, string> = {
   promo: 'bg-neutral-200 text-neutral-700',
 };
 
-export default function AdminDashboard() {
+// AI Email Assistant component
+function AIEmailAssistant() {
+  const [situation, setSituation] = useState('');
+  const [recipientEmail, setRecipientEmail] = useState('');
+  const [recipientName, setRecipientName] = useState('');
+  const [includeCreditsCount, setIncludeCreditsCount] = useState(0);
+  const [drafting, setDrafting] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [draft, setDraft] = useState<{ subject: string; html: string } | null>(null);
+  const [result, setResult] = useState<{ success: boolean; message: string } | null>(null);
+
+  const handleDraft = async () => {
+    if (!situation || !recipientEmail) return;
+    setDrafting(true);
+    setResult(null);
+    setDraft(null);
+    try {
+      const res = await fetch('/api/admin/ai-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'draft',
+          situation,
+          recipientEmail: recipientEmail.trim(),
+          recipientName: recipientName.trim() || undefined,
+          includeCredits: includeCreditsCount > 0 ? includeCreditsCount : undefined,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed');
+      setDraft(data.draft);
+    } catch (err) {
+      setResult({ success: false, message: err instanceof Error ? err.message : 'Failed to generate' });
+    } finally {
+      setDrafting(false);
+    }
+  };
+
+  const handleSend = async () => {
+    if (!draft) return;
+    setSending(true);
+    try {
+      const res = await fetch('/api/admin/ai-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'send',
+          situation,
+          recipientEmail: recipientEmail.trim(),
+          includeCredits: includeCreditsCount > 0 ? includeCreditsCount : undefined,
+          draft,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed');
+      setResult({ success: true, message: `Email sent to ${recipientEmail}!${includeCreditsCount > 0 ? ` +${includeCreditsCount} credit(s)` : ''}` });
+      setDraft(null);
+      setSituation('');
+      setRecipientEmail('');
+      setRecipientName('');
+      setIncludeCreditsCount(0);
+    } catch (err) {
+      setResult({ success: false, message: err instanceof Error ? err.message : 'Failed to send' });
+    } finally {
+      setSending(false);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-xl font-bold text-neutral-900 mb-1">AI Email Assistant</h2>
+        <p className="text-sm text-neutral-500">Describe the situation and AI will draft a branded email signed by Marie.</p>
+      </div>
+
+      <div className="bg-white rounded-xl border border-neutral-200 p-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+          <div>
+            <label className="block text-xs font-medium text-neutral-500 mb-1">Recipient Email *</label>
+            <input type="email" value={recipientEmail} onChange={e => setRecipientEmail(e.target.value)} placeholder="user@example.com" className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:ring-2 focus:ring-neutral-900 focus:border-transparent" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-neutral-500 mb-1">Recipient Name</label>
+            <input type="text" value={recipientName} onChange={e => setRecipientName(e.target.value)} placeholder="John (optional)" className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:ring-2 focus:ring-neutral-900 focus:border-transparent" />
+          </div>
+        </div>
+
+        <div className="mb-4">
+          <label className="block text-xs font-medium text-neutral-500 mb-1">Situation / What to say *</label>
+          <textarea value={situation} onChange={e => setSituation(e.target.value)} rows={3} placeholder="e.g., User's comic book failed twice. Apologize, explain we've fixed the issue, and offer 2 free credits as compensation." className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:ring-2 focus:ring-neutral-900 focus:border-transparent resize-none" />
+        </div>
+
+        <div className="flex items-end gap-3 mb-4">
+          <div className="w-32">
+            <label className="block text-xs font-medium text-neutral-500 mb-1">Gift credits</label>
+            <input type="number" min={0} max={50} value={includeCreditsCount} onChange={e => setIncludeCreditsCount(parseInt(e.target.value) || 0)} className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:ring-2 focus:ring-neutral-900 focus:border-transparent" />
+          </div>
+          <button onClick={handleDraft} disabled={drafting || !situation || !recipientEmail} className="flex items-center gap-2 px-4 py-2 bg-neutral-900 text-white rounded-lg text-sm font-medium hover:bg-neutral-800 disabled:opacity-50 transition-colors">
+            {drafting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+            {drafting ? 'Drafting...' : 'Draft with AI'}
+          </button>
+        </div>
+
+        <p className="text-xs text-neutral-400">AI looks up the user&apos;s account, recent books, and plan to write a contextual email. Signed by Marie with DraftMyBook branding.</p>
+      </div>
+
+      {/* Draft preview */}
+      {draft && (
+        <div className="bg-white rounded-xl border border-neutral-200 overflow-hidden">
+          <div className="px-6 py-4 bg-neutral-50 border-b border-neutral-200 flex items-center justify-between">
+            <div>
+              <p className="text-xs text-neutral-500">Subject</p>
+              <p className="font-medium text-neutral-900">{draft.subject}</p>
+            </div>
+            <div className="flex gap-2">
+              <button onClick={handleDraft} disabled={drafting} className="px-3 py-1.5 text-xs border border-neutral-300 rounded-lg hover:bg-neutral-100 transition-colors">
+                {drafting ? 'Regenerating...' : 'Regenerate'}
+              </button>
+              <button onClick={handleSend} disabled={sending} className="flex items-center gap-1.5 px-4 py-1.5 bg-neutral-900 text-white text-xs font-medium rounded-lg hover:bg-neutral-800 disabled:opacity-50 transition-colors">
+                {sending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
+                {sending ? 'Sending...' : 'Send Email'}
+              </button>
+            </div>
+          </div>
+          <div className="p-6">
+            <div className="border border-neutral-200 rounded-lg overflow-hidden max-h-[500px] overflow-y-auto">
+              <iframe srcDoc={draft.html} className="w-full h-[400px] border-0" title="Email preview" />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {result && (
+        <div className={`p-4 rounded-xl text-sm ${result.success ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
+          {result.message}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function AdminDashboardContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const activeSection = searchParams.get('section') || 'overview';
   const { data: session, status: sessionStatus } = useSession();
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -956,6 +1100,16 @@ export default function AdminDashboard() {
 
   if (!stats) return null;
 
+  const sectionTitles: Record<string, string> = {
+    overview: 'Overview',
+    users: 'Users',
+    books: 'Books',
+    email: 'AI Email Assistant',
+    credits: 'Credits & Gifts',
+    blog: 'Blog Generator',
+    'bulk-email': 'Bulk Email',
+  };
+
   return (
     <div className="min-h-screen bg-neutral-50">
       {/* Toast Notification */}
@@ -1006,20 +1160,12 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* Header */}
-      <header className="bg-white border-b border-neutral-200 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <button
-              onClick={() => router.push('/')}
-              className="text-neutral-500 hover:text-neutral-900 transition-colors"
-            >
-              <ArrowLeft className="h-5 w-5" />
-            </button>
-            <h1 className="text-xl font-bold" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>
-              Admin Dashboard
-            </h1>
-          </div>
+      {/* Section Header */}
+      <header className="bg-white border-b border-neutral-200 sticky top-0 z-20">
+        <div className="px-8 py-4 flex items-center justify-between">
+          <h1 className="text-xl font-bold text-neutral-900" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>
+            {sectionTitles[activeSection] || 'Admin'}
+          </h1>
           <div className="flex items-center gap-4">
             {/* Traffic Warning Toggle */}
             <div className="flex items-center gap-3 px-4 py-2 bg-neutral-50 rounded-xl border border-neutral-200">
@@ -1054,8 +1200,20 @@ export default function AdminDashboard() {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-6 py-8">
+      <main className="px-8 py-8">
+        {/* AI Email Section */}
+        {activeSection === 'email' && <AIEmailAssistant />}
+
+        {/* Credits Section */}
+        {activeSection === 'credits' && <GiftByEmailCard />}
+
+        {/* Blog Section */}
+        {activeSection === 'blog' && <BlogGeneratorCard />}
+
         {/* Overview Cards - Clean monochrome design */}
+        {(activeSection === 'overview' || activeSection === 'users' || activeSection === 'books' || activeSection === 'bulk-email') && (
+        <>
+
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           <div className="bg-white rounded-xl border border-neutral-200 p-6">
             <div className="flex items-center gap-3 mb-3">
@@ -1871,12 +2029,6 @@ export default function AdminDashboard() {
             </div>
           )}
 
-          {/* Gift Credits by Email - works for non-users too */}
-          <GiftByEmailCard />
-
-          {/* Blog Article Generator */}
-          <BlogGeneratorCard />
-
           {stats.users.length > 0 ? (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
@@ -2336,6 +2488,8 @@ export default function AdminDashboard() {
             </div>
           )}
         </div>
+        </>
+        )}
       </main>
 
       {/* Bulk Delete Confirmation Modal */}
@@ -2380,5 +2534,13 @@ export default function AdminDashboard() {
         type="danger"
       />
     </div>
+  );
+}
+
+export default function AdminDashboard() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-neutral-50 flex items-center justify-center"><Loader2 className="h-12 w-12 animate-spin text-neutral-900" /></div>}>
+      <AdminDashboardContent />
+    </Suspense>
   );
 }
