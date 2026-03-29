@@ -287,7 +287,7 @@ export async function POST(request: NextRequest) {
       }
 
       const model = getGenAI().getGenerativeModel({
-        model: 'gemini-3.1-flash-image-preview',
+        model: 'gemini-3-pro-image-preview',
         safetySettings: SAFETY_SETTINGS,
       });
 

@@ -255,7 +255,7 @@ export function getGeminiFlashLight(): GenerativeModel {
 export function getGeminiImage(): GenerativeModel {
   if (!_geminiImage) {
     _geminiImage = getGenAI().getGenerativeModel({
-      model: 'gemini-3.1-flash-image-preview',
+      model: 'gemini-3-pro-image-preview',
       safetySettings: SAFETY_SETTINGS,
     });
   }

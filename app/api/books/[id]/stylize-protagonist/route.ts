@@ -147,7 +147,7 @@ DO NOT include any text, words, or labels in the image.`;
 
     // Use Gemini to transform the image
     const model = getGenAI().getGenerativeModel({
-      model: 'gemini-3.1-flash-image-preview',
+      model: 'gemini-3-pro-image-preview',
       safetySettings: SAFETY_SETTINGS,
     });
 
