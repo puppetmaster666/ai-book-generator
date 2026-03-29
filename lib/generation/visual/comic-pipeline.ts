@@ -178,7 +178,7 @@ Output ONLY valid JSON:
   "script": "The full script text with PAGE markers, locations, actions, dialogue, and SFX"
 }`;
 
-  const result = await getGeminiPro().generateContent(prompt);
+  const result = await getGeminiFlash().generateContent(prompt);
   const response = result.response.text();
   const parsed = parseJSONFromResponse(response) as ComicScript;
 
@@ -489,18 +489,51 @@ export async function generateComicOutline(bookData: {
     throw new Error('Scene planning produced no pages');
   }
 
-  // ── Step 3: EDITOR ──
-  console.log('[ComicPipeline] Step 3: EDITOR - Quality review pass...');
-  const step3Start = Date.now();
+  // ── Step 3: EDITOR (skip if running low on time) ──
+  const elapsedSoFar = Date.now() - pipelineStart;
+  let finalPlan = scenePlan;
 
-  const finalPlan = await reviewQuality(scenePlan, script, {
-    title: bookData.title,
-    genre: bookData.genre,
-    targetChapters: bookData.targetChapters,
-    characters: bookData.characters,
+  if (elapsedSoFar < 120000) {
+    // Only run editor if we have time budget left (< 2 minutes used so far)
+    console.log('[ComicPipeline] Step 3: EDITOR - Quality review pass...');
+    const step3Start = Date.now();
+
+    finalPlan = await reviewQuality(scenePlan, script, {
+      title: bookData.title,
+      genre: bookData.genre,
+      targetChapters: bookData.targetChapters,
+      characters: bookData.characters,
+    });
+
+    console.log(`[ComicPipeline] Step 3 took ${Date.now() - step3Start}ms`);
+  } else {
+    console.log(`[ComicPipeline] Step 3: EDITOR skipped (${(elapsedSoFar / 1000).toFixed(0)}s elapsed, saving time for image generation)`);
+  }
+
+  // ── Validate scene data ──
+  // Ensure every chapter has a proper scene object (prevents frontend crashes)
+  finalPlan.chapters = finalPlan.chapters.map((ch, idx) => {
+    if (!ch.scene) {
+      ch.scene = {
+        location: 'unspecified',
+        description: ch.summary || ch.text || `Page ${idx + 1}`,
+        characters: bookData.characters.map(c => c.name),
+        characterActions: {},
+        background: 'default setting',
+        mood: 'neutral',
+        cameraAngle: 'medium shot',
+      };
+    }
+    // Ensure required scene fields exist
+    if (!ch.scene.description) ch.scene.description = ch.summary || `Page ${idx + 1}`;
+    if (!ch.scene.characters) ch.scene.characters = [];
+    if (!ch.scene.characterActions) ch.scene.characterActions = {};
+    if (!ch.scene.background) ch.scene.background = 'default';
+    if (!ch.scene.mood) ch.scene.mood = 'neutral';
+    if (!ch.scene.cameraAngle) ch.scene.cameraAngle = 'medium shot';
+    if (!ch.scene.location) ch.scene.location = 'unspecified';
+    return ch;
   });
-
-  console.log(`[ComicPipeline] Step 3 took ${Date.now() - step3Start}ms`);
 
   const totalTime = Date.now() - pipelineStart;
   console.log(`[ComicPipeline] Pipeline complete in ${totalTime}ms (${(totalTime / 1000).toFixed(1)}s) - ${finalPlan.chapters.length} pages`);

@@ -902,6 +902,25 @@ export async function POST(
           ...ch,
           number: idx + 1,
         }));
+
+        // Validate scene data on every chapter to prevent frontend crashes
+        outline.chapters = outline.chapters.map((ch) => {
+          if (!ch.scene) {
+            ch.scene = {
+              location: 'unspecified',
+              description: ch.summary || ch.text || `Page ${ch.number}`,
+              characters: (book.characters as { name: string }[]).map(c => c.name),
+              characterActions: {},
+              background: 'default setting',
+              mood: 'neutral',
+              cameraAngle: 'medium shot',
+            };
+          }
+          if (!ch.scene.description) ch.scene.description = ch.summary || `Page ${ch.number}`;
+          if (!ch.scene.characters) ch.scene.characters = [];
+          if (!ch.scene.characterActions) ch.scene.characterActions = {};
+          return ch;
+        });
       } else if (book.bookType === 'non-fiction') {
         // Use non-fiction outline for non-fiction books
         console.log('Generating non-fiction outline with topic structure...');
