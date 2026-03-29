@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Film, Clock } from 'lucide-react';
+import { Film, Clock, Shield } from 'lucide-react';
 
 interface ScreenplayPreviewProps {
   title: string;
@@ -250,13 +250,21 @@ export default function ScreenplayPreview({
         ))}
       </div>
 
-      {/* Status text */}
+      {/* Status text with estimate */}
       <p className="text-center text-neutral-500 text-sm mt-3">
         {isGenerating
-          ? `Writing sequence ${currentSequence} of ${totalSequences}...`
+          ? `Writing sequence ${currentSequence} of ${totalSequences} — est. ~${Math.max(1, Math.ceil((totalSequences - currentSequence + 1) * 3))} min remaining`
           : 'Screenplay complete'
         }
       </p>
+
+      {/* Don't leave disclaimer */}
+      {isGenerating && (
+        <div className="flex items-center justify-center gap-2 mt-3 text-xs text-amber-400/80 bg-amber-500/10 rounded-lg px-3 py-2 border border-amber-500/20">
+          <Shield className="h-3.5 w-3.5 flex-shrink-0" />
+          <span>Please don&apos;t close this page while your screenplay is being written.</span>
+        </div>
+      )}
     </div>
   );
 }

@@ -463,15 +463,30 @@ function GenerateComicContent() {
       <div className="min-h-screen bg-white">
         <Header />
         <main className="py-20 px-6">
-          <div className="max-w-6xl mx-auto text-center">
+          <div className="max-w-lg mx-auto text-center">
             <Loader2 className="h-12 w-12 animate-spin mx-auto mb-4 text-neutral-900" />
             <h2 className="text-2xl font-bold text-neutral-900 mb-2">Preparing Your Comic</h2>
             <p className="text-neutral-600 mb-4">
-              Creating your story outline and planning each panel...
+              Writing the script, planning scenes, and preparing panel layouts...
             </p>
-            <p className="text-sm text-neutral-500">
-              This usually takes 15-30 seconds. Please don&apos;t close this page.
-            </p>
+            <div className="space-y-3 text-left max-w-sm mx-auto mb-6">
+              <div className="flex items-center gap-3 text-sm">
+                <div className="w-6 h-6 rounded-full bg-neutral-900 text-white flex items-center justify-center text-xs font-bold">1</div>
+                <span className="text-neutral-700">Writing comic script with character voices</span>
+              </div>
+              <div className="flex items-center gap-3 text-sm">
+                <div className="w-6 h-6 rounded-full bg-neutral-100 text-neutral-400 flex items-center justify-center text-xs font-bold">2</div>
+                <span className="text-neutral-400">Planning scenes and panel layouts</span>
+              </div>
+              <div className="flex items-center gap-3 text-sm">
+                <div className="w-6 h-6 rounded-full bg-neutral-100 text-neutral-400 flex items-center justify-center text-xs font-bold">3</div>
+                <span className="text-neutral-400">Quality review pass</span>
+              </div>
+            </div>
+            <div className="flex items-center justify-center gap-2 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-4 py-2.5 max-w-sm mx-auto">
+              <ShieldAlert className="h-4 w-4 flex-shrink-0" />
+              <span>This takes about 60-90 seconds. Please don&apos;t close this page.</span>
+            </div>
           </div>
         </main>
       </div>
@@ -580,6 +595,19 @@ function GenerateComicContent() {
                 {errorCount > 0 && (
                   <span className="text-neutral-500">{errorCount} failed</span>
                 )}
+              </div>
+            )}
+            {/* Time estimate and disclaimer during generation */}
+            {isGenerating && (
+              <div className="flex items-center justify-between mt-3 pt-3 border-t border-neutral-100">
+                <div className="flex items-center gap-2 text-sm text-neutral-500">
+                  <Clock className="h-3.5 w-3.5" />
+                  <span>~{Math.max(1, Math.ceil((panels.length - doneCount) * 0.15))} min remaining ({Math.ceil(elapsedTime / 60)}m elapsed)</span>
+                </div>
+                <div className="flex items-center gap-1.5 text-xs text-amber-700 bg-amber-50 px-3 py-1 rounded-full border border-amber-200">
+                  <ShieldAlert className="h-3 w-3" />
+                  <span>Don&apos;t close this page</span>
+                </div>
               </div>
             )}
           </div>

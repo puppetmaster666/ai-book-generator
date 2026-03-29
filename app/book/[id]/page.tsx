@@ -7,6 +7,7 @@ import Header from '@/components/Header';
 import ToastModal from '@/components/ToastModal';
 import { Download, BookOpen, Loader2, Check, AlertCircle, ImageIcon, Mail, Palette, PenTool, Clock, Zap, AlertTriangle, Save, Trash2, RefreshCw, X, FileText, Film, Megaphone, Lock } from 'lucide-react';
 import ScreenplayPreview from '@/components/ScreenplayPreview';
+import GenerationProgress, { NOVEL_STEPS, COMIC_STEPS, PICTURE_BOOK_STEPS, SCREENPLAY_STEPS } from '@/components/GenerationProgress';
 import { useGeneratingBook } from '@/contexts/GeneratingBookContext';
 import Link from 'next/link';
 import FirstBookDiscountPopup from '@/components/FirstBookDiscountPopup';
@@ -1516,10 +1517,10 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
                     Initializing Generation
                   </h2>
                   <p className="text-neutral-600 mb-4">
-                    Your book is being prepared. This page updates automatically.
+                    Your book is being prepared. This usually takes 15-30 seconds.
                   </p>
                   {/* Animated connection indicator */}
-                  <div className="inline-flex items-center gap-3 text-sm bg-emerald-50 px-4 py-2 rounded-full border border-emerald-200">
+                  <div className="inline-flex items-center gap-3 text-sm bg-emerald-50 px-4 py-2 rounded-full border border-emerald-200 mb-4">
                     <div className="flex items-center gap-1">
                       <div className="w-2 h-2 bg-emerald-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
                       <div className="w-2 h-2 bg-emerald-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
@@ -1527,6 +1528,9 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
                     </div>
                     <span className="text-emerald-700 font-medium">Connecting to AI</span>
                   </div>
+                  <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-4 py-2 inline-block">
+                    Please don&apos;t close or refresh this page while we set up your book.
+                  </p>
                 </div>
               ) : (
                 <div className="text-center">
@@ -1693,23 +1697,40 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
                 </div>
               </div>
 
-              {/* Info messages */}
-              <div className="bg-neutral-50 border border-neutral-200 rounded-xl p-4 mb-6">
-                <div className="flex items-start gap-3">
-                  <Check className="h-5 w-5 text-neutral-600 flex-shrink-0 mt-0.5" />
-                  <div className="space-y-1">
-                    <p className="text-sm text-neutral-700">
-                      <span className="font-medium">Safe to leave.</span> Your book will continue generating in the background.
-                    </p>
-                    <p className="text-xs text-neutral-500">
-                      {isIllustrated
-                        ? 'We will generate the panels one by one. You can come back anytime.'
-                        : isScreenplay
-                          ? 'Estimated: 20-40 minutes for a full screenplay. Each sequence takes 2-4 minutes.'
-                          : 'Estimated: 30-60 minutes for a full novel. Each chapter takes 2-4 minutes.'}
-                    </p>
-                  </div>
-                </div>
+              {/* Step-based progress with estimates */}
+              <div className="mb-6">
+                <GenerationProgress
+                  steps={
+                    isIllustrated
+                      ? (book.dialogueStyle === 'bubbles' || book.bookPreset === 'comic_story' || book.bookPreset === 'adult_comic'
+                        ? COMIC_STEPS
+                        : PICTURE_BOOK_STEPS)
+                      : isScreenplay
+                        ? SCREENPLAY_STEPS
+                        : NOVEL_STEPS
+                  }
+                  currentStepIndex={
+                    book.status === 'outlining' ? 0
+                    : isIllustrated
+                      ? ((book.illustrations?.length || 0) > 0 ? 3 : (book.currentChapter > 0 ? 1 : 0))
+                      : isScreenplay
+                        ? (book.currentChapter > 1 ? 2 : book.currentChapter > 0 ? 1 : 0)
+                        : (book.currentChapter > 0 ? 1 : 0)
+                  }
+                  elapsedSeconds={elapsedTime}
+                  stepDetail={
+                    book.status === 'outlining' ? undefined
+                    : isIllustrated
+                      ? (() => {
+                        const total = (book.dialogueStyle === 'bubbles' || book.bookPreset === 'comic_story' || book.bookPreset === 'adult_comic') ? 24 : 20;
+                        const done = book.illustrations?.length || 0;
+                        return done > 0 ? `Panel ${done} of ${total} complete` : undefined;
+                      })()
+                      : isScreenplay
+                        ? `Sequence ${book.currentChapter} of ${book.totalChapters}`
+                        : `Chapter ${book.currentChapter} of ${book.totalChapters}`
+                  }
+                />
               </div>
 
               {/* Progress Bar */}
