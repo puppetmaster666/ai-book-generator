@@ -63,50 +63,87 @@ function slugify(text: string): string {
 }
 
 /**
- * Simple markdown to HTML conversion (no external deps needed).
+ * Markdown to well-formatted HTML conversion.
+ * Produces clean, properly spaced HTML for blog articles.
  */
 function markdownToHtml(md: string): string {
-  let html = md
-    // Code blocks first (before other processing)
-    .replace(/```(\w+)?\n([\s\S]*?)```/g, '<pre><code>$2</code></pre>')
-    .replace(/`([^`]+)`/g, '<code>$1</code>')
+  // Normalize line endings and clean up
+  let text = md.replace(/\r\n/g, '\n').trim();
+
+  // Remove em dashes and en dashes - replace with commas or periods
+  text = text.replace(/\s*—\s*/g, ', ').replace(/\s*–\s*/g, ', ');
+
+  // Split into blocks by double newlines
+  const blocks = text.split(/\n\n+/);
+  const htmlBlocks: string[] = [];
+
+  let inList = false;
+  const listItems: string[] = [];
+
+  const flushList = () => {
+    if (listItems.length > 0) {
+      htmlBlocks.push(`<ul>\n${listItems.join('\n')}\n</ul>`);
+      listItems.length = 0;
+    }
+    inList = false;
+  };
+
+  for (const block of blocks) {
+    const trimmed = block.trim();
+    if (!trimmed) continue;
+
+    // Check if this block is a list (all lines start with - or *)
+    const lines = trimmed.split('\n');
+    const isListBlock = lines.every(l => /^\s*[-*]\s/.test(l) || /^\s*\d+\.\s/.test(l));
+
+    if (isListBlock) {
+      if (!inList) inList = true;
+      for (const line of lines) {
+        const content = line.replace(/^\s*[-*]\s+/, '').replace(/^\s*\d+\.\s+/, '');
+        listItems.push(`  <li>${applyInlineFormatting(content)}</li>`);
+      }
+      continue;
+    }
+
+    // Not a list block - flush any pending list
+    if (inList) flushList();
+
     // Headers
-    .replace(/^### (.+)$/gm, '<h3>$1</h3>')
-    .replace(/^## (.+)$/gm, '<h2>$1</h2>')
-    .replace(/^# (.+)$/gm, '<h1>$1</h1>')
-    // Bold and italic
+    if (trimmed.startsWith('### ')) {
+      htmlBlocks.push(`<h3>${applyInlineFormatting(trimmed.slice(4))}</h3>`);
+    } else if (trimmed.startsWith('## ')) {
+      htmlBlocks.push(`<h2>${applyInlineFormatting(trimmed.slice(3))}</h2>`);
+    } else if (trimmed.startsWith('# ')) {
+      htmlBlocks.push(`<h1>${applyInlineFormatting(trimmed.slice(2))}</h1>`);
+    } else if (trimmed.startsWith('> ')) {
+      htmlBlocks.push(`<blockquote><p>${applyInlineFormatting(trimmed.slice(2))}</p></blockquote>`);
+    } else if (trimmed === '---') {
+      htmlBlocks.push('<hr>');
+    } else if (trimmed.startsWith('```')) {
+      // Code block
+      const code = trimmed.replace(/^```\w*\n?/, '').replace(/\n?```$/, '');
+      htmlBlocks.push(`<pre><code>${code}</code></pre>`);
+    } else {
+      // Regular paragraph - join lines within block
+      const joined = lines.map(l => l.trim()).join(' ');
+      htmlBlocks.push(`<p>${applyInlineFormatting(joined)}</p>`);
+    }
+  }
+
+  // Flush any trailing list
+  if (inList) flushList();
+
+  return htmlBlocks.join('\n\n');
+}
+
+/** Apply inline markdown formatting (bold, italic, links, code) */
+function applyInlineFormatting(text: string): string {
+  return text
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
     .replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>')
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
     .replace(/\*(.+?)\*/g, '<em>$1</em>')
-    // Links
-    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>')
-    // Unordered lists
-    .replace(/^- (.+)$/gm, '<li>$1</li>')
-    // Ordered lists
-    .replace(/^\d+\. (.+)$/gm, '<li>$1</li>')
-    // Horizontal rules
-    .replace(/^---$/gm, '<hr>')
-    // Blockquotes
-    .replace(/^> (.+)$/gm, '<blockquote>$1</blockquote>');
-
-  // Wrap consecutive <li> items in <ul>
-  html = html.replace(new RegExp('(<li>.*?</li>\\n?)+', 'gs'), (match) => `<ul>${match}</ul>`);
-
-  // Paragraphs - wrap remaining lines
-  html = html
-    .split('\n\n')
-    .map(block => {
-      const trimmed = block.trim();
-      if (!trimmed) return '';
-      if (trimmed.startsWith('<h') || trimmed.startsWith('<ul') || trimmed.startsWith('<ol') ||
-        trimmed.startsWith('<pre') || trimmed.startsWith('<blockquote') || trimmed.startsWith('<hr')) {
-        return trimmed;
-      }
-      return `<p>${trimmed.replace(/\n/g, ' ')}</p>`;
-    })
-    .join('\n');
-
-  return html;
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>');
 }
 
 /**
@@ -169,12 +206,21 @@ REQUIREMENTS:
 7. Include bullet lists where appropriate
 8. End with a conclusion that encourages action
 
+FORMATTING:
+- Use ## for main sections and ### for subsections
+- Keep paragraphs short (3-4 sentences max)
+- Leave blank lines between ALL elements (paragraphs, headers, lists)
+- Use bullet lists with "- " prefix (not * or numbers)
+
 DO NOT:
 - Write generic filler content
 - Stuff keywords unnaturally
 - Sound like a sales pitch
 - Use AI cliches ("in today's fast-paced world", "delve into", "leverage")
 - Use the word "robust", "landscape", "tapestry", or "journey"
+- Use em dashes (—) or en dashes (–) ANYWHERE. Use commas, periods, or semicolons instead
+- Use "however" or "furthermore" as sentence starters
+- Write walls of text without paragraph breaks
 
 OUTPUT FORMAT (follow exactly):
 ---TITLE---

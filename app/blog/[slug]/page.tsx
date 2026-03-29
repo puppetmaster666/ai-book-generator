@@ -128,13 +128,18 @@ export default async function BlogArticlePage(
           <div
             className="prose prose-neutral prose-lg max-w-none
               prose-headings:font-bold prose-headings:text-neutral-900
-              prose-h2:text-2xl prose-h2:mt-10 prose-h2:mb-4
-              prose-h3:text-xl prose-h3:mt-8 prose-h3:mb-3
-              prose-p:text-neutral-700 prose-p:leading-relaxed
+              prose-h2:text-2xl prose-h2:mt-12 prose-h2:mb-5
+              prose-h3:text-xl prose-h3:mt-10 prose-h3:mb-4
+              prose-p:text-neutral-700 prose-p:leading-[1.8] prose-p:mb-6
               prose-a:text-neutral-900 prose-a:underline prose-a:font-medium
-              prose-li:text-neutral-700
+              prose-li:text-neutral-700 prose-li:mb-2 prose-li:leading-[1.7]
+              prose-ul:my-6 prose-ul:pl-6
+              prose-ol:my-6 prose-ol:pl-6
               prose-strong:text-neutral-900
-              prose-blockquote:border-l-neutral-300 prose-blockquote:text-neutral-600"
+              prose-blockquote:border-l-neutral-300 prose-blockquote:text-neutral-600 prose-blockquote:my-8 prose-blockquote:pl-6
+              prose-pre:bg-neutral-50 prose-pre:rounded-xl prose-pre:p-6 prose-pre:my-8
+              prose-code:text-neutral-800 prose-code:bg-neutral-100 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded
+              prose-hr:my-10"
             dangerouslySetInnerHTML={{ __html: post.content }}
           />
 
