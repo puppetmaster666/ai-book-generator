@@ -1,9 +1,9 @@
 import { GoogleGenerativeAI, GenerativeModel } from '@google/generative-ai';
 import { SAFETY_SETTINGS } from './safety';
 
-// Safety timeout: 240s per key (4 minutes) - prevents Vercel 300s hard kill
-// Vercel kills function at 300s, so we timeout at 240s to rotate keys before death
-const SAFETY_TIMEOUT_MS = 240000; // 4 minutes
+// Safety timeout: 700s per key - Vercel Fluid Compute allows up to 800s
+// We timeout at 700s to leave buffer before the 800s hard kill
+const SAFETY_TIMEOUT_MS = 700000; // ~11.7 minutes
 
 // API timeout constants (DEPRECATED - kept for backwards compatibility)
 // These are no longer used as actual timeouts - Gemini handles its own timing
@@ -219,11 +219,12 @@ export function getGeminiPro(): GenerativeModel {
   return _geminiPro;
 }
 
-// Gemini 3 Flash for fast tasks (outlines, ideas, summaries)
+// Gemini 3.1 Pro for fast tasks (outlines, ideas, summaries)
+// Previously used Flash, now using Pro for all tasks
 export function getGeminiFlash(): GenerativeModel {
   if (!_geminiFlash) {
     _geminiFlash = getGenAI().getGenerativeModel({
-      model: 'gemini-3-flash-preview',
+      model: 'gemini-3.1-pro-preview',
       safetySettings: SAFETY_SETTINGS,
       generationConfig: {
         temperature: 0.3,
@@ -235,11 +236,12 @@ export function getGeminiFlash(): GenerativeModel {
   return _geminiFlash;
 }
 
-// Lightweight Gemini 3 Flash for very quick tasks (idea generation)
+// Gemini 3.1 Pro for quick tasks (idea generation)
+// Previously used Flash Light, now using Pro for all tasks
 export function getGeminiFlashLight(): GenerativeModel {
   if (!_geminiFlashLight) {
     _geminiFlashLight = getGenAI().getGenerativeModel({
-      model: 'gemini-3-flash-preview',
+      model: 'gemini-3.1-pro-preview',
       safetySettings: SAFETY_SETTINGS,
       generationConfig: {
         temperature: 0.9,

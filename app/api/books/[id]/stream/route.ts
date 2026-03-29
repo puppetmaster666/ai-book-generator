@@ -10,8 +10,8 @@ import {
 } from '@/lib/generation/shared/writing-quality';
 import { countWords } from '@/lib/epub';
 
-// Allow up to 5 minutes for streaming
-export const maxDuration = 300;
+// Allow up to 13 minutes for streaming (Vercel Fluid Compute)
+export const maxDuration = 800;
 
 // Helper to send SSE events
 function sendEvent(controller: ReadableStreamDefaultController, event: string, data: unknown) {

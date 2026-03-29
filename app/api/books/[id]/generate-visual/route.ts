@@ -16,12 +16,12 @@ import { getBookReadyEmail, sendEmail } from '@/lib/email';
 import { BOOK_PRESETS, FREE_TIER_LIMITS, type BookPresetKey } from '@/lib/constants';
 import { generateIllustrationWithRetry, type IllustrationAttemptResult } from '@/lib/illustration-utils';
 
-// Set max duration for this background task (5 minutes is Vercel Pro limit)
-export const maxDuration = 300;
+// Set max duration for this background task (Vercel Fluid Compute allows 800s on Pro)
+export const maxDuration = 800;
 
-// Safety margin before Vercel timeout - stop accepting new work 30s before timeout
-const TIMEOUT_SAFETY_MARGIN_MS = 30000;
-const MAX_GENERATION_TIME_MS = (maxDuration * 1000) - TIMEOUT_SAFETY_MARGIN_MS; // 270 seconds
+// Safety margin before Vercel timeout - stop accepting new work 60s before timeout
+const TIMEOUT_SAFETY_MARGIN_MS = 60000;
+const MAX_GENERATION_TIME_MS = (maxDuration * 1000) - TIMEOUT_SAFETY_MARGIN_MS; // 740 seconds
 
 // Re-use the generation logic, but adapted for single-panel execution to check status
 // We need to import the generation helper or duplicate the core logic briefly

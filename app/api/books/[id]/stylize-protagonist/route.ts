@@ -210,7 +210,7 @@ DO NOT include any text, words, or labels in the image.`;
     // Now analyze the stylized character to generate a text description
     // This will be used for consistency in future illustrations
     const descriptionModel = getGenAI().getGenerativeModel({
-      model: 'gemini-3-flash-preview',
+      model: 'gemini-3.1-pro-preview',
       safetySettings: SAFETY_SETTINGS,
     });
 

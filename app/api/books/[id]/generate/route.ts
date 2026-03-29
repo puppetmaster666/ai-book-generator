@@ -31,10 +31,10 @@ import { BOOK_FORMATS, ART_STYLES, ILLUSTRATION_DIMENSIONS, BOOK_PRESETS, type B
 import { sendEmail, getBookReadyEmail } from '@/lib/email';
 
 // Allow up to 5 minutes for outline generation (Vercel Pro plan max: 300s)
-export const maxDuration = 300;
+export const maxDuration = 800; // Vercel Fluid Compute allows up to 800s on Pro plan
 
-// Outline generation timeout (4 minutes - leave 1 minute buffer for cleanup)
-const OUTLINE_TIMEOUT_MS = 240000;
+// Outline generation timeout (10 minutes - leave buffer for post-outline work)
+const OUTLINE_TIMEOUT_MS = 600000;
 
 /**
  * Wraps a promise with a timeout. If the promise doesn't resolve within the timeout,

@@ -47,7 +47,7 @@ import { getDNABlacklist } from '@/lib/dna-blacklist';
 const MAX_REGENERATION_ATTEMPTS = 2;
 
 // Allow up to 5 minutes for chapter generation (Vercel Pro plan max: 300s)
-export const maxDuration = 300;
+export const maxDuration = 800; // Vercel Fluid Compute allows up to 800s on Pro plan
 
 // Chapter generation timeout (4 minutes - leave 1 minute buffer for cleanup)
 // This ensures we can gracefully handle failures before Vercel kills the function
