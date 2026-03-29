@@ -139,6 +139,80 @@ const formatLabels: Record<string, string> = {
   comic: 'Comic',
 };
 
+// Gift Credits by Email component
+function GiftByEmailCard() {
+  const [email, setEmail] = useState('');
+  const [recipientName, setRecipientName] = useState('');
+  const [credits, setCredits] = useState(1);
+  const [message, setMessage] = useState('');
+  const [sending, setSending] = useState(false);
+  const [result, setResult] = useState<{ success: boolean; message: string } | null>(null);
+
+  const handleSend = async () => {
+    if (!email.includes('@')) return;
+    setSending(true);
+    setResult(null);
+    try {
+      const res = await fetch('/api/admin/credits/gift-by-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.trim(), credits, message: message.trim() || undefined, recipientName: recipientName.trim() || undefined }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed');
+      setResult({ success: true, message: data.message });
+      setEmail('');
+      setRecipientName('');
+      setMessage('');
+      setCredits(1);
+    } catch (err) {
+      setResult({ success: false, message: err instanceof Error ? err.message : 'Failed' });
+    } finally {
+      setSending(false);
+    }
+  };
+
+  return (
+    <div className="bg-white rounded-xl border border-neutral-200 p-6 mb-6">
+      <div className="flex items-center gap-2 mb-4">
+        <Mail className="h-5 w-5 text-neutral-700" />
+        <h3 className="text-base font-semibold text-neutral-900">Gift Credits by Email</h3>
+        <span className="text-xs bg-neutral-100 text-neutral-600 px-2 py-0.5 rounded-full">Works for non-users too</span>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-3">
+        <div>
+          <label className="block text-xs font-medium text-neutral-500 mb-1">Email *</label>
+          <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="someone@email.com" className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:ring-2 focus:ring-neutral-900 focus:border-transparent" />
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-neutral-500 mb-1">Name (optional)</label>
+          <input type="text" value={recipientName} onChange={e => setRecipientName(e.target.value)} placeholder="John" className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:ring-2 focus:ring-neutral-900 focus:border-transparent" />
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-neutral-500 mb-1">Credits</label>
+          <input type="number" min={1} max={100} value={credits} onChange={e => setCredits(parseInt(e.target.value) || 1)} className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:ring-2 focus:ring-neutral-900 focus:border-transparent" />
+        </div>
+        <div className="flex items-end">
+          <button onClick={handleSend} disabled={sending || !email.includes('@')} className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-neutral-900 text-white rounded-lg text-sm font-medium hover:bg-neutral-800 disabled:opacity-50 transition-colors">
+            {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Gift className="h-4 w-4" />}
+            {sending ? 'Sending...' : 'Send Credit'}
+          </button>
+        </div>
+      </div>
+      <div>
+        <label className="block text-xs font-medium text-neutral-500 mb-1">Personal message (optional, shown in email)</label>
+        <input type="text" value={message} onChange={e => setMessage(e.target.value)} placeholder="Thanks for your interest! Here's a free book on us." className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:ring-2 focus:ring-neutral-900 focus:border-transparent" />
+      </div>
+      <p className="text-xs text-neutral-400 mt-2">If the user exists, credits are added immediately. If not, they&apos;ll get an invite email and credits apply when they sign up. Email signed by Marie.</p>
+      {result && (
+        <div className={`mt-3 p-3 rounded-lg text-sm ${result.success ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
+          {result.message}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // Simplified neutral color palette
 const statusColors: Record<string, string> = {
   completed: 'bg-neutral-900 text-white',
@@ -1725,6 +1799,9 @@ export default function AdminDashboard() {
               )}
             </div>
           )}
+
+          {/* Gift Credits by Email - works for non-users too */}
+          <GiftByEmailCard />
 
           {stats.users.length > 0 ? (
             <div className="overflow-x-auto">
