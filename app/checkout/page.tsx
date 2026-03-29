@@ -317,7 +317,13 @@ function CheckoutContent() {
                     </div>
                   )}
                   <div className="flex justify-between text-sm mt-2">
-                    <span className="text-neutral-600">EPUB Download</span>
+                    <span className="text-neutral-600">
+                      {bookDetails?.bookFormat === 'picture_book'
+                        ? 'PDF Download'
+                        : bookDetails?.bookFormat === 'screenplay'
+                          ? 'PDF / TXT Download'
+                          : 'EPUB / PDF / TXT Download'}
+                    </span>
                     <span className="font-medium text-green-600">Included</span>
                   </div>
                 </>
