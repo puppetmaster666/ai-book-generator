@@ -4,9 +4,8 @@
  */
 
 import { prisma } from '@/lib/db';
-import { getGeminiFlash, getGeminiImage, withTimeout } from '@/lib/generation/shared/api-client';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import { SAFETY_SETTINGS } from '@/lib/generation/shared/safety';
-// SAFETY_SETTINGS used in text generation; image model uses built-in safety
 import { TOPIC_POOL, INTERNAL_LINKS, type TopicTemplate } from './topics';
 
 /**
@@ -189,18 +188,21 @@ keyword1, keyword2, keyword3, keyword4, keyword5
 ---CONTENT---
 The full article in markdown format`;
 
-  const result = await withTimeout(
-    () => getGeminiFlash().generateContent({
-      contents: [{ role: 'user', parts: [{ text: prompt }] }],
-      generationConfig: {
-        temperature: 0.8,
-        maxOutputTokens: 8192,
-      },
-      safetySettings: SAFETY_SETTINGS,
-    }),
-    120000,
-    'generateBlogArticle'
-  );
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) throw new Error('GEMINI_API_KEY not set');
+  const genAI = new GoogleGenerativeAI(apiKey);
+  const model = genAI.getGenerativeModel({
+    model: 'gemini-3.1-pro-preview',
+    safetySettings: SAFETY_SETTINGS,
+  });
+
+  const result = await model.generateContent({
+    contents: [{ role: 'user', parts: [{ text: prompt }] }],
+    generationConfig: {
+      temperature: 0.8,
+      maxOutputTokens: 8192,
+    },
+  });
 
   const response = result.response.text();
 
@@ -258,12 +260,15 @@ SUBJECT MATTER:
 
 The text MUST be clearly legible and spelled correctly.`;
 
-    const model = getGeminiImage();
-    const result = await withTimeout(
-      () => model.generateContent(prompt),
-      60000,
-      'generateBlogCoverImage'
-    );
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) throw new Error('GEMINI_API_KEY not set');
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const imageModel = genAI.getGenerativeModel({
+      model: 'gemini-3-pro-image-preview',
+      safetySettings: SAFETY_SETTINGS,
+    });
+
+    const result = await imageModel.generateContent(prompt);
 
     const parts = result.response.candidates?.[0]?.content?.parts;
     if (parts) {
