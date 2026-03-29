@@ -389,9 +389,8 @@ export async function withTimeout<T>(
   // Start with last working key if available
   switchToLastWorkingKey();
 
-  // Quick health check: find a working key BEFORE starting the expensive operation
-  // This detects rate-limited keys in ~2s instead of waiting 4min for timeout
-  await findWorkingKey();
+  // Health checks removed - they were adding 5-20s overhead per call and
+  // causing timeouts. Just try the key and rotate on failure.
 
   console.log(`[Gemini] Starting ${operationName} with key ${getCurrentKeyIndex()} (${SAFETY_TIMEOUT_MS / 1000}s safety timeout per key)`);
 

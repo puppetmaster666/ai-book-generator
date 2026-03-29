@@ -8,16 +8,18 @@ import { sendEmail } from '@/lib/email';
 export const maxDuration = 60;
 
 /**
- * AI Email Assistant - drafts and optionally sends emails using Gemini.
+ * AI Email Assistant - drafts and sends emails using Gemini.
  *
  * POST /api/admin/ai-email
  * Body:
- *   - action: 'draft' | 'send'
- *   - situation: description of why you're emailing (e.g., "user's book failed twice, apologize")
- *   - recipientEmail: who to send to
+ *   - action: 'draft' | 'send' | 'bulk-send'
+ *   - situation: description of why you're emailing
+ *   - recipientEmail: who to send to (single)
+ *   - recipientEmails: array of emails (bulk)
  *   - recipientName: optional name
- *   - includeCredits: optional number of credits to gift with the email
- *   - draft: optional - if provided, send this exact HTML instead of generating new
+ *   - includeCredits: optional credits to gift
+ *   - draft: pre-generated email to send
+ *   - filter: optional { joinedAfter?, joinedBefore? } for user filtering
  */
 export async function POST(request: NextRequest) {
   const session = await auth();
@@ -35,14 +37,70 @@ export async function POST(request: NextRequest) {
   }
 
   const body = await request.json();
-  const { action, situation, recipientEmail, recipientName, includeCredits, draft } = body as {
-    action: 'draft' | 'send';
+  const { action, situation, recipientEmail, recipientEmails, recipientName, includeCredits, draft, filter } = body as {
+    action: 'draft' | 'send' | 'bulk-send';
     situation: string;
-    recipientEmail: string;
+    recipientEmail?: string;
+    recipientEmails?: string[];
     recipientName?: string;
     includeCredits?: number;
     draft?: { subject: string; html: string };
+    filter?: { joinedAfter?: string; joinedBefore?: string };
   };
+
+  // Bulk send to multiple recipients
+  if (action === 'bulk-send' && draft) {
+    let emails = recipientEmails || [];
+
+    // If no explicit list, query users based on filter
+    if (emails.length === 0 && filter) {
+      const where: Record<string, unknown> = {};
+      if (filter.joinedAfter) where.createdAt = { ...(where.createdAt as object || {}), gte: new Date(filter.joinedAfter) };
+      if (filter.joinedBefore) where.createdAt = { ...(where.createdAt as object || {}), lte: new Date(filter.joinedBefore) };
+
+      const users = await prisma.user.findMany({
+        where,
+        select: { email: true, id: true, name: true },
+      });
+      emails = users.map(u => u.email);
+    }
+
+    if (emails.length === 0) {
+      return NextResponse.json({ error: 'No recipients found' }, { status: 400 });
+    }
+
+    let sent = 0;
+    let failed = 0;
+    const delay = (ms: number) => new Promise(r => setTimeout(r, ms));
+
+    for (let i = 0; i < emails.length; i++) {
+      const email = emails[i].toLowerCase().trim();
+      if (i > 0) await delay(500); // Respect Resend rate limits (2/sec)
+
+      try {
+        // Gift credits if requested
+        if (includeCredits && includeCredits > 0) {
+          const user = await prisma.user.findUnique({ where: { email } });
+          if (user) {
+            await prisma.user.update({ where: { id: user.id }, data: { freeCredits: { increment: includeCredits } } });
+          } else {
+            await prisma.pendingCredit.create({ data: { email, credits: includeCredits, giftedBy: session.user.id } });
+          }
+        }
+
+        const ok = await sendEmail({ to: email, subject: draft.subject, html: draft.html });
+        if (ok) sent++; else failed++;
+
+        await prisma.emailLog.create({
+          data: { to: email, subject: draft.subject, template: 'ai_bulk', status: ok ? 'sent' : 'failed', metadata: { situation, includeCredits } },
+        }).catch(() => {});
+      } catch {
+        failed++;
+      }
+    }
+
+    return NextResponse.json({ success: true, sent, failed, total: emails.length });
+  }
 
   if (!recipientEmail?.includes('@')) {
     return NextResponse.json({ error: 'Valid recipient email required' }, { status: 400 });

@@ -318,6 +318,7 @@ const paymentMethodStyles: Record<string, string> = {
 
 // AI Email Assistant component
 function AIEmailAssistant() {
+  const [mode, setMode] = useState<'single' | 'bulk'>('single');
   const [situation, setSituation] = useState('');
   const [recipientEmail, setRecipientEmail] = useState('');
   const [recipientName, setRecipientName] = useState('');
@@ -327,8 +328,14 @@ function AIEmailAssistant() {
   const [draft, setDraft] = useState<{ subject: string; html: string } | null>(null);
   const [result, setResult] = useState<{ success: boolean; message: string } | null>(null);
 
+  // Bulk mode state
+  const [joinedAfter, setJoinedAfter] = useState('');
+  const [joinedBefore, setJoinedBefore] = useState('');
+  const [bulkTarget, setBulkTarget] = useState<'all' | 'filtered'>('all');
+
   const handleDraft = async () => {
-    if (!situation || !recipientEmail) return;
+    if (!situation) return;
+    if (mode === 'single' && !recipientEmail) return;
     setDrafting(true);
     setResult(null);
     setDraft(null);
@@ -339,8 +346,8 @@ function AIEmailAssistant() {
         body: JSON.stringify({
           action: 'draft',
           situation,
-          recipientEmail: recipientEmail.trim(),
-          recipientName: recipientName.trim() || undefined,
+          recipientEmail: mode === 'single' ? recipientEmail.trim() : 'user@example.com',
+          recipientName: mode === 'single' ? (recipientName.trim() || undefined) : undefined,
           includeCredits: includeCreditsCount > 0 ? includeCreditsCount : undefined,
         }),
       });
@@ -357,26 +364,39 @@ function AIEmailAssistant() {
   const handleSend = async () => {
     if (!draft) return;
     setSending(true);
+    setResult(null);
     try {
-      const res = await fetch('/api/admin/ai-email', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'send',
-          situation,
-          recipientEmail: recipientEmail.trim(),
-          includeCredits: includeCreditsCount > 0 ? includeCreditsCount : undefined,
-          draft,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed');
-      setResult({ success: true, message: `Email sent to ${recipientEmail}!${includeCreditsCount > 0 ? ` +${includeCreditsCount} credit(s)` : ''}` });
+      if (mode === 'bulk') {
+        const filter: Record<string, string> = {};
+        if (bulkTarget === 'filtered') {
+          if (joinedAfter) filter.joinedAfter = joinedAfter;
+          if (joinedBefore) filter.joinedBefore = joinedBefore;
+        }
+        const res = await fetch('/api/admin/ai-email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'bulk-send',
+            situation,
+            includeCredits: includeCreditsCount > 0 ? includeCreditsCount : undefined,
+            draft,
+            filter: bulkTarget === 'filtered' ? filter : {},
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Failed');
+        setResult({ success: true, message: `Sent to ${data.sent} user${data.sent !== 1 ? 's' : ''}${data.failed > 0 ? ` (${data.failed} failed)` : ''}${includeCreditsCount > 0 ? ` +${includeCreditsCount} credit(s) each` : ''}` });
+      } else {
+        const res = await fetch('/api/admin/ai-email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'send', situation, recipientEmail: recipientEmail.trim(), includeCredits: includeCreditsCount > 0 ? includeCreditsCount : undefined, draft }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Failed');
+        setResult({ success: true, message: `Email sent to ${recipientEmail}!${includeCreditsCount > 0 ? ` +${includeCreditsCount} credit(s)` : ''}` });
+      }
       setDraft(null);
-      setSituation('');
-      setRecipientEmail('');
-      setRecipientName('');
-      setIncludeCreditsCount(0);
     } catch (err) {
       setResult({ success: false, message: err instanceof Error ? err.message : 'Failed to send' });
     } finally {
@@ -391,21 +411,59 @@ function AIEmailAssistant() {
         <p className="text-sm text-neutral-500">Describe the situation and AI will draft a branded email signed by Marie.</p>
       </div>
 
+      {/* Mode toggle */}
+      <div className="flex gap-2">
+        <button onClick={() => { setMode('single'); setDraft(null); setResult(null); }} className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${mode === 'single' ? 'bg-neutral-900 text-white' : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200'}`}>
+          Single Recipient
+        </button>
+        <button onClick={() => { setMode('bulk'); setDraft(null); setResult(null); }} className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${mode === 'bulk' ? 'bg-neutral-900 text-white' : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200'}`}>
+          Bulk Send
+        </button>
+      </div>
+
       <div className="bg-white rounded-xl border border-neutral-200 p-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-          <div>
-            <label className="block text-xs font-medium text-neutral-500 mb-1">Recipient Email *</label>
-            <input type="email" value={recipientEmail} onChange={e => setRecipientEmail(e.target.value)} placeholder="user@example.com" className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:ring-2 focus:ring-neutral-900 focus:border-transparent" />
+        {mode === 'single' ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div>
+              <label className="block text-xs font-medium text-neutral-500 mb-1">Recipient Email *</label>
+              <input type="email" value={recipientEmail} onChange={e => setRecipientEmail(e.target.value)} placeholder="user@example.com" className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:ring-2 focus:ring-neutral-900 focus:border-transparent" />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-neutral-500 mb-1">Recipient Name</label>
+              <input type="text" value={recipientName} onChange={e => setRecipientName(e.target.value)} placeholder="John (optional)" className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:ring-2 focus:ring-neutral-900 focus:border-transparent" />
+            </div>
           </div>
-          <div>
-            <label className="block text-xs font-medium text-neutral-500 mb-1">Recipient Name</label>
-            <input type="text" value={recipientName} onChange={e => setRecipientName(e.target.value)} placeholder="John (optional)" className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:ring-2 focus:ring-neutral-900 focus:border-transparent" />
+        ) : (
+          <div className="mb-4">
+            <label className="block text-xs font-medium text-neutral-500 mb-2">Send to</label>
+            <div className="flex gap-3 mb-3">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="radio" checked={bulkTarget === 'all'} onChange={() => setBulkTarget('all')} className="accent-neutral-900" />
+                <span className="text-sm text-neutral-700">All users</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="radio" checked={bulkTarget === 'filtered'} onChange={() => setBulkTarget('filtered')} className="accent-neutral-900" />
+                <span className="text-sm text-neutral-700">Filter by join date</span>
+              </label>
+            </div>
+            {bulkTarget === 'filtered' && (
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-neutral-500 mb-1">Joined after</label>
+                  <input type="date" value={joinedAfter} onChange={e => setJoinedAfter(e.target.value)} className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:ring-2 focus:ring-neutral-900 focus:border-transparent" />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-neutral-500 mb-1">Joined before</label>
+                  <input type="date" value={joinedBefore} onChange={e => setJoinedBefore(e.target.value)} className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:ring-2 focus:ring-neutral-900 focus:border-transparent" />
+                </div>
+              </div>
+            )}
           </div>
-        </div>
+        )}
 
         <div className="mb-4">
           <label className="block text-xs font-medium text-neutral-500 mb-1">Situation / What to say *</label>
-          <textarea value={situation} onChange={e => setSituation(e.target.value)} rows={3} placeholder="e.g., User's comic book failed twice. Apologize, explain we've fixed the issue, and offer 2 free credits as compensation." className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:ring-2 focus:ring-neutral-900 focus:border-transparent resize-none" />
+          <textarea value={situation} onChange={e => setSituation(e.target.value)} rows={3} placeholder={mode === 'bulk' ? 'e.g., Announce our new comic book pipeline upgrade. Thank users for their support and mention we now have better character consistency and narration.' : 'e.g., User\'s comic book failed twice. Apologize, explain we\'ve fixed the issue, and offer 2 free credits.'} className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:ring-2 focus:ring-neutral-900 focus:border-transparent resize-none" />
         </div>
 
         <div className="flex items-end gap-3 mb-4">
@@ -413,13 +471,17 @@ function AIEmailAssistant() {
             <label className="block text-xs font-medium text-neutral-500 mb-1">Gift credits</label>
             <input type="number" min={0} max={50} value={includeCreditsCount} onChange={e => setIncludeCreditsCount(parseInt(e.target.value) || 0)} className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:ring-2 focus:ring-neutral-900 focus:border-transparent" />
           </div>
-          <button onClick={handleDraft} disabled={drafting || !situation || !recipientEmail} className="flex items-center gap-2 px-4 py-2 bg-neutral-900 text-white rounded-lg text-sm font-medium hover:bg-neutral-800 disabled:opacity-50 transition-colors">
+          <button onClick={handleDraft} disabled={drafting || !situation || (mode === 'single' && !recipientEmail)} className="flex items-center gap-2 px-4 py-2 bg-neutral-900 text-white rounded-lg text-sm font-medium hover:bg-neutral-800 disabled:opacity-50 transition-colors">
             {drafting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
             {drafting ? 'Drafting...' : 'Draft with AI'}
           </button>
         </div>
 
-        <p className="text-xs text-neutral-400">AI looks up the user&apos;s account, recent books, and plan to write a contextual email. Signed by Marie with DraftMyBook branding.</p>
+        <p className="text-xs text-neutral-400">
+          {mode === 'bulk'
+            ? 'AI drafts one email, then sends it to all matching users. Credits are applied individually. ~0.5s per email (rate limited).'
+            : 'AI looks up the user\'s account, recent books, and plan to write a contextual email. Signed by Marie.'}
+        </p>
       </div>
 
       {/* Draft preview */}
@@ -436,7 +498,7 @@ function AIEmailAssistant() {
               </button>
               <button onClick={handleSend} disabled={sending} className="flex items-center gap-1.5 px-4 py-1.5 bg-neutral-900 text-white text-xs font-medium rounded-lg hover:bg-neutral-800 disabled:opacity-50 transition-colors">
                 {sending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
-                {sending ? 'Sending...' : 'Send Email'}
+                {sending ? 'Sending...' : mode === 'bulk' ? 'Send to All' : 'Send Email'}
               </button>
             </div>
           </div>
