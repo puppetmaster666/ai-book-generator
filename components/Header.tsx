@@ -156,6 +156,16 @@ if (genDropdownRef.current && !genDropdownRef.current.contains(event.target as N
             >
               FAQ
             </Link>
+            <Link
+              href="/blog"
+              className={`text-sm transition-colors ${
+                variant === 'transparent'
+                  ? 'text-white/80 hover:text-white'
+                  : 'text-neutral-600 hover:text-neutral-900'
+              }`}
+            >
+              Blog
+            </Link>
           </div>
 
           {/* Center Logo + Version */}

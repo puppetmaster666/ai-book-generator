@@ -237,27 +237,37 @@ async function generateCoverImage(title: string, primaryKeyword: string): Promis
     // Shorten title for cover if too long
     const coverTitle = title.length > 60 ? title.substring(0, 57) + '...' : title;
 
-    const prompt = `Create a professional magazine-style blog cover image.
+    // Randomize visual style for variety across articles
+    const visualStyles = [
+      { bg: 'Flat-lay photograph of an open notebook, coffee cup, and scattered book pages on a wooden desk', palette: 'warm natural tones, cream, brown, soft white' },
+      { bg: 'Minimalist geometric shapes and lines forming an abstract book/page pattern', palette: 'black, white, and one bold accent color (orange or teal)' },
+      { bg: 'Overhead view of a cozy reading nook with stacked books and warm lighting', palette: 'warm amber, deep brown, cream, soft gold' },
+      { bg: 'Clean gradient background with subtle paper texture', palette: 'soft gradient from navy to teal, or coral to amber' },
+      { bg: 'Artistic watercolor splash with book silhouettes', palette: 'vibrant watercolor washes: indigo, magenta, or emerald' },
+      { bg: 'Close-up macro photo of book pages fanning open with dramatic lighting', palette: 'high contrast black and white with one color accent' },
+      { bg: 'Illustration of a typewriter with floating letters and stories emerging from it', palette: 'vintage sepia tones with pops of red or blue' },
+      { bg: 'Modern workspace with a tablet showing text, stylized and editorial', palette: 'cool grays, white, with electric blue or lime accents' },
+    ];
+    const style = visualStyles[Math.floor(Math.random() * visualStyles.length)];
 
-LAYOUT:
-- 16:9 landscape format
-- The title text "${coverTitle}" must appear prominently on the image
-- Title should be in bold, clean, modern typography (white or light text)
-- Place title in the lower-third or center of the image with enough contrast to read
-- Add a small "DraftMyBook" watermark/logo text in one corner (subtle, small)
+    const prompt = `Create a professional blog cover image. 16:9 landscape format.
 
-VISUAL STYLE:
-- Modern, editorial design like a tech magazine or Medium article cover
-- Rich, atmospheric background related to: ${primaryKeyword}
-- Use depth of field, gradients, or overlays to ensure text readability
-- Color palette: deep blues, purples, or warm tones with bright accents
-- Professional quality, suitable for a blog header
+TITLE TEXT: "${coverTitle}"
+- Use clean, bold sans-serif typography (like Helvetica, Inter, or Montserrat style)
+- Title text color: white
+- Place a solid or semi-transparent dark rectangle/banner behind the title for readability
+- NO drop shadows, NO text glow, NO gradient text effects — just clean text on a clean background strip
+- Position the title in the lower third of the image
+- Small "DraftMyBook" text in bottom-right corner (very subtle, small, light gray)
 
-SUBJECT MATTER:
-- Conceptual imagery related to books, writing, AI, creativity
-- Could include: open books, glowing screens, pen/paper, abstract AI patterns
-- The imagery should SUPPORT the title, not compete with it
+BACKGROUND IMAGE:
+- ${style.bg}
+- Color palette: ${style.palette}
+- The background should be visually interesting but NOT busy — the title must be easy to read
+- Professional editorial quality, like a Substack or Medium article header
 
+DO NOT use: glowing text, neon effects, drop shadows on text, lens flares, or cheesy stock photo aesthetics.
+The overall feel should be clean, modern, and editorial — like a New York Times or Wired article header.
 The text MUST be clearly legible and spelled correctly.`;
 
     const apiKey = process.env.GEMINI_API_KEY;
