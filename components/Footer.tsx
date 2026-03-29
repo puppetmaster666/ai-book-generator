@@ -4,7 +4,7 @@ export default function Footer() {
   return (
     <footer className="bg-neutral-900 text-white">
       <div className="max-w-7xl mx-auto px-6 py-16">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-12">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-8 mb-12">
           {/* Brand */}
           <div className="col-span-2 md:col-span-1">
             <Link href="/" className="text-xl font-semibold tracking-tight" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>
@@ -32,6 +32,38 @@ export default function Footer() {
               <li>
                 <Link href="/faq" className="text-sm text-neutral-400 hover:text-white transition-colors">
                   FAQ
+                </Link>
+              </li>
+              <li>
+                <Link href="/blog" className="text-sm text-neutral-400 hover:text-white transition-colors">
+                  Blog
+                </Link>
+              </li>
+            </ul>
+          </div>
+
+          {/* Create */}
+          <div>
+            <h4 className="font-medium mb-4 text-sm">Create</h4>
+            <ul className="space-y-3">
+              <li>
+                <Link href="/ai-book-generator" className="text-sm text-neutral-400 hover:text-white transition-colors">
+                  AI Book Generator
+                </Link>
+              </li>
+              <li>
+                <Link href="/ai-comic-book-maker" className="text-sm text-neutral-400 hover:text-white transition-colors">
+                  AI Comic Book Maker
+                </Link>
+              </li>
+              <li>
+                <Link href="/ai-novel-writer" className="text-sm text-neutral-400 hover:text-white transition-colors">
+                  AI Novel Writer
+                </Link>
+              </li>
+              <li>
+                <Link href="/ai-childrens-book-generator" className="text-sm text-neutral-400 hover:text-white transition-colors">
+                  Children&apos;s Book Creator
                 </Link>
               </li>
             </ul>
