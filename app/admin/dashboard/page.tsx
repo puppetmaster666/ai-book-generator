@@ -317,8 +317,18 @@ const paymentMethodStyles: Record<string, string> = {
 };
 
 // AI Email Assistant component
-function AIEmailAssistant() {
-  const [mode, setMode] = useState<'single' | 'bulk'>('single');
+interface UserInfo {
+  id: string;
+  email: string;
+  name: string | null;
+  plan: string;
+  createdAt: string;
+  freeCredits?: number;
+  credits?: number;
+}
+
+function AIEmailAssistant({ defaultMode = 'single', users = [] }: { defaultMode?: 'single' | 'bulk'; users?: UserInfo[] }) {
+  const [mode, setMode] = useState<'single' | 'bulk'>(defaultMode);
   const [situation, setSituation] = useState('');
   const [recipientEmail, setRecipientEmail] = useState('');
   const [recipientName, setRecipientName] = useState('');
@@ -331,7 +341,9 @@ function AIEmailAssistant() {
   // Bulk mode state
   const [joinedAfter, setJoinedAfter] = useState('');
   const [joinedBefore, setJoinedBefore] = useState('');
-  const [bulkTarget, setBulkTarget] = useState<'all' | 'filtered'>('all');
+  const [bulkTarget, setBulkTarget] = useState<'all' | 'filtered' | 'selected'>('all');
+  const [selectedEmails, setSelectedEmails] = useState<Set<string>>(new Set());
+  const [userSearch, setUserSearch] = useState('');
 
   const handleDraft = async () => {
     if (!situation) return;
@@ -380,7 +392,8 @@ function AIEmailAssistant() {
             situation,
             includeCredits: includeCreditsCount > 0 ? includeCreditsCount : undefined,
             draft,
-            filter: bulkTarget === 'filtered' ? filter : {},
+            recipientEmails: bulkTarget === 'selected' ? Array.from(selectedEmails) : undefined,
+            filter: bulkTarget === 'filtered' ? filter : bulkTarget === 'all' ? {} : undefined,
           }),
         });
         const data = await res.json();
@@ -439,11 +452,15 @@ function AIEmailAssistant() {
             <div className="flex gap-3 mb-3">
               <label className="flex items-center gap-2 cursor-pointer">
                 <input type="radio" checked={bulkTarget === 'all'} onChange={() => setBulkTarget('all')} className="accent-neutral-900" />
-                <span className="text-sm text-neutral-700">All users</span>
+                <span className="text-sm text-neutral-700">All users ({users.length})</span>
               </label>
               <label className="flex items-center gap-2 cursor-pointer">
                 <input type="radio" checked={bulkTarget === 'filtered'} onChange={() => setBulkTarget('filtered')} className="accent-neutral-900" />
-                <span className="text-sm text-neutral-700">Filter by join date</span>
+                <span className="text-sm text-neutral-700">Filter by date</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="radio" checked={bulkTarget === 'selected'} onChange={() => setBulkTarget('selected')} className="accent-neutral-900" />
+                <span className="text-sm text-neutral-700">Select users ({selectedEmails.size})</span>
               </label>
             </div>
             {bulkTarget === 'filtered' && (
@@ -456,6 +473,34 @@ function AIEmailAssistant() {
                   <label className="block text-xs font-medium text-neutral-500 mb-1">Joined before</label>
                   <input type="date" value={joinedBefore} onChange={e => setJoinedBefore(e.target.value)} className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:ring-2 focus:ring-neutral-900 focus:border-transparent" />
                 </div>
+              </div>
+            )}
+            {bulkTarget === 'selected' && users.length > 0 && (
+              <div className="mt-3">
+                <div className="flex items-center gap-2 mb-2">
+                  <input type="text" value={userSearch} onChange={e => setUserSearch(e.target.value)} placeholder="Search by name or email..." className="flex-1 px-3 py-1.5 border border-neutral-300 rounded-lg text-sm focus:ring-2 focus:ring-neutral-900 focus:border-transparent" />
+                  <button onClick={() => setSelectedEmails(new Set(users.map(u => u.email)))} className="text-xs px-2 py-1.5 bg-neutral-100 rounded-lg hover:bg-neutral-200 transition-colors">Select all</button>
+                  <button onClick={() => setSelectedEmails(new Set())} className="text-xs px-2 py-1.5 bg-neutral-100 rounded-lg hover:bg-neutral-200 transition-colors">Clear</button>
+                </div>
+                <div className="max-h-48 overflow-y-auto border border-neutral-200 rounded-lg divide-y divide-neutral-100">
+                  {users
+                    .filter(u => !userSearch || u.email.toLowerCase().includes(userSearch.toLowerCase()) || (u.name || '').toLowerCase().includes(userSearch.toLowerCase()))
+                    .map(u => (
+                    <label key={u.id} className="flex items-center gap-3 px-3 py-2 hover:bg-neutral-50 cursor-pointer">
+                      <input type="checkbox" checked={selectedEmails.has(u.email)} onChange={e => {
+                        const next = new Set(selectedEmails);
+                        e.target.checked ? next.add(u.email) : next.delete(u.email);
+                        setSelectedEmails(next);
+                      }} className="accent-neutral-900" />
+                      <div className="flex-1 min-w-0">
+                        <span className="text-sm text-neutral-900 truncate block">{u.name || u.email}</span>
+                        {u.name && <span className="text-xs text-neutral-400 truncate block">{u.email}</span>}
+                      </div>
+                      <span className="text-xs text-neutral-400">{new Date(u.createdAt).toLocaleDateString()}</span>
+                    </label>
+                  ))}
+                </div>
+                <p className="text-xs text-neutral-400 mt-1">{selectedEmails.size} selected</p>
               </div>
             )}
           </div>
@@ -1270,7 +1315,7 @@ function AdminDashboardContent() {
 
       <main className="px-8 py-8">
         {/* AI Email Section */}
-        {activeSection === 'email' && <AIEmailAssistant />}
+        {activeSection === 'email' && <AIEmailAssistant defaultMode="single" users={stats.users} />}
 
         {/* Credits Section */}
         {activeSection === 'credits' && <GiftByEmailCard />}
@@ -1278,8 +1323,11 @@ function AdminDashboardContent() {
         {/* Blog Section */}
         {activeSection === 'blog' && <BlogGeneratorCard />}
 
+        {/* Bulk Email - redirect to AI Email in bulk mode */}
+        {activeSection === 'bulk-email' && <AIEmailAssistant defaultMode="bulk" users={stats.users} />}
+
         {/* Overview Cards - Clean monochrome design */}
-        {(activeSection === 'overview' || activeSection === 'users' || activeSection === 'books' || activeSection === 'bulk-email') && (
+        {(activeSection === 'overview' || activeSection === 'users' || activeSection === 'books') && (
         <>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
