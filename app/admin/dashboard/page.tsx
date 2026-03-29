@@ -327,7 +327,7 @@ interface UserInfo {
   credits?: number;
 }
 
-function AIEmailAssistant({ defaultMode = 'single', users = [] }: { defaultMode?: 'single' | 'bulk'; users?: UserInfo[] }) {
+function AIEmailAssistant({ defaultMode = 'single', users = [], totalUsers }: { defaultMode?: 'single' | 'bulk'; users?: UserInfo[]; totalUsers?: number }) {
   const [mode, setMode] = useState<'single' | 'bulk'>(defaultMode);
   const [situation, setSituation] = useState('');
   const [recipientEmail, setRecipientEmail] = useState('');
@@ -344,6 +344,20 @@ function AIEmailAssistant({ defaultMode = 'single', users = [] }: { defaultMode?
   const [bulkTarget, setBulkTarget] = useState<'all' | 'filtered' | 'selected'>('all');
   const [selectedEmails, setSelectedEmails] = useState<Set<string>>(new Set());
   const [userSearch, setUserSearch] = useState('');
+  const [allUsers, setAllUsers] = useState<UserInfo[]>([]);
+  const [loadingAllUsers, setLoadingAllUsers] = useState(false);
+
+  // Load all users when "Select users" mode is chosen
+  useEffect(() => {
+    if (bulkTarget === 'selected' && allUsers.length === 0 && !loadingAllUsers) {
+      setLoadingAllUsers(true);
+      fetch(`/api/admin/stats?usersLimit=1000&usersPage=1`)
+        .then(r => r.json())
+        .then(data => { if (data.users) setAllUsers(data.users); })
+        .catch(() => setAllUsers(users))
+        .finally(() => setLoadingAllUsers(false));
+    }
+  }, [bulkTarget]);
 
   const handleDraft = async () => {
     if (!situation) return;
@@ -452,7 +466,7 @@ function AIEmailAssistant({ defaultMode = 'single', users = [] }: { defaultMode?
             <div className="flex gap-3 mb-3">
               <label className="flex items-center gap-2 cursor-pointer">
                 <input type="radio" checked={bulkTarget === 'all'} onChange={() => setBulkTarget('all')} className="accent-neutral-900" />
-                <span className="text-sm text-neutral-700">All users ({users.length})</span>
+                <span className="text-sm text-neutral-700">All users ({totalUsers || users.length})</span>
               </label>
               <label className="flex items-center gap-2 cursor-pointer">
                 <input type="radio" checked={bulkTarget === 'filtered'} onChange={() => setBulkTarget('filtered')} className="accent-neutral-900" />
@@ -475,15 +489,21 @@ function AIEmailAssistant({ defaultMode = 'single', users = [] }: { defaultMode?
                 </div>
               </div>
             )}
-            {bulkTarget === 'selected' && users.length > 0 && (
+            {bulkTarget === 'selected' && (
               <div className="mt-3">
+                {loadingAllUsers ? (
+                  <div className="flex items-center gap-2 text-sm text-neutral-500 py-4">
+                    <Loader2 className="h-4 w-4 animate-spin" /> Loading all users...
+                  </div>
+                ) : (
+                <>
                 <div className="flex items-center gap-2 mb-2">
                   <input type="text" value={userSearch} onChange={e => setUserSearch(e.target.value)} placeholder="Search by name or email..." className="flex-1 px-3 py-1.5 border border-neutral-300 rounded-lg text-sm focus:ring-2 focus:ring-neutral-900 focus:border-transparent" />
-                  <button onClick={() => setSelectedEmails(new Set(users.map(u => u.email)))} className="text-xs px-2 py-1.5 bg-neutral-100 rounded-lg hover:bg-neutral-200 transition-colors">Select all</button>
+                  <button onClick={() => setSelectedEmails(new Set((allUsers.length > 0 ? allUsers : users).map(u => u.email)))} className="text-xs px-2 py-1.5 bg-neutral-100 rounded-lg hover:bg-neutral-200 transition-colors">Select all</button>
                   <button onClick={() => setSelectedEmails(new Set())} className="text-xs px-2 py-1.5 bg-neutral-100 rounded-lg hover:bg-neutral-200 transition-colors">Clear</button>
                 </div>
                 <div className="max-h-48 overflow-y-auto border border-neutral-200 rounded-lg divide-y divide-neutral-100">
-                  {users
+                  {(allUsers.length > 0 ? allUsers : users)
                     .filter(u => !userSearch || u.email.toLowerCase().includes(userSearch.toLowerCase()) || (u.name || '').toLowerCase().includes(userSearch.toLowerCase()))
                     .map(u => (
                     <label key={u.id} className="flex items-center gap-3 px-3 py-2 hover:bg-neutral-50 cursor-pointer">
@@ -501,6 +521,8 @@ function AIEmailAssistant({ defaultMode = 'single', users = [] }: { defaultMode?
                   ))}
                 </div>
                 <p className="text-xs text-neutral-400 mt-1">{selectedEmails.size} selected</p>
+                </>
+                )}
               </div>
             )}
           </div>
@@ -1315,7 +1337,7 @@ function AdminDashboardContent() {
 
       <main className="px-8 py-8">
         {/* AI Email Section */}
-        {activeSection === 'email' && <AIEmailAssistant defaultMode="single" users={stats.users} />}
+        {activeSection === 'email' && <AIEmailAssistant defaultMode="single" users={stats.users} totalUsers={stats.overview.totalUsers} />}
 
         {/* Credits Section */}
         {activeSection === 'credits' && <GiftByEmailCard />}
@@ -1324,7 +1346,7 @@ function AdminDashboardContent() {
         {activeSection === 'blog' && <BlogGeneratorCard />}
 
         {/* Bulk Email - redirect to AI Email in bulk mode */}
-        {activeSection === 'bulk-email' && <AIEmailAssistant defaultMode="bulk" users={stats.users} />}
+        {activeSection === 'bulk-email' && <AIEmailAssistant defaultMode="bulk" users={stats.users} totalUsers={stats.overview.totalUsers} />}
 
         {/* Overview Cards - Clean monochrome design */}
         {(activeSection === 'overview' || activeSection === 'users' || activeSection === 'books') && (
