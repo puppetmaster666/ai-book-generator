@@ -389,3 +389,109 @@ export function getBugApologyEmail(
     `, 'Something went wrong. We added 1 book to your account.'),
   };
 }
+
+/**
+ * Credit invite email - sent to people who haven't signed up yet.
+ * Includes Marie's personal signature for a warm touch.
+ */
+export function getCreditInviteEmail(
+  recipientName: string | null,
+  credits: number,
+  personalMessage?: string | null
+): { subject: string; html: string } {
+  const greeting = recipientName ? recipientName.split(' ')[0] : 'Hi there';
+  const bookWord = credits === 1 ? 'book' : 'books';
+
+  const messageSection = personalMessage
+    ? `<p style="color: #525252; font-size: 15px; margin: 0 0 24px 0; line-height: 1.6; font-style: italic; border-left: 3px solid #BFFF00; padding-left: 16px;">${personalMessage}</p>`
+    : '';
+
+  return {
+    subject: `${greeting}, you have ${credits} free ${bookWord} waiting for you`,
+    html: emailWrapper(`
+      <h2 style="font-size: 24px; font-weight: 600; margin: 0 0 16px 0; color: #171717;">
+        ${greeting}, you've been gifted ${credits} free ${bookWord}.
+      </h2>
+
+      ${messageSection}
+
+      <p style="color: #525252; font-size: 15px; margin: 0 0 24px 0; line-height: 1.6;">
+        Someone at DraftMyBook wants you to try creating a book with AI. We've reserved ${credits} ${bookWord} for you — no cost, no commitment.
+      </p>
+
+      <div style="background-color: #171717; border-radius: 8px; padding: 32px; margin: 24px 0; text-align: center;">
+        <p style="color: #BFFF00; font-size: 48px; font-weight: 700; margin: 0; line-height: 1;">${credits}</p>
+        <p style="color: #a3a3a3; font-size: 14px; margin: 8px 0 0 0;">free ${bookWord} waiting for you</p>
+      </div>
+
+      <p style="color: #525252; font-size: 15px; margin: 0 0 8px 0; line-height: 1.6;">
+        Create a novel, comic book, children's book, or screenplay — all powered by AI. Just sign up and your credits will be applied automatically.
+      </p>
+
+      ${ctaButton('Claim Your Free Book', `${APP_URL}/signup`)}
+
+      <div style="margin-top: 40px; padding-top: 24px; border-top: 1px solid #e5e5e5;">
+        <p style="color: #525252; font-size: 14px; margin: 0; line-height: 1.6;">
+          Warm regards,
+        </p>
+        <p style="color: #171717; font-size: 15px; font-weight: 600; margin: 4px 0 0 0;">
+          Marie
+        </p>
+        <p style="color: #737373; font-size: 13px; margin: 2px 0 0 0;">
+          DraftMyBook Team
+        </p>
+      </div>
+    `, `You've been gifted ${credits} free ${bookWord}. Claim them now.`),
+  };
+}
+
+/**
+ * Credit applied email - sent to existing users who receive a gift.
+ * Includes Marie's personal signature.
+ */
+export function getCreditGiftFromMarieEmail(
+  userName: string,
+  credits: number,
+  personalMessage?: string | null
+): { subject: string; html: string } {
+  const firstName = userName?.split(' ')[0] || 'there';
+  const bookWord = credits === 1 ? 'book' : 'books';
+
+  const messageSection = personalMessage
+    ? `<p style="color: #525252; font-size: 15px; margin: 0 0 24px 0; line-height: 1.6; font-style: italic; border-left: 3px solid #BFFF00; padding-left: 16px;">${personalMessage}</p>`
+    : '';
+
+  return {
+    subject: `${firstName}, ${credits} free ${bookWord} added to your account`,
+    html: emailWrapper(`
+      <h2 style="font-size: 24px; font-weight: 600; margin: 0 0 16px 0; color: #171717;">
+        ${firstName}, we've added ${credits} ${bookWord} to your account.
+      </h2>
+
+      ${messageSection}
+
+      <div style="background-color: #171717; border-radius: 8px; padding: 32px; margin: 24px 0; text-align: center;">
+        <p style="color: #BFFF00; font-size: 48px; font-weight: 700; margin: 0; line-height: 1;">${credits}</p>
+        <p style="color: #a3a3a3; font-size: 14px; margin: 8px 0 0 0;">${bookWord} ready to create</p>
+      </div>
+
+      <p style="color: #525252; font-size: 15px; margin: 0 0 8px 0; line-height: 1.6;">
+        Use them anytime — they never expire.
+      </p>
+
+      ${ctaButton('Create a Book', `${APP_URL}/create`)}
+
+      <div style="margin-top: 40px; padding-top: 24px; border-top: 1px solid #e5e5e5;">
+        <p style="color: #525252; font-size: 14px; margin: 0; line-height: 1.6;">
+          Warm regards,
+        </p>
+        <p style="color: #171717; font-size: 15px; font-weight: 600; margin: 4px 0 0 0;">
+          Marie
+        </p>
+        <p style="color: #737373; font-size: 13px; margin: 2px 0 0 0;">
+          DraftMyBook Team
+        </p>
+      </div>
+    `, `We've added ${credits} free ${bookWord} to your account.`),
+  };
+}

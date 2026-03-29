@@ -95,6 +95,40 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             });
             console.log(`[Auth] Auto-verified email for Google OAuth user: ${user.email}`);
           }
+
+          // Auto-apply pending credits for new or existing OAuth users
+          try {
+            const pendingCredits = await prisma.pendingCredit.findMany({
+              where: { email: user.email!.toLowerCase().trim(), claimed: false },
+            });
+
+            if (pendingCredits.length > 0 && existingUser) {
+              const totalCredits = pendingCredits.reduce((sum, pc) => sum + pc.credits, 0);
+              await prisma.$transaction([
+                prisma.user.update({
+                  where: { id: existingUser.id },
+                  data: { freeCredits: { increment: totalCredits } },
+                }),
+                ...pendingCredits.map(pc =>
+                  prisma.pendingCredit.update({
+                    where: { id: pc.id },
+                    data: { claimed: true, claimedAt: new Date() },
+                  })
+                ),
+                prisma.notification.create({
+                  data: {
+                    userId: existingUser.id,
+                    type: 'free_credit',
+                    title: `You have ${totalCredits} free book credit${totalCredits > 1 ? 's' : ''}!`,
+                    message: `Someone gifted you ${totalCredits} book${totalCredits > 1 ? 's' : ''}. Start creating now!`,
+                  },
+                }),
+              ]);
+              console.log(`[Auth] Applied ${totalCredits} pending credit(s) to OAuth user ${user.email}`);
+            }
+          } catch (creditError) {
+            console.error('[Auth] Error applying pending credits:', creditError);
+          }
         } catch (error) {
           console.error('[Auth] Error auto-verifying OAuth user email:', error);
           // Don't block sign-in if this fails

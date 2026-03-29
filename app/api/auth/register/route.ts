@@ -45,14 +45,54 @@ export async function POST(request: Request) {
       },
     });
 
+    // Auto-apply any pending credits for this email
+    let creditsApplied = 0;
+    try {
+      const pendingCredits = await prisma.pendingCredit.findMany({
+        where: { email: email.toLowerCase().trim(), claimed: false },
+      });
+
+      if (pendingCredits.length > 0) {
+        const totalCredits = pendingCredits.reduce((sum, pc) => sum + pc.credits, 0);
+        await prisma.$transaction([
+          prisma.user.update({
+            where: { id: user.id },
+            data: { freeCredits: { increment: totalCredits } },
+          }),
+          ...pendingCredits.map(pc =>
+            prisma.pendingCredit.update({
+              where: { id: pc.id },
+              data: { claimed: true, claimedAt: new Date() },
+            })
+          ),
+          prisma.notification.create({
+            data: {
+              userId: user.id,
+              type: 'free_credit',
+              title: `Welcome! You have ${totalCredits} free book credit${totalCredits > 1 ? 's' : ''}!`,
+              message: `Someone gifted you ${totalCredits} book${totalCredits > 1 ? 's' : ''}. Start creating now!`,
+            },
+          }),
+        ]);
+        creditsApplied = totalCredits;
+        console.log(`[Register] Applied ${totalCredits} pending credit(s) to new user ${email}`);
+      }
+    } catch (creditError) {
+      console.error('[Register] Error applying pending credits:', creditError);
+      // Don't block registration if credit claiming fails
+    }
+
     return NextResponse.json({
       success: true,
-      message: 'Account created successfully.',
+      message: creditsApplied > 0
+        ? `Account created! ${creditsApplied} free book credit${creditsApplied > 1 ? 's' : ''} applied to your account.`
+        : 'Account created successfully.',
       user: {
         id: user.id,
         email: user.email,
         name: user.name,
       },
+      creditsApplied,
     });
   } catch (error) {
     console.error('Registration error:', error);

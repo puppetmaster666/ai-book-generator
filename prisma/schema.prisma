@@ -303,3 +303,16 @@ model BlogPost {
   @@index([slug])
   @@index([primaryKeyword])
 }
+
+model PendingCredit {
+  id        String   @id @default(cuid())
+  email     String
+  credits   Int      @default(1)
+  message   String?  // Optional personal message from admin
+  giftedBy  String?  // Admin who sent it
+  claimed   Boolean  @default(false)
+  claimedAt DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([email, claimed])
+}
