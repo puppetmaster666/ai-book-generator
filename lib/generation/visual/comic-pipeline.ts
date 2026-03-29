@@ -162,7 +162,7 @@ ACTION & VISUAL DIRECTION:
 - Write what we SEE: physical actions, expressions, body language
 - Use specific verbs: "slams", "flinches", "grips" - not "reacts" or "responds"
 - Include environment interaction (leaning on walls, kicking debris, gripping railings)
-- SFX sparingly (max 5-6 across the whole script, only for impactful moments)
+- SFX are welcome where they add energy (CRASH!, WHOOSH!, BANG!) - use them naturally
 - Each page should end with a hook that makes you want to turn the page
 
 TARGET: ~1500-2000 words for the full script. Quality over quantity - a tight, well-paced story beats a padded one.

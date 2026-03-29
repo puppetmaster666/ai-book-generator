@@ -245,6 +245,7 @@ async function attemptIllustrationGeneration(data: {
   characterVisualGuide?: CharacterVisualGuide;
   visualStyleGuide?: VisualStyleGuide;
   bookFormat?: string;
+  referenceImages?: { characterName: string; imageData: string }[];
 }): Promise<IllustrationAttemptResult> {
   try {
     // Build base URL - check multiple env vars in order of preference
@@ -267,6 +268,7 @@ async function attemptIllustrationGeneration(data: {
           characterVisualGuide: data.characterVisualGuide,
           visualStyleGuide: data.visualStyleGuide,
           bookFormat: data.bookFormat,
+          referenceImages: data.referenceImages,
         }),
         signal: controller.signal,
       });
@@ -333,6 +335,7 @@ async function generateIllustrationImage(data: {
   characterVisualGuide?: CharacterVisualGuide;
   visualStyleGuide?: VisualStyleGuide;
   bookFormat?: string;
+  referenceImages?: { characterName: string; imageData: string }[];
 }): Promise<{ imageUrl: string; altText: string; width: number; height: number } | null> {
   let currentScene = data.scene;
 
@@ -386,6 +389,13 @@ async function generateIllustrationImage(data: {
   return null;
 }
 
+// Character portrait type for reference images
+type CharacterPortrait = {
+  characterName: string;
+  facePortrait: string;
+  fullBodyPortrait: string;
+};
+
 // Generate all illustrations in parallel for visual books
 async function generateIllustrationsInParallel(
   chapters: VisualChapter[],
@@ -401,6 +411,7 @@ async function generateIllustrationsInParallel(
     characterVisualGuide?: CharacterVisualGuide;
     visualStyleGuide?: VisualStyleGuide;
     contentRating?: ContentRating;
+    characterPortraits?: CharacterPortrait[];
   }
 ): Promise<Map<number, { imageUrl: string; altText: string; width: number; height: number }>> {
   const results = new Map<number, { imageUrl: string; altText: string; width: number; height: number }>();
@@ -465,6 +476,33 @@ async function generateIllustrationsInParallel(
         console.log(`Generating illustration for page ${chapter.number}...`);
       }
 
+      // Build character reference images from portraits for consistency
+      const referenceImages: { characterName: string; imageData: string }[] = [];
+      if (bookData.characterPortraits && chapter.scene.characters) {
+        const MAX_REFS = 2; // Limit to avoid payload size issues
+        let refCount = 0;
+        for (const charName of chapter.scene.characters) {
+          if (refCount >= MAX_REFS) break;
+          const portrait = bookData.characterPortraits.find(
+            p => p.characterName.toLowerCase() === charName.toLowerCase()
+          );
+          if (portrait) {
+            // Use face portrait for multi-character scenes, both for 1-2 character scenes
+            referenceImages.push({
+              characterName: `${charName} (face reference)`,
+              imageData: portrait.facePortrait,
+            });
+            if (chapter.scene.characters.length <= 2 && portrait.fullBodyPortrait) {
+              referenceImages.push({
+                characterName: `${charName} (body reference)`,
+                imageData: portrait.fullBodyPortrait,
+              });
+            }
+            refCount++;
+          }
+        }
+      }
+
       const result = await generateIllustrationImage({
         scene: illustrationPrompt,
         artStyle: bookData.artStyle,
@@ -477,6 +515,7 @@ async function generateIllustrationsInParallel(
         characterVisualGuide: bookData.characterVisualGuide,
         visualStyleGuide: bookData.visualStyleGuide,
         bookFormat: bookData.bookFormat,
+        referenceImages: referenceImages.length > 0 ? referenceImages : undefined,
       });
 
       if (result) {
@@ -1179,6 +1218,21 @@ export async function POST(
         console.log(`[Preview] Limiting unpaid visual book to ${FREE_PREVIEW_PANELS} panels (book has ${visualChapters.length} total)`);
       }
 
+      // Load character portraits from DB for reference images (critical for consistency)
+      let portraitsForGen: CharacterPortrait[] | undefined;
+      try {
+        const bookWithPortraits = await prisma.book.findUnique({
+          where: { id },
+          select: { characterPortraits: true },
+        });
+        if (bookWithPortraits?.characterPortraits) {
+          portraitsForGen = bookWithPortraits.characterPortraits as unknown as CharacterPortrait[];
+          console.log(`Loaded ${portraitsForGen.length} character portraits for reference`);
+        }
+      } catch (e) {
+        console.warn('Failed to load character portraits for generation:', e);
+      }
+
       // Step 2a: Generate illustrations in parallel (using scene descriptions from outline)
       console.log(`Generating ${chaptersToGenerate.length} illustrations in parallel...`);
       const illustrationResults = await generateIllustrationsInParallel(
@@ -1195,6 +1249,7 @@ export async function POST(
           characterVisualGuide: characterVisualGuide || undefined,
           visualStyleGuide: visualStyleGuide || undefined,
           contentRating: (book.contentRating as ContentRating) || 'general',
+          characterPortraits: portraitsForGen,
         }
       );
 
