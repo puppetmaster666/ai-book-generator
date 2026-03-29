@@ -219,74 +219,134 @@ function BlogGeneratorCard() {
   const [count, setCount] = useState(1);
   const [generating, setGenerating] = useState(false);
   const [progress, setProgress] = useState('');
-  const [result, setResult] = useState<{ success: boolean; message: string; articles?: { title: string; url: string }[] } | null>(null);
+  const [result, setResult] = useState<{ success: boolean; message: string } | null>(null);
+  const [posts, setPosts] = useState<{ id: string; title: string; slug: string; primaryKeyword: string; publishedAt: string | null; createdAt: string }[]>([]);
+  const [selectedPosts, setSelectedPosts] = useState<Set<string>>(new Set());
+  const [deleting, setDeleting] = useState(false);
+  const [loadingPosts, setLoadingPosts] = useState(true);
+
+  // Load existing posts
+  useEffect(() => {
+    fetch('/api/admin/blog').then(r => r.json()).then(data => {
+      if (data.posts) setPosts(data.posts);
+    }).catch(() => {}).finally(() => setLoadingPosts(false));
+  }, []);
 
   const handleGenerate = async () => {
     setGenerating(true);
     setResult(null);
-    const allArticles: { title: string; url: string }[] = [];
+    let generated = 0;
     let failures = 0;
 
     for (let i = 0; i < count; i++) {
       setProgress(`Generating article ${i + 1} of ${count}... (1-2 min each)`);
       try {
-        const res = await fetch('/api/blog/generate', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-        });
+        const res = await fetch('/api/blog/generate', { method: 'POST', headers: { 'Content-Type': 'application/json' } });
         const data = await res.json();
         if (!res.ok) throw new Error(data.errors?.[0] || data.error || 'Failed');
-        if (data.articles) allArticles.push(...data.articles);
-      } catch (err) {
-        failures++;
-        console.error(`Article ${i + 1} failed:`, err);
-      }
+        generated++;
+      } catch { failures++; }
     }
 
-    setResult({
-      success: failures === 0,
-      message: `Generated ${allArticles.length} article${allArticles.length !== 1 ? 's' : ''}${failures > 0 ? ` (${failures} failed)` : ''}`,
-      articles: allArticles,
-    });
+    setResult({ success: failures === 0, message: `Generated ${generated} article${generated !== 1 ? 's' : ''}${failures > 0 ? ` (${failures} failed)` : ''}` });
     setGenerating(false);
     setProgress('');
+    // Refresh post list
+    fetch('/api/admin/blog').then(r => r.json()).then(data => { if (data.posts) setPosts(data.posts); }).catch(() => {});
+  };
+
+  const handleDelete = async () => {
+    if (selectedPosts.size === 0) return;
+    if (!confirm(`Delete ${selectedPosts.size} article${selectedPosts.size !== 1 ? 's' : ''}? This cannot be undone.`)) return;
+    setDeleting(true);
+    try {
+      const res = await fetch('/api/admin/blog', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: Array.from(selectedPosts) }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setPosts(prev => prev.filter(p => !selectedPosts.has(p.id)));
+        setSelectedPosts(new Set());
+        setResult({ success: true, message: `Deleted ${data.deleted} article${data.deleted !== 1 ? 's' : ''}` });
+      }
+    } catch { setResult({ success: false, message: 'Failed to delete' }); }
+    finally { setDeleting(false); }
   };
 
   return (
-    <div className="bg-white rounded-xl border border-neutral-200 p-6 mb-6">
-      <div className="flex items-center gap-2 mb-4">
-        <BookOpen className="h-5 w-5 text-neutral-700" />
-        <h3 className="text-base font-semibold text-neutral-900">Blog Article Generator</h3>
-        <span className="text-xs bg-neutral-100 text-neutral-600 px-2 py-0.5 rounded-full">SEO + Cover Image</span>
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-xl font-bold text-neutral-900 mb-1">Blog Management</h2>
+        <p className="text-sm text-neutral-500">Generate new articles and manage existing ones.</p>
       </div>
-      <div className="flex items-end gap-3 mb-3">
-        <div className="w-24">
-          <label className="block text-xs font-medium text-neutral-500 mb-1">Articles</label>
-          <input type="number" min={1} max={5} value={count} onChange={e => setCount(Math.min(5, Math.max(1, parseInt(e.target.value) || 1)))} className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:ring-2 focus:ring-neutral-900 focus:border-transparent" />
+
+      {/* Generator */}
+      <div className="bg-white rounded-xl border border-neutral-200 p-6">
+        <div className="flex items-center gap-2 mb-4">
+          <Sparkles className="h-5 w-5 text-neutral-700" />
+          <h3 className="text-base font-semibold text-neutral-900">Generate New Articles</h3>
         </div>
-        <button onClick={handleGenerate} disabled={generating} className="flex items-center gap-2 px-4 py-2 bg-neutral-900 text-white rounded-lg text-sm font-medium hover:bg-neutral-800 disabled:opacity-50 transition-colors">
-          {generating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-          {generating ? 'Generating...' : `Generate ${count} Article${count > 1 ? 's' : ''}`}
-        </button>
+        <div className="flex items-end gap-3 mb-3">
+          <div className="w-24">
+            <label className="block text-xs font-medium text-neutral-500 mb-1">Count</label>
+            <input type="number" min={1} max={5} value={count} onChange={e => setCount(Math.min(5, Math.max(1, parseInt(e.target.value) || 1)))} className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:ring-2 focus:ring-neutral-900 focus:border-transparent" />
+          </div>
+          <button onClick={handleGenerate} disabled={generating} className="flex items-center gap-2 px-4 py-2 bg-neutral-900 text-white rounded-lg text-sm font-medium hover:bg-neutral-800 disabled:opacity-50 transition-colors">
+            {generating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+            {generating ? 'Generating...' : `Generate ${count}`}
+          </button>
+        </div>
+        {progress && <p className="text-xs text-amber-600 mt-2">{progress}</p>}
+        {result && (
+          <div className={`mt-3 p-3 rounded-lg text-sm ${result.success ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
+            {result.message}
+          </div>
+        )}
       </div>
-      <p className="text-xs text-neutral-400">Auto-picks the least-covered SEO keyword. Each article gets a magazine-style cover image with title. Topics rotate across: AI book generator, comic maker, novel writer, script writer, self-publishing.</p>
-      {progress && <p className="text-xs text-amber-600 mt-2">{progress}</p>}
-      {result && (
-        <div className={`mt-3 p-3 rounded-lg text-sm ${result.success ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
-          <p>{result.message}</p>
-          {result.articles && result.articles.length > 0 && (
-            <ul className="mt-2 space-y-1">
-              {result.articles.map((a, i) => (
-                <li key={i}>
-                  <a href={a.url} target="_blank" rel="noopener noreferrer" className="underline hover:text-green-900">
-                    {a.title}
-                  </a>
-                </li>
-              ))}
-            </ul>
+
+      {/* Existing articles */}
+      <div className="bg-white rounded-xl border border-neutral-200 p-6">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <BookOpen className="h-5 w-5 text-neutral-700" />
+            <h3 className="text-base font-semibold text-neutral-900">Articles ({posts.length})</h3>
+          </div>
+          {selectedPosts.size > 0 && (
+            <button onClick={handleDelete} disabled={deleting} className="flex items-center gap-1.5 px-3 py-1.5 bg-red-600 text-white text-xs font-medium rounded-lg hover:bg-red-700 disabled:opacity-50 transition-colors">
+              {deleting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3 w-3" />}
+              Delete {selectedPosts.size}
+            </button>
           )}
         </div>
-      )}
+
+        {loadingPosts ? (
+          <div className="flex items-center gap-2 text-sm text-neutral-500 py-4"><Loader2 className="h-4 w-4 animate-spin" /> Loading...</div>
+        ) : posts.length === 0 ? (
+          <p className="text-sm text-neutral-500 py-4">No articles yet. Generate some above.</p>
+        ) : (
+          <div className="divide-y divide-neutral-100">
+            <label className="flex items-center gap-3 px-2 py-2 text-xs text-neutral-500">
+              <input type="checkbox" checked={selectedPosts.size === posts.length && posts.length > 0} onChange={e => setSelectedPosts(e.target.checked ? new Set(posts.map(p => p.id)) : new Set())} className="accent-neutral-900" />
+              Select all
+            </label>
+            {posts.map(post => (
+              <label key={post.id} className="flex items-center gap-3 px-2 py-3 hover:bg-neutral-50 cursor-pointer">
+                <input type="checkbox" checked={selectedPosts.has(post.id)} onChange={e => {
+                  const next = new Set(selectedPosts);
+                  e.target.checked ? next.add(post.id) : next.delete(post.id);
+                  setSelectedPosts(next);
+                }} className="accent-neutral-900" />
+                <div className="flex-1 min-w-0">
+                  <a href={`/blog/${post.slug}`} target="_blank" rel="noopener noreferrer" className="text-sm font-medium text-neutral-900 hover:underline truncate block">{post.title}</a>
+                  <span className="text-xs text-neutral-400">{post.primaryKeyword} &middot; {post.publishedAt ? new Date(post.publishedAt).toLocaleDateString() : 'Draft'}</span>
+                </div>
+              </label>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
