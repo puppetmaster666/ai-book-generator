@@ -591,11 +591,13 @@ export async function POST(
       console.log('[Generate] No auth session, treating as non-admin');
     }
 
-    // Check for outlineOnly mode from request body
+    // Check for outlineOnly and serverDriven modes from request body
     let outlineOnlyFromBody = false;
+    let serverDriven = false;
     try {
       const body = await request.json();
       outlineOnlyFromBody = body.outlineOnly === true;
+      serverDriven = body.serverDriven === true;
     } catch {
       // No body or invalid JSON - use default
     }
@@ -1156,13 +1158,36 @@ export async function POST(
     }
 
     // For outlineOnly mode, return here after generating the outline
-    // For comics: client will fire parallel /api/generate-panel requests
-    // For text books: client will call /api/books/[id]/generate-next repeatedly
     if (outlineOnly) {
       const isComicFlow = dialogueStyle === 'bubbles';
-      console.log(`OutlineOnly mode: returning outline with ${outline.chapters.length} ${isComicFlow ? 'panels' : 'chapters'} for client-side ${isComicFlow ? 'parallel panel' : 'sequential chapter'} generation`);
 
-      // Status is already 'generating' from the outline save above
+      // If server-driven, mark the book and kick off generation automatically
+      if (serverDriven) {
+        await prisma.book.update({
+          where: { id },
+          data: { generationMode: 'server' },
+        });
+
+        const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://draftmybook.com';
+
+        if (isComicFlow || useVisualFlow) {
+          // Comics/picture books: trigger visual generation
+          console.log(`[Generate] Server-driven: kicking off /generate-visual for ${id}`);
+          fetch(`${appUrl}/api/books/${id}/generate-visual`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+          }).catch(err => console.error(`[Generate] Failed to kick off visual gen for ${id}:`, err));
+        } else {
+          // Text/screenplay: trigger chapter-by-chapter generation
+          console.log(`[Generate] Server-driven: kicking off /generate-next for ${id}`);
+          fetch(`${appUrl}/api/books/${id}/generate-next`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+          }).catch(err => console.error(`[Generate] Failed to kick off chapter gen for ${id}:`, err));
+        }
+      }
+
+      console.log(`OutlineOnly mode: ${outline.chapters.length} ${isComicFlow ? 'panels' : 'chapters'} ready. ${serverDriven ? 'Server-driven generation started.' : 'Waiting for client.'}`);
 
       // Refetch book with updated data
       const updatedBook = await prisma.book.findUnique({
@@ -1185,12 +1210,15 @@ export async function POST(
       return NextResponse.json({
         success: true,
         outlineOnly: true,
+        serverDriven,
         book: updatedBook,
         totalPanels: outline.chapters.length,
         totalChapters: outline.chapters.length,
-        message: isComicFlow
-          ? 'Outline generated. Ready for parallel panel generation.'
-          : 'Outline generated. Ready for chapter-by-chapter generation.',
+        message: serverDriven
+          ? 'Generation started. You can leave this page — we\'ll email you when it\'s ready.'
+          : isComicFlow
+            ? 'Outline generated. Ready for parallel panel generation.'
+            : 'Outline generated. Ready for chapter-by-chapter generation.',
       });
     }
 

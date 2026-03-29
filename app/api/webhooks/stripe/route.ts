@@ -14,7 +14,11 @@ function getStripe() {
 export async function POST(request: NextRequest) {
   try {
     const stripe = getStripe();
-    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET || '';
+    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+    if (!webhookSecret) {
+      console.error('STRIPE_WEBHOOK_SECRET is not set');
+      return NextResponse.json({ error: 'Webhook not configured' }, { status: 500 });
+    }
     const body = await request.text();
     const signature = request.headers.get('stripe-signature') || '';
 
@@ -30,7 +34,19 @@ export async function POST(request: NextRequest) {
     switch (event.type) {
       case 'checkout.session.completed': {
         const session = event.data.object as Stripe.Checkout.Session;
-        const { bookId, productType } = session.metadata || {};
+        const { bookId, productType, promoCode } = session.metadata || {};
+
+        // Increment promo code usage now that payment is confirmed
+        if (promoCode) {
+          try {
+            await prisma.promoCode.update({
+              where: { code: promoCode },
+              data: { currentUses: { increment: 1 } },
+            });
+          } catch (err) {
+            console.error('Failed to increment promo usage for code:', promoCode, err);
+          }
+        }
 
         // Create payment record now that payment is confirmed
         // We don't create it during checkout to avoid tracking abandoned sessions
@@ -76,22 +92,14 @@ export async function POST(request: NextRequest) {
             },
           });
 
-          // Visual books use client-side parallel generation from the book page
-          // Only trigger server-side generation for text-only books
-          const isVisualBook = book?.bookFormat === 'picture_book' ||
-                               book?.dialogueStyle === 'bubbles' ||
-                               book?.bookPreset === 'comic_story' ||
-                               book?.bookPreset === 'childrens_picture' ||
-                               book?.bookPreset === 'adult_comic';
-
-          if (!isVisualBook) {
-            // Trigger book generation for text-only books (fire and forget)
-            fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/books/${bookId}/generate`, {
-              method: 'POST',
-            }).catch(console.error);
-          } else {
-            console.log(`Skipping webhook generation for visual book ${bookId} - client-side generation will handle it`);
-          }
+          // Trigger server-driven generation for ALL book types (fire and forget)
+          // User can leave the page - server handles everything, email sent on completion
+          console.log(`[Webhook] Triggering server-driven generation for book ${bookId} (format: ${book?.bookFormat})`);
+          fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/books/${bookId}/generate`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ serverDriven: true }),
+          }).catch(console.error);
         }
 
         // Handle subscription

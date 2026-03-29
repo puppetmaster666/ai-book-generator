@@ -30,11 +30,11 @@ export const NOVEL_STEPS: GenerationStep[] = [
 ];
 
 export const COMIC_STEPS: GenerationStep[] = [
-  { name: 'Writing Script', description: 'Creating the story with character voices and dialogue', estimatedSeconds: 30 },
-  { name: 'Planning Scenes', description: 'Breaking the script into panels with visual direction', estimatedSeconds: 25 },
-  { name: 'Quality Review', description: 'Checking story coherence and dialogue quality', estimatedSeconds: 15 },
-  { name: 'Generating Art', description: 'Creating illustrations for each panel', estimatedSeconds: 180 },
-  { name: 'Assembling Book', description: 'Compiling panels into your final comic', estimatedSeconds: 15 },
+  { name: 'Writing Script', description: 'Creating the story with character voices and dialogue', estimatedSeconds: 45 },
+  { name: 'Planning Scenes', description: 'Breaking the script into panels with visual direction', estimatedSeconds: 35 },
+  { name: 'Quality Review', description: 'Checking story coherence and dialogue quality', estimatedSeconds: 20 },
+  { name: 'Generating Art', description: 'Creating illustrations for each panel (5-10 min)', estimatedSeconds: 360 },
+  { name: 'Assembling Book', description: 'Compiling panels into your final comic', estimatedSeconds: 20 },
 ];
 
 export const PICTURE_BOOK_STEPS: GenerationStep[] = [
@@ -167,12 +167,12 @@ export default function GenerationProgress({
         </div>
       </div>
 
-      {/* Disclaimer */}
-      <div className="flex items-center gap-2.5 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
-        <Shield className="h-4 w-4 text-amber-600 flex-shrink-0" />
-        <p className="text-sm text-amber-800">
-          <span className="font-medium">Please don&apos;t close or refresh this page.</span>
-          {' '}Your generation is in progress and leaving may interrupt it.
+      {/* Safe to leave message */}
+      <div className="flex items-center gap-2.5 bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3">
+        <Shield className="h-4 w-4 text-emerald-600 flex-shrink-0" />
+        <p className="text-sm text-emerald-800">
+          <span className="font-medium">You can leave this page anytime.</span>
+          {' '}Generation continues in the background. We&apos;ll email you when your book is ready.
         </p>
       </div>
     </div>

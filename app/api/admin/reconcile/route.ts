@@ -33,30 +33,33 @@ export async function GET(request: NextRequest) {
     }
 
     const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
+    const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000);
 
-    // Find books that were paid but are stuck (not actively generating or completed)
-    const stuckBooks = await prisma.book.findMany({
+    // Query 1: Books that were paid but never started (failed, pending, preview_complete)
+    const stuckNotStarted = await prisma.book.findMany({
       where: {
         paymentStatus: 'completed',
-        status: {
-          notIn: ['completed', 'generating', 'outlining'],
-        },
-        updatedAt: {
-          lt: tenMinutesAgo,
-        },
+        status: { notIn: ['completed', 'generating', 'outlining'] },
+        updatedAt: { lt: tenMinutesAgo },
       },
-      select: {
-        id: true,
-        title: true,
-        status: true,
-        bookFormat: true,
-        updatedAt: true,
-        createdAt: true,
-      },
+      select: { id: true, title: true, status: true, bookFormat: true, updatedAt: true, generationMode: true, currentChapter: true, totalChapters: true },
     });
 
+    // Query 2: Server-driven books stuck in 'generating' (self-chain likely failed)
+    const stuckGenerating = await prisma.book.findMany({
+      where: {
+        paymentStatus: 'completed',
+        generationMode: 'server',
+        status: 'generating',
+        updatedAt: { lt: fifteenMinutesAgo }, // Longer threshold for server-driven
+      },
+      select: { id: true, title: true, status: true, bookFormat: true, updatedAt: true, generationMode: true, currentChapter: true, totalChapters: true },
+    });
+
+    const stuckBooks = [...stuckNotStarted, ...stuckGenerating];
+
     console.log(
-      `[Reconcile] Found ${stuckBooks.length} stuck book(s) with completed payment`
+      `[Reconcile] Found ${stuckBooks.length} stuck book(s) (${stuckNotStarted.length} not started, ${stuckGenerating.length} stuck generating)`
     );
 
     if (stuckBooks.length === 0) {
@@ -80,20 +83,31 @@ export async function GET(request: NextRequest) {
       );
 
       try {
-        // For visual books that already have an outline, use generate-visual to retry illustrations
+        // Determine the right endpoint based on book state
         const isVisualBook = book.bookFormat === 'picture_book';
-        const hasOutline = book.status === 'failed'; // Failed books likely have an outline already
+        const isStuckGenerating = book.status === 'generating';
+        let endpoint: string;
 
-        const endpoint = (isVisualBook && hasOutline)
-          ? `/api/books/${book.id}/generate-visual`
-          : `/api/books/${book.id}/generate`;
+        if (isStuckGenerating && isVisualBook) {
+          // Visual book stuck during image generation - resume with generate-visual
+          endpoint = `/api/books/${book.id}/generate-visual`;
+        } else if (isStuckGenerating && !isVisualBook) {
+          // Text/screenplay stuck during chapter generation - resume with generate-next
+          endpoint = `/api/books/${book.id}/generate-next`;
+        } else if (isVisualBook && (book.status === 'failed' || book.currentChapter > 0)) {
+          // Visual book that failed after outline was created - retry illustrations
+          endpoint = `/api/books/${book.id}/generate-visual`;
+        } else {
+          // Everything else - start from scratch with generate
+          endpoint = `/api/books/${book.id}/generate`;
+        }
 
-        console.log(`[Reconcile] Using endpoint: ${endpoint}`);
+        console.log(`[Reconcile] Using endpoint: ${endpoint} (status: ${book.status}, chapter: ${book.currentChapter}/${book.totalChapters})`);
 
         const res = await fetch(`${appUrl}${endpoint}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ outlineOnly: false }),
+          body: JSON.stringify({ serverDriven: true }),
         });
 
         if (res.ok) {

@@ -120,6 +120,7 @@ model Book {
   isFeaturedSample       Boolean        @default(false)
   samplePdfUrl           String?
   livePreview            String?
+  generationMode         String         @default("client") // "client" | "server"
   user                   User?          @relation(fields: [userId], references: [id])
   chapters               Chapter[]
   illustrations          Illustration[]

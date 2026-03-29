@@ -93,6 +93,7 @@ export async function POST(
 ) {
   // Extract id outside try-catch so it's available in error handler
   const { id } = await params;
+  const functionStartTime = Date.now();
 
   try {
 
@@ -1140,6 +1141,27 @@ ${chapterPlan.summary}
     // Check if this was the last chapter
     if (nextChapterNum >= totalChapters) {
       return await finalizeBook(id, book);
+    }
+
+    // Server-driven mode: self-chain to generate next chapter
+    // Parse serverDriven from request body (already parsed above or check book)
+    const isServerDriven = book.generationMode === 'server';
+    if (isServerDriven) {
+      const elapsed = Date.now() - functionStartTime;
+      const hasTimeForAnother = elapsed < 600000; // 600s = leave 200s buffer
+
+      if (hasTimeForAnother) {
+        // Still have time - but we can't loop in this architecture easily,
+        // so fire-and-forget to self for the next chapter
+        console.log(`[GenerateNext] Server-driven: chaining to next chapter (${elapsed}ms elapsed)`);
+      }
+
+      // Fire-and-forget: trigger next chapter
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://draftmybook.com';
+      fetch(`${appUrl}/api/books/${id}/generate-next`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      }).catch(err => console.error(`[GenerateNext] Self-chain failed for ${id}:`, err));
     }
 
     // More chapters to generate

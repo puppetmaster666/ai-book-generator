@@ -258,11 +258,11 @@ export default function ScreenplayPreview({
         }
       </p>
 
-      {/* Don't leave disclaimer */}
+      {/* Safe to leave */}
       {isGenerating && (
-        <div className="flex items-center justify-center gap-2 mt-3 text-xs text-amber-400/80 bg-amber-500/10 rounded-lg px-3 py-2 border border-amber-500/20">
+        <div className="flex items-center justify-center gap-2 mt-3 text-xs text-emerald-400/80 bg-emerald-500/10 rounded-lg px-3 py-2 border border-emerald-500/20">
           <Shield className="h-3.5 w-3.5 flex-shrink-0" />
-          <span>Please don&apos;t close this page while your screenplay is being written.</span>
+          <span>You can leave this page. We&apos;ll email you when your screenplay is ready.</span>
         </div>
       )}
     </div>
