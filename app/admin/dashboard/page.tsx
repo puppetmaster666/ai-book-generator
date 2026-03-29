@@ -224,26 +224,32 @@ function BlogGeneratorCard() {
   const handleGenerate = async () => {
     setGenerating(true);
     setResult(null);
-    setProgress(`Generating ${count} article${count > 1 ? 's' : ''} with cover images... This takes 1-2 min per article.`);
-    try {
-      const res = await fetch('/api/blog/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ count }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed');
-      setResult({
-        success: true,
-        message: `Generated ${data.generated} article${data.generated > 1 ? 's' : ''}${data.failed > 0 ? ` (${data.failed} failed)` : ''}`,
-        articles: data.articles,
-      });
-    } catch (err) {
-      setResult({ success: false, message: err instanceof Error ? err.message : 'Failed' });
-    } finally {
-      setGenerating(false);
-      setProgress('');
+    const allArticles: { title: string; url: string }[] = [];
+    let failures = 0;
+
+    for (let i = 0; i < count; i++) {
+      setProgress(`Generating article ${i + 1} of ${count}... (1-2 min each)`);
+      try {
+        const res = await fetch('/api/blog/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.errors?.[0] || data.error || 'Failed');
+        if (data.articles) allArticles.push(...data.articles);
+      } catch (err) {
+        failures++;
+        console.error(`Article ${i + 1} failed:`, err);
+      }
     }
+
+    setResult({
+      success: failures === 0,
+      message: `Generated ${allArticles.length} article${allArticles.length !== 1 ? 's' : ''}${failures > 0 ? ` (${failures} failed)` : ''}`,
+      articles: allArticles,
+    });
+    setGenerating(false);
+    setProgress('');
   };
 
   return (

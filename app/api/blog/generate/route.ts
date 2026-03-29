@@ -3,7 +3,7 @@ import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { generateAndPublishArticle } from '@/lib/blog/generate-article';
 
-export const maxDuration = 800; // Fluid Compute - cover image generation can be slow
+export const maxDuration = 300; // Each article takes 1-2 min max
 
 // GET - called by Vercel Cron (uses CRON_SECRET)
 export async function GET(request: NextRequest) {
@@ -45,30 +45,24 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
-  // Optional: generate multiple articles
-  const body = await request.json().catch(() => ({}));
-  const count = Math.min(body.count || 1, 5); // Max 5 at a time
+  // Generate ONE article per request (prevents timeout)
+  console.log('[Blog Admin] Generating 1 article...');
+  const result = await generateAndPublishArticle();
 
-  const results = [];
-  for (let i = 0; i < count; i++) {
-    console.log(`[Blog Admin] Generating article ${i + 1} of ${count}...`);
-    const result = await generateAndPublishArticle();
-    results.push(result);
-
-    if (!result.success) {
-      console.error(`[Blog Admin] Article ${i + 1} failed: ${result.error}`);
-      // Continue trying remaining articles even if one fails
-    }
+  if (result.success) {
+    return NextResponse.json({
+      success: true,
+      generated: 1,
+      failed: 0,
+      articles: [{ title: result.title, slug: result.slug, url: `/blog/${result.slug}` }],
+    });
   }
 
-  const successes = results.filter(r => r.success);
-  const failures = results.filter(r => !r.success);
-
   return NextResponse.json({
-    success: failures.length === 0,
-    generated: successes.length,
-    failed: failures.length,
-    articles: successes.map(r => ({ title: r.title, slug: r.slug, url: `/blog/${r.slug}` })),
-    errors: failures.map(r => r.error),
-  });
+    success: false,
+    generated: 0,
+    failed: 1,
+    articles: [],
+    errors: [result.error],
+  }, { status: 500 });
 }
