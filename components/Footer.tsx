@@ -39,6 +39,11 @@ export default function Footer() {
                   Blog
                 </Link>
               </li>
+              <li>
+                <Link href="/changelog" className="text-sm text-neutral-400 hover:text-white transition-colors">
+                  What&apos;s New
+                </Link>
+              </li>
             </ul>
           </div>
 

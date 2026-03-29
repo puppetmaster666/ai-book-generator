@@ -5,6 +5,7 @@ import { Menu, X, ChevronDown, LogOut, User, BookOpen, Loader2, Check, AlertCirc
 import { useState, useRef, useEffect } from 'react';
 import { useSession, signOut } from 'next-auth/react';
 import { useGeneratingBook } from '@/contexts/GeneratingBookContext';
+import { APP_VERSION, getLatestChangelog } from '@/lib/version';
 
 interface HeaderProps {
   variant?: 'default' | 'transparent';
@@ -157,16 +158,25 @@ if (genDropdownRef.current && !genDropdownRef.current.contains(event.target as N
             </Link>
           </div>
 
-          {/* Center Logo */}
-          <Link
-            href="/"
-            className={`text-2xl font-bold tracking-tight md:absolute md:left-1/2 md:-translate-x-1/2 ${
-              variant === 'transparent' ? 'text-white' : 'text-neutral-900'
-            }`}
-            style={{ fontFamily: 'FoundersGrotesk, system-ui' }}
-          >
-            draftmybook
-          </Link>
+          {/* Center Logo + Version */}
+          <div className="md:absolute md:left-1/2 md:-translate-x-1/2 flex items-center gap-2">
+            <Link
+              href="/"
+              className={`text-2xl font-bold tracking-tight ${
+                variant === 'transparent' ? 'text-white' : 'text-neutral-900'
+              }`}
+              style={{ fontFamily: 'FoundersGrotesk, system-ui' }}
+            >
+              draftmybook
+            </Link>
+            <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded-full ${
+              variant === 'transparent'
+                ? 'bg-white/10 text-white/60'
+                : 'bg-neutral-100 text-neutral-400'
+            }`}>
+              v{APP_VERSION}
+            </span>
+          </div>
 
           {/* Right Nav */}
           <div className="hidden md:flex items-center gap-6 flex-1 justify-end">

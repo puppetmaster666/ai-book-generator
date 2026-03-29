@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { ArrowRight, Loader2, Sparkles, X, Check, ChevronRight, Zap, BookOpen, Download, ExternalLink, ChevronDown, Play, Crown, Upload, FileText } from 'lucide-react';
 import Footer from '@/components/Footer';
 import NewYearPopup from '@/components/NewYearPopup';
@@ -13,6 +14,9 @@ import Testimonials from '@/components/Testimonials';
 import FAQ from '@/components/FAQ';
 import ScreenplayAnimation from '@/components/ScreenplayAnimation';
 import FeaturedShowcase from '@/components/FeaturedShowcase';
+import { APP_VERSION, getLatestChangelog } from '@/lib/version';
+
+const LATEST_CHANGELOG = getLatestChangelog();
 
 // Idea categories for the Surprise Me feature
 type IdeaCategory = 'random' | 'novel' | 'short_story' | 'nonfiction' | 'childrens' | 'comic' | 'adult_comic' | 'screenplay' | 'tv_series';
@@ -63,6 +67,7 @@ export default function Home() {
   const [isLoading] = useState(false);
   const [error, setError] = useState('');
   const [isGeneratingIdea, setIsGeneratingIdea] = useState(false);
+  const [ideasRemaining, setIdeasRemaining] = useState<number | null>(null);
   const [lightboxImage, setLightboxImage] = useState<{ src: string; label: string } | null>(null);
   const [ideaCategory, setIdeaCategory] = useState<IdeaCategory>('random');
   const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
@@ -81,6 +86,14 @@ export default function Home() {
     }
   }, []);
 
+  // Fetch remaining idea generations on mount
+  useEffect(() => {
+    fetch('/api/generate-idea')
+      .then(res => res.json())
+      .then(data => setIdeasRemaining(data.remaining ?? null))
+      .catch(() => {});
+  }, []);
+
   // Show sticky banner after scrolling past hero section
   useEffect(() => {
     const handleScroll = () => {
@@ -93,6 +106,10 @@ export default function Home() {
   }, [stickyBannerDismissed]);
 
   const handleFindIdea = async () => {
+    if (ideasRemaining !== null && ideasRemaining <= 0) {
+      setError('You\'ve used all 5 free idea generations this month. Type your own idea instead!');
+      return;
+    }
     setIsGeneratingIdea(true);
     setError('');
 
@@ -103,12 +120,16 @@ export default function Home() {
         body: JSON.stringify({ category: ideaCategory }),
       });
 
+      const data = await response.json();
+
       if (!response.ok) {
-        throw new Error('Failed to generate idea');
+        setError(data.error || 'Failed to generate idea');
+        if (data.remaining !== undefined) setIdeasRemaining(data.remaining);
+        return;
       }
 
-      const data = await response.json();
       setBookIdea(data.idea);
+      if (data.remaining !== undefined) setIdeasRemaining(data.remaining);
     } catch (err) {
       setError('Failed to generate idea. Please try again.');
     } finally {
@@ -284,10 +305,20 @@ export default function Home() {
         {/* Hero Content */}
         <div className="relative z-10 flex-1 flex items-center justify-center px-6 py-16">
           <div className="max-w-4xl mx-auto text-center">
-            {/* Badge */}
-            <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-md px-5 py-2.5 rounded-full text-sm text-white mb-8 border border-white/20 shadow-lg">
-              <Zap className={`h-4 w-4 ${ACCENT.text} animate-pulse`} />
-              <span className="font-medium">Try free sample - 50,000+ word books in under an hour</span>
+            {/* What's New + Badge */}
+            <div className="flex flex-col items-center gap-3 mb-8">
+              <Link
+                href="/changelog"
+                className="inline-flex items-center gap-2 bg-lime-400/20 backdrop-blur-md px-4 py-1.5 rounded-full text-xs text-lime-300 border border-lime-400/30 hover:bg-lime-400/30 transition-colors"
+              >
+                <span className="w-1.5 h-1.5 bg-lime-400 rounded-full animate-pulse" />
+                <span>New in v{APP_VERSION}: {LATEST_CHANGELOG.title}</span>
+                <span className="text-lime-400/60">&rarr;</span>
+              </Link>
+              <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-md px-5 py-2.5 rounded-full text-sm text-white border border-white/20 shadow-lg">
+                <Zap className={`h-4 w-4 ${ACCENT.text} animate-pulse`} />
+                <span className="font-medium">Try free sample - 50,000+ word books in under an hour</span>
+              </div>
             </div>
 
             {/* Headline */}
@@ -431,15 +462,16 @@ export default function Home() {
                     <button
                       type="button"
                       onClick={handleFindIdea}
-                      disabled={isLoading || isGeneratingIdea || isParsingFile}
+                      disabled={isLoading || isGeneratingIdea || isParsingFile || (ideasRemaining !== null && ideasRemaining <= 0)}
                       className="text-sm text-neutral-500 hover:text-neutral-900 disabled:opacity-50 flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-neutral-100 transition-colors"
+                      title={ideasRemaining !== null ? `${ideasRemaining} free idea${ideasRemaining !== 1 ? 's' : ''} remaining this month` : undefined}
                     >
                       {isGeneratingIdea ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
                       ) : (
                         <Sparkles className="h-4 w-4" />
                       )}
-                      {isGeneratingIdea ? 'Generating...' : 'Surprise me'}
+                      {isGeneratingIdea ? 'Generating...' : ideasRemaining !== null && ideasRemaining <= 0 ? 'No ideas left' : `Surprise me${ideasRemaining !== null ? ` (${ideasRemaining}/5)` : ''}`}
                     </button>
                     {/* Upload File Button */}
                     <label className="text-sm text-neutral-500 hover:text-neutral-900 flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-neutral-100 transition-colors cursor-pointer">

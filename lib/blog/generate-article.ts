@@ -232,13 +232,31 @@ async function generateCoverImage(title: string, primaryKeyword: string): Promis
   altText: string;
 } | null> {
   try {
-    const prompt = `Create a professional blog cover illustration for an article titled "${title}".
-The article is about ${primaryKeyword}.
-Style: Modern, clean, professional illustration with vibrant colors.
-Show a conceptual representation of the topic (books, writing, creativity, AI).
-DO NOT include any text, words, letters, or numbers in the image.
-Aspect ratio: 16:9 landscape format.
-Professional quality suitable for a tech/publishing blog.`;
+    // Shorten title for cover if too long
+    const coverTitle = title.length > 60 ? title.substring(0, 57) + '...' : title;
+
+    const prompt = `Create a professional magazine-style blog cover image.
+
+LAYOUT:
+- 16:9 landscape format
+- The title text "${coverTitle}" must appear prominently on the image
+- Title should be in bold, clean, modern typography (white or light text)
+- Place title in the lower-third or center of the image with enough contrast to read
+- Add a small "DraftMyBook" watermark/logo text in one corner (subtle, small)
+
+VISUAL STYLE:
+- Modern, editorial design like a tech magazine or Medium article cover
+- Rich, atmospheric background related to: ${primaryKeyword}
+- Use depth of field, gradients, or overlays to ensure text readability
+- Color palette: deep blues, purples, or warm tones with bright accents
+- Professional quality, suitable for a blog header
+
+SUBJECT MATTER:
+- Conceptual imagery related to books, writing, AI, creativity
+- Could include: open books, glowing screens, pen/paper, abstract AI patterns
+- The imagery should SUPPORT the title, not compete with it
+
+The text MUST be clearly legible and spelled correctly.`;
 
     const model = getGeminiImage();
     const result = await withTimeout(
