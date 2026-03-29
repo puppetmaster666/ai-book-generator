@@ -76,11 +76,21 @@ export async function GET(request: NextRequest) {
 
     for (const book of stuckBooks) {
       console.log(
-        `[Reconcile] Triggering generation for book "${book.title}" (${book.id}), status: ${book.status}, last updated: ${book.updatedAt.toISOString()}`
+        `[Reconcile] Triggering generation for book "${book.title}" (${book.id}), status: ${book.status}, format: ${book.bookFormat}, last updated: ${book.updatedAt.toISOString()}`
       );
 
       try {
-        const res = await fetch(`${appUrl}/api/books/${book.id}/generate`, {
+        // For visual books that already have an outline, use generate-visual to retry illustrations
+        const isVisualBook = book.bookFormat === 'picture_book';
+        const hasOutline = book.status === 'failed'; // Failed books likely have an outline already
+
+        const endpoint = (isVisualBook && hasOutline)
+          ? `/api/books/${book.id}/generate-visual`
+          : `/api/books/${book.id}/generate`;
+
+        console.log(`[Reconcile] Using endpoint: ${endpoint}`);
+
+        const res = await fetch(`${appUrl}${endpoint}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ outlineOnly: false }),

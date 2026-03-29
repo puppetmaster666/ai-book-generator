@@ -765,7 +765,7 @@ function GenerateComicContent() {
                   {panel.status === 'done' && panel.imageUrl && (
                     <Image
                       src={panel.imageUrl}
-                      alt={`Panel ${panel.number}: ${panel.scene.description}`}
+                      alt={`Panel ${panel.number}: ${panel.scene?.description || 'Illustration'}`}
                       fill
                       className="object-cover"
                       unoptimized
@@ -801,7 +801,7 @@ function GenerateComicContent() {
                     {panel.title}
                   </p>
                   <p className="text-xs text-neutral-500 line-clamp-2 mt-1">
-                    {panel.scene.description}
+                    {panel.scene?.description || ''}
                   </p>
                   {panel.dialogue && panel.dialogue.length > 0 && (
                     <p className="text-xs text-neutral-600 mt-1">
