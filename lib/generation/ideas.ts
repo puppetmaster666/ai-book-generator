@@ -486,7 +486,7 @@ Now write your unique ${actualCategory === 'childrens' ? "children's book" : act
 
   for (let attempt = 0; attempt < maxRetries; attempt++) {
     const result = await getGeminiFlashLight().generateContent(prompt);
-    let idea = result.response.text().trim();
+    let idea = (result.response.text() || '').trim();
 
     // Remove any quotes or prefixes
     idea = idea.replace(/^["']|["']$/g, '').trim();

@@ -264,6 +264,20 @@ export function getGeminiImage(): GenerativeModel {
   return _geminiImage;
 }
 
+/**
+ * Safe response text extraction.
+ * Gemini can return undefined from .text() if the response is blocked or empty.
+ * This prevents the common "Cannot read properties of undefined (reading 'trim')" crash.
+ */
+export function safeResponseText(result: { response: { text: () => string } }): string {
+  try {
+    const text = result.response.text();
+    return text || '';
+  } catch {
+    return '';
+  }
+}
+
 // Streaming content generator - yields text chunks as they arrive
 // Returns an async generator that yields partial text and finally the full text
 export async function* streamContent(

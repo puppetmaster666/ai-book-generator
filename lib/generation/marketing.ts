@@ -124,7 +124,7 @@ Output ONLY valid JSON with no markdown formatting:
       'generateMetadataAndMarketing'
     );
 
-    const responseText = result.response.text().trim();
+    const responseText = (result.response.text() || '').trim();
 
     // Extract JSON from response (handle potential markdown wrapping)
     let jsonStr = responseText;

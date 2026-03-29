@@ -683,7 +683,7 @@ ${chapterContent}`;
       FAST_TASK_TIMEOUT,
       'Chapter summary'
     );
-    const summary = result.response.text().trim();
+    const summary = (result.response.text() || '').trim();
     const elapsed = Date.now() - startTime;
     const summaryWords = summary.split(/\s+/).filter(w => w.length > 0).length;
     console.log(`[Summary] SUCCESS in ${elapsed}ms. ${summaryWords} words`);
@@ -753,7 +753,7 @@ Return JSON:
       FAST_TASK_TIMEOUT,
       'Chapter summary with causality'
     );
-    const response = result.response.text().trim();
+    const response = (result.response.text() || '').trim();
     const elapsed = Date.now() - startTime;
 
     // Try to parse JSON response
@@ -921,7 +921,7 @@ Return ONLY the corrected chapter text. No explanations, no comments, no markdow
       45000, // 45s timeout
       'Chapter review'
     );
-    let polished = result.response.text().trim();
+    let polished = (result.response.text() || '').trim();
 
     // Final cleanup pass
     polished = polished

@@ -132,7 +132,7 @@ TARGET LENGTH: ${targetWords}-${targetWords + 200} words (this will be broken in
 Write the complete story now. Make it engaging, unique, and memorable. Include actual dialogue with quotation marks.`;
 
   const result = await getGeminiPro().generateContent(prompt);
-  const story = result.response.text().trim();
+  const story = (result.response.text() || '').trim();
 
   console.log(`Generated narrative story: ${story.split(/\s+/).length} words`);
   return story;
