@@ -7,7 +7,7 @@ import {
   SCREENPLAY_SCIENCE_IN_EMOTION,
 } from '@/lib/screenplay';
 import { SAFETY_SETTINGS } from '../shared/safety';
-import { getGeminiFlash, withTimeout } from '../shared/api-client';
+import { getGeminiFlash, getGeminiPro, withTimeout } from '../shared/api-client';
 
 /**
  * Count character tics using regex (AI can't count reliably)
@@ -468,4 +468,115 @@ ${issuesSection}
   );
 
   return result.response.text();
+}
+
+/**
+ * Dialogue Refinement Pass - rewrites dialogue for subtext and voice differentiation
+ *
+ * Research shows the two-pass technique is more reliable than one-shot subtext:
+ * 1. First generation writes the plot mechanics (already done by sequence generation)
+ * 2. This pass specifically rewrites dialogue to hide meaning beneath surface conversation
+ *
+ * Uses Pro model for creative rewriting quality.
+ */
+export async function refineScreenplayDialogue(data: {
+  sequenceContent: string;
+  sequenceNumber: number;
+  characters: CharacterProfile[];
+}): Promise<string> {
+  const currentWordCount = data.sequenceContent.split(/\s+/).length;
+  const minOutputWords = Math.floor(currentWordCount * 0.85);
+  const maxOutputWords = Math.floor(currentWordCount * 1.15);
+
+  // Build character voice reference
+  const characterVoices = data.characters.map(c => {
+    const archetype = c.dialogueArchetype || 'The Reactor';
+    const vocab = c.voiceTraits?.vocabulary || 'standard';
+    const rhythm = c.voiceTraits?.rhythm || 'varied';
+    const tics = c.voiceTraits?.tics || 'none';
+    const secret = c.internalConflict || 'none specified';
+    return `${c.name} (${archetype}):
+  - Secret they're hiding: ${secret}
+  - Vocabulary: ${vocab}
+  - Speech rhythm: ${rhythm}
+  - Verbal tics: ${tics}
+  - Flaw: ${c.flaw || 'none'}`;
+  }).join('\n\n');
+
+  const prompt = `You are a dialogue specialist. Your ONLY job is to rewrite the dialogue in this screenplay sequence to add subtext and voice differentiation. Do NOT change action lines, sluglines, or story structure.
+
+SEQUENCE ${data.sequenceNumber}:
+${data.sequenceContent}
+
+CHARACTER VOICE PROFILES:
+${characterVoices}
+
+=== YOUR TASK: DIALOGUE REWRITE ===
+
+For EVERY dialogue line, ask yourself:
+1. Does this character sound DIFFERENT from every other character? If you covered the character name, could you tell who's speaking?
+2. Is the character saying what they MEAN? If yes, REWRITE so they say something else that IMPLIES what they mean.
+3. Is this line doing WORK? Every line should advance plot, reveal character, or create conflict. If it does none, cut it.
+
+SUBTEXT TECHNIQUES (use all of these):
+- DISPLACEMENT: Characters talk about trivial things when they mean something profound
+  "Where were you?" → "The milk's expired again." (meaning: I know you weren't where you said)
+- DEFLECTION: Characters avoid direct answers for the first 1-2 exchanges
+  "Are you okay?" → "Did you feed the cat?" (meaning: I don't want to talk about it)
+- CONTRADICTION: What they say vs. what they do don't match
+  "I'm fine" while hands shake / "I don't care" while watching the door
+- SILENCE: Sometimes the most powerful line is no line at all
+  Replace weak dialogue with [silence] or a physical action
+
+VOICE DIFFERENTIATION:
+- The Evader: deflects, jokes, changes subject. Short, evasive. "I mean... you know how it is."
+- The Steamroller: dominates, interrupts (use --). "LISTEN. That's not what I--"
+- The Professor: precise, technical, cracks under pressure. "The data suggests--" then breaks: "I don't know. I just don't."
+- The Reactor: emotional bursts, monosyllabic. "No." "Wait." "Yeah."
+
+Each character's VOCABULARY must be distinct:
+- Different education levels = different word choices
+- Different emotional defaults = different sentence lengths
+- Different verbal tics = recognizable speech patterns
+
+HARD RULES:
+- NEVER let a character say "I feel [emotion]" or "I am [emotion]"
+- NEVER use: "I need you to understand", "Here's the thing", "Let me be clear", "The truth is"
+- NEVER have characters answer questions directly in their first response
+- Output MUST be ${minOutputWords}-${maxOutputWords} words (do not shrink the sequence)
+- Keep ALL action lines, sluglines, and scene structure EXACTLY as-is
+- ONLY rewrite dialogue and the occasional parenthetical/action beat around dialogue
+
+OUTPUT: The complete sequence with rewritten dialogue. Same format, same structure, better dialogue.`;
+
+  try {
+    const result = await withTimeout(
+      () => getGeminiPro().generateContent({
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        generationConfig: {
+          temperature: 0.85,
+          maxOutputTokens: 16000,
+        },
+        safetySettings: SAFETY_SETTINGS,
+      }),
+      180000,
+      `refineScreenplayDialogue_${data.sequenceNumber}`
+    );
+
+    const refined = result.response.text();
+    const refinedWordCount = refined.split(/\s+/).length;
+
+    // Sanity check: if the refined version lost too much content, keep original
+    if (refinedWordCount < currentWordCount * 0.7) {
+      console.warn(`[DialogueRefine] Seq ${data.sequenceNumber}: Refined version too short (${refinedWordCount} vs ${currentWordCount} words), keeping original`);
+      return data.sequenceContent;
+    }
+
+    console.log(`[DialogueRefine] Seq ${data.sequenceNumber}: Refined dialogue (${currentWordCount} → ${refinedWordCount} words)`);
+    return refined;
+  } catch (error) {
+    // Dialogue refinement is non-critical - if it fails, use original
+    console.warn(`[DialogueRefine] Seq ${data.sequenceNumber} failed (non-critical):`, error);
+    return data.sequenceContent;
+  }
 }

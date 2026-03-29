@@ -4,7 +4,7 @@ import {
   SEQUENCE_TO_BEATS,
 } from '@/lib/screenplay';
 import { SAFETY_SETTINGS } from '../shared/safety';
-import { getGeminiFlash, withTimeout } from '../shared/api-client';
+import { getGeminiPro, withTimeout } from '../shared/api-client';
 import { parseJSONFromResponse } from '../shared/json-utils';
 
 /**
@@ -109,11 +109,11 @@ Output ONLY valid JSON:
 }`;
 
   const result = await withTimeout(
-    () => getGeminiFlash().generateContent({
+    () => getGeminiPro().generateContent({
       contents: [{ role: 'user', parts: [{ text: prompt }] }],
       generationConfig: {
         temperature: 0.8,
-        maxOutputTokens: 8192,
+        maxOutputTokens: 16384,
       },
       safetySettings: SAFETY_SETTINGS,
     }),

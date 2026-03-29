@@ -14,7 +14,7 @@ export const FAST_TASK_TIMEOUT = 30000; // DEPRECATED: kept for function signatu
 
 // Lazy initialization to avoid errors during build
 // Support multiple API keys for rate limit failover
-let _genAIInstances: (GoogleGenerativeAI | null)[] = [null, null, null];
+let _genAIInstances: (GoogleGenerativeAI | null)[] = [null, null, null, null, null];
 let _geminiPro: GenerativeModel | null = null;
 let _geminiFlash: GenerativeModel | null = null;
 let _geminiFlashLight: GenerativeModel | null = null; // Lightweight version for quick tasks
@@ -27,6 +27,7 @@ let _lastWorkingKeyIndex = 0; // Start with primary key by default
 // Environment variable names for keys in order of preference
 const API_KEY_ENV_NAMES = [
   'GEMINI_API_KEY',
+  'GEMINI_API_Gemini2026',
   'GEMINI_API_BACKUP1',
   'GEMINI_API_BACKUP2',
   'GEMINI_API_BACKUP3'
@@ -87,7 +88,7 @@ export function getGeminiFlashForReview(): GenerativeModel {
     _reviewKeyIndex = desiredKeyIndex;
     _reviewGenAI = null;
     _reviewFlash = getReviewGenAI().getGenerativeModel({
-      model: 'gemini-3-pro-preview',
+      model: 'gemini-3.1-pro-preview',
       safetySettings: SAFETY_SETTINGS,
     });
   }
@@ -168,7 +169,7 @@ export function switchToBackupKey() {
 
 // Switch back to primary key (can be called periodically to retry primary)
 export function switchToPrimaryKey() {
-  if (_currentKeyIndex !== 0 && process.env.GEMINI_API_KEY) {
+  if (_currentKeyIndex !== 0 && process.env[API_KEY_ENV_NAMES[0]]) {
     console.log('[Gemini] Resetting to primary API key');
     _currentKeyIndex = 0;
     resetModelInstances();
@@ -205,7 +206,7 @@ function getGenAI(): GoogleGenerativeAI {
 export function getGeminiPro(): GenerativeModel {
   if (!_geminiPro) {
     _geminiPro = getGenAI().getGenerativeModel({
-      model: 'gemini-3-pro-preview',
+      model: 'gemini-3.1-pro-preview',
       safetySettings: SAFETY_SETTINGS,
       generationConfig: {
         temperature: 0.8,
@@ -254,7 +255,7 @@ export function getGeminiFlashLight(): GenerativeModel {
 export function getGeminiImage(): GenerativeModel {
   if (!_geminiImage) {
     _geminiImage = getGenAI().getGenerativeModel({
-      model: 'gemini-3-pro-image-preview',
+      model: 'gemini-3.1-flash-image-preview',
       safetySettings: SAFETY_SETTINGS,
     });
   }
@@ -364,7 +365,7 @@ export async function withTimeout<T>(
   _timeoutMs: number, // DEPRECATED: kept for backwards compatibility, not used
   operationName: string = 'operation'
 ): Promise<T> {
-  const totalKeys = 4;
+  const totalKeys = API_KEY_ENV_NAMES.length;
   let lastError: Error | null = null;
   const failedKeys: { key: number; reason: string }[] = [];
   const overallStart = Date.now();
@@ -457,7 +458,7 @@ export async function withRetry<T>(
   baseDelayMs: number = 5000
 ): Promise<T> {
   let lastError: Error | null = null;
-  const totalKeys = 4;
+  const totalKeys = API_KEY_ENV_NAMES.length;
   let keysTriedThisCycle = 0;
   let currentCycle = 0;
 

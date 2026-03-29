@@ -70,6 +70,7 @@ type VisualStyleGuide = {
 // Get API key by index
 const API_KEY_ENV_NAMES = [
   'GEMINI_API_KEY',
+  'GEMINI_API_Gemini2026',
   'GEMINI_API_BACKUP1',
   'GEMINI_API_BACKUP2',
   'GEMINI_API_BACKUP3'
@@ -209,7 +210,7 @@ export async function POST(request: NextRequest) {
       }
 
       const model = getGenAI().getGenerativeModel({
-        model: 'gemini-3-pro-image-preview',
+        model: 'gemini-3.1-flash-image-preview',
         safetySettings: SAFETY_SETTINGS,
       });
 

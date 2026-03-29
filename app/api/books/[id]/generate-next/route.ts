@@ -10,6 +10,7 @@ import {
   extendScreenplaySequence,
   summarizeScreenplaySequence,
   reviewScreenplaySequence,
+  refineScreenplayDialogue,
   generateMetadataAndMarketing,
   checkOutlineConsistency,
   applyThematicPolish,
@@ -634,6 +635,22 @@ ${postProcessed.surgicalPrompt}`,
       const ticCheck = flagExcessiveTics(sequenceContent);
       if (ticCheck.warnings.length > 0) {
         console.warn(`[TIC WARNING] Sequence ${nextChapterNum}: ${ticCheck.warnings.join(', ')}`);
+      }
+
+      // Dialogue refinement pass - rewrites dialogue for subtext and voice differentiation
+      // This is the "two-pass technique": sequence generation wrote plot mechanics,
+      // now we specifically rewrite dialogue to hide meaning beneath surface conversation
+      try {
+        const preDialogueContent = sequenceContent;
+        sequenceContent = await refineScreenplayDialogue({
+          sequenceContent,
+          sequenceNumber: nextChapterNum,
+          characters: screenplayOutline.characters,
+        });
+        console.log(`Sequence ${nextChapterNum} dialogue refined`);
+      } catch (dialogueError) {
+        console.warn(`Dialogue refinement failed for sequence ${nextChapterNum} (non-critical):`, dialogueError);
+        // Continue with original dialogue
       }
 
       // Review and polish - but preserve length

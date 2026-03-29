@@ -5,6 +5,7 @@ import {
   generateOutline,
   generateNonFictionOutline,
   generateIllustratedOutline,
+  generateComicOutline,
   buildIllustrationPromptFromScene,
   generateChapter,
   summarizeChapter,
@@ -786,33 +787,70 @@ export async function POST(
           }
         }
       } else if (useVisualFlow && dialogueStyle) {
-        // Use enhanced illustrated outline for visual books
         // Use the preset's panel count from targetChapters (20 for picture books, 24 for comics)
         const targetPanelCount = book.targetChapters;
-        console.log(`Generating illustrated outline with ${targetPanelCount} panels...`);
+        const isComicStyle = dialogueStyle === 'bubbles';
 
-        const visualOutline = await withTimeout(
-          generateIllustratedOutline({
-            title: book.title,
-            genre: book.genre,
-            bookType: book.bookType,
-            premise: book.premise,
-            originalIdea: book.originalIdea || undefined,
-            characters: book.characters as { name: string; description: string }[],
-            beginning: book.beginning,
-            middle: book.middle,
-            ending: book.ending,
-            writingStyle: book.writingStyle,
-            targetWords: book.targetWords,
-            targetChapters: targetPanelCount,
-            dialogueStyle: dialogueStyle,
-            characterVisualGuide: book.characterVisualGuide as CharacterVisualGuide | undefined,
-            contentRating: (book.contentRating || 'general') as ContentRating,
-          }),
-          OUTLINE_TIMEOUT_MS,
-          'Visual book outline generation'
-        );
-        outline = visualOutline;
+        if (isComicStyle) {
+          // COMIC BOOKS: Use the new 4-step pipeline (Writer → Director → Editor → Artist)
+          console.log(`Generating comic outline with 4-step pipeline (${targetPanelCount} panels)...`);
+
+          const comicOutline = await withTimeout(
+            generateComicOutline({
+              title: book.title,
+              genre: book.genre,
+              bookType: book.bookType,
+              premise: book.premise,
+              originalIdea: book.originalIdea || undefined,
+              characters: book.characters as { name: string; description: string }[],
+              beginning: book.beginning,
+              middle: book.middle,
+              ending: book.ending,
+              writingStyle: book.writingStyle,
+              targetWords: book.targetWords,
+              targetChapters: targetPanelCount,
+              dialogueStyle: dialogueStyle,
+              contentRating: (book.contentRating || 'general') as ContentRating,
+              characterVisualGuide: book.characterVisualGuide as {
+                characters: Array<{
+                  name: string;
+                  physicalDescription: string;
+                  clothing: string;
+                  distinctiveFeatures: string;
+                }>;
+              } | undefined,
+            }),
+            OUTLINE_TIMEOUT_MS,
+            'Comic book outline generation (4-step pipeline)'
+          );
+          outline = comicOutline;
+        } else {
+          // PICTURE BOOKS: Use the existing 2-step pipeline (works well for prose style)
+          console.log(`Generating picture book outline with ${targetPanelCount} panels...`);
+
+          const visualOutline = await withTimeout(
+            generateIllustratedOutline({
+              title: book.title,
+              genre: book.genre,
+              bookType: book.bookType,
+              premise: book.premise,
+              originalIdea: book.originalIdea || undefined,
+              characters: book.characters as { name: string; description: string }[],
+              beginning: book.beginning,
+              middle: book.middle,
+              ending: book.ending,
+              writingStyle: book.writingStyle,
+              targetWords: book.targetWords,
+              targetChapters: targetPanelCount,
+              dialogueStyle: dialogueStyle,
+              characterVisualGuide: book.characterVisualGuide as CharacterVisualGuide | undefined,
+              contentRating: (book.contentRating || 'general') as ContentRating,
+            }),
+            OUTLINE_TIMEOUT_MS,
+            'Picture book outline generation'
+          );
+          outline = visualOutline;
+        }
 
         // ENFORCE exact panel count - AI sometimes ignores "Create EXACTLY X" instruction
         const generatedCount = outline.chapters.length;

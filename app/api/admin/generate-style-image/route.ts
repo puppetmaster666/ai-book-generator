@@ -7,9 +7,9 @@ let genAI: GoogleGenerativeAI | null = null;
 
 function getGenAI(): GoogleGenerativeAI {
   if (!genAI) {
-    const apiKey = process.env.GEMINI_API_KEY;
+    const apiKey = process.env.GEMINI_API_KEY || process.env.GEMINI_API_Gemini2026;
     if (!apiKey) {
-      throw new Error('GEMINI_API_KEY environment variable is not set');
+      throw new Error('No Gemini API key environment variable is set');
     }
     genAI = new GoogleGenerativeAI(apiKey);
   }
@@ -49,7 +49,7 @@ Image specifications:
 
     // Generate image using Gemini Image model
     const model = getGenAI().getGenerativeModel({
-      model: 'gemini-3-pro-image-preview',
+      model: 'gemini-3.1-flash-image-preview',
       safetySettings: SAFETY_SETTINGS,
     });
 

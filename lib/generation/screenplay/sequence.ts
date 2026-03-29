@@ -13,7 +13,7 @@ import {
   buildSceneConstraintsSection,
 } from '@/lib/screenplay';
 import { SAFETY_SETTINGS } from '../shared/safety';
-import { getGeminiFlash, withTimeout } from '../shared/api-client';
+import { getGeminiFlash, getGeminiPro, withTimeout } from '../shared/api-client';
 import { parseJSONFromResponse } from '../shared/json-utils';
 import { getDNABlacklist, generateBlacklistPromptSection, type DNAEntry } from '@/lib/dna-blacklist';
 
@@ -793,7 +793,7 @@ OUTPUT: Industry-standard screenplay format ONLY. No commentary.`;
 
   // Use streaming if onProgress callback is provided for live preview
   if (data.onProgress) {
-    const model = getGeminiFlash();
+    const model = getGeminiPro();
     let accumulated = '';
     let lastProgressUpdate = 0;
 
@@ -825,7 +825,7 @@ OUTPUT: Industry-standard screenplay format ONLY. No commentary.`;
   } else {
     // Non-streaming generation
     const result = await withTimeout(
-      () => getGeminiFlash().generateContent({
+      () => getGeminiPro().generateContent({
         contents: [{ role: 'user', parts: [{ text: prompt }] }],
         generationConfig: {
           temperature: 0.9, // Slightly higher for more creative dialogue
