@@ -225,10 +225,12 @@ export async function POST(
                 }
 
                 // Determine if we need text baked into the image
-                const hasDialogue = book.dialogueStyle === 'bubbles' && chapter.dialogue && chapter.dialogue.length > 0;
-                const isPictureBook = bookFormat === 'picture_book' && !hasDialogue;
-                const hasStoryText = isPictureBook && !!chapter.text && chapter.text.trim().length > 0;
-                const needsTextBaking = !!(hasDialogue || hasStoryText);
+                const isComicStyle = book.dialogueStyle === 'bubbles';
+                const hasDialogue = isComicStyle && chapter.dialogue && chapter.dialogue.length > 0;
+                const hasNarration = !!chapter.text && chapter.text.trim().length > 0;
+                const isPictureBook = bookFormat === 'picture_book' && !isComicStyle;
+                const hasStoryText = isPictureBook && hasNarration;
+                const needsTextBaking = !!(hasDialogue || hasStoryText || (isComicStyle && hasNarration));
 
                 let illustrationPrompt = buildIllustrationPromptFromScene(
                     chapter.scene,
@@ -247,6 +249,14 @@ export async function POST(
                         type: d.type as any,
                     }));
                     illustrationPrompt += buildSpeechBubblePrompt(bubbles);
+
+                    // Also add narration box if page has narration text
+                    if (isComicStyle && hasNarration) {
+                        illustrationPrompt += `\n\nNARRATION BOX (IMPORTANT):\nInclude a rectangular narration caption box at the TOP of the image with this text:\n"${chapter.text.trim().slice(0, 150)}"\n\nStyle: Clean rectangular box with subtle background (yellow/cream or white), dark text, positioned at the top of the image.`;
+                    }
+                } else if (isComicStyle && hasNarration) {
+                    // Comic page with narration but no dialogue
+                    illustrationPrompt += `\n\nNARRATION BOX (IMPORTANT):\nInclude a rectangular narration caption box at the TOP of the image with this text:\n"${chapter.text.trim().slice(0, 150)}"\n\nStyle: Clean rectangular box with subtle background (yellow/cream or white), dark text, positioned at the top of the image.\n\nDo NOT include any other text except this narration box.`;
                 } else if (hasStoryText) {
                     illustrationPrompt += buildPictureBookTextPrompt(chapter.text);
                 } else {

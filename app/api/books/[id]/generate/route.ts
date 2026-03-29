@@ -416,10 +416,12 @@ async function generateIllustrationsInParallel(
       }
 
       // Determine if we need text baked into the image
-      const hasDialogue = bookData.dialogueStyle === 'bubbles' && chapter.dialogue && chapter.dialogue.length > 0;
-      const isPictureBook = bookData.bookFormat === 'picture_book' && !hasDialogue;
-      const hasStoryText = isPictureBook && !!chapter.text && chapter.text.trim().length > 0;
-      const needsTextBaking = !!(hasDialogue || hasStoryText);
+      const isComicStyle = bookData.dialogueStyle === 'bubbles';
+      const hasDialogue = isComicStyle && chapter.dialogue && chapter.dialogue.length > 0;
+      const hasNarration = !!chapter.text && chapter.text.trim().length > 0;
+      const isPictureBook = bookData.bookFormat === 'picture_book' && !isComicStyle;
+      const hasStoryText = isPictureBook && hasNarration;
+      const needsTextBaking = !!(hasDialogue || hasStoryText || (isComicStyle && hasNarration));
 
       // Build prompt from scene description (with panel layout for comics)
       // Skip the "NO TEXT" instruction if we need to bake text into the image
@@ -442,7 +444,17 @@ async function generateIllustrationsInParallel(
           type: d.type,
         }));
         illustrationPrompt += buildSpeechBubblePrompt(bubbles);
-        console.log(`Generating illustration with ${bubbles.length} speech bubbles for page ${chapter.number}...`);
+
+        // Also add narration box if this page has narration text
+        if (isComicStyle && hasNarration) {
+          illustrationPrompt += `\n\nNARRATION BOX (IMPORTANT):\nInclude a rectangular narration caption box at the TOP of the image with this text:\n"${chapter.text.trim().slice(0, 150)}"\n\nStyle: Clean rectangular box with subtle background (yellow/cream or white), dark text, positioned at the top of the image. This is the narrator's voice guiding the reader.`;
+        }
+
+        console.log(`Generating illustration with ${bubbles.length} speech bubbles${hasNarration ? ' + narration' : ''} for page ${chapter.number}...`);
+      } else if (isComicStyle && hasNarration) {
+        // Comic page with narration but no dialogue - add narration caption box
+        illustrationPrompt += `\n\nNARRATION BOX (IMPORTANT):\nInclude a rectangular narration caption box at the TOP of the image with this text:\n"${chapter.text.trim().slice(0, 150)}"\n\nStyle: Clean rectangular box with subtle background (yellow/cream or white), dark text, positioned at the top of the image. This is the narrator's voice guiding the reader.\n\nDo NOT include any other text except this narration box.`;
+        console.log(`Generating illustration with narration box for page ${chapter.number}...`);
       } else if (hasStoryText) {
         // Picture book with story text - bake text at bottom of image
         illustrationPrompt += buildPictureBookTextPrompt(chapter.text);

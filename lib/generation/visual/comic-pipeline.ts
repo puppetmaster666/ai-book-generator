@@ -139,27 +139,30 @@ STORY STRUCTURE:
 - Include a clear climax and satisfying resolution
 - The story should make sense if you read just the dialogue aloud
 
-DIALOGUE:
+DIALOGUE & NARRATION (CRITICAL - readers need text to follow the story):
+- EVERY page must have EITHER dialogue OR narration OR both. NO silent pages with only SFX.
 - Each character MUST sound different (use the voice profiles)
-- Max 60 words of dialogue per page (some pages can have zero dialogue)
+- Aim for 2-4 speech bubbles per page on dialogue-heavy pages
+- Include NARRATION BOXES on at least 60% of pages. These are the narrator's voice:
+  NARRATION: "Three hours earlier, before everything went wrong..."
+  NARRATION: "The city had never felt so quiet."
+  NARRATION: "She didn't know it yet, but this was the last time she'd see him."
+- Narration boxes set the scene, provide context, show time passing, and guide the reader
 - Dialogue reveals character - what they say AND what they avoid saying
 - NEVER have characters state emotions: NO "I'm so angry!" YES: "You knew. This whole time."
-- Use silence, interruptions, trailing off, and subtext
-- Sarcasm, deflection, and half-truths make dialogue feel real
-- The 50/50 rule: if the image shows an action (falling, fighting), dialogue should NOT describe that action
+- Sound effects (SFX) are fine but NEVER as the only text on a page - always pair with dialogue or narration
 
 BANNED AI DIALOGUE:
 Never write these robotic patterns:
 - "I need you to understand..." / "Here's the thing..." / "Let me be clear..."
 - "I have to tell you something..." / "The truth is..." / "You need to know that..."
 - "I feel [emotion]" / "I am [emotion]" (show through actions instead)
-- Characters narrating what's already visible ("Look, he's running!" while art shows running)
 
 ACTION & VISUAL DIRECTION:
 - Write what we SEE: physical actions, expressions, body language
 - Use specific verbs: "slams", "flinches", "grips" - not "reacts" or "responds"
 - Include environment interaction (leaning on walls, kicking debris, gripping railings)
-- Mark sound effects: SFX: CRASH!, SFX: WHOOSH!, etc.
+- SFX sparingly (max 5-6 across the whole script, only for impactful moments)
 - Each page should end with a hook that makes you want to turn the page
 
 TARGET: ~1500-2000 words for the full script. Quality over quantity - a tight, well-paced story beats a padded one.
@@ -235,7 +238,13 @@ ${characterRef}
 
 YOUR TASK: Break the script into EXACTLY ${bookData.targetChapters} pages. For each page, provide:
 
-1. **text**: Brief narration if needed (keep minimal - comics are visual)
+1. **text**: NARRATION BOX text — the narrator's voice that guides the reader. This is CRITICAL for readability.
+   - Use narration on at least 60% of pages (15+ pages out of ${bookData.targetChapters})
+   - Narration sets context: "Three hours earlier...", "The city had changed since the war.", "She ran. She didn't look back."
+   - Narration bridges scenes: "Meanwhile, across town...", "By the time they arrived, it was too late."
+   - Narration adds emotional depth: "He wanted to say something. Anything. But the words wouldn't come."
+   - Keep narration to 1-2 sentences per page (concise but meaningful)
+   - Pages with NO dialogue MUST have narration — never leave a page with only SFX
 2. **dialogue**: Extract the dialogue from the script for this page. Assign bubble positions.
 3. **scene**: Full visual direction for the artist
 4. **panelLayout**: How to divide the page
@@ -246,6 +255,7 @@ DIALOGUE RULES:
 - If a page has more dialogue in the script, split across pages or cut the weakest lines
 - Position bubbles logically: speakers on the left get left positions, right get right
 - Reading order: top-to-bottom, left-to-right
+- At least 18 of ${bookData.targetChapters} pages should have dialogue OR narration with meaningful text
 
 PANEL LAYOUT PACING:
 - "splash" (full page): Dramatic reveals, emotional peaks, opening/closing (use 4-5 times)
@@ -280,7 +290,7 @@ Output ONLY valid JSON with EXACTLY ${bookData.targetChapters} chapters:
     {
       "number": 1,
       "title": "Page title",
-      "text": "Brief narration if needed, otherwise empty string",
+      "text": "The city hadn't slept in three days. Neither had she.",
       "summary": "What happens on this page (1 sentence)",
       "targetWords": 40,
       "panelLayout": "splash",
