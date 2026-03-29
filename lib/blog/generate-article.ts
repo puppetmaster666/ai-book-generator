@@ -283,37 +283,42 @@ async function generateCoverImage(title: string, primaryKeyword: string): Promis
     // Shorten title for cover if too long
     const coverTitle = title.length > 60 ? title.substring(0, 57) + '...' : title;
 
-    // Randomize visual style for variety across articles
-    const visualStyles = [
-      { bg: 'Flat-lay photograph of an open notebook, coffee cup, and scattered book pages on a wooden desk', palette: 'warm natural tones, cream, brown, soft white' },
-      { bg: 'Minimalist geometric shapes and lines forming an abstract book/page pattern', palette: 'black, white, and one bold accent color (orange or teal)' },
-      { bg: 'Overhead view of a cozy reading nook with stacked books and warm lighting', palette: 'warm amber, deep brown, cream, soft gold' },
-      { bg: 'Clean gradient background with subtle paper texture', palette: 'soft gradient from navy to teal, or coral to amber' },
-      { bg: 'Artistic watercolor splash with book silhouettes', palette: 'vibrant watercolor washes: indigo, magenta, or emerald' },
-      { bg: 'Close-up macro photo of book pages fanning open with dramatic lighting', palette: 'high contrast black and white with one color accent' },
-      { bg: 'Illustration of a typewriter with floating letters and stories emerging from it', palette: 'vintage sepia tones with pops of red or blue' },
-      { bg: 'Modern workspace with a tablet showing text, stylized and editorial', palette: 'cool grays, white, with electric blue or lime accents' },
+    // Vary the background composition but keep the brand palette consistent
+    const backgrounds = [
+      'Flat-lay of an open notebook and scattered book pages on a dark charcoal surface',
+      'Minimalist geometric shapes and lines forming an abstract book or page pattern on dark background',
+      'Stack of books with one open, shot from above on a dark surface with dramatic side lighting',
+      'Clean dark gradient background with subtle paper or fabric texture',
+      'Close-up of book pages fanning open with high contrast dramatic lighting, dark tones',
+      'Silhouette of a person reading against a window, moody and editorial',
+      'Abstract flowing lines and dots suggesting AI or neural networks, minimal and dark',
+      'Typewriter keys in close-up with shallow depth of field, dark moody tones',
     ];
-    const style = visualStyles[Math.floor(Math.random() * visualStyles.length)];
+    const bg = backgrounds[Math.floor(Math.random() * backgrounds.length)];
 
     const prompt = `Create a professional blog cover image. 16:9 landscape format.
 
+STRICT COLOR PALETTE — USE ONLY THESE COLORS:
+- Background: charcoal black (#171717) and dark grays (#333, #555)
+- Accent: lime/chartreuse (#BFFF00) — use sparingly for highlights or small elements
+- Text: white (#FFFFFF)
+- NO other colors. No blues, no purples, no oranges, no teals, no warm tones.
+
 TITLE TEXT: "${coverTitle}"
-- Use clean, bold sans-serif typography (like Helvetica, Inter, or Montserrat style)
-- Title text color: white
-- Place a solid or semi-transparent dark rectangle/banner behind the title for readability
-- NO drop shadows, NO text glow, NO gradient text effects — just clean text on a clean background strip
-- Position the title in the lower third of the image
-- Small "DraftMyBook" text in bottom-right corner (very subtle, small, light gray)
+- Clean, bold, modern sans-serif font (Helvetica/Inter style)
+- White text on a solid charcoal (#171717) banner/strip
+- Banner positioned in the lower third of the image
+- NO drop shadows, NO glow, NO gradient text. Just clean white on dark.
+- Small "draftmybook" text in bottom-right corner (tiny, #BFFF00 lime color)
 
-BACKGROUND IMAGE:
-- ${style.bg}
-- Color palette: ${style.palette}
-- The background should be visually interesting but NOT busy — the title must be easy to read
-- Professional editorial quality, like a Substack or Medium article header
+BACKGROUND:
+- ${bg}
+- Must be predominantly dark (charcoal/black tones)
+- If any accent color is needed, use ONLY lime/chartreuse (#BFFF00)
+- Professional, editorial quality. Clean and minimal.
 
-DO NOT use: glowing text, neon effects, drop shadows on text, lens flares, or cheesy stock photo aesthetics.
-The overall feel should be clean, modern, and editorial — like a New York Times or Wired article header.
+BANNED: Rainbow colors, neon, lens flares, gradients on text, stock photo look, bright backgrounds.
+Think: Apple product page meets editorial magazine. Dark, clean, premium.
 The text MUST be clearly legible and spelled correctly.`;
 
     const apiKey = process.env.GEMINI_API_KEY;
