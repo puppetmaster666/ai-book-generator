@@ -11,6 +11,8 @@ interface HeaderProps {
   variant?: 'default' | 'transparent';
 }
 
+const LATEST_CHANGELOG = getLatestChangelog();
+
 export default function Header({ variant = 'default' }: HeaderProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -279,7 +281,7 @@ if (genDropdownRef.current && !genDropdownRef.current.contains(event.target as N
 
             {/* Credit Counter + Notification Bell (always visible when logged in) */}
             {session?.user && (
-              <>
+              <div className="flex items-center gap-1.5">
                 {/* Credit Counter */}
                 <div className="relative" ref={creditDropdownRef}>
                   <button
@@ -362,8 +364,38 @@ if (genDropdownRef.current && !genDropdownRef.current.contains(event.target as N
                         )}
                       </div>
 
+                      {/* Credit Gift Banner */}
+                      {freeCredits > 0 && (
+                        <Link
+                          href="/create"
+                          className="mx-3 my-2 p-3 bg-lime-50 border border-lime-200 rounded-lg flex items-center gap-2 hover:bg-lime-100 transition-colors"
+                          onClick={() => setNotifDropdownOpen(false)}
+                        >
+                          <Gift className="h-5 w-5 text-lime-600 flex-shrink-0" />
+                          <div>
+                            <p className="text-sm font-medium text-lime-900">
+                              {freeCredits} Free Credit{freeCredits > 1 ? 's' : ''} Available
+                            </p>
+                            <p className="text-xs text-lime-700">Tap to create a book</p>
+                          </div>
+                        </Link>
+                      )}
+
+                      {/* Patch Notes */}
+                      <Link
+                        href="/changelog"
+                        className="mx-3 my-2 p-3 bg-neutral-50 border border-neutral-200 rounded-lg flex items-center gap-2 hover:bg-neutral-100 transition-colors"
+                        onClick={() => setNotifDropdownOpen(false)}
+                      >
+                        <span className="w-2 h-2 bg-lime-400 rounded-full flex-shrink-0" />
+                        <div>
+                          <p className="text-sm font-medium text-neutral-900">v{APP_VERSION}: {LATEST_CHANGELOG.title}</p>
+                          <p className="text-xs text-neutral-500">View patch notes</p>
+                        </div>
+                      </Link>
+
                       {/* Notifications List */}
-                      <div className="max-h-64 overflow-y-auto">
+                      <div className="max-h-48 overflow-y-auto">
                         {notifications.length > 0 ? (
                           notifications.slice(0, 5).map((notif) => (
                             <div
@@ -378,27 +410,15 @@ if (genDropdownRef.current && !genDropdownRef.current.contains(event.target as N
                             </div>
                           ))
                         ) : (
-                          <p className="px-4 py-6 text-sm text-neutral-400 text-center">
-                            No notifications yet
+                          <p className="px-4 py-4 text-sm text-neutral-400 text-center">
+                            No other notifications
                           </p>
                         )}
                       </div>
-
-                      {notifications.length > 0 && (
-                        <div className="px-4 py-2 border-t border-neutral-100">
-                          <Link
-                            href="/dashboard"
-                            className="text-xs text-neutral-600 hover:text-neutral-900"
-                            onClick={() => setNotifDropdownOpen(false)}
-                          >
-                            View all notifications
-                          </Link>
-                        </div>
-                      )}
                     </div>
                   )}
                 </div>
-              </>
+              </div>
             )}
 
             {status === 'loading' ? (
