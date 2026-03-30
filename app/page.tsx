@@ -258,7 +258,7 @@ export default function Home() {
 
       {/* Sticky CTA Banner - appears after scrolling, positioned below header on mobile */}
       {showStickyBanner && !stickyBannerDismissed && (
-        <div className="fixed top-0 left-0 right-0 z-50 bg-neutral-900/95 backdrop-blur-sm border-b border-neutral-800 animate-in slide-in-from-top duration-300">
+        <div className="fixed top-0 left-0 right-0 z-50 bg-neutral-900/95 backdrop-blur-sm border-b border-neutral-800 animate-in slide-in-from-top duration-300 pt-[env(safe-area-inset-top)]">
           <div className="max-w-6xl mx-auto px-4 py-2.5 flex items-center justify-between gap-4">
             <p className="text-white text-sm hidden sm:block">
               <span className="font-medium">Ready to create your book?</span>
@@ -303,13 +303,13 @@ export default function Home() {
         </div>
 
         {/* Hero Content */}
-        <div className="relative z-10 flex-1 flex items-center justify-center px-6 py-16">
+        <div className="relative z-10 flex-1 flex items-center justify-center px-6 pt-24 pb-16">
           <div className="max-w-4xl mx-auto text-center">
             {/* What's New + Badge */}
             <div className="flex flex-col items-center gap-3 mb-8">
               <Link
                 href="/changelog"
-                className="inline-flex items-center gap-2 bg-lime-400/20 backdrop-blur-md px-4 py-1.5 rounded-full text-xs text-lime-300 border border-lime-400/30 hover:bg-lime-400/30 transition-colors"
+                className="inline-flex items-center gap-2 bg-lime-400/20 backdrop-blur-md px-4 py-2.5 sm:py-1.5 rounded-full text-xs text-lime-300 border border-lime-400/30 hover:bg-lime-400/30 transition-colors cursor-pointer"
               >
                 <span className="w-1.5 h-1.5 bg-lime-400 rounded-full animate-pulse" />
                 <span>New in v{APP_VERSION}: {LATEST_CHANGELOG.title}</span>

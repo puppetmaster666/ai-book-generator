@@ -542,6 +542,9 @@ if (genDropdownRef.current && !genDropdownRef.current.contains(event.target as N
               <Link href="/faq" className="text-lg" onClick={() => setMenuOpen(false)}>
                 FAQ
               </Link>
+              <Link href="/blog" className="text-lg" onClick={() => setMenuOpen(false)}>
+                Blog
+              </Link>
 
               {session?.user ? (
                 <>
