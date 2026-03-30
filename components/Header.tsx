@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Menu, X, ChevronDown, LogOut, User, BookOpen, Loader2, Check, AlertCircle, Shield, Bell, Gift } from 'lucide-react';
+import { Menu, X, ChevronDown, LogOut, User, BookOpen, Loader2, Check, AlertCircle, Shield, Bell, Gift, Plus, Coins } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import { useSession, signOut } from 'next-auth/react';
 import { useGeneratingBook } from '@/contexts/GeneratingBookContext';
@@ -28,6 +28,9 @@ export default function Header({ variant = 'default' }: HeaderProps) {
   }>>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [freeCredits, setFreeCredits] = useState(0);
+  const [paidCredits, setPaidCredits] = useState(0);
+  const [creditDropdownOpen, setCreditDropdownOpen] = useState(false);
+  const creditDropdownRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const genDropdownRef = useRef<HTMLDivElement>(null);
@@ -51,6 +54,7 @@ export default function Header({ variant = 'default' }: HeaderProps) {
             setNotifications(data.notifications);
             setUnreadCount(data.unreadCount || 0);
             setFreeCredits(data.freeCredits || 0);
+            setPaidCredits(data.credits || 0);
           }
         })
         .catch(() => {});
@@ -59,6 +63,7 @@ export default function Header({ variant = 'default' }: HeaderProps) {
       setNotifications([]);
       setUnreadCount(0);
       setFreeCredits(0);
+      setPaidCredits(0);
     }
   }, [session]);
 
@@ -73,6 +78,9 @@ if (genDropdownRef.current && !genDropdownRef.current.contains(event.target as N
       }
       if (notifDropdownRef.current && !notifDropdownRef.current.contains(event.target as Node)) {
         setNotifDropdownOpen(false);
+      }
+      if (creditDropdownRef.current && !creditDropdownRef.current.contains(event.target as Node)) {
+        setCreditDropdownOpen(false);
       }
     }
     document.addEventListener('mousedown', handleClickOutside);
@@ -269,86 +277,128 @@ if (genDropdownRef.current && !genDropdownRef.current.contains(event.target as N
               </div>
             )}
 
-            {/* Notification Bell */}
-            {session?.user && (unreadCount > 0 || freeCredits > 0) && (
-              <div className="relative" ref={notifDropdownRef}>
-                <button
-                  onClick={() => setNotifDropdownOpen(!notifDropdownOpen)}
-                  className="relative p-2 rounded-full hover:bg-neutral-100 transition-colors"
-                >
-                  <Bell className="h-5 w-5 text-neutral-600" />
-                  {unreadCount > 0 && (
-                    <span className="absolute -top-0.5 -right-0.5 w-5 h-5 bg-red-500 text-white text-xs font-medium rounded-full flex items-center justify-center">
-                      {unreadCount > 9 ? '9+' : unreadCount}
-                    </span>
-                  )}
-                </button>
+            {/* Credit Counter + Notification Bell (always visible when logged in) */}
+            {session?.user && (
+              <>
+                {/* Credit Counter */}
+                <div className="relative" ref={creditDropdownRef}>
+                  <button
+                    onClick={() => setCreditDropdownOpen(!creditDropdownOpen)}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full transition-colors ${
+                      variant === 'transparent'
+                        ? 'bg-white/10 hover:bg-white/20 text-white'
+                        : 'bg-neutral-100 hover:bg-neutral-200 text-neutral-700'
+                    }`}
+                  >
+                    <Coins className="h-4 w-4" />
+                    <span className="text-sm font-medium">{freeCredits + paidCredits}</span>
+                  </button>
 
-                {notifDropdownOpen && (
-                  <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl border border-neutral-200 shadow-lg py-2 z-50">
-                    <div className="px-4 py-2 border-b border-neutral-100 flex items-center justify-between">
-                      <p className="font-medium text-sm">Notifications</p>
-                      {unreadCount > 0 && (
-                        <button
-                          onClick={markAllNotificationsRead}
-                          className="text-xs text-neutral-500 hover:text-neutral-900"
-                        >
-                          Mark all read
-                        </button>
-                      )}
-                    </div>
-
-                    {/* Free Credits Banner */}
-                    {freeCredits > 0 && (
-                      <div className="mx-3 my-2 p-3 bg-lime-50 border border-lime-200 rounded-lg">
-                        <div className="flex items-center gap-2">
-                          <Gift className="h-5 w-5 text-lime-600" />
-                          <div>
-                            <p className="text-sm font-medium text-lime-900">
-                              {freeCredits} Free Credit{freeCredits > 1 ? 's' : ''}
-                            </p>
-                            <p className="text-xs text-lime-700">Available to use</p>
-                          </div>
+                  {creditDropdownOpen && (
+                    <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl border border-neutral-200 shadow-lg py-3 z-50">
+                      <div className="px-4 pb-3 border-b border-neutral-100">
+                        <p className="text-sm font-medium text-neutral-900">Your Credits</p>
+                        <div className="mt-2 space-y-1">
+                          {freeCredits > 0 && (
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="text-neutral-500">Free credits</span>
+                              <span className="font-medium text-lime-600">{freeCredits}</span>
+                            </div>
+                          )}
+                          {paidCredits > 0 && (
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="text-neutral-500">Plan credits</span>
+                              <span className="font-medium">{paidCredits}</span>
+                            </div>
+                          )}
+                          {freeCredits === 0 && paidCredits === 0 && (
+                            <p className="text-sm text-neutral-400">No credits available</p>
+                          )}
                         </div>
                       </div>
-                    )}
-
-                    {/* Notifications List */}
-                    <div className="max-h-64 overflow-y-auto">
-                      {notifications.length > 0 ? (
-                        notifications.slice(0, 5).map((notif) => (
-                          <div
-                            key={notif.id}
-                            className={`px-4 py-3 hover:bg-neutral-50 transition-colors ${!notif.read ? 'bg-blue-50/50' : ''}`}
-                          >
-                            <p className="text-sm font-medium text-neutral-900">{notif.title}</p>
-                            <p className="text-xs text-neutral-500 mt-0.5 line-clamp-2">{notif.message}</p>
-                            <p className="text-xs text-neutral-400 mt-1">
-                              {new Date(notif.createdAt).toLocaleDateString()}
-                            </p>
-                          </div>
-                        ))
-                      ) : (
-                        <p className="px-4 py-6 text-sm text-neutral-400 text-center">
-                          No notifications yet
-                        </p>
-                      )}
-                    </div>
-
-                    {notifications.length > 0 && (
-                      <div className="px-4 py-2 border-t border-neutral-100">
+                      <div className="px-3 pt-3">
                         <Link
-                          href="/dashboard"
-                          className="text-xs text-neutral-600 hover:text-neutral-900"
-                          onClick={() => setNotifDropdownOpen(false)}
+                          href="/create"
+                          className="flex items-center justify-center gap-2 w-full py-2.5 bg-neutral-900 text-white text-sm font-medium rounded-lg hover:bg-neutral-800 transition-colors"
+                          onClick={() => setCreditDropdownOpen(false)}
                         >
-                          View all notifications
+                          <Plus className="h-4 w-4" />
+                          Create a Book
                         </Link>
                       </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Notification Bell */}
+                <div className="relative" ref={notifDropdownRef}>
+                  <button
+                    onClick={() => setNotifDropdownOpen(!notifDropdownOpen)}
+                    className={`relative p-2 rounded-full transition-colors ${
+                      variant === 'transparent'
+                        ? 'hover:bg-white/10 text-white'
+                        : 'hover:bg-neutral-100 text-neutral-600'
+                    }`}
+                  >
+                    <Bell className="h-5 w-5" />
+                    {unreadCount > 0 && (
+                      <span className="absolute -top-0.5 -right-0.5 w-5 h-5 bg-red-500 text-white text-xs font-medium rounded-full flex items-center justify-center">
+                        {unreadCount > 9 ? '9+' : unreadCount}
+                      </span>
                     )}
-                  </div>
-                )}
-              </div>
+                  </button>
+
+                  {notifDropdownOpen && (
+                    <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl border border-neutral-200 shadow-lg py-2 z-50">
+                      <div className="px-4 py-2 border-b border-neutral-100 flex items-center justify-between">
+                        <p className="font-medium text-sm">Notifications</p>
+                        {unreadCount > 0 && (
+                          <button
+                            onClick={markAllNotificationsRead}
+                            className="text-xs text-neutral-500 hover:text-neutral-900"
+                          >
+                            Mark all read
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Notifications List */}
+                      <div className="max-h-64 overflow-y-auto">
+                        {notifications.length > 0 ? (
+                          notifications.slice(0, 5).map((notif) => (
+                            <div
+                              key={notif.id}
+                              className={`px-4 py-3 hover:bg-neutral-50 transition-colors ${!notif.read ? 'bg-blue-50/50' : ''}`}
+                            >
+                              <p className="text-sm font-medium text-neutral-900">{notif.title}</p>
+                              <p className="text-xs text-neutral-500 mt-0.5 line-clamp-2">{notif.message}</p>
+                              <p className="text-xs text-neutral-400 mt-1">
+                                {new Date(notif.createdAt).toLocaleDateString()}
+                              </p>
+                            </div>
+                          ))
+                        ) : (
+                          <p className="px-4 py-6 text-sm text-neutral-400 text-center">
+                            No notifications yet
+                          </p>
+                        )}
+                      </div>
+
+                      {notifications.length > 0 && (
+                        <div className="px-4 py-2 border-t border-neutral-100">
+                          <Link
+                            href="/dashboard"
+                            className="text-xs text-neutral-600 hover:text-neutral-900"
+                            onClick={() => setNotifDropdownOpen(false)}
+                          >
+                            View all notifications
+                          </Link>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </>
             )}
 
             {status === 'loading' ? (
@@ -514,23 +564,49 @@ if (genDropdownRef.current && !genDropdownRef.current.contains(event.target as N
               )}
 
               {session?.user && (
-                <div className="flex items-center gap-3 pb-4 mb-2 border-b border-neutral-200">
-                  {session.user.image ? (
-                    <img
-                      src={session.user.image}
-                      alt={session.user.name || 'Profile'}
-                      className="w-12 h-12 rounded-full object-cover border-2 border-neutral-200"
-                    />
-                  ) : (
-                    <div className="w-12 h-12 rounded-full bg-neutral-900 text-white flex items-center justify-center text-sm font-medium">
-                      {getInitials(session.user.name, session.user.email)}
+                <>
+                  <div className="flex items-center gap-3 pb-4 mb-2 border-b border-neutral-200">
+                    {session.user.image ? (
+                      <img
+                        src={session.user.image}
+                        alt={session.user.name || 'Profile'}
+                        className="w-12 h-12 rounded-full object-cover border-2 border-neutral-200"
+                      />
+                    ) : (
+                      <div className="w-12 h-12 rounded-full bg-neutral-900 text-white flex items-center justify-center text-sm font-medium">
+                        {getInitials(session.user.name, session.user.email)}
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-sm truncate">{session.user.name || 'User'}</p>
+                      <p className="text-xs text-neutral-500 truncate">{session.user.email}</p>
                     </div>
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-sm truncate">{session.user.name || 'User'}</p>
-                    <p className="text-xs text-neutral-500 truncate">{session.user.email}</p>
                   </div>
-                </div>
+
+                  {/* Mobile Credit + Notification Bar */}
+                  <div className="flex items-center gap-3 pb-4 mb-2 border-b border-neutral-200">
+                    <Link
+                      href="/create"
+                      className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-neutral-900 text-white rounded-lg text-sm font-medium"
+                      onClick={() => setMenuOpen(false)}
+                    >
+                      <Coins className="h-4 w-4" />
+                      {freeCredits + paidCredits} Credit{freeCredits + paidCredits !== 1 ? 's' : ''} — Create
+                    </Link>
+                    {unreadCount > 0 && (
+                      <Link
+                        href="/dashboard"
+                        className="relative p-2.5 bg-neutral-100 rounded-lg"
+                        onClick={() => setMenuOpen(false)}
+                      >
+                        <Bell className="h-5 w-5 text-neutral-600" />
+                        <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs font-medium rounded-full flex items-center justify-center">
+                          {unreadCount > 9 ? '9+' : unreadCount}
+                        </span>
+                      </Link>
+                    )}
+                  </div>
+                </>
               )}
 
               <Link href="/how-it-works" className="text-lg" onClick={() => setMenuOpen(false)}>

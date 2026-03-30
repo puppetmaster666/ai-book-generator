@@ -26,13 +26,14 @@ export async function GET() {
     // Also get user's free credits
     const user = await prisma.user.findUnique({
       where: { id: session.user.id },
-      select: { freeCredits: true },
+      select: { freeCredits: true, credits: true },
     });
 
     return NextResponse.json({
       notifications,
       unreadCount,
       freeCredits: user?.freeCredits || 0,
+      credits: user?.credits || 0,
     });
   } catch (error) {
     console.error('Error fetching notifications:', error);
