@@ -839,13 +839,14 @@ function AdminDashboardContent() {
         throw new Error(data.error || 'Failed to send emails');
       }
 
+      const errorDetail = data.errors?.length ? ` — ${data.errors[0]}` : '';
       setEmailResult({
-        success: true,
-        message: data.message || `Sent ${data.sent} email(s) successfully${data.failed > 0 ? `, ${data.failed} failed` : ''}`,
+        success: data.failed === 0,
+        message: data.message || `Sent ${data.sent} email(s)${data.failed > 0 ? `, ${data.failed} failed${errorDetail}` : ''}`,
       });
       setShowToast(true);
-      setTimeout(() => setShowToast(false), 5000);
-      setSelectedUsers(new Set());
+      setTimeout(() => setShowToast(false), 10000);
+      if (data.sent > 0) setSelectedUsers(new Set());
     } catch (err) {
       setEmailResult({
         success: false,

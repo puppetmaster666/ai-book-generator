@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/db';
-import { sendEmail } from '@/lib/email';
+import { sendEmailWithDetails } from '@/lib/email';
 import { randomBytes } from 'crypto';
 import {
   getWelcomeEmail,
@@ -107,7 +107,7 @@ async function sendTemplateEmail(
       return { success: false, error: `Unknown template: ${template}` };
   }
 
-  const result = await sendEmail({
+  const result = await sendEmailWithDetails({
     to: targetEmail,
     subject: emailContent.subject,
     html: emailContent.html,
@@ -119,13 +119,14 @@ async function sendTemplateEmail(
       to: targetEmail,
       subject: emailContent.subject,
       template,
-      status: result ? 'sent' : 'failed',
+      status: result.success ? 'sent' : 'failed',
+      error: result.error,
       userId: targetUserId,
       metadata: creditsIncluded > 0 ? { creditsIncluded } : undefined,
     },
   });
 
-  return { success: result, error: result ? undefined : `Failed to send to ${targetEmail}` };
+  return { success: result.success, error: result.error || (result.success ? undefined : `Failed to send to ${targetEmail}`) };
 }
 
 export async function POST(request: NextRequest) {
