@@ -841,7 +841,7 @@ function AdminDashboardContent() {
 
       setEmailResult({
         success: true,
-        message: `Sent ${data.sent} email(s) successfully${data.failed > 0 ? `, ${data.failed} failed` : ''}`,
+        message: data.message || `Sent ${data.sent} email(s) successfully${data.failed > 0 ? `, ${data.failed} failed` : ''}`,
       });
       setShowToast(true);
       setTimeout(() => setShowToast(false), 5000);
@@ -1189,7 +1189,7 @@ function AdminDashboardContent() {
 
       setEmailResult({
         success: true,
-        message: `Sent ${data.sent} email(s) successfully${data.failed > 0 ? `, ${data.failed} failed` : ''}`,
+        message: data.message || `Sent ${data.sent} email(s) successfully${data.failed > 0 ? `, ${data.failed} failed` : ''}`,
       });
       setShowToast(true);
       setTimeout(() => setShowToast(false), 5000);

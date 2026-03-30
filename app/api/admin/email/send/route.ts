@@ -18,6 +18,116 @@ const REPLY_TO_EMAIL = 'lhllparis@gmail.com';
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://www.draftmybook.com';
 
+// Resend free tier: 100 emails/day. Reserve 10 for transactional (book ready, verification, etc.)
+const DAILY_BULK_LIMIT = 90;
+
+async function getEmailsSentToday(): Promise<number> {
+  const startOfDay = new Date();
+  startOfDay.setHours(0, 0, 0, 0);
+
+  return prisma.emailLog.count({
+    where: {
+      createdAt: { gte: startOfDay },
+      status: 'sent',
+    },
+  });
+}
+
+async function sendTemplateEmail(
+  targetEmail: string,
+  targetName: string,
+  targetUserId: string | null,
+  template: EmailTemplateId,
+  customMessage?: string,
+  customSubject?: string,
+  includeCredit?: boolean,
+  creditAmount?: number,
+): Promise<{ success: boolean; error?: string }> {
+  let emailContent: { subject: string; html: string };
+  let creditsIncluded = 0;
+
+  switch (template) {
+    case 'welcome':
+      emailContent = getWelcomeEmail(targetName);
+      break;
+    case 'free_credit':
+      emailContent = getFreeCreditEmail(targetName, 1);
+      creditsIncluded = 1;
+      break;
+    case 'announcement':
+      if (!customMessage) {
+        return { success: false, error: 'Custom message required for announcement' };
+      }
+      if (includeCredit && creditAmount && creditAmount > 0) {
+        const token = randomBytes(32).toString('hex');
+        await prisma.creditClaim.create({
+          data: {
+            token,
+            ...(targetUserId ? { userId: targetUserId } : { email: targetEmail.toLowerCase() }),
+            credits: creditAmount,
+            expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+          },
+        });
+        const claimUrl = `${APP_URL}/claim-credit?token=${token}`;
+        emailContent = getAnnouncementEmailWithCredit(
+          targetName,
+          customSubject || 'News from DraftMyBook',
+          customMessage,
+          creditAmount,
+          claimUrl
+        );
+        creditsIncluded = creditAmount;
+      } else {
+        emailContent = getAnnouncementEmail(
+          targetName,
+          customSubject || 'News from DraftMyBook',
+          customMessage
+        );
+      }
+      break;
+    case 'bug_apology': {
+      const bugToken = randomBytes(32).toString('hex');
+      await prisma.creditClaim.create({
+        data: {
+          token: bugToken,
+          ...(targetUserId ? { userId: targetUserId } : { email: targetEmail.toLowerCase() }),
+          credits: 1,
+          expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+        },
+      });
+      const bugClaimUrl = `${APP_URL}/claim-credit?token=${bugToken}`;
+      emailContent = getBugApologyEmail(targetName, bugClaimUrl);
+      creditsIncluded = 1;
+      break;
+    }
+    case 'beta_feedback':
+      emailContent = getBetaFeedbackEmail(targetName);
+      break;
+    default:
+      return { success: false, error: `Unknown template: ${template}` };
+  }
+
+  const result = await sendEmail({
+    to: targetEmail,
+    subject: emailContent.subject,
+    html: emailContent.html,
+    replyTo: REPLY_TO_EMAIL,
+  });
+
+  await prisma.emailLog.create({
+    data: {
+      to: targetEmail,
+      subject: emailContent.subject,
+      template,
+      status: result ? 'sent' : 'failed',
+      userId: targetUserId,
+      metadata: creditsIncluded > 0 ? { creditsIncluded } : undefined,
+    },
+  });
+
+  return { success: result, error: result ? undefined : `Failed to send to ${targetEmail}` };
+}
+
 export async function POST(request: NextRequest) {
   try {
     const session = await auth();
@@ -25,7 +135,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Check if user is admin
     const user = await prisma.user.findUnique({
       where: { id: session.user.id },
       select: { isAdmin: true },
@@ -63,141 +172,64 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No valid users found' }, { status: 400 });
     }
 
+    // Check how many emails we can still send today
+    const sentToday = await getEmailsSentToday();
+    const remainingToday = Math.max(0, DAILY_BULK_LIMIT - sentToday);
+
+    // Split into: send now (within daily limit) and queue for later
+    const sendNow = users.slice(0, remainingToday);
+    const sendLater = users.slice(remainingToday);
+
     let successCount = 0;
     let failCount = 0;
     const errors: string[] = [];
 
-    // Helper to delay between emails (avoid rate limiting - Resend allows 2/sec)
+    // Send immediate batch with 500ms delay between each
     const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-    // Send emails with rate limiting
-    for (let i = 0; i < users.length; i++) {
-      const targetUser = users[i];
-
-      // Add delay between emails (500ms = max 2 per second)
-      if (i > 0) {
-        await delay(500);
-      }
+    for (let i = 0; i < sendNow.length; i++) {
+      const targetUser = sendNow[i];
+      if (i > 0) await delay(500);
 
       try {
-        let emailContent: { subject: string; html: string };
-        let creditsIncluded = 0;
-
-        switch (template) {
-          case 'welcome':
-            emailContent = getWelcomeEmail(targetUser.name || 'there');
-            break;
-          case 'free_credit':
-            // For free_credit template via this endpoint, default to 1 credit
-            emailContent = getFreeCreditEmail(targetUser.name || 'there', 1);
-            creditsIncluded = 1;
-            break;
-          case 'announcement':
-            if (!customMessage) {
-              throw new Error('Custom message required for announcement');
-            }
-
-            // Check if we should include a claimable credit
-            if (includeCredit && creditAmount && creditAmount > 0) {
-              // Generate unique claim token
-              const token = randomBytes(32).toString('hex');
-
-              // Create CreditClaim record (expires in 30 days)
-              await prisma.creditClaim.create({
-                data: {
-                  token,
-                  userId: targetUser.id,
-                  credits: creditAmount,
-                  expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
-                },
-              });
-
-              const claimUrl = `${APP_URL}/claim-credit?token=${token}`;
-
-              emailContent = getAnnouncementEmailWithCredit(
-                targetUser.name || 'there',
-                customSubject || 'News from DraftMyBook',
-                customMessage,
-                creditAmount,
-                claimUrl
-              );
-              creditsIncluded = creditAmount;
-            } else {
-              emailContent = getAnnouncementEmail(
-                targetUser.name || 'there',
-                customSubject || 'News from DraftMyBook',
-                customMessage
-              );
-            }
-            break;
-          case 'bug_apology':
-            // Bug apology template - always includes 1 claimable credit
-            const bugToken = randomBytes(32).toString('hex');
-
-            // Create CreditClaim record (expires in 30 days)
-            await prisma.creditClaim.create({
-              data: {
-                token: bugToken,
-                userId: targetUser.id,
-                credits: 1,
-                expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
-              },
-            });
-
-            const bugClaimUrl = `${APP_URL}/claim-credit?token=${bugToken}`;
-            emailContent = getBugApologyEmail(targetUser.name || 'there', bugClaimUrl);
-            creditsIncluded = 1;
-            break;
-          case 'beta_feedback':
-            // Beta feedback request - asks users for their thoughts
-            emailContent = getBetaFeedbackEmail(targetUser.name || 'there');
-            break;
-          default:
-            throw new Error(`Unknown template: ${template}`);
-        }
-
-        const result = await sendEmail({
-          to: targetUser.email,
-          subject: emailContent.subject,
-          html: emailContent.html,
-          replyTo: REPLY_TO_EMAIL, // Replies go to your Gmail
-        });
-
-        // Log the email
-        await prisma.emailLog.create({
-          data: {
-            to: targetUser.email,
-            subject: emailContent.subject,
-            template,
-            status: result ? 'sent' : 'failed',
-            userId: targetUser.id,
-            metadata: creditsIncluded > 0 ? { creditsIncluded } : undefined,
-          },
-        });
-
-        if (result) {
+        const result = await sendTemplateEmail(
+          targetUser.email, targetUser.name || 'there', targetUser.id,
+          template, customMessage, customSubject, includeCredit, creditAmount
+        );
+        if (result.success) {
           successCount++;
         } else {
           failCount++;
-          errors.push(`Failed to send to ${targetUser.email}`);
+          if (result.error) errors.push(result.error);
         }
       } catch (err) {
-        const errorMsg = err instanceof Error ? err.message : 'Unknown error';
         failCount++;
-        errors.push(`Error for ${targetUser.email}: ${errorMsg}`);
-
-        // Log failed email
-        await prisma.emailLog.create({
-          data: {
-            to: targetUser.email,
-            subject: `[${template}]`,
-            template,
-            status: 'failed',
-            error: errorMsg,
-            userId: targetUser.id,
-          },
-        }).catch(() => {}); // Don't fail if logging fails
+        errors.push(`Error for ${targetUser.email}: ${err instanceof Error ? err.message : 'Unknown'}`);
       }
+    }
+
+    // Queue remaining users in a batch for later days
+    let batchId: string | null = null;
+    if (sendLater.length > 0) {
+      const batch = await prisma.emailBatch.create({
+        data: {
+          template,
+          customSubject,
+          customMessage,
+          includeCredit: includeCredit || false,
+          creditAmount: creditAmount || 0,
+          isAnonymous: false,
+          totalCount: sendLater.length,
+          items: {
+            create: sendLater.map(u => ({
+              email: u.email,
+              userId: u.id,
+              userName: u.name || 'there',
+            })),
+          },
+        },
+      });
+      batchId = batch.id;
     }
 
     return NextResponse.json({
@@ -205,7 +237,12 @@ export async function POST(request: NextRequest) {
       sent: successCount,
       failed: failCount,
       total: users.length,
+      queued: sendLater.length,
+      batchId,
       errors: errors.length > 0 ? errors : undefined,
+      message: sendLater.length > 0
+        ? `Sent ${successCount} today (daily limit: ${DAILY_BULK_LIMIT}). ${sendLater.length} queued — they'll be sent automatically over the next ${Math.ceil(sendLater.length / DAILY_BULK_LIMIT)} day(s).`
+        : undefined,
     });
   } catch (error) {
     console.error('Bulk email error:', error);

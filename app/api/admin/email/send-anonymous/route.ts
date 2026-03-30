@@ -11,6 +11,21 @@ import {
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://www.draftmybook.com';
 
+// Resend free tier: 100 emails/day. Reserve 10 for transactional.
+const DAILY_BULK_LIMIT = 90;
+
+async function getEmailsSentToday(): Promise<number> {
+  const startOfDay = new Date();
+  startOfDay.setHours(0, 0, 0, 0);
+
+  return prisma.emailLog.count({
+    where: {
+      createdAt: { gte: startOfDay },
+      status: 'sent',
+    },
+  });
+}
+
 export async function POST(request: NextRequest) {
   try {
     const session = await auth();
@@ -18,7 +33,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Check if user is admin
     const user = await prisma.user.findUnique({
       where: { id: session.user.id },
       select: { isAdmin: true },
@@ -46,86 +60,63 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No template selected' }, { status: 400 });
     }
 
+    // Check daily limit
+    const sentToday = await getEmailsSentToday();
+    const remainingToday = Math.max(0, DAILY_BULK_LIMIT - sentToday);
+
+    const sendNow = emails.slice(0, remainingToday);
+    const sendLater = emails.slice(remainingToday);
+
     let successCount = 0;
     let failCount = 0;
     const errors: string[] = [];
 
-    // Helper to delay between emails (avoid rate limiting - Resend allows 2/sec)
     const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-    // Send emails to each anonymous contact with rate limiting
-    for (let i = 0; i < emails.length; i++) {
-      const email = emails[i];
-
-      // Add delay between emails (500ms = max 2 per second)
-      if (i > 0) {
-        await delay(500);
-      }
+    for (let i = 0; i < sendNow.length; i++) {
+      const email = sendNow[i];
+      if (i > 0) await delay(500);
 
       try {
         let emailContent: { subject: string; html: string };
         let claimToken: string | null = null;
         let creditsIncluded = 0;
 
-        // For credits, we create a pending claim that requires registration
-        // The token is stored with email instead of userId - they must register to claim
         if (template === 'bug_apology' || (template === 'announcement' && includeCredit && creditAmount && creditAmount > 0)) {
           claimToken = randomBytes(32).toString('hex');
           const creditsToGive = template === 'bug_apology' ? 1 : creditAmount!;
           creditsIncluded = creditsToGive;
 
-          // Create an anonymous credit claim - email-based, userId is null
           await prisma.creditClaim.create({
             data: {
               token: claimToken,
-              email: email.toLowerCase(), // Store email for matching when they register
+              email: email.toLowerCase(),
               credits: creditsToGive,
-              expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
+              expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
             },
           });
         }
 
         switch (template) {
           case 'announcement':
-            if (!customMessage) {
-              throw new Error('Custom message required for announcement');
-            }
-
+            if (!customMessage) throw new Error('Custom message required');
             if (includeCredit && creditAmount && creditAmount > 0 && claimToken) {
               const claimUrl = `${APP_URL}/claim-credit?token=${claimToken}`;
-              emailContent = getAnnouncementEmailWithCredit(
-                'there', // Anonymous users don't have names
-                customSubject || 'News from DraftMyBook',
-                customMessage,
-                creditAmount,
-                claimUrl
-              );
+              emailContent = getAnnouncementEmailWithCredit('there', customSubject || 'News from DraftMyBook', customMessage, creditAmount, claimUrl);
             } else {
-              emailContent = getAnnouncementEmail(
-                'there',
-                customSubject || 'News from DraftMyBook',
-                customMessage
-              );
+              emailContent = getAnnouncementEmail('there', customSubject || 'News from DraftMyBook', customMessage);
             }
             break;
           case 'bug_apology':
-            if (!claimToken) {
-              throw new Error('Failed to generate claim token');
-            }
-            const bugClaimUrl = `${APP_URL}/claim-credit?token=${claimToken}`;
-            emailContent = getBugApologyEmail('there', bugClaimUrl);
+            if (!claimToken) throw new Error('Failed to generate claim token');
+            emailContent = getBugApologyEmail('there', `${APP_URL}/claim-credit?token=${claimToken}`);
             break;
           default:
             throw new Error(`Unknown template: ${template}`);
         }
 
-        const result = await sendEmail({
-          to: email,
-          subject: emailContent.subject,
-          html: emailContent.html,
-        });
+        const result = await sendEmail({ to: email, subject: emailContent.subject, html: emailContent.html });
 
-        // Log the email
         await prisma.emailLog.create({
           data: {
             to: email,
@@ -147,18 +138,33 @@ export async function POST(request: NextRequest) {
         failCount++;
         errors.push(`Error for ${email}: ${errorMsg}`);
 
-        // Log failed email
         await prisma.emailLog.create({
-          data: {
-            to: email,
-            subject: `[${template}]`,
-            template,
-            status: 'failed',
-            error: errorMsg,
-            metadata: { anonymous: true },
-          },
-        }).catch(() => {}); // Don't fail if logging fails
+          data: { to: email, subject: `[${template}]`, template, status: 'failed', error: errorMsg, metadata: { anonymous: true } },
+        }).catch(() => {});
       }
+    }
+
+    // Queue remaining for later days
+    let batchId: string | null = null;
+    if (sendLater.length > 0) {
+      const batch = await prisma.emailBatch.create({
+        data: {
+          template,
+          customSubject,
+          customMessage,
+          includeCredit: includeCredit || false,
+          creditAmount: creditAmount || 0,
+          isAnonymous: true,
+          totalCount: sendLater.length,
+          items: {
+            create: sendLater.map(e => ({
+              email: e,
+              userName: 'there',
+            })),
+          },
+        },
+      });
+      batchId = batch.id;
     }
 
     return NextResponse.json({
@@ -166,7 +172,12 @@ export async function POST(request: NextRequest) {
       sent: successCount,
       failed: failCount,
       total: emails.length,
+      queued: sendLater.length,
+      batchId,
       errors: errors.length > 0 ? errors : undefined,
+      message: sendLater.length > 0
+        ? `Sent ${successCount} today (daily limit: ${DAILY_BULK_LIMIT}). ${sendLater.length} queued — they'll be sent automatically over the next ${Math.ceil(sendLater.length / DAILY_BULK_LIMIT)} day(s).`
+        : undefined,
     });
   } catch (error) {
     console.error('Anonymous email error:', error);

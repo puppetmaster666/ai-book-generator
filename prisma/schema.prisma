@@ -260,6 +260,41 @@ model EmailLog {
   @@index([createdAt])
 }
 
+model EmailBatch {
+  id            String           @id @default(cuid())
+  template      String
+  customSubject String?
+  customMessage String?
+  includeCredit Boolean          @default(false)
+  creditAmount  Int              @default(0)
+  isAnonymous   Boolean          @default(false)
+  status        String           @default("in_progress") // in_progress, completed, cancelled
+  totalCount    Int
+  sentCount     Int              @default(0)
+  failedCount   Int              @default(0)
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  items         EmailBatchItem[]
+
+  @@index([status])
+  @@index([createdAt])
+}
+
+model EmailBatchItem {
+  id        String     @id @default(cuid())
+  batchId   String
+  email     String
+  userId    String?
+  userName  String?
+  status    String     @default("pending") // pending, sent, failed
+  error     String?
+  sentAt    DateTime?
+  batch     EmailBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
+
+  @@index([batchId, status])
+  @@index([status])
+}
+
 model SiteSettings {
   id                    String   @id @default("default")
   trafficWarningEnabled Boolean  @default(false)
