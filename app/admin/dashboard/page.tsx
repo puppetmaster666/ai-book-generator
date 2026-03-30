@@ -472,7 +472,10 @@ function AIEmailAssistant({ defaultMode = 'single', users = [], totalUsers }: { 
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Failed');
-        setResult({ success: true, message: `Sent to ${data.sent} user${data.sent !== 1 ? 's' : ''}${data.failed > 0 ? ` (${data.failed} failed)` : ''}${includeCreditsCount > 0 ? ` +${includeCreditsCount} credit(s) each` : ''}` });
+        setResult({
+          success: data.failed === 0,
+          message: `Sent to ${data.sent} user${data.sent !== 1 ? 's' : ''}${data.failed > 0 ? ` (${data.failed} failed)` : ''}${includeCreditsCount > 0 ? ` +${includeCreditsCount} credit(s) each` : ''}`,
+        });
       } else {
         const res = await fetch('/api/admin/ai-email', {
           method: 'POST',
@@ -480,7 +483,7 @@ function AIEmailAssistant({ defaultMode = 'single', users = [], totalUsers }: { 
           body: JSON.stringify({ action: 'send', situation, recipientEmail: recipientEmail.trim(), includeCredits: includeCreditsCount > 0 ? includeCreditsCount : undefined, draft }),
         });
         const data = await res.json();
-        if (!res.ok) throw new Error(data.error || 'Failed');
+        if (!res.ok || !data.sent) throw new Error(data.error || data.message || 'Failed');
         setResult({ success: true, message: `Email sent to ${recipientEmail}!${includeCreditsCount > 0 ? ` +${includeCreditsCount} credit(s)` : ''}` });
       }
       setDraft(null);
