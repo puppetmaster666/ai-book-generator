@@ -709,6 +709,11 @@ SCENE DISCIPLINE:
    - "And that was that" - BANNED
    End sentences on PHYSICAL NOUNS, not emotional conclusions.
 
+=== PUNCTUATION (MANDATORY) ===
+- NEVER use em dashes or en dashes anywhere in dialogue or action lines
+- Use commas, periods, semicolons, or colons instead
+- No exceptions to this rule
+
 === BANNED AI-ISMS (INSTANT FAILURE) ===
 DIALOGUE:
 - "I need you to understand" / "Here's the thing" / "Let me be clear"

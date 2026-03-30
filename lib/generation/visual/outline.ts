@@ -1,6 +1,6 @@
 import { getGeminiPro } from '../shared/api-client';
 import { parseJSONFromResponse } from '../shared/json-utils';
-import { ContentRating, getContentRatingInstructions, detectLanguageInstruction } from '../shared/writing-quality';
+import { ContentRating, getContentRatingInstructions, detectLanguageInstruction, PUNCTUATION_RULES } from '../shared/writing-quality';
 import { buildNameGuidancePrompt, BANNED_OVERUSED_NAMES } from '../shared/name-variety';
 import { VisualChapter } from './types';
 
@@ -128,6 +128,8 @@ PICTURE BOOK REQUIREMENTS:
 `}
 
 TARGET LENGTH: ${targetWords}-${targetWords + 200} words (this will be broken into ${bookData.targetChapters} pages)
+
+${PUNCTUATION_RULES}
 
 Write the complete story now. Make it engaging, unique, and memorable. Include actual dialogue with quotation marks.`;
 

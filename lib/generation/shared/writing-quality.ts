@@ -377,3 +377,14 @@ export function detectLanguageInstruction(text: string): string {
   // Default: no special instruction needed (Latin-based languages)
   return '';
 }
+
+/**
+ * Global punctuation rules injected into all generation prompts.
+ * NEVER use em dashes or en dashes anywhere.
+ */
+export const PUNCTUATION_RULES = `
+PUNCTUATION (MANDATORY):
+- NEVER use em dashes (—) or en dashes (–) anywhere in your output
+- Use commas, periods, semicolons, or colons instead
+- If you need a pause, use a comma. If you need a break, use a period.
+- This rule has NO exceptions.`;

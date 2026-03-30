@@ -168,15 +168,12 @@ export async function POST(request: NextRequest) {
 - Member since: ${user.createdAt.toISOString().split('T')[0]}`;
     }
 
-    // Check their recent books
-    const recentBooks = await prisma.book.findMany({
+    // Check book count (don't include titles for privacy)
+    const bookCount = await prisma.book.count({
       where: { email: recipientEmail.toLowerCase() },
-      orderBy: { createdAt: 'desc' },
-      take: 3,
-      select: { title: true, status: true, bookFormat: true, createdAt: true },
     });
-    if (recentBooks.length > 0) {
-      recipientContext += `\nRecent books: ${recentBooks.map(b => `"${b.title}" (${b.status}, ${b.bookFormat})`).join(', ')}`;
+    if (bookCount > 0) {
+      recipientContext += `\nBooks created: ${bookCount}`;
     }
   } catch {
     // Couldn't look up user - that's fine
@@ -198,6 +195,9 @@ RULES:
 - If offering credits, make it feel like a gift not compensation
 - Don't use "I hope this email finds you well" or similar cliches
 - Use the recipient's first name if available
+- NEVER use em dashes or en dashes. Use commas, periods, or semicolons instead
+- NEVER mention specific book titles the user has created (privacy concern)
+- Do NOT reference what the user has been working on specifically
 
 OUTPUT FORMAT (follow exactly):
 ---SUBJECT---

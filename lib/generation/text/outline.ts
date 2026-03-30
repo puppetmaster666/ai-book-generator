@@ -1,7 +1,7 @@
 import { SAFETY_SETTINGS, sanitizeContentForSafety, isSafetyBlockError } from '../shared/safety';
 import { getGeminiPro, getGeminiFlash } from '../shared/api-client';
 import { parseJSONFromResponse } from '../shared/json-utils';
-import { detectLanguageInstruction } from '../shared/writing-quality';
+import { detectLanguageInstruction, PUNCTUATION_RULES } from '../shared/writing-quality';
 import { buildNameGuidancePrompt, BANNED_OVERUSED_NAMES } from '../shared/name-variety';
 import { buildNameSuggestionPrompt } from '../shared/name-generator';
 

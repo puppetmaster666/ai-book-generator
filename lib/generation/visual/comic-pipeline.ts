@@ -12,7 +12,7 @@
 
 import { getGeminiPro, getGeminiFlash } from '../shared/api-client';
 import { parseJSONFromResponse } from '../shared/json-utils';
-import { ContentRating, getContentRatingInstructions, detectLanguageInstruction } from '../shared/writing-quality';
+import { ContentRating, getContentRatingInstructions, detectLanguageInstruction, PUNCTUATION_RULES } from '../shared/writing-quality';
 import { buildNameGuidancePrompt } from '../shared/name-variety';
 import { VisualChapter, SceneDescription, DialogueEntry, PanelLayout } from './types';
 
@@ -166,6 +166,7 @@ ACTION & VISUAL DIRECTION:
 - Each page should end with a hook that makes you want to turn the page
 
 TARGET: ~1500-2000 words for the full script. Quality over quantity - a tight, well-paced story beats a padded one.
+${PUNCTUATION_RULES}
 
 Output ONLY valid JSON:
 {

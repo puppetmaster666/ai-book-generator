@@ -14,7 +14,8 @@ import {
   getRollingContext,
   detectLanguageInstruction,
   detectFictionBannedPhrases,
-  FICTION_BANNED_PHRASES
+  FICTION_BANNED_PHRASES,
+  PUNCTUATION_RULES
 } from '../shared/writing-quality';
 
 // Remove duplicate chapter headings that appear twice (e.g., ALL CAPS then Title Case)
@@ -404,6 +405,7 @@ WORD LIMIT: ${data.targetWords} words MAXIMUM. This is a hard limit. Cover the t
 ${isLastChapter ? `
 FINAL CHAPTER REQUIREMENT:
 This is the FINAL chapter. End the book with "The End" on its own line at the very end. Do not use any other variation like "THE END" or "[The End]".` : ''}
+${PUNCTUATION_RULES}
 OUTPUT: The chapter text only, starting with the chapter heading.`;
   } else {
     // Fiction prompt - narrative style with strict quality requirements
@@ -505,6 +507,7 @@ WORD LIMIT: ${data.targetWords} words MAXIMUM. This is a hard limit. Write a com
 ${isLastChapter ? `
 FINAL CHAPTER REQUIREMENT:
 This is the FINAL chapter. End the book with "The End" on its own line at the very end. Do not use any other variation like "THE END" or "[The End]".` : ''}
+${PUNCTUATION_RULES}
 OUTPUT: The chapter text only, starting with the chapter heading.`;
   }
 
