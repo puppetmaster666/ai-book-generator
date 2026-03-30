@@ -3,7 +3,7 @@ import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { getGeminiPro } from '@/lib/generation/shared/api-client';
 import { SAFETY_SETTINGS } from '@/lib/generation/shared/safety';
-import { sendEmail } from '@/lib/email';
+import { sendEmailWithDetails } from '@/lib/email';
 
 export const maxDuration = 60;
 
@@ -88,11 +88,11 @@ export async function POST(request: NextRequest) {
           }
         }
 
-        const ok = await sendEmail({ to: email, subject: draft.subject, html: draft.html });
-        if (ok) sent++; else failed++;
+        const result = await sendEmailWithDetails({ to: email, subject: draft.subject, html: draft.html, replyTo: 'lhllparis@gmail.com' });
+        if (result.success) sent++; else failed++;
 
         await prisma.emailLog.create({
-          data: { to: email, subject: draft.subject, template: 'ai_bulk', status: ok ? 'sent' : 'failed', metadata: { situation, includeCredits } },
+          data: { to: email, subject: draft.subject, template: 'ai_bulk', status: result.success ? 'sent' : 'failed', error: result.error, metadata: { situation, includeCredits } },
         }).catch(() => {});
       } catch {
         failed++;
@@ -125,10 +125,11 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      const sent = await sendEmail({
+      const result = await sendEmailWithDetails({
         to: recipientEmail,
         subject: draft.subject,
         html: draft.html,
+        replyTo: 'lhllparis@gmail.com',
       });
 
       await prisma.emailLog.create({
@@ -136,12 +137,18 @@ export async function POST(request: NextRequest) {
           to: recipientEmail,
           subject: draft.subject,
           template: 'ai_custom',
-          status: sent ? 'sent' : 'failed',
+          status: result.success ? 'sent' : 'failed',
+          error: result.error,
           metadata: { situation, includeCredits },
         },
       }).catch(() => {});
 
-      return NextResponse.json({ success: true, sent, message: sent ? 'Email sent!' : 'Failed to send' });
+      return NextResponse.json({
+        success: result.success,
+        sent: result.success,
+        message: result.success ? 'Email sent!' : `Failed to send: ${result.error}`,
+        error: result.error,
+      });
     } catch (error) {
       return NextResponse.json({ error: 'Failed to send email' }, { status: 500 });
     }
