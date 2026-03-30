@@ -258,7 +258,7 @@ export default function Home() {
 
       {/* Sticky CTA Banner - appears after scrolling, positioned below header on mobile */}
       {showStickyBanner && !stickyBannerDismissed && (
-        <div className="fixed top-14 sm:top-0 left-0 right-0 z-40 bg-neutral-900/95 backdrop-blur-sm border-b border-neutral-800 animate-in slide-in-from-top duration-300">
+        <div className="fixed top-0 left-0 right-0 z-50 bg-neutral-900/95 backdrop-blur-sm border-b border-neutral-800 animate-in slide-in-from-top duration-300">
           <div className="max-w-6xl mx-auto px-4 py-2.5 flex items-center justify-between gap-4">
             <p className="text-white text-sm hidden sm:block">
               <span className="font-medium">Ready to create your book?</span>
