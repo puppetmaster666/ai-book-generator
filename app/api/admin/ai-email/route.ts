@@ -5,7 +5,7 @@ import { getGeminiPro } from '@/lib/generation/shared/api-client';
 import { SAFETY_SETTINGS } from '@/lib/generation/shared/safety';
 import { sendEmailWithDetails } from '@/lib/email';
 
-export const maxDuration = 60;
+export const maxDuration = 120;
 
 /**
  * AI Email Assistant - drafts and sends emails using Gemini.
@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
     filter?: { joinedAfter?: string; joinedBefore?: string };
   };
 
-  // Bulk send to multiple recipients
+  // Bulk send to multiple recipients (with daily batching)
   if (action === 'bulk-send' && draft) {
     let emails = recipientEmails || [];
 
@@ -69,25 +69,42 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No recipients found' }, { status: 400 });
     }
 
+    // Check daily limit (90 bulk emails/day, reserve 10 for transactional)
+    const DAILY_BULK_LIMIT = 90;
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
+    const sentToday = await prisma.emailLog.count({
+      where: { createdAt: { gte: startOfDay }, status: 'sent' },
+    });
+    const remainingToday = Math.max(0, DAILY_BULK_LIMIT - sentToday);
+
+    const sendNow = emails.slice(0, remainingToday);
+    const sendLater = emails.slice(remainingToday);
+
     let sent = 0;
     let failed = 0;
     const delay = (ms: number) => new Promise(r => setTimeout(r, ms));
 
-    for (let i = 0; i < emails.length; i++) {
-      const email = emails[i].toLowerCase().trim();
-      if (i > 0) await delay(500); // Respect Resend rate limits (2/sec)
-
-      try {
-        // Gift credits if requested
-        if (includeCredits && includeCredits > 0) {
-          const user = await prisma.user.findUnique({ where: { email } });
+    // Gift credits to ALL recipients upfront (even queued ones get credits now)
+    if (includeCredits && includeCredits > 0) {
+      for (const email of emails) {
+        try {
+          const user = await prisma.user.findUnique({ where: { email: email.toLowerCase().trim() } });
           if (user) {
             await prisma.user.update({ where: { id: user.id }, data: { freeCredits: { increment: includeCredits } } });
           } else {
-            await prisma.pendingCredit.create({ data: { email, credits: includeCredits, giftedBy: session.user.id } });
+            await prisma.pendingCredit.create({ data: { email: email.toLowerCase().trim(), credits: includeCredits, giftedBy: session.user.id } });
           }
-        }
+        } catch { /* continue */ }
+      }
+    }
 
+    // Send today's batch
+    for (let i = 0; i < sendNow.length; i++) {
+      const email = sendNow[i].toLowerCase().trim();
+      if (i > 0) await delay(500);
+
+      try {
         const result = await sendEmailWithDetails({ to: email, subject: draft.subject, html: draft.html, replyTo: 'lhllparis@gmail.com' });
         if (result.success) sent++; else failed++;
 
@@ -99,7 +116,35 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    return NextResponse.json({ success: true, sent, failed, total: emails.length });
+    // Queue remaining for tomorrow via EmailBatch
+    let batchId: string | null = null;
+    if (sendLater.length > 0) {
+      // Store the draft HTML in the batch's customMessage field
+      const batch = await prisma.emailBatch.create({
+        data: {
+          template: 'ai_bulk',
+          customSubject: draft.subject,
+          customMessage: draft.html,
+          includeCredit: false, // Credits already gifted above
+          creditAmount: 0,
+          isAnonymous: false,
+          totalCount: sendLater.length,
+          items: {
+            create: sendLater.map(e => ({
+              email: e.toLowerCase().trim(),
+              userName: 'there',
+            })),
+          },
+        },
+      });
+      batchId = batch.id;
+    }
+
+    const message = sendLater.length > 0
+      ? `Sent ${sent} today (daily limit: ${DAILY_BULK_LIMIT}). ${sendLater.length} queued — they'll send automatically tomorrow.`
+      : undefined;
+
+    return NextResponse.json({ success: true, sent, failed, total: emails.length, queued: sendLater.length, batchId, message });
   }
 
   if (!recipientEmail?.includes('@')) {

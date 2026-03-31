@@ -474,7 +474,7 @@ function AIEmailAssistant({ defaultMode = 'single', users = [], totalUsers }: { 
         if (!res.ok) throw new Error(data.error || 'Failed');
         setResult({
           success: data.failed === 0,
-          message: `Sent to ${data.sent} user${data.sent !== 1 ? 's' : ''}${data.failed > 0 ? ` (${data.failed} failed)` : ''}${includeCreditsCount > 0 ? ` +${includeCreditsCount} credit(s) each` : ''}`,
+          message: data.message || `Sent to ${data.sent} user${data.sent !== 1 ? 's' : ''}${data.failed > 0 ? ` (${data.failed} failed)` : ''}${data.queued > 0 ? ` — ${data.queued} queued for tomorrow` : ''}${includeCreditsCount > 0 ? ` +${includeCreditsCount} credit(s) each` : ''}`,
         });
       } else {
         const res = await fetch('/api/admin/ai-email', {

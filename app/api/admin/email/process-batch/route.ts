@@ -147,7 +147,12 @@ export async function POST(request: NextRequest) {
             emailContent = getBetaFeedbackEmail(targetName);
             break;
           default:
-            throw new Error(`Unknown template: ${template}`);
+            // Handle ai_bulk and other custom templates — HTML stored in customMessage
+            if (batch.customMessage && batch.customSubject) {
+              emailContent = { subject: batch.customSubject, html: batch.customMessage };
+            } else {
+              throw new Error(`Unknown template: ${template}`);
+            }
         }
 
         const result = await sendEmail({
