@@ -29,6 +29,7 @@ import {
   Star,
   Upload,
   Sparkles,
+  X,
 } from 'lucide-react';
 import Image from 'next/image';
 import ConfirmModal from '@/components/ConfirmModal';
@@ -721,6 +722,20 @@ function AdminDashboardContent() {
   const [emailLogsTotal, setEmailLogsTotal] = useState(0);
   const [isLoadingEmailLogs, setIsLoadingEmailLogs] = useState(false);
   const [emailLogsFilter, setEmailLogsFilter] = useState<'all' | 'sent' | 'failed'>('all');
+  const [emailLogsView, setEmailLogsView] = useState<'logs' | 'campaigns'>('campaigns');
+  const [campaigns, setCampaigns] = useState<Array<{
+    subject: string;
+    template: string;
+    sentCount: number;
+    failedCount: number;
+    totalCount: number;
+    unsentCount: number;
+    firstSent: string;
+    lastSent: string;
+  }>>([]);
+  const [campaignTotalUsers, setCampaignTotalUsers] = useState(0);
+  const [isLoadingCampaigns, setIsLoadingCampaigns] = useState(false);
+  const [unsentModal, setUnsentModal] = useState<{ subject: string; users: Array<{ id: string; email: string; name: string | null }>; loading: boolean } | null>(null);
 
   // Site settings state
   const [trafficWarningEnabled, setTrafficWarningEnabled] = useState(false);
@@ -1210,6 +1225,39 @@ function AdminDashboardContent() {
     }
   };
 
+  const fetchCampaigns = async () => {
+    setIsLoadingCampaigns(true);
+    try {
+      const response = await fetch('/api/admin/email-logs?view=campaigns');
+      const data = await response.json();
+      if (response.ok) {
+        setCampaigns(data.campaigns || []);
+        setCampaignTotalUsers(data.totalUsers || 0);
+      }
+    } catch (err) {
+      console.error('Failed to fetch campaigns:', err);
+    } finally {
+      setIsLoadingCampaigns(false);
+    }
+  };
+
+  const handleViewUnsent = async (subject: string) => {
+    setUnsentModal({ subject, users: [], loading: true });
+    try {
+      const response = await fetch('/api/admin/email-logs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'get-unsent', subject }),
+      });
+      const data = await response.json();
+      if (response.ok) {
+        setUnsentModal({ subject, users: data.unsentUsers || [], loading: false });
+      }
+    } catch {
+      setUnsentModal(null);
+    }
+  };
+
   const fetchEmailLogs = async (page = 1, filter: 'all' | 'sent' | 'failed' = 'all') => {
     setIsLoadingEmailLogs(true);
     try {
@@ -1268,6 +1316,7 @@ function AdminDashboardContent() {
     }
     fetchStats();
     fetchEmailLogs();
+    fetchCampaigns();
     fetchSiteSettings();
   }, [session, sessionStatus, router]);
 
@@ -2572,6 +2621,52 @@ function AdminDashboardContent() {
         </div>
 
         {/* Email Logs */}
+        {/* Unsent Users Modal */}
+        {unsentModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl max-w-lg w-full max-h-[80vh] flex flex-col">
+              <div className="p-6 border-b border-neutral-200">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-semibold text-lg">Unsent Users</h3>
+                  <button onClick={() => setUnsentModal(null)} className="p-1 hover:bg-neutral-100 rounded-lg">
+                    <X className="h-5 w-5" />
+                  </button>
+                </div>
+                <p className="text-sm text-neutral-500 mt-1 truncate">{unsentModal.subject}</p>
+              </div>
+              <div className="flex-1 overflow-y-auto p-6">
+                {unsentModal.loading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="h-6 w-6 animate-spin text-neutral-400" />
+                  </div>
+                ) : unsentModal.users.length === 0 ? (
+                  <p className="text-neutral-500 text-center py-8">All users received this email!</p>
+                ) : (
+                  <>
+                    <p className="text-sm text-neutral-600 mb-4">{unsentModal.users.length} user{unsentModal.users.length !== 1 ? 's' : ''} didn&apos;t receive this email:</p>
+                    <div className="space-y-2 mb-4">
+                      {unsentModal.users.map(u => (
+                        <div key={u.id} className="flex items-center justify-between py-2 px-3 bg-neutral-50 rounded-lg text-sm">
+                          <span className="text-neutral-900">{u.email}</span>
+                          <span className="text-neutral-400 text-xs">{u.name || ''}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(unsentModal.users.map(u => u.email).join('\n'));
+                      }}
+                      className="w-full py-2.5 border border-neutral-200 rounded-lg text-sm font-medium hover:bg-neutral-50 transition-colors"
+                    >
+                      Copy All Emails
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="bg-white rounded-xl border border-neutral-200 p-6 mt-8">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
@@ -2579,35 +2674,119 @@ function AdminDashboardContent() {
                 <Mail className="h-5 w-5 text-neutral-500" />
                 Email Logs
               </h2>
-              <span className="text-sm text-neutral-500">
-                ({emailLogsTotal} total)
-              </span>
-              {isLoadingEmailLogs && <Loader2 className="h-4 w-4 animate-spin text-neutral-400" />}
+              {/* View toggle */}
+              <div className="flex bg-neutral-100 rounded-lg p-0.5">
+                <button
+                  onClick={() => { setEmailLogsView('campaigns'); fetchCampaigns(); }}
+                  className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${emailLogsView === 'campaigns' ? 'bg-white text-neutral-900 shadow-sm' : 'text-neutral-500 hover:text-neutral-700'}`}
+                >
+                  Campaigns
+                </button>
+                <button
+                  onClick={() => { setEmailLogsView('logs'); fetchEmailLogs(1, emailLogsFilter); }}
+                  className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${emailLogsView === 'logs' ? 'bg-white text-neutral-900 shadow-sm' : 'text-neutral-500 hover:text-neutral-700'}`}
+                >
+                  All Logs ({emailLogsTotal})
+                </button>
+              </div>
+              {(isLoadingEmailLogs || isLoadingCampaigns) && <Loader2 className="h-4 w-4 animate-spin text-neutral-400" />}
             </div>
-            <div className="flex items-center gap-2">
-              <select
-                value={emailLogsFilter}
-                onChange={(e) => {
-                  const newFilter = e.target.value as 'all' | 'sent' | 'failed';
-                  setEmailLogsFilter(newFilter);
-                  fetchEmailLogs(1, newFilter);
-                }}
-                className="px-3 py-1.5 text-sm border border-neutral-300 rounded-lg focus:ring-2 focus:ring-neutral-900 focus:border-transparent"
-              >
-                <option value="all">All</option>
-                <option value="sent">Sent</option>
-                <option value="failed">Failed</option>
-              </select>
+            {emailLogsView === 'logs' && (
+              <div className="flex items-center gap-2">
+                <select
+                  value={emailLogsFilter}
+                  onChange={(e) => {
+                    const newFilter = e.target.value as 'all' | 'sent' | 'failed';
+                    setEmailLogsFilter(newFilter);
+                    fetchEmailLogs(1, newFilter);
+                  }}
+                  className="px-3 py-1.5 text-sm border border-neutral-300 rounded-lg focus:ring-2 focus:ring-neutral-900 focus:border-transparent"
+                >
+                  <option value="all">All</option>
+                  <option value="sent">Sent</option>
+                  <option value="failed">Failed</option>
+                </select>
+                <button
+                  onClick={() => fetchEmailLogs(emailLogsPage, emailLogsFilter)}
+                  className="p-2 text-neutral-500 hover:text-neutral-900 hover:bg-neutral-100 rounded-lg transition-colors"
+                  title="Refresh"
+                >
+                  <RefreshCw className="h-4 w-4" />
+                </button>
+              </div>
+            )}
+            {emailLogsView === 'campaigns' && (
               <button
-                onClick={() => fetchEmailLogs(emailLogsPage, emailLogsFilter)}
+                onClick={fetchCampaigns}
                 className="p-2 text-neutral-500 hover:text-neutral-900 hover:bg-neutral-100 rounded-lg transition-colors"
                 title="Refresh"
               >
                 <RefreshCw className="h-4 w-4" />
               </button>
-            </div>
+            )}
           </div>
 
+          {/* Campaign View */}
+          {emailLogsView === 'campaigns' && (
+            <div className="space-y-3">
+              {campaigns.length > 0 ? campaigns.map((c, i) => (
+                <div key={i} className="border border-neutral-200 rounded-xl p-4 hover:bg-neutral-50 transition-colors">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-neutral-900 truncate">{c.subject}</p>
+                      <div className="flex items-center gap-3 mt-2 flex-wrap">
+                        <span className="inline-flex items-center gap-1 text-xs">
+                          <span className="w-2 h-2 bg-green-500 rounded-full" />
+                          {c.sentCount} sent
+                        </span>
+                        {c.failedCount > 0 && (
+                          <span className="inline-flex items-center gap-1 text-xs text-red-600">
+                            <span className="w-2 h-2 bg-red-500 rounded-full" />
+                            {c.failedCount} failed
+                          </span>
+                        )}
+                        {c.unsentCount > 0 && (
+                          <span className="inline-flex items-center gap-1 text-xs text-amber-600">
+                            <span className="w-2 h-2 bg-amber-400 rounded-full" />
+                            ~{c.unsentCount} unsent
+                          </span>
+                        )}
+                        <span className="text-xs text-neutral-400">
+                          {new Date(c.lastSent).toLocaleDateString()}
+                        </span>
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-neutral-100 text-neutral-500">
+                          {c.template}
+                        </span>
+                      </div>
+                    </div>
+                    {c.unsentCount > 0 && (
+                      <button
+                        onClick={() => handleViewUnsent(c.subject)}
+                        className="px-3 py-1.5 text-xs font-medium border border-neutral-200 rounded-lg hover:bg-neutral-100 transition-colors whitespace-nowrap"
+                      >
+                        View unsent
+                      </button>
+                    )}
+                  </div>
+                  {/* Progress bar */}
+                  <div className="mt-3 h-1.5 bg-neutral-100 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-green-500 rounded-full transition-all"
+                      style={{ width: `${campaignTotalUsers > 0 ? (c.sentCount / campaignTotalUsers) * 100 : 0}%` }}
+                    />
+                  </div>
+                  <p className="text-[11px] text-neutral-400 mt-1">
+                    {c.sentCount} of {campaignTotalUsers} users ({campaignTotalUsers > 0 ? Math.round((c.sentCount / campaignTotalUsers) * 100) : 0}%)
+                  </p>
+                </div>
+              )) : (
+                <p className="text-neutral-400 text-sm text-center py-6">No campaigns yet</p>
+              )}
+            </div>
+          )}
+
+          {/* Log View */}
+          {emailLogsView === 'logs' && <>
           {emailLogs.length > 0 ? (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
@@ -2689,6 +2868,7 @@ function AdminDashboardContent() {
               </div>
             </div>
           )}
+          </>}
         </div>
         </>
         )}
