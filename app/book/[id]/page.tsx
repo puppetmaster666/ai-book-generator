@@ -1557,28 +1557,60 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
             </div>
           )}
 
-          {/* Failed Section - Content Blocked */}
+          {/* Failed Section - Content Blocked with Refund */}
           {book.status === 'failed' && book.errorMessage === 'content_blocked' && (
-            <div className="bg-white rounded-2xl border border-red-200 p-8 mb-6">
+            <div className="bg-white rounded-2xl border border-neutral-200 p-8 mb-6">
               <div className="text-center">
-                <div className="w-16 h-16 mx-auto mb-4 bg-red-50 rounded-full flex items-center justify-center">
-                  <AlertCircle className="h-8 w-8 text-red-500" />
+                {/* Refund badge */}
+                <div className="inline-flex items-center gap-2 px-4 py-2 bg-lime-100 border border-lime-300 rounded-full mb-6 animate-pulse">
+                  <svg className="h-4 w-4 text-lime-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                  <span className="text-sm font-medium text-lime-800">Credit refunded to your account</span>
+                </div>
+
+                <div className="w-16 h-16 mx-auto mb-4 bg-neutral-100 rounded-full flex items-center justify-center">
+                  <AlertCircle className="h-8 w-8 text-neutral-500" />
                 </div>
                 <h2 className="text-xl font-semibold text-neutral-900 mb-2">
-                  Content Blocked
+                  Content couldn&apos;t be generated
                 </h2>
-                <p className="text-neutral-600 mb-4">
-                  Your book content was blocked by AI safety filters.
+                <p className="text-neutral-600 mb-2">
+                  Our AI wasn&apos;t able to generate this book due to content restrictions.
                 </p>
                 <p className="text-sm text-neutral-500 mb-6">
-                  Please create a new book with different content. Avoid adult themes, explicit violence, or controversial topics.
+                  Your credit has been refunded. Try adjusting your prompt — toning down mature themes or explicit content usually helps.
                 </p>
-                <Link
-                  href="/create"
-                  className="inline-flex items-center gap-2 px-6 py-3 bg-neutral-900 text-white rounded-full hover:bg-neutral-800 font-medium transition-colors"
-                >
-                  Create New Book
-                </Link>
+
+                {/* Show original prompt for reference */}
+                {book.premise && (
+                  <div className="bg-neutral-50 rounded-xl p-4 mb-6 max-w-lg mx-auto text-left">
+                    <p className="text-xs text-neutral-400 uppercase tracking-wider mb-1">Your original prompt</p>
+                    <p className="text-sm text-neutral-700">{book.premise}</p>
+                  </div>
+                )}
+
+                <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+                  <button
+                    onClick={() => {
+                      if (book.premise) {
+                        sessionStorage.setItem('bookIdea', book.premise);
+                      }
+                      window.location.href = '/create';
+                    }}
+                    className="inline-flex items-center gap-2 px-6 py-3 bg-neutral-900 text-white rounded-full hover:bg-neutral-800 font-medium transition-colors"
+                  >
+                    Try Again with Adjusted Prompt
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (book.premise) {
+                        navigator.clipboard.writeText(book.premise);
+                      }
+                    }}
+                    className="inline-flex items-center gap-2 px-4 py-2.5 border border-neutral-200 rounded-full text-sm text-neutral-600 hover:bg-neutral-50 transition-colors"
+                  >
+                    Copy Prompt
+                  </button>
+                </div>
               </div>
             </div>
           )}

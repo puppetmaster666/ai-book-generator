@@ -36,11 +36,13 @@ export async function GET(request: NextRequest) {
     const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000);
 
     // Query 1: Books that were paid but never started (failed, pending, preview_complete)
+    // Exclude content_blocked books — those need user intervention, not auto-retry
     const stuckNotStarted = await prisma.book.findMany({
       where: {
         paymentStatus: 'completed',
         status: { notIn: ['completed', 'generating', 'outlining'] },
         updatedAt: { lt: tenMinutesAgo },
+        NOT: { errorMessage: 'content_blocked' },
       },
       select: { id: true, title: true, status: true, bookFormat: true, updatedAt: true, generationMode: true, currentChapter: true, totalChapters: true },
     });

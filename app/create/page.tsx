@@ -121,12 +121,31 @@ export default function CreateBook() {
   const [isDragging, setIsDragging] = useState(false);
   const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
   const [isParsingFile, setIsParsingFile] = useState(false);
+  const [showPromptHistory, setShowPromptHistory] = useState(false);
+  const [promptHistory, setPromptHistory] = useState<string[]>([]);
 
   // Get user ID from session if logged in
   const userId = (session?.user as { id?: string })?.id;
 
   // Storage key for form state
   const FORM_STATE_KEY = 'createBookFormState';
+
+  // Load prompt history from localStorage
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('promptHistory');
+      if (saved) setPromptHistory(JSON.parse(saved));
+    } catch { /* ignore */ }
+  }, []);
+
+  // Save prompt to history when submitting
+  const savePromptToHistory = (prompt: string) => {
+    const trimmed = prompt.trim();
+    if (!trimmed || trimmed.length < 20) return;
+    const updated = [trimmed, ...promptHistory.filter(p => p !== trimmed)].slice(0, 10);
+    setPromptHistory(updated);
+    localStorage.setItem('promptHistory', JSON.stringify(updated));
+  };
 
   // Fetch remaining idea generations on mount
   useEffect(() => {
@@ -394,6 +413,9 @@ export default function CreateBook() {
 
     setIsSubmitting(true);
     setError('');
+
+    // Save prompt to history
+    savePromptToHistory(idea);
 
     try {
       const preset = BOOK_PRESETS[selectedPreset];
@@ -840,6 +862,36 @@ export default function CreateBook() {
 
                 {error && (
                   <p className="text-red-600 text-sm mt-4 bg-red-50 px-4 py-2 rounded-lg">{error}</p>
+                )}
+
+                {/* Prompt History */}
+                {promptHistory.length > 0 && (
+                  <div className="mt-6">
+                    <button
+                      type="button"
+                      onClick={() => setShowPromptHistory(!showPromptHistory)}
+                      className="flex items-center gap-2 text-sm text-neutral-400 hover:text-neutral-600 transition-colors"
+                    >
+                      <Clock className="h-3.5 w-3.5" />
+                      Previous prompts ({promptHistory.length})
+                      <ChevronDown className={`h-3.5 w-3.5 transition-transform ${showPromptHistory ? 'rotate-180' : ''}`} />
+                    </button>
+                    {showPromptHistory && (
+                      <div className="mt-3 space-y-2 max-h-48 overflow-y-auto">
+                        {promptHistory.map((prompt, i) => (
+                          <button
+                            key={i}
+                            type="button"
+                            onClick={() => setIdea(prompt)}
+                            className="w-full text-left p-3 bg-neutral-50 hover:bg-neutral-100 rounded-lg transition-colors group"
+                          >
+                            <p className="text-sm text-neutral-700 line-clamp-2">{prompt}</p>
+                            <p className="text-xs text-neutral-400 mt-1 group-hover:text-neutral-600">Click to use</p>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 )}
 
                 <div className="mt-8 flex justify-end">

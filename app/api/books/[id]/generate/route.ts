@@ -1670,7 +1670,8 @@ export async function POST(
       errorMessage.includes('blocked') ||
       errorMessage.includes('safety');
 
-    await prisma.book.update({
+    // Get book details for refund logic
+    const failedBook = await prisma.book.update({
       where: { id },
       data: {
         status: 'failed',
@@ -1678,12 +1679,49 @@ export async function POST(
           ? 'content_blocked'
           : errorMessage,
       },
+      select: { id: true, userId: true, paymentId: true, premise: true },
     });
+
+    // Auto-refund credit for content-blocked books
+    if (isContentBlocked && failedBook.userId) {
+      try {
+        const isPromoPayment = failedBook.paymentId?.startsWith('promo_');
+        const isFreePayment = failedBook.paymentId?.startsWith('free_');
+
+        if (isPromoPayment || isFreePayment) {
+          // Refund as free credit
+          await prisma.user.update({
+            where: { id: failedBook.userId },
+            data: { freeCredits: { increment: 1 } },
+          });
+        } else if (failedBook.paymentId) {
+          // Paid with subscription credits — refund credit
+          await prisma.user.update({
+            where: { id: failedBook.userId },
+            data: { credits: { increment: 1 } },
+          });
+        }
+
+        // Send notification about the refund
+        await prisma.notification.create({
+          data: {
+            userId: failedBook.userId,
+            type: 'credit_refund',
+            title: 'Credit refunded',
+            message: 'Your book was blocked by content filters. We\'ve refunded your credit — try again with adjusted content.',
+          },
+        });
+
+        console.log(`[Generate] Auto-refunded credit for content-blocked book ${id} to user ${failedBook.userId}`);
+      } catch (refundErr) {
+        console.error(`[Generate] Failed to auto-refund for book ${id}:`, refundErr);
+      }
+    }
 
     return NextResponse.json(
       {
         error: isContentBlocked
-          ? 'Content was blocked by AI safety filters. Please try with different content.'
+          ? 'Content was blocked by AI safety filters. Your credit has been refunded.'
           : 'Failed to generate book',
         contentBlocked: isContentBlocked,
       },
