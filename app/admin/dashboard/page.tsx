@@ -735,7 +735,7 @@ function AdminDashboardContent() {
   }>>([]);
   const [campaignTotalUsers, setCampaignTotalUsers] = useState(0);
   const [isLoadingCampaigns, setIsLoadingCampaigns] = useState(false);
-  const [unsentModal, setUnsentModal] = useState<{ subject: string; users: Array<{ id: string; email: string; name: string | null }>; loading: boolean } | null>(null);
+  const [unsentModal, setUnsentModal] = useState<{ subject: string; users: Array<{ id: string; email: string; name: string | null }>; loading: boolean; resending?: boolean; resendResult?: string } | null>(null);
 
   // Site settings state
   const [trafficWarningEnabled, setTrafficWarningEnabled] = useState(false);
@@ -1255,6 +1255,27 @@ function AdminDashboardContent() {
       }
     } catch {
       setUnsentModal(null);
+    }
+  };
+
+  const handleResendToUnsent = async (subject: string) => {
+    if (!unsentModal) return;
+    setUnsentModal(prev => prev ? { ...prev, resending: true, resendResult: undefined } : null);
+    try {
+      const response = await fetch('/api/admin/email-logs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'resend-unsent', subject }),
+      });
+      const data = await response.json();
+      if (response.ok && data.success) {
+        setUnsentModal(prev => prev ? { ...prev, resending: false, resendResult: data.message } : null);
+        fetchCampaigns();
+      } else {
+        setUnsentModal(prev => prev ? { ...prev, resending: false, resendResult: data.error || 'Failed to resend' } : null);
+      }
+    } catch {
+      setUnsentModal(prev => prev ? { ...prev, resending: false, resendResult: 'Failed to resend' } : null);
     }
   };
 
@@ -2652,14 +2673,32 @@ function AdminDashboardContent() {
                         </div>
                       ))}
                     </div>
-                    <button
-                      onClick={() => {
-                        navigator.clipboard.writeText(unsentModal.users.map(u => u.email).join('\n'));
-                      }}
-                      className="w-full py-2.5 border border-neutral-200 rounded-lg text-sm font-medium hover:bg-neutral-50 transition-colors"
-                    >
-                      Copy All Emails
-                    </button>
+                    {unsentModal.resendResult && (
+                      <div className={`p-3 rounded-lg text-sm mb-4 ${unsentModal.resendResult.includes('Failed') || unsentModal.resendResult.includes('No stored') ? 'bg-red-50 text-red-700' : 'bg-green-50 text-green-700'}`}>
+                        {unsentModal.resendResult}
+                      </div>
+                    )}
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleResendToUnsent(unsentModal.subject)}
+                        disabled={unsentModal.resending}
+                        className="flex-1 py-2.5 bg-neutral-900 text-white rounded-lg text-sm font-medium hover:bg-neutral-800 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                      >
+                        {unsentModal.resending ? (
+                          <><Loader2 className="h-4 w-4 animate-spin" /> Sending...</>
+                        ) : (
+                          <><Send className="h-4 w-4" /> Resend to {unsentModal.users.length} users</>
+                        )}
+                      </button>
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(unsentModal.users.map(u => u.email).join('\n'));
+                        }}
+                        className="px-4 py-2.5 border border-neutral-200 rounded-lg text-sm font-medium hover:bg-neutral-50 transition-colors"
+                      >
+                        Copy
+                      </button>
+                    </div>
                   </>
                 )}
               </div>
