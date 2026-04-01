@@ -92,6 +92,7 @@ model Book {
   totalChapters          Int            @default(0)
   totalWords             Int            @default(0)
   errorMessage           String?
+  reconcileRetries       Int            @default(0)
   paymentId              String?
   paymentStatus          String         @default("pending")
   createdAt              DateTime       @default(now())

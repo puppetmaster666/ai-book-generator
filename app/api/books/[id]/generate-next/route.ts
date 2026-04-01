@@ -94,6 +94,7 @@ export async function POST(
   // Extract id outside try-catch so it's available in error handler
   const { id } = await params;
   const functionStartTime = Date.now();
+  let heartbeatInterval: ReturnType<typeof setInterval> | null = null;
 
   try {
 
@@ -788,6 +789,13 @@ ${postProcessed.surgicalPrompt}`,
     }
 
     // STANDARD CHAPTER GENERATION FLOW
+    // Heartbeat: keep updatedAt fresh so reconcile doesn't think we're stuck
+    heartbeatInterval = setInterval(async () => {
+      try {
+        await prisma.book.update({ where: { id }, data: { /* updatedAt auto-set */ } });
+      } catch { /* ignore */ }
+    }, 120000); // Every 2 minutes
+
     // Generate chapter content with streaming for live preview
     let chapterContent: string;
 
@@ -838,14 +846,21 @@ ${postProcessed.surgicalPrompt}`,
         `Chapter ${nextChapterNum} generation`
       );
     } catch (timeoutError) {
+      clearInterval(heartbeatInterval);
       console.error(`Chapter ${nextChapterNum} generation timed out:`, timeoutError);
-      // Generate emergency placeholder to keep the book moving
-      chapterContent = `Chapter ${nextChapterNum}: ${chapterPlan.title}
-
-${chapterPlan.summary}
-
-[This chapter is being regenerated. Please refresh in a moment.]`;
-      console.log(`Created placeholder for chapter ${nextChapterNum} due to timeout`);
+      // Don't save a placeholder — mark as failed so reconcile retries this exact chapter
+      await prisma.book.update({
+        where: { id },
+        data: {
+          status: 'failed',
+          errorMessage: `Chapter ${nextChapterNum} timed out. Will auto-retry.`,
+        },
+      });
+      return NextResponse.json({
+        error: `Chapter ${nextChapterNum} timed out, will retry automatically`,
+        chapter: nextChapterNum,
+        totalChapters,
+      }, { status: 500 });
     }
 
     // === HARD REJECT CHECK FOR PROSE (Code Fortress) ===
@@ -1085,6 +1100,9 @@ ${chapterPlan.summary}
       }, { status: 404 });
     }
 
+    // Clear heartbeat before saving
+    clearInterval(heartbeatInterval);
+
     // Save chapter (use upsert to handle retries gracefully)
     const savedChapter = await prisma.chapter.upsert({
       where: {
@@ -1174,6 +1192,8 @@ ${chapterPlan.summary}
     });
 
   } catch (error) {
+    // Ensure heartbeat is always cleared
+    if (heartbeatInterval) clearInterval(heartbeatInterval);
     console.error('Error generating next chapter:', error);
 
     // Try to update book with error status (may fail if book was deleted)
@@ -1278,12 +1298,14 @@ async function finalizeBook(id: string, book: {
     // Continue - metadata is optional enhancement
   }
 
-  // Mark as completed
+  // Mark as completed and reset retry counter
   await prisma.book.update({
     where: { id },
     data: {
       status: 'completed',
       completedAt: new Date(),
+      reconcileRetries: 0,
+      errorMessage: null,
     },
   });
 

@@ -35,16 +35,19 @@ export async function GET(request: NextRequest) {
     const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
     const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000);
 
+    const MAX_RECONCILE_RETRIES = 5;
+
     // Query 1: Books that were paid but never started (failed, pending, preview_complete)
-    // Exclude content_blocked books — those need user intervention, not auto-retry
+    // Exclude content_blocked books and books that exceeded retry cap
     const stuckNotStarted = await prisma.book.findMany({
       where: {
         paymentStatus: 'completed',
         status: { notIn: ['completed', 'generating', 'outlining'] },
         updatedAt: { lt: tenMinutesAgo },
         NOT: { errorMessage: 'content_blocked' },
+        reconcileRetries: { lt: MAX_RECONCILE_RETRIES },
       },
-      select: { id: true, title: true, status: true, bookFormat: true, updatedAt: true, generationMode: true, currentChapter: true, totalChapters: true },
+      select: { id: true, title: true, status: true, bookFormat: true, updatedAt: true, generationMode: true, currentChapter: true, totalChapters: true, reconcileRetries: true },
     });
 
     // Query 2: Server-driven books stuck in 'generating' (self-chain likely failed)
@@ -53,9 +56,10 @@ export async function GET(request: NextRequest) {
         paymentStatus: 'completed',
         generationMode: 'server',
         status: 'generating',
-        updatedAt: { lt: fifteenMinutesAgo }, // Longer threshold for server-driven
+        updatedAt: { lt: fifteenMinutesAgo },
+        reconcileRetries: { lt: MAX_RECONCILE_RETRIES },
       },
-      select: { id: true, title: true, status: true, bookFormat: true, updatedAt: true, generationMode: true, currentChapter: true, totalChapters: true },
+      select: { id: true, title: true, status: true, bookFormat: true, updatedAt: true, generationMode: true, currentChapter: true, totalChapters: true, reconcileRetries: true },
     });
 
     const stuckBooks = [...stuckNotStarted, ...stuckGenerating];
@@ -107,7 +111,13 @@ export async function GET(request: NextRequest) {
           endpoint = `/api/books/${book.id}/generate`;
         }
 
-        console.log(`[Reconcile] Using endpoint: ${endpoint} (status: ${book.status}, chapter: ${book.currentChapter}/${book.totalChapters})`);
+        console.log(`[Reconcile] Using endpoint: ${endpoint} (status: ${book.status}, chapter: ${book.currentChapter}/${book.totalChapters}, retry: ${(book.reconcileRetries || 0) + 1}/${MAX_RECONCILE_RETRIES})`);
+
+        // Increment retry counter
+        await prisma.book.update({
+          where: { id: book.id },
+          data: { reconcileRetries: { increment: 1 } },
+        });
 
         const res = await fetch(`${appUrl}${endpoint}`, {
           method: 'POST',
