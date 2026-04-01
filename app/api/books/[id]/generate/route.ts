@@ -754,17 +754,48 @@ export async function POST(
 
         console.log(`Generating ${presetKey} screenplay: ${totalSequences} sequences, ${targetPages} pages target`);
 
-        // Use screenplay outline with beat sheet structure
-        const screenplayResult = await withTimeout(
-          generateScreenplayOutline({
-            idea: book.premise,
-            genre: book.genre,
-            title: book.title,
-            targetPages,
-          }),
-          OUTLINE_TIMEOUT_MS,
-          'Screenplay outline generation'
-        );
+        // Screenplay outline with progressive content softening
+        const MAX_SP_OUTLINE_ATTEMPTS = 3;
+        const SP_SOFTENING = [
+          '',
+          `\n\nCONTENT NOTE: Keep violence implied, not graphic. Intimate scenes fade to black. Focus on dialogue, tension, and character conflict. Think PG-13 rating.`,
+          `\n\nSTRICT: All content must be suitable for general audiences. No graphic violence, no mature themes. Focus on emotional drama, clever dialogue, and plot twists.`,
+        ];
+
+        let screenplayResult;
+        for (let spAttempt = 0; spAttempt < MAX_SP_OUTLINE_ATTEMPTS; spAttempt++) {
+          try {
+            if (spAttempt > 0) {
+              console.log(`[Screenplay Outline] Retry ${spAttempt + 1}/${MAX_SP_OUTLINE_ATTEMPTS} with softer content...`);
+            }
+            screenplayResult = await withTimeout(
+              generateScreenplayOutline({
+                idea: book.premise + SP_SOFTENING[spAttempt],
+                genre: book.genre,
+                title: book.title,
+                targetPages,
+              }),
+              OUTLINE_TIMEOUT_MS,
+              `Screenplay outline generation (attempt ${spAttempt + 1})`
+            );
+            if (spAttempt > 0) {
+              console.log(`[Screenplay Outline] Succeeded on attempt ${spAttempt + 1}`);
+            }
+            break;
+          } catch (spError) {
+            const errMsg = spError instanceof Error ? spError.message : '';
+            const isContentBlock = errMsg.includes('PROHIBITED_CONTENT') || errMsg.includes('blocked') || errMsg.includes('safety');
+            if (isContentBlock && spAttempt < MAX_SP_OUTLINE_ATTEMPTS - 1) {
+              console.warn(`[Screenplay Outline] Content blocked on attempt ${spAttempt + 1}, retrying softer...`);
+              continue;
+            }
+            throw spError;
+          }
+        }
+
+        if (!screenplayResult) {
+          throw new Error('Failed to generate screenplay outline after all attempts');
+        }
 
         // Store beat sheet and characters in outline, plus format info for generate-next
         outline = {
@@ -844,65 +875,100 @@ export async function POST(
         const targetPanelCount = book.targetChapters;
         const isComicStyle = dialogueStyle === 'bubbles';
 
-        if (isComicStyle) {
-          // COMIC BOOKS: Use the new 4-step pipeline (Writer → Director → Editor → Artist)
-          console.log(`Generating comic outline with 4-step pipeline (${targetPanelCount} panels)...`);
+        // Visual outline with progressive content softening on safety blocks
+        const MAX_VISUAL_OUTLINE_ATTEMPTS = 3;
+        const CONTENT_SOFTENING_INSTRUCTIONS = [
+          '', // Attempt 1: no modification
+          `\n\nIMPORTANT CONTENT GUIDELINES: Keep all scenes suitable for general audiences. Replace any violence with dramatic tension. Replace any explicit or mature content with emotional implications. Use "fade to black" for intimate moments. Focus on emotions, atmosphere, and character expressions rather than physical actions.`,
+          `\n\nSTRICT CONTENT POLICY: This must be completely family-friendly. No violence, no mature themes, no conflict descriptions. Focus entirely on positive emotions, beautiful environments, and character dialogue. Think Disney/Pixar level content. Every scene should be safe for all ages.`,
+        ];
 
-          const comicOutline = await withTimeout(
-            generateComicOutline({
-              title: book.title,
-              genre: book.genre,
-              bookType: book.bookType,
-              premise: book.premise,
-              originalIdea: book.originalIdea || undefined,
-              characters: book.characters as { name: string; description: string }[],
-              beginning: book.beginning,
-              middle: book.middle,
-              ending: book.ending,
-              writingStyle: book.writingStyle,
-              targetWords: book.targetWords,
-              targetChapters: targetPanelCount,
-              dialogueStyle: dialogueStyle,
-              contentRating: (book.contentRating || 'general') as ContentRating,
-              characterVisualGuide: book.characterVisualGuide as {
-                characters: Array<{
-                  name: string;
-                  physicalDescription: string;
-                  clothing: string;
-                  distinctiveFeatures: string;
-                }>;
-              } | undefined,
-            }),
-            OUTLINE_TIMEOUT_MS,
-            'Comic book outline generation (4-step pipeline)'
-          );
-          outline = comicOutline;
-        } else {
-          // PICTURE BOOKS: Use the existing 2-step pipeline (works well for prose style)
-          console.log(`Generating picture book outline with ${targetPanelCount} panels...`);
+        for (let outlineAttempt = 0; outlineAttempt < MAX_VISUAL_OUTLINE_ATTEMPTS; outlineAttempt++) {
+          try {
+            const softeningInstruction = CONTENT_SOFTENING_INSTRUCTIONS[outlineAttempt];
+            const adjustedPremise = book.premise + softeningInstruction;
 
-          const visualOutline = await withTimeout(
-            generateIllustratedOutline({
-              title: book.title,
-              genre: book.genre,
-              bookType: book.bookType,
-              premise: book.premise,
-              originalIdea: book.originalIdea || undefined,
-              characters: book.characters as { name: string; description: string }[],
-              beginning: book.beginning,
-              middle: book.middle,
-              ending: book.ending,
-              writingStyle: book.writingStyle,
-              targetWords: book.targetWords,
-              targetChapters: targetPanelCount,
-              dialogueStyle: dialogueStyle,
-              characterVisualGuide: book.characterVisualGuide as CharacterVisualGuide | undefined,
-              contentRating: (book.contentRating || 'general') as ContentRating,
-            }),
-            OUTLINE_TIMEOUT_MS,
-            'Picture book outline generation'
-          );
-          outline = visualOutline;
+            if (outlineAttempt > 0) {
+              console.log(`[Visual Outline] Retry ${outlineAttempt + 1}/${MAX_VISUAL_OUTLINE_ATTEMPTS} with softer content instructions...`);
+            }
+
+            if (isComicStyle) {
+              console.log(`Generating comic outline with 4-step pipeline (${targetPanelCount} panels)...`);
+              const comicOutline = await withTimeout(
+                generateComicOutline({
+                  title: book.title,
+                  genre: book.genre,
+                  bookType: book.bookType,
+                  premise: adjustedPremise,
+                  originalIdea: book.originalIdea || undefined,
+                  characters: book.characters as { name: string; description: string }[],
+                  beginning: book.beginning,
+                  middle: book.middle,
+                  ending: book.ending,
+                  writingStyle: book.writingStyle,
+                  targetWords: book.targetWords,
+                  targetChapters: targetPanelCount,
+                  dialogueStyle: dialogueStyle,
+                  contentRating: (book.contentRating || 'general') as ContentRating,
+                  characterVisualGuide: book.characterVisualGuide as {
+                    characters: Array<{
+                      name: string;
+                      physicalDescription: string;
+                      clothing: string;
+                      distinctiveFeatures: string;
+                    }>;
+                  } | undefined,
+                }),
+                OUTLINE_TIMEOUT_MS,
+                `Comic book outline generation (attempt ${outlineAttempt + 1})`
+              );
+              outline = comicOutline;
+            } else {
+              console.log(`Generating picture book outline with ${targetPanelCount} panels...`);
+              const visualOutline = await withTimeout(
+                generateIllustratedOutline({
+                  title: book.title,
+                  genre: book.genre,
+                  bookType: book.bookType,
+                  premise: adjustedPremise,
+                  originalIdea: book.originalIdea || undefined,
+                  characters: book.characters as { name: string; description: string }[],
+                  beginning: book.beginning,
+                  middle: book.middle,
+                  ending: book.ending,
+                  writingStyle: book.writingStyle,
+                  targetWords: book.targetWords,
+                  targetChapters: targetPanelCount,
+                  dialogueStyle: dialogueStyle,
+                  characterVisualGuide: book.characterVisualGuide as CharacterVisualGuide | undefined,
+                  contentRating: (book.contentRating || 'general') as ContentRating,
+                }),
+                OUTLINE_TIMEOUT_MS,
+                `Picture book outline generation (attempt ${outlineAttempt + 1})`
+              );
+              outline = visualOutline;
+            }
+
+            // Success — break out of retry loop
+            if (outlineAttempt > 0) {
+              console.log(`[Visual Outline] Succeeded on attempt ${outlineAttempt + 1} with softened content`);
+            }
+            break;
+          } catch (outlineError) {
+            const errMsg = outlineError instanceof Error ? outlineError.message : '';
+            const isContentBlock = errMsg.includes('PROHIBITED_CONTENT') || errMsg.includes('blocked') || errMsg.includes('safety');
+
+            if (isContentBlock && outlineAttempt < MAX_VISUAL_OUTLINE_ATTEMPTS - 1) {
+              console.warn(`[Visual Outline] Content blocked on attempt ${outlineAttempt + 1}, retrying with softer content...`);
+              continue;
+            }
+            // Not a content block or last attempt — rethrow
+            throw outlineError;
+          }
+        }
+
+        if (!outline) {
+          throw new Error('Failed to generate visual outline after all attempts');
         }
 
         // ENFORCE exact panel count - AI sometimes ignores "Create EXACTLY X" instruction
@@ -994,21 +1060,25 @@ export async function POST(
           OUTLINE_TIMEOUT_MS,
           'Non-fiction outline generation'
         );
-        // Map non-fiction outline to standard format (keyPoints → summary for compatibility)
         outline = {
           chapters: nfOutline.chapters.map(ch => ({
             ...ch,
             summary: ch.summary,
-            pov: undefined, // Non-fiction doesn't have POV
+            pov: undefined,
           })),
         };
       } else {
-        // Use standard outline for fiction text-based books
-        // Outline generation callback for live preview updates
+        // Fiction text-based books with progressive content softening on safety blocks
+        const MAX_TEXT_OUTLINE_ATTEMPTS = 3;
+        const TEXT_SOFTENING = [
+          '',
+          `\n\nCONTENT NOTE: Rewrite any mature scenes as emotional implications. Violence should be referenced but not depicted. Intimate scenes use "fade to black." Think prestige drama (HBO) not explicit.`,
+          `\n\nSTRICT: Make this completely PG-13. No violence details, no mature themes. Focus on character emotions, relationships, and plot twists. Skip any scene that could trigger content filters.`,
+        ];
+
         let lastOutlineProgressUpdate = 0;
         const onOutlineProgress = async (status: string, chaptersCompleted: number, totalChapters: number) => {
           const now = Date.now();
-          // Throttle updates to every 2 seconds
           if (now - lastOutlineProgressUpdate > 2000) {
             try {
               await prisma.book.update({
@@ -1017,57 +1087,82 @@ export async function POST(
               });
               lastOutlineProgressUpdate = now;
             } catch (e) {
-              // Ignore errors - live preview is non-critical
+              // Ignore - live preview is non-critical
             }
           }
         };
 
-        // For large books (>16 chapters), chunked generation handles its own timeouts per chunk
-        // For smaller books, use the standard timeout wrapper
-        if (book.targetChapters > 16) {
-          console.log(`[Generate] Large book (${book.targetChapters} chapters) - using chunked outline generation`);
-          outline = await generateOutline({
-            title: book.title,
-            genre: book.genre,
-            bookType: book.bookType,
-            premise: book.premise,
-            originalIdea: book.originalIdea || undefined,
-            characters: book.characters as { name: string; description: string }[],
-            beginning: book.beginning,
-            middle: book.middle,
-            ending: book.ending,
-            writingStyle: book.writingStyle,
-            targetWords: book.targetWords,
-            targetChapters: book.targetChapters,
-            onProgress: onOutlineProgress,
-          });
-        } else {
-          outline = await withTimeout(
-            generateOutline({
-              title: book.title,
-              genre: book.genre,
-              bookType: book.bookType,
-              premise: book.premise,
-              originalIdea: book.originalIdea || undefined,
-              characters: book.characters as { name: string; description: string }[],
-              beginning: book.beginning,
-              middle: book.middle,
-              ending: book.ending,
-              writingStyle: book.writingStyle,
-              targetWords: book.targetWords,
-              targetChapters: book.targetChapters,
-              onProgress: onOutlineProgress,
-            }),
-            OUTLINE_TIMEOUT_MS,
-            'Fiction outline generation'
-          );
+        for (let textAttempt = 0; textAttempt < MAX_TEXT_OUTLINE_ATTEMPTS; textAttempt++) {
+          try {
+            const adjustedPremise = book.premise + TEXT_SOFTENING[textAttempt];
+
+            if (textAttempt > 0) {
+              console.log(`[Text Outline] Retry ${textAttempt + 1}/${MAX_TEXT_OUTLINE_ATTEMPTS} with softer content...`);
+            }
+
+            if (book.targetChapters > 16) {
+              console.log(`[Generate] Large book (${book.targetChapters} chapters) - using chunked outline generation`);
+              outline = await generateOutline({
+                title: book.title,
+                genre: book.genre,
+                bookType: book.bookType,
+                premise: adjustedPremise,
+                originalIdea: book.originalIdea || undefined,
+                characters: book.characters as { name: string; description: string }[],
+                beginning: book.beginning,
+                middle: book.middle,
+                ending: book.ending,
+                writingStyle: book.writingStyle,
+                targetWords: book.targetWords,
+                targetChapters: book.targetChapters,
+                onProgress: onOutlineProgress,
+              });
+            } else {
+              outline = await withTimeout(
+                generateOutline({
+                  title: book.title,
+                  genre: book.genre,
+                  bookType: book.bookType,
+                  premise: adjustedPremise,
+                  originalIdea: book.originalIdea || undefined,
+                  characters: book.characters as { name: string; description: string }[],
+                  beginning: book.beginning,
+                  middle: book.middle,
+                  ending: book.ending,
+                  writingStyle: book.writingStyle,
+                  targetWords: book.targetWords,
+                  targetChapters: book.targetChapters,
+                  onProgress: onOutlineProgress,
+                }),
+                OUTLINE_TIMEOUT_MS,
+                `Fiction outline generation (attempt ${textAttempt + 1})`
+              );
+            }
+
+            if (textAttempt > 0) {
+              console.log(`[Text Outline] Succeeded on attempt ${textAttempt + 1} with softened content`);
+            }
+            break;
+          } catch (outlineError) {
+            const errMsg = outlineError instanceof Error ? outlineError.message : '';
+            const isContentBlock = errMsg.includes('PROHIBITED_CONTENT') || errMsg.includes('blocked') || errMsg.includes('safety');
+
+            if (isContentBlock && textAttempt < MAX_TEXT_OUTLINE_ATTEMPTS - 1) {
+              console.warn(`[Text Outline] Content blocked on attempt ${textAttempt + 1}, retrying softer...`);
+              continue;
+            }
+            throw outlineError;
+          }
         }
 
-        // Clear live preview after outline complete
         await prisma.book.update({
           where: { id },
           data: { livePreview: null },
         });
+      }
+
+      if (!outline) {
+        throw new Error('Failed to generate outline after all attempts');
       }
 
       await prisma.book.update({
