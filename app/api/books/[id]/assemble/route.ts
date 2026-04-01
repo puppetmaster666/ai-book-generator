@@ -90,26 +90,26 @@ export async function POST(
     const characterVisualGuide = book.characterVisualGuide as CharacterVisualGuide | null;
     const visualStyleGuide = book.visualStyleGuide as VisualStyleGuide | null;
 
-    // Generate cover
+    // Generate cover (non-fatal — book completes even if cover fails)
     console.log('Generating cover...');
-    const coverPrompt = await generateCoverPrompt({
-      title: book.title,
-      genre: book.genre,
-      bookType: book.bookType,
-      premise: book.premise,
-      authorName: book.authorName,
-      artStyle: book.artStyle || undefined,
-      artStylePrompt: artStyleConfig?.coverStyle,
-      characterVisualGuide: characterVisualGuide || undefined,
-      visualStyleGuide: visualStyleGuide || undefined,
-    });
-
     let coverImageUrl: string | null = null;
+    let coverPrompt: string | null = null;
     try {
+      coverPrompt = await generateCoverPrompt({
+        title: book.title,
+        genre: book.genre,
+        bookType: book.bookType,
+        premise: book.premise,
+        authorName: book.authorName,
+        artStyle: book.artStyle || undefined,
+        artStylePrompt: artStyleConfig?.coverStyle,
+        characterVisualGuide: characterVisualGuide || undefined,
+        visualStyleGuide: visualStyleGuide || undefined,
+      });
       coverImageUrl = await generateCoverImage(coverPrompt);
     } catch (error) {
-      console.error('Failed to generate cover:', error);
-      // Continue without cover
+      console.error('Failed to generate cover (continuing without):', error instanceof Error ? error.message : error);
+      // Continue without cover — the book is still complete
     }
 
     // Mark as completed

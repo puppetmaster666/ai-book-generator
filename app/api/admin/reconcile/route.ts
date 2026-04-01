@@ -99,6 +99,9 @@ export async function GET(request: NextRequest) {
         } else if (isVisualBook && (book.status === 'failed' || book.currentChapter > 0)) {
           // Visual book that failed after outline was created - retry illustrations
           endpoint = `/api/books/${book.id}/generate-visual`;
+        } else if (!isVisualBook && book.currentChapter > 0) {
+          // Text book with existing chapters — resume, don't restart
+          endpoint = `/api/books/${book.id}/generate-next`;
         } else {
           // Everything else - start from scratch with generate
           endpoint = `/api/books/${book.id}/generate`;
