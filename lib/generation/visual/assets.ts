@@ -283,16 +283,16 @@ export async function generateVisualStyleGuide(data: {
 }> {
   // Technical anchors - specific aesthetic rules for each art style to avoid generic "digital art" look
   const styleAnchors: Record<string, string> = {
-    'manga': "Screentones, G Pen inking, 90s cel-shaded aesthetic, expressive micro-expressions, speed lines for motion.",
-    'anime': "Screentones, G Pen inking, 90s cel-shaded aesthetic, expressive micro-expressions, speed lines for motion.",
-    'noir': "High-contrast Chiaroscuro, ink-heavy, no mid-tones, dramatic black shadows, Sin City aesthetic.",
-    'superhero': "Dynamic Foreshortening, Bold Black Inking, Kirby Krackle energy effects, Ben-Day dots, Silver Age comic aesthetic.",
-    'retro': "Offset Printing Artifacts, Limited CMYK Palette, Aged Paper Texture, 1950s Silver Age aesthetic, halftone patterns.",
-    'watercolor': "Wet-on-Wet Textures, Visible Paper Grain, Soft Color Bleeds, Pigment Blooms, translucent washes, deckled edges.",
-    'cartoon': "Thick Clean Outlines, Flat/Cell Shading, Saturday Morning Cartoon style, expressive exaggerated proportions.",
-    'classic': "Cross-Hatching, Ink Wash, Muted Earth-Tones, Beatrix Potter and Arthur Rackham inspired textures.",
-    'storybook': "Cross-Hatching, Ink Wash, Muted Earth-Tones, Beatrix Potter and Arthur Rackham inspired textures.",
-    'fantasy': "Luminous Lighting, Epic Scale, Painterly oil-on-canvas texture, Ghibli/Zelda background depth, magical atmosphere."
+    'manga': "Clean G-pen inking with screentone shading, cel-shaded coloring with precise highlights, large expressive eyes with iris reflections, speed lines for motion, Makoto Shinkai atmospheric lighting, distinct anime face proportions, hair with individual strand detail and glossy highlights.",
+    'anime': "Clean G-pen inking with screentone shading, cel-shaded coloring with precise highlights, large expressive eyes with iris reflections, speed lines for motion, Makoto Shinkai atmospheric lighting, distinct anime face proportions, hair with individual strand detail and glossy highlights.",
+    'noir': "Heavy India ink with stark chiaroscuro, deep pooling blacks consuming 60%+ of frame, razor-sharp light edges, Frank Miller and Mike Mignola shadow blocking, German Expressionist angles, rain-slicked reflections, venetian blind shadow patterns. ZERO COLOR — pure black/white/gray only.",
+    'superhero': "Bold black inking with dynamic line weight variation, dramatic foreshortening and heroic perspective, vivid saturated colors with Ben-Day halftone texture, Kirby Krackle energy effects, muscular dynamic poses with fabric flow physics, dramatic rim lighting, Jim Lee and Jack Kirby inspired.",
+    'retro': "Visible halftone Ben-Day dot printing, limited CMYK four-color palette, aged yellowed newsprint texture, offset printing registration artifacts, bold simplified ink lines, Roy Lichtenstein pop art compositions, Silver Age comic aesthetic with period printing imperfections.",
+    'watercolor': "Wet-on-wet technique with visible paper grain and pigment blooms, soft translucent washes bleeding at edges, warm muted palette with saturated accents, deckled soft edges, visible brushstrokes with light pencil underdrawing, atmospheric depth through layered glazes. Jerry Pinkney and Lisbeth Zwerger quality.",
+    'cartoon': "Thick clean 3px black outlines, flat cel-shaded coloring with subtle gradient shadows, exaggerated expressive proportions (large heads, small bodies), vibrant saturated complementary colors, smooth vector-clean edges, dynamic squash-and-stretch poses, Pixar-meets-Cartoon-Network quality.",
+    'classic': "Fine cross-hatching and ink wash technique, muted earth-tone palette (ochre, sage, dusty rose, cream), detailed naturalistic backgrounds, hand-drawn pen stroke texture, gentle dappled lighting, antique book plate quality, Beatrix Potter and Arthur Rackham craftsmanship.",
+    'storybook': "Fine cross-hatching and ink wash technique, muted earth-tone palette (ochre, sage, dusty rose, cream), detailed naturalistic backgrounds, hand-drawn pen stroke texture, gentle dappled lighting, antique book plate quality, Beatrix Potter and Arthur Rackham craftsmanship.",
+    'fantasy': "Luminous magical lighting with oil-on-canvas impasto texture, rich jewel-tone palette (emerald, sapphire, amethyst, gold), epic scale with atmospheric perspective, Ghibli-inspired background depth, magical particle effects (floating lights, glowing runes), dramatic chiaroscuro with warm-cool contrast. Brian Froud and Alan Lee quality."
   };
 
   const normalizedStyle = data.artStyle.toLowerCase();
