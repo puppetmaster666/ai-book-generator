@@ -19,6 +19,7 @@ export * from './visual/prompts';
 export * from './visual/assets';
 export * from './visual/consistency';
 export * from './visual/comic-pipeline';
+export * from './visual/picture-book-pipeline';
 
 // Screenplay generation
 export * from './screenplay/outline';

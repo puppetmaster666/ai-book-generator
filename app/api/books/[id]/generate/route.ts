@@ -6,6 +6,7 @@ import {
   generateNonFictionOutline,
   generateIllustratedOutline,
   generateComicOutline,
+  generatePictureBookOutline,
   buildIllustrationPromptFromScene,
   generateChapter,
   summarizeChapter,
@@ -924,9 +925,9 @@ export async function POST(
               );
               outline = comicOutline;
             } else {
-              console.log(`Generating picture book outline with ${targetPanelCount} panels...`);
+              console.log(`Generating picture book outline with 3-step pipeline (${targetPanelCount} panels)...`);
               const visualOutline = await withTimeout(
-                generateIllustratedOutline({
+                generatePictureBookOutline({
                   title: book.title,
                   genre: book.genre,
                   bookType: book.bookType,

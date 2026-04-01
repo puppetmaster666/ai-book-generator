@@ -369,11 +369,69 @@ export function buildSpeechBubblePrompt(dialogue: Array<{
   return prompt;
 }
 
-// Helper for picture book text (text at bottom)
-export function buildPictureBookTextPrompt(text: string): string {
+// Helper for picture book text with layout-aware positioning
+export function buildPictureBookTextPrompt(text: string, textPosition?: string, pageStyle?: string): string {
   if (!text) return '';
 
-  // For picture books, we usually want the text distinct or we let the client render it.
-  // But if we want it baked in (like a poster):
-  return `\n\nTEXT INTEGRATION:\nAt the bottom of the image, include the following story text in a clear, readable storybook font:\n"${text}"\n\nEnsure the text is legible against the background (use a text box or gradient if needed).`;
+  const position = textPosition || 'bottom-banner';
+  const style = pageStyle || 'full-bleed';
+
+  // Wordless pages
+  if (position === 'none') {
+    return '\n\nNO TEXT in this image. Let the illustration tell the story completely on its own.';
+  }
+
+  // Minimal text (1 short line tucked in corner)
+  if (position === 'minimal') {
+    return `\n\nTEXT (minimal - small and unobtrusive):
+Include this SHORT text in a small, elegant font tucked into the bottom-right corner:
+"${text}"
+The text should be small and subtle — the illustration is the star of this page.
+Use a semi-transparent text background if needed for legibility.`;
+  }
+
+  let prompt = '\n\nTEXT INTEGRATION (CRITICAL - this is a picture book, text must be beautiful and readable):\n';
+
+  // Position-specific instructions
+  switch (position) {
+    case 'top-banner':
+      prompt += `Place the story text in a clean horizontal band across the TOP of the image.
+The text area should be ${style === 'full-bleed' ? 'a semi-transparent overlay strip' : 'a clean white/cream band'} spanning the full width.`;
+      break;
+    case 'bottom-banner':
+      prompt += `Place the story text in a clean horizontal band across the BOTTOM of the image.
+The text area should be ${style === 'full-bleed' ? 'a semi-transparent overlay strip' : 'a clean white/cream band'} spanning the full width.
+Leave the top 70% of the image for the illustration.`;
+      break;
+    case 'left-side':
+      prompt += `Split the page: LEFT 35% is a text panel (white/cream background), RIGHT 65% is the illustration.
+Place the text on the left side in an elegant book font.`;
+      break;
+    case 'right-side':
+      prompt += `Split the page: LEFT 65% is the illustration, RIGHT 35% is a text panel (white/cream background).
+Place the text on the right side in an elegant book font.`;
+      break;
+    case 'overlay-top':
+      prompt += `Overlay the text at the top of the illustration with a soft semi-transparent background (white at 70% opacity).
+The text should float over the illustration without obscuring the main subject.`;
+      break;
+    case 'overlay-center':
+      prompt += `Center the text over the illustration with a large semi-transparent background panel.
+This is a dramatic moment — the text should be prominent and impactful.
+Use a slightly larger font size than other pages.`;
+      break;
+    default:
+      prompt += `Place the story text at the bottom of the image in a clean, readable area.`;
+  }
+
+  prompt += `\n\nThe text to include:\n"${text}"\n`;
+  prompt += `\nTEXT STYLE RULES:
+- Use a warm, friendly storybook font (serif or rounded sans-serif)
+- Text must be PERFECTLY LEGIBLE — high contrast against background
+- Font size: large enough to read comfortably (this is a children's book)
+- Text color: dark brown or black on light backgrounds, white on dark backgrounds
+- If text overlaps illustration, add a soft background gradient or panel for readability
+- Text should feel like part of the page design, not stamped on top\n`;
+
+  return prompt;
 }

@@ -258,7 +258,12 @@ export async function POST(
                     // Comic page with narration but no dialogue
                     illustrationPrompt += `\n\nNARRATION BOX (IMPORTANT):\nInclude a rectangular narration caption box at the TOP of the image with this text:\n"${chapter.text.trim().slice(0, 150)}"\n\nStyle: Clean rectangular box with subtle background (yellow/cream or white), dark text, positioned at the top of the image.\n\nDo NOT include any other text except this narration box.`;
                 } else if (hasStoryText) {
-                    illustrationPrompt += buildPictureBookTextPrompt(chapter.text);
+                    // Pass textPosition and pageStyle from the new pipeline if available
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    const textPos = (chapter as any).textPosition as string | undefined;
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    const pageSty = (chapter as any).pageStyle as string | undefined;
+                    illustrationPrompt += buildPictureBookTextPrompt(chapter.text, textPos, pageSty);
                 } else {
                     illustrationPrompt += `\nCRITICAL: Do NOT include any text, words, letters, numbers, signs, labels, or written characters anywhere in the image.`;
                 }
