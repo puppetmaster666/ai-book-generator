@@ -697,7 +697,9 @@ function AdminDashboardContent() {
   // Confirmation modal state
   const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
   const [showRestartConfirm, setShowRestartConfirm] = useState(false);
-  const [restartBookData, setRestartBookData] = useState<{ id: string; title: string } | null>(null);
+  const [restartBookData, setRestartBookData] = useState<{ id: string; title: string; status: string; paymentStatus: string; currentChapter: number; bookFormat: string } | null>(null);
+  const [restartGrantFull, setRestartGrantFull] = useState(false);
+  const [restartKeepProgress, setRestartKeepProgress] = useState(false);
   const [showUserDeleteConfirm, setShowUserDeleteConfirm] = useState(false);
   const [isDeletingUsers, setIsDeletingUsers] = useState(false);
   const [deleteUsersError, setDeleteUsersError] = useState('');
@@ -1085,8 +1087,10 @@ function AdminDashboardContent() {
     }
   };
 
-  const handleRestartBook = (bookId: string, bookTitle: string) => {
-    setRestartBookData({ id: bookId, title: bookTitle });
+  const handleRestartBook = (bookId: string, bookTitle: string, status: string, paymentStatus: string, currentChapter: number, bookFormat: string) => {
+    setRestartBookData({ id: bookId, title: bookTitle, status, paymentStatus, currentChapter, bookFormat });
+    setRestartGrantFull(false);
+    setRestartKeepProgress(false);
     setShowRestartConfirm(true);
   };
 
@@ -1096,10 +1100,16 @@ function AdminDashboardContent() {
     const { id: bookId } = restartBookData;
     setRestartingBookId(bookId);
     setRestartResult(null);
+    setShowRestartConfirm(false);
 
     try {
       const response = await fetch(`/api/admin/books/${bookId}/restart`, {
         method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          grantFullBook: restartGrantFull,
+          keepProgress: restartKeepProgress,
+        }),
       });
 
       const data = await response.json();
@@ -1108,31 +1118,10 @@ function AdminDashboardContent() {
         throw new Error(data.error || 'Failed to restart book');
       }
 
-      // After successful restart, trigger outline generation
-      // This moves the book from 'pending' to 'generating' so orchestration can start
-      try {
-        const genRes = await fetch(`/api/books/${bookId}/generate`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ outlineOnly: true }),
-        });
-        if (genRes.ok) {
-          setRestartResult({
-            success: true,
-            message: `${data.message} Generation started.`,
-          });
-        } else {
-          setRestartResult({
-            success: true,
-            message: `${data.message} Note: Auto-start failed, visit book page to resume.`,
-          });
-        }
-      } catch {
-        setRestartResult({
-          success: true,
-          message: `${data.message} Note: Auto-start failed, visit book page to resume.`,
-        });
-      }
+      setRestartResult({
+        success: true,
+        message: data.message,
+      });
       await fetchStats(true);
     } catch (err) {
       setRestartResult({
@@ -1921,7 +1910,7 @@ function AdminDashboardContent() {
                           )}
                           {/* Restart */}
                           <button
-                            onClick={() => handleRestartBook(book.id, book.title)}
+                            onClick={() => handleRestartBook(book.id, book.title, book.status, book.paymentStatus, book.currentChapter, book.bookFormat)}
                             disabled={restartingBookId === book.id}
                             title="Restart from scratch (keeps original input)"
                             className="p-2 text-neutral-500 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-colors disabled:opacity-50"
@@ -2925,20 +2914,66 @@ function AdminDashboardContent() {
         type="danger"
       />
 
-      {/* Restart Book Confirmation Modal */}
-      <ConfirmModal
-        isOpen={showRestartConfirm}
-        onClose={() => {
-          setShowRestartConfirm(false);
-          setRestartBookData(null);
-        }}
-        onConfirm={confirmRestartBook}
-        title="Restart Book from Scratch"
-        message={restartBookData ? `Are you sure you want to restart "${restartBookData.title}" from scratch? This will DELETE all chapters, illustrations, and generated content. The original book input (title, premise, characters, etc.) will be kept.` : ''}
-        confirmText="Restart Book"
-        cancelText="Cancel"
-        type="warning"
-      />
+      {/* Restart Book Modal with Options */}
+      {showRestartConfirm && restartBookData && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6">
+            <h3 className="text-lg font-semibold mb-1">Restart Generation</h3>
+            <p className="text-sm text-neutral-500 mb-4 truncate">{restartBookData.title}</p>
+
+            {/* Mode selection */}
+            <div className="space-y-3 mb-5">
+              <label className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${!restartKeepProgress ? 'border-neutral-900 bg-neutral-50' : 'border-neutral-200 hover:bg-neutral-50'}`}>
+                <input type="radio" checked={!restartKeepProgress} onChange={() => setRestartKeepProgress(false)} className="mt-0.5" />
+                <div>
+                  <p className="text-sm font-medium">Full restart</p>
+                  <p className="text-xs text-neutral-500">Delete all content and regenerate from scratch</p>
+                </div>
+              </label>
+
+              {restartBookData.currentChapter > 0 && (
+                <label className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${restartKeepProgress ? 'border-neutral-900 bg-neutral-50' : 'border-neutral-200 hover:bg-neutral-50'}`}>
+                  <input type="radio" checked={restartKeepProgress} onChange={() => setRestartKeepProgress(true)} className="mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium">Resume from chapter {restartBookData.currentChapter}</p>
+                    <p className="text-xs text-neutral-500">Keep existing progress, continue where it stopped</p>
+                  </div>
+                </label>
+              )}
+            </div>
+
+            {/* Grant full book option */}
+            {restartBookData.paymentStatus !== 'completed' && (
+              <label className="flex items-center gap-3 p-3 rounded-xl border border-lime-200 bg-lime-50 cursor-pointer mb-5">
+                <input type="checkbox" checked={restartGrantFull} onChange={(e) => setRestartGrantFull(e.target.checked)} className="rounded" />
+                <div>
+                  <p className="text-sm font-medium text-lime-900">Grant full book (override free tier)</p>
+                  <p className="text-xs text-lime-700">
+                    {restartBookData.bookFormat === 'picture_book' ? 'All panels instead of 5' :
+                     restartBookData.bookFormat === 'screenplay' ? 'Full screenplay instead of 2 pages' :
+                     'All chapters instead of 1'}
+                  </p>
+                </div>
+              </label>
+            )}
+
+            <div className="flex gap-3">
+              <button
+                onClick={confirmRestartBook}
+                className="flex-1 py-2.5 bg-neutral-900 text-white rounded-lg text-sm font-medium hover:bg-neutral-800 transition-colors"
+              >
+                {restartKeepProgress ? 'Resume' : 'Restart'}{restartGrantFull ? ' + Grant Full Book' : ''}
+              </button>
+              <button
+                onClick={() => { setShowRestartConfirm(false); setRestartBookData(null); }}
+                className="px-4 py-2.5 border border-neutral-200 rounded-lg text-sm hover:bg-neutral-50 transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Delete Users Confirmation Modal */}
       <ConfirmModal
