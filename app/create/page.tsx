@@ -928,6 +928,11 @@ export default function CreateBook() {
                       </>
                     )}
                   </button>
+                  {isSubmitting && (
+                    <div className="mt-4">
+                      <GeneratingMessage type="outline" size="sm" showTimer />
+                    </div>
+                  )}
                 </div>
               </div>
             </>
@@ -1015,6 +1020,11 @@ export default function CreateBook() {
                     </>
                   )}
                 </button>
+                {isSubmitting && (
+                  <div className="mt-4">
+                    <GeneratingMessage type="outline" size="sm" showTimer className="justify-center" />
+                  </div>
+                )}
               </div>
             </>
           )}
