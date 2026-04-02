@@ -28,3 +28,8 @@ The app uses a neutral-first design system. Do not introduce new colors outside 
 ## User-Facing Language
 - Never expose AI/automation internals in changelogs, UI copy, or user-facing text
 - Say "your book is being created" not "AI is generating your content"
+
+## NEVER Use Em Dashes or En Dashes
+- NEVER use — (em dash) or – (en dash) anywhere in the codebase, user-facing text, changelogs, comments, or generated content
+- Use commas, periods, semicolons, colons, or rewrite the sentence instead
+- This applies to ALL files: .ts, .tsx, .md, prompts, templates, everything
