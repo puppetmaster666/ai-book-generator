@@ -234,9 +234,9 @@ export async function POST(
 
                 let illustrationPrompt = buildIllustrationPromptFromScene(
                     chapter.scene,
-                    book.artStyle || 'illustration', // fallback
-                    undefined,
-                    undefined,
+                    book.artStyle || 'illustration',
+                    characterVisualGuide || undefined,
+                    visualStyleGuide || undefined,
                     chapter.panelLayout,
                     { skipNoTextInstruction: needsTextBaking, contentRating: (book.contentRating || 'general') as ContentRating }
                 );

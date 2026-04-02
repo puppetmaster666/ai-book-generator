@@ -8,6 +8,7 @@ import {
   generateComicOutline,
   generatePictureBookOutline,
   buildIllustrationPromptFromScene,
+  buildPictureBookTextPrompt,
   generateChapter,
   summarizeChapter,
   updateCharacterStates,
@@ -111,30 +112,7 @@ Speech bubble style guidelines:
 
 // Build story text instructions for children's picture books
 // The text appears at the bottom of the image, integrated into the illustration
-function buildPictureBookTextPrompt(storyText: string): string {
-  if (!storyText || storyText.trim().length === 0) return '';
-
-  // Clean up the text - keep it short for picture books
-  const cleanText = storyText.trim().slice(0, 200);
-
-  return `
-STORY TEXT - CHILDREN'S PICTURE BOOK:
-This is a children's picture book page. You MUST include the story text as part of the illustration.
-
-TEXT TO INCLUDE (write this EXACTLY):
-"${cleanText}"
-
-Text placement and style:
-- Place the text at the BOTTOM of the image, in a clear readable area
-- Use a clean, child-friendly font style (rounded, friendly letterforms)
-- Text should be large enough to read easily (suitable for young children)
-- Text color should contrast well with the background (use white text with dark outline if on complex background)
-- Leave adequate padding/margin around the text
-- The text area can have a subtle semi-transparent background if needed for readability
-- DO NOT abbreviate or modify the text - use it EXACTLY as provided
-- The illustration should occupy approximately the top 70-80% of the image, with text below
-`;
-}
+// buildPictureBookTextPrompt is now imported from the shared prompts module
 
 // Sanitize a scene description by removing/replacing sensitive words
 function sanitizeSceneForRetry(scene: string, retryLevel: number): string {
@@ -469,8 +447,12 @@ async function generateIllustrationsInParallel(
         console.log(`Generating illustration with narration box for page ${chapter.number}...`);
       } else if (hasStoryText) {
         // Picture book with story text - bake text at bottom of image
-        illustrationPrompt += buildPictureBookTextPrompt(chapter.text);
-        console.log(`Generating illustration with story text for page ${chapter.number}...`);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const textPos = (chapter as any).textPosition as string | undefined;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const pageSty = (chapter as any).pageStyle as string | undefined;
+        illustrationPrompt += buildPictureBookTextPrompt(chapter.text, textPos, pageSty);
+        console.log(`Generating illustration with story text for page ${chapter.number} (position: ${textPos || 'default'})...`);
       } else {
         // No text needed - add explicit no-text instruction
         illustrationPrompt += `\n${NO_TEXT_INSTRUCTION}`;

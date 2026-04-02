@@ -62,7 +62,7 @@ async function generatePictureBookStory(bookData: {
     ? `\nORIGINAL AUTHOR VISION (incorporate faithfully):\n${bookData.originalIdea}\n`
     : '';
 
-  const prompt = `You are a children's picture book author known for heartfelt stories with beautiful visual moments. Write a complete story ready to be illustrated.
+  const prompt = `You are a children's picture book author known for heartfelt stories with beautiful visual moments. Your job is to write a complete story, page by page, ready to be illustrated.
 ${languageInstruction ? `\n${languageInstruction}\n` : ''}
 ${contentGuidelines}
 ${originalIdeaSection}
@@ -84,22 +84,56 @@ ${buildNameGuidancePrompt(bookData.premise, bookData.title, bookData.genre)}
 
 YOUR TASK: Output a JSON object with three parts:
 
-PART 1 - "voiceProfiles": Give each character a distinct personality and way of speaking.
-Think about: how a shy rabbit talks differently than a brave fox, how a grumpy troll sounds different from a cheerful fairy.
+PART 1 - "voiceProfiles": Give each character a DISTINCT personality and way of speaking.
+Think about:
+- A shy rabbit talks differently than a brave fox
+- A grumpy troll sounds different from a cheerful fairy
+- Vocabulary, sentence length, verbal quirks, catchphrases
+- How they handle stress or excitement differently
 
-PART 2 - "story": Write the FULL story as a flowing narrative.
-This is a picture book — every sentence should paint a picture. Think about what the ILLUSTRATION will show.
+PART 2 - "story": Write the FULL story as a PAGE-BY-PAGE narrative.
+Use PAGE markers so the story has clear page breaks:
 
-STORY RULES:
-- Write for ${bookData.targetChapters} pages (each page = 2-4 sentences of text)
-- Total story: ${bookData.targetChapters * 3} sentences approximately
-- Use sensory language: colors, sounds, textures, weather, light
+PAGE 1:
+The forest was quiet. Too quiet. Luna pressed her ear to the old oak tree and listened.
+"Something's different today," she whispered.
+
+PAGE 2:
+A crack of light split the bark. Luna stumbled back...
+
+STORY STRUCTURE RULES (CRITICAL):
+- Write EXACTLY ${bookData.targetChapters} pages (use PAGE markers)
+- Each page: 2-4 sentences of story text
+- Every page must be a CONSEQUENCE of the previous one (Therefore/But logic, NEVER "And then")
+  BAD: "Luna went to the forest. And then she found a cave. And then she met a bear."
+  GOOD: "Luna followed the tracks into the forest. But instead of a deer, she found a cave that hummed with strange light. Therefore, she crept closer..."
+- Characters must have GOALS that drive their actions
+- Build REAL tension with stakes the reader cares about
+- Include a clear CLIMAX (page ${Math.floor(bookData.targetChapters * 0.75)}-${Math.floor(bookData.targetChapters * 0.85)}) and satisfying RESOLUTION
+- Each page should end with a HOOK that makes you want to turn the page
+- The story should make sense if you read just the dialogue aloud
+
+TEXT & DIALOGUE:
 - Mix dialogue with narration: "Come on!" called Fox, his tail swishing through the tall grass.
-- SHOW don't tell: NOT "She was sad" → "Her ears drooped. She turned away from the window."
-- Create VISUAL CONTRAST between pages: a quiet indoor moment → an action outdoors → a close-up emotional beat
-- Build to a satisfying emotional climax and resolution
-- Each paragraph should naturally correspond to one illustration
-- Include page-turn hooks: end sections with curiosity or suspense
+- Each character MUST sound different (use the voice profiles)
+- Include dialogue on at least 60% of pages
+- NEVER have characters state emotions: NO "I'm scared!" YES: She gripped the branch tighter.
+- SHOW don't tell: NOT "She was sad" YES "Her ears drooped. She turned away from the window."
+
+BANNED AI DIALOGUE (never write these):
+- "I need you to understand..." / "Here's the thing..." / "Let me be clear..."
+- "I believe in you" / "You can do this" (show support through actions instead)
+- "I feel [emotion]" / "I am [emotion]"
+- Any character stating the theme or moral directly
+
+VISUAL CONTRAST (essential for illustration):
+- Alternate between: quiet indoor moments, outdoor action, close-up emotional beats
+- Use sensory language: colors, sounds, textures, weather, light
+- Describe what we SEE: physical actions, expressions, body language
+- Include environment interaction (climbing trees, splashing puddles, hiding behind things)
+- Each page should naturally suggest a different illustration
+
+TARGET: ~${bookData.targetChapters * 30} words for the full story. Quality over quantity.
 
 PART 3 - "emotionalBeats": List the emotional journey, one beat per page.
 Example: ["curiosity", "excitement", "worry", "determination", "fear", "courage", "joy", "peace"]
@@ -113,11 +147,11 @@ Output ONLY valid JSON:
       "name": "Character Name",
       "role": "protagonist/friend/mentor/obstacle",
       "personality": "Core personality traits",
-      "speechStyle": "How they talk - vocabulary, tone, catchphrases",
-      "emotionalArc": "How they change: starts shy → becomes brave"
+      "speechStyle": "How they talk: vocabulary, tone, verbal quirks, catchphrases",
+      "emotionalArc": "How they change through the story"
     }
   ],
-  "story": "The full story text, with natural paragraph breaks between pages. Include dialogue mixed with narration.",
+  "story": "PAGE 1:\\nThe story begins...\\n\\nPAGE 2:\\nThe story continues...",
   "emotionalBeats": ["curiosity", "wonder", "worry", "courage", "joy"]
 }`;
 
