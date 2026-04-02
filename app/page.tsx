@@ -14,6 +14,7 @@ import Testimonials from '@/components/Testimonials';
 import FAQ from '@/components/FAQ';
 import ScreenplayAnimation from '@/components/ScreenplayAnimation';
 import FeaturedShowcase from '@/components/FeaturedShowcase';
+import GeneratingMessage from '@/components/GeneratingMessage';
 import { APP_VERSION, getLatestChangelog } from '@/lib/version';
 
 const LATEST_CHANGELOG = getLatestChangelog();
@@ -473,6 +474,9 @@ export default function Home() {
                       )}
                       {isGeneratingIdea ? 'Generating...' : ideasRemaining !== null && ideasRemaining <= 0 ? 'No ideas left' : `Surprise me${ideasRemaining !== null ? ` (${ideasRemaining}/5)` : ''}`}
                     </button>
+                    {isGeneratingIdea && (
+                      <GeneratingMessage type="idea" size="sm" showTimer />
+                    )}
                     {/* Upload File Button */}
                     <label className="text-sm text-neutral-500 hover:text-neutral-900 flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-neutral-100 transition-colors cursor-pointer">
                       <Upload className="h-4 w-4" />

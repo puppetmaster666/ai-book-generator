@@ -6,6 +6,7 @@ import { useSession } from 'next-auth/react';
 import Image from 'next/image';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
+import GeneratingMessage from '@/components/GeneratingMessage';
 import { ArrowLeft, ArrowRight, Sparkles, Loader2, BookOpen, Palette, Layers, ChevronDown, GraduationCap, Film, Upload, FileText, X, Clock, Skull, Tv, Check } from 'lucide-react';
 import {
   BOOK_PRESETS,
@@ -522,7 +523,8 @@ export default function CreateBook() {
                 <div className="text-center py-20">
                   <Loader2 className="h-12 w-12 animate-spin mx-auto mb-4 text-neutral-900" />
                   <h2 className="text-xl font-semibold mb-2">Creating your book...</h2>
-                  <p className="text-neutral-600">We&apos;re expanding your idea into a full outline</p>
+                  <p className="text-neutral-600 mb-4">We&apos;re expanding your idea into a full outline</p>
+                  <GeneratingMessage type="outline" size="md" showTimer className="justify-center" />
                 </div>
               ) : (
                 <>
@@ -787,6 +789,9 @@ export default function CreateBook() {
                       )}
                       {isGeneratingIdea ? 'Generating...' : ideasRemaining !== null && ideasRemaining <= 0 ? 'No ideas left' : `Surprise me${ideasRemaining !== null ? ` (${ideasRemaining}/5)` : ''}`}
                     </button>
+                    {isGeneratingIdea && (
+                      <GeneratingMessage type="idea" size="sm" showTimer />
+                    )}
 
                     {/* Category Dropdown */}
                     <div className="relative">

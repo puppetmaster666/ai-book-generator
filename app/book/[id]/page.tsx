@@ -107,21 +107,42 @@ interface ChapterCardStatus {
 }
 
 const WRITING_MESSAGES = [
-  "Crafting compelling prose",
-  "Developing character arcs",
-  "Building narrative tension",
-  "Weaving plot threads",
-  "Adding descriptive details",
-  "Perfecting dialogue",
-  "Creating memorable scenes",
+  "Writing prose that flows...",
+  "Finding the perfect opening line...",
+  "Making characters argue convincingly...",
+  "Adding the details that make it real...",
+  "Crafting dialogue that sounds human...",
+  "Building tension, page by page...",
+  "Letting the story surprise itself...",
+  "Polishing sentences until they shine...",
+  "Wrestling with the middle (every author's struggle)...",
+  "Making sure nobody says 'I need you to understand'...",
+  "Developing character arcs...",
+  "Weaving plot threads together...",
+  "Creating memorable scenes...",
+  "Choosing words like a poet, plotting like a chess player...",
 ];
 
 const ILLUSTRATION_MESSAGES = [
-  "Composing visual elements",
-  "Rendering character details",
-  "Applying art style",
-  "Generating scene artwork",
-  "Finalizing illustrations",
+  "Painting your world into existence...",
+  "Mixing colors on the digital palette...",
+  "Bringing characters to life, pixel by pixel...",
+  "Composing the perfect scene...",
+  "Adding those tiny details you'll love finding...",
+  "Making sure everyone looks like themselves...",
+  "Choosing the perfect camera angle...",
+  "Rendering light and shadow...",
+];
+
+const SCREENPLAY_MESSAGES = [
+  "Writing dialogue with subtext...",
+  "Setting up scenes that crackle...",
+  "Making every line earn its place...",
+  "Cutting the boring parts (you're welcome)...",
+  "Adding the pause before the big line...",
+  "Making sure it reads like a real script...",
+  "Building the scene everyone will talk about...",
+  "Letting characters interrupt each other...",
 ];
 
 // Format elapsed time as MM:SS or HH:MM:SS
@@ -660,7 +681,11 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
     if (book?.status === 'generating' || book?.status === 'outlining') {
       const interval = setInterval(() => {
         setWritingMessage(prev => {
-          const messages = book?.bookFormat !== 'text_only' ? [...WRITING_MESSAGES, ...ILLUSTRATION_MESSAGES] : WRITING_MESSAGES;
+          const messages = book?.bookFormat === 'screenplay'
+            ? SCREENPLAY_MESSAGES
+            : book?.bookFormat !== 'text_only'
+              ? [...WRITING_MESSAGES, ...ILLUSTRATION_MESSAGES]
+              : WRITING_MESSAGES;
           const currentIndex = messages.indexOf(prev);
           return messages[(currentIndex + 1) % messages.length];
         });
