@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import {
   BarChart3,
   Users,
@@ -17,18 +17,24 @@ import {
 } from 'lucide-react';
 
 const NAV_ITEMS = [
-  { href: '/admin/dashboard', label: 'Overview', icon: BarChart3, section: 'overview' },
-  { href: '/admin/dashboard', label: 'Users', icon: Users, section: 'users' },
-  { href: '/admin/dashboard', label: 'Books', icon: BookOpen, section: 'books' },
-  { href: '/admin/dashboard', label: 'AI Email', icon: Sparkles, section: 'email' },
-  { href: '/admin/dashboard', label: 'Credits', icon: Gift, section: 'credits' },
-  { href: '/admin/dashboard', label: 'Blog', icon: FileText, section: 'blog' },
-  { href: '/admin/dashboard', label: 'Bulk Email', icon: Mail, section: 'bulk-email' },
+  { label: 'Overview', icon: BarChart3, section: 'overview' },
+  { label: 'Users', icon: Users, section: 'users' },
+  { label: 'Books', icon: BookOpen, section: 'books' },
+  { label: 'AI Email', icon: Sparkles, section: 'email' },
+  { label: 'Credits', icon: Gift, section: 'credits' },
+  { label: 'Blog', icon: FileText, section: 'blog' },
+  { label: 'Bulk Email', icon: Mail, section: 'bulk-email' },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const activeSection = searchParams.get('section') || 'overview';
   const [collapsed, setCollapsed] = useState(false);
+
+  const handleNavClick = (section: string) => {
+    router.push(`/admin/dashboard?section=${section}`);
+  };
 
   return (
     <div className="min-h-screen bg-neutral-50 flex">
@@ -52,12 +58,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         {/* Nav */}
         <nav className="flex-1 py-4 space-y-1 px-2">
           {NAV_ITEMS.map(item => {
-            const isActive = pathname === item.href;
+            const isActive = activeSection === item.section;
             return (
-              <Link
+              <button
                 key={item.section}
-                href={`${item.href}?section=${item.section}`}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
+                onClick={() => handleNavClick(item.section)}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
                   isActive
                     ? 'bg-neutral-800 text-white'
                     : 'text-neutral-400 hover:text-white hover:bg-neutral-800/50'
@@ -66,7 +72,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               >
                 <item.icon className="h-4 w-4 flex-shrink-0" />
                 {!collapsed && <span>{item.label}</span>}
-              </Link>
+              </button>
             );
           })}
         </nav>
