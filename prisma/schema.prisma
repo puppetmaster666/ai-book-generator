@@ -198,6 +198,7 @@ model PromoCode {
   createdAt   DateTime         @default(now())
   updatedAt   DateTime         @updatedAt
   onePerUser  Boolean          @default(false)
+  adminOnly   Boolean          @default(false)
   fixedPrice  Int?
   usages      PromoCodeUsage[]
 }

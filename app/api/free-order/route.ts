@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
+import { auth } from '@/lib/auth';
 import { rateLimit, getClientIP } from '@/lib/rate-limit';
 
 export async function POST(request: NextRequest) {
@@ -24,12 +25,28 @@ export async function POST(request: NextRequest) {
     const code = promoCode.toUpperCase();
     const clientIP = getClientIP(request.headers);
 
+    // Check if current user is admin
+    let isAdmin = false;
+    const session = await auth();
+    if (session?.user?.id) {
+      const user = await prisma.user.findUnique({
+        where: { id: session.user.id },
+        select: { isAdmin: true },
+      });
+      isAdmin = user?.isAdmin || false;
+    }
+
     // Check promo code in database
     const dbPromo = await prisma.promoCode.findUnique({
       where: { code },
     });
 
     if (!dbPromo) {
+      return NextResponse.json({ error: 'Invalid promo code' }, { status: 400 });
+    }
+
+    // Admin-only promo codes: reject non-admin users
+    if (dbPromo.adminOnly && !isAdmin) {
       return NextResponse.json({ error: 'Invalid promo code' }, { status: 400 });
     }
 
@@ -41,46 +58,51 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Promo code has expired' }, { status: 400 });
     }
 
-    if (dbPromo.currentUses >= dbPromo.maxUses) {
-      return NextResponse.json({ error: 'Promo code has reached its usage limit' }, { status: 400 });
-    }
+    // Admins bypass usage limits and one-per-user checks
+    if (!isAdmin) {
+      if (dbPromo.currentUses >= dbPromo.maxUses) {
+        return NextResponse.json({ error: 'Promo code has reached its usage limit' }, { status: 400 });
+      }
 
-    // Atomically check-and-increment to prevent race conditions
-    const updated = await prisma.promoCode.updateMany({
-      where: {
-        code,
-        currentUses: { lt: dbPromo.maxUses },
-        isActive: true,
-      },
-      data: { currentUses: { increment: 1 } },
-    });
-    if (updated.count === 0) {
-      return NextResponse.json({ error: 'Promo code has reached its usage limit' }, { status: 400 });
-    }
+      // Check one-per-user limit BEFORE incrementing
+      if (dbPromo.onePerUser) {
+        const existingUsage = await prisma.promoCodeUsage.findFirst({
+          where: {
+            promoCodeId: dbPromo.id,
+            OR: [
+              { email: email?.toLowerCase() },
+              { ipAddress: clientIP },
+            ],
+          },
+        });
 
-    // Check one-per-user limit
-    if (dbPromo.onePerUser) {
-      const existingUsage = await prisma.promoCodeUsage.findFirst({
-        where: {
-          promoCodeId: dbPromo.id,
-          OR: [
-            { email: email?.toLowerCase() },
-            { ipAddress: clientIP },
-          ],
-        },
-      });
-
-      if (existingUsage) {
-        return NextResponse.json(
-          { error: 'You have already used this promo code' },
-          { status: 400 }
-        );
+        if (existingUsage) {
+          return NextResponse.json(
+            { error: 'You have already used this promo code' },
+            { status: 400 }
+          );
+        }
       }
     }
 
     // Only allow 100% discount codes for free orders
     if (dbPromo.discount < 1) {
       return NextResponse.json({ error: 'This promo code requires payment' }, { status: 400 });
+    }
+
+    // Atomically increment usage AFTER all validation passes (skip for admins on unlimited codes)
+    if (!isAdmin) {
+      const updated = await prisma.promoCode.updateMany({
+        where: {
+          code,
+          currentUses: { lt: dbPromo.maxUses },
+          isActive: true,
+        },
+        data: { currentUses: { increment: 1 } },
+      });
+      if (updated.count === 0) {
+        return NextResponse.json({ error: 'Promo code has reached its usage limit' }, { status: 400 });
+      }
     }
 
     // Check if book exists
@@ -92,7 +114,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Book not found' }, { status: 404 });
     }
 
-    // Track usage and update book (promo already incremented atomically above)
+    // Track usage and update book
     await prisma.$transaction([
       prisma.promoCodeUsage.create({
         data: {

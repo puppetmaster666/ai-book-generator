@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
+import { auth } from '@/lib/auth';
 import { rateLimit, getClientIP } from '@/lib/rate-limit';
 
 // No hardcoded promos - all promo codes must be in the database
@@ -30,6 +31,22 @@ export async function POST(request: NextRequest) {
     });
 
     if (dbPromo) {
+      // Admin-only codes: check if user is admin
+      if (dbPromo.adminOnly) {
+        const session = await auth();
+        let isAdmin = false;
+        if (session?.user?.id) {
+          const user = await prisma.user.findUnique({
+            where: { id: session.user.id },
+            select: { isAdmin: true },
+          });
+          isAdmin = user?.isAdmin || false;
+        }
+        if (!isAdmin) {
+          return NextResponse.json({ valid: false, error: 'Invalid promo code' });
+        }
+      }
+
       // Check if active
       if (!dbPromo.isActive) {
         return NextResponse.json({ valid: false, error: 'Promo code is no longer active' });
