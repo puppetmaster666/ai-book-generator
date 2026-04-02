@@ -367,10 +367,12 @@ CONTENT REQUIREMENTS:
 PROSE QUALITY:
 - Write in clear, accessible language. Avoid jargon unless explained
 - Use "you" to address readers directly, but don't overuse "You might wonder..."
-- Vary paragraph length. Mix short punchy paragraphs with longer explanatory ones
+- Vary paragraph length DRAMATICALLY. Some paragraphs should be one sentence. Others 6-8 sentences. NEVER write 3+ consecutive paragraphs of similar length. Uniform paragraph size is an AI fingerprint.
+- Vary sentence length too. Follow a long explanatory sentence with a short punchy one. AI text clusters at 15-20 words per sentence. Human writing ranges from 3 to 35+.
 - Use subheadings sparingly (only if chapter is very long)
 - Complete all sentences properly. No fragments or garbled text
 - SPECIFIC DETAILS matter: "a 2019 Stanford study" is better than "research shows"
+- Use UNEXPECTED word choices. Avoid the most obvious, "safe" word. Choose a more precise, less predictable alternative.
 
 AVOID THESE AI PATTERNS (CRITICAL):
 - NEVER start chapters with "Have you ever..." - this is the #1 AI tell
@@ -379,6 +381,10 @@ AVOID THESE AI PATTERNS (CRITICAL):
 - Don't use the same physical descriptions repeatedly ("shoulders dropped", "heart rate slowed")
 - Vary your transition phrases - don't always use "In the next chapter..."
 - Avoid repetitive 3-part structures: "It is not X. It is Y. It is Z."
+- Avoid parallel negation: "Not X, but Y" used more than once per chapter
+- Avoid rhetorical questions immediately followed by their answer
+- Do NOT start every paragraph with a topic sentence that previews the paragraph. Start mid-thought, with an example, or with a specific detail.
+- AI VOCABULARY BAN: Never use these words: delve, tapestry, pivotal, testament, vibrant, realm, embark, nuanced, intricate, meticulous, seamless, paradigm, unparalleled, transformative, holistic, robust, leverage, harness, groundbreaking
 
 AVOID THESE ERRORS:
 - Making up statistics, studies, or fake research
@@ -387,6 +393,8 @@ AVOID THESE ERRORS:
 - Excessive bullet points. Integrate information into flowing prose
 - Starting multiple paragraphs with the same word
 - Using the same character names across different case studies
+- Hedging language: "It is worth noting that", "It should be mentioned", "It is important to note"
+- Formal transition overuse: "Furthermore", "Moreover", "Additionally", "Consequently"
 
 STRUCTURE:
 - This is chapter ${data.chapterNumber} of ${(data.outline as { chapters?: unknown[] })?.chapters?.length || 15}
@@ -462,32 +470,60 @@ DIALOGUE FORMAT (REQUIRED):
 
 PROSE QUALITY:
 - Write clean, professional prose. No purple prose or overwrought descriptions
-- SHOW emotions through actions: "Her hands trembled" not "She was terrified"
-- Vary sentence length. Mix short punchy sentences with longer flowing ones
-- Be specific: "oak door" not "the door", "1967 Mustang" not "old car"
-- Use sensory details that aren't clichés: "metallic taste of adrenaline" not "heart pounded"
+- NEVER name emotions directly. Not "She was terrified" or "He felt a wave of grief" or "A sense of dread washed over her"
+- SHOW emotions through involuntary behavior: trembling hands, inability to make eye contact, picking at a loose thread, scrubbing a clean counter
+- Be specific when it matters: "oak door" not "the door", "1967 Mustang" not "old car". But leave most objects unmodified. Selective detail beats wall-to-wall description.
+- Use sensory details that are UNEXPECTED and SPECIFIC, not stock phrases. Not "metallic smell" every scene. What does the air taste like? What is the texture of the seat? Surprise the reader.
 
-SENTENCE STRUCTURE (ELIMINATE AI RHYTHM):
+SENTENCE STRUCTURE (ELIMINATE AI RHYTHM - CRITICAL):
+- BURSTINESS: Vary sentence length DRAMATICALLY. Follow a 28-word sentence with "She stopped." then a 15-word sentence. AI clusters at 15-20 words per sentence. Human writing ranges from 2 to 40+.
+- PARAGRAPH VARIATION: Some paragraphs should be ONE sentence. Others 6-8 sentences. NEVER write 3+ consecutive paragraphs of similar length. Uniform 3-5 sentence paragraphs are an AI fingerprint.
+- UNPREDICTABLE OPENINGS: Do NOT start every paragraph with a topic sentence or character action. Start mid-thought. Start with a sensory fragment. Start with dialogue. Start with a single word. Vary it.
 - PRIORITIZE Direct Action (Subject + Verb + Object). This is how humans naturally write
 - AVOID the "Participial Flourish" (e.g., "Sighing heavily, he sat down"). Use it MAX once per page
 - NEVER start more than 2 consecutive sentences with the same word
-- BAD: "She walked in. She sat down. She opened her laptop." (repetitive AI pattern)
-- GOOD: "She walked in and sat down. The laptop screen glowed as she opened it."
-- BAD: "Walking to the door, she reached for the handle. Turning the knob, she pushed it open."
-- GOOD: "She walked to the door. The handle was cold. She pushed it open."
 - Limit "She/He/It/The" sentence starters to max 20% of sentences
+- Use UNEXPECTED word choices. Avoid the most obvious adjective or verb. Choose the third or fourth word that comes to mind, not the first.
 
 PRONOUN USAGE:
 - After first mention in a scene, use "he/she/they" instead of character names
 - Embed pronouns mid-sentence: "The screen flickered as she scrolled down"
 - Character names should appear roughly once every 100-150 words for clarity
 
+EMOTIONAL PROCESSING (CRITICAL AI TELL):
+- NEVER write "felt a wave of", "a sense of purpose", "realized with a start", "something shifted inside"
+- NEVER bookend emotions (introduce, process, resolve) in the same paragraph. Real people sit with feelings unresolved.
+- Show emotion through: displacement onto objects (scrubbing a clean sink = guilt), changed behavior (suddenly precise about trivial things = anger), what the character notices in their environment
+- Internal monologue must be FRAGMENTED and ASSOCIATIVE, not clean logical narratives. Characters think in half-formed impressions, circle back, contradict themselves, get distracted mid-thought.
+
 AVOID THESE AI PATTERNS:
-- Clichés: "heart pounded", "blood ran cold", "time stood still", "shoulders dropped"
+- Clichés: "heart pounded", "blood ran cold", "time stood still", "shoulders dropped", "jaw clenched", "eyes widened", "fists clenched", "let out a breath she didn't know she was holding"
 - Repetitive 2-word patterns: "She looked", "She thought", "She reached", "It was"
 - Participial phrase chains: "Seeing this, he... Knowing that, she... Feeling the..."
-- Adjective stacking: "the dark, gloomy, ominous shadows"
+- Adjective stacking: "the dark, gloomy, ominous shadows". One modifier max. Leave MOST objects unmodified.
 - Clinical euphemisms in mature content: Use atmospheric descriptions instead
+- SUMMARY MASQUERADING AS SCENE: Do not open paragraphs by summarizing a feeling or state. Drop the reader into the action or observation directly.
+- PARALLEL STRUCTURES: "Not X, but Y" constructions. Groups of three (tricolons). Rhetorical question immediately followed by its answer. Mirror sentences. These are AI structural tells.
+- AI VOCABULARY: Never use these words: delve, tapestry, pivotal, testament, vibrant, realm, embark, nuanced, intricate, meticulous, seamless, paradigm, unparalleled, transformative
+
+THEMATIC METAPHOR DISCIPLINE (CRITICAL):
+- If the character has a profession or worldview (programmer, soldier, doctor, etc.), do NOT map every single observation through that lens
+- BAD: Every paragraph uses coding metaphors ("variable", "protocol", "malware", "node", "debug", "system error") when the character is a programmer
+- GOOD: Use the professional metaphor 2-3 times per chapter MAX, and only when it reveals character. The rest of the time, the character thinks like a normal human.
+- The metaphor should feel like a window into the character, not a gimmick applied to everything
+
+DIALOGUE (CRITICAL FOR HUMAN-LIKE WRITING):
+- SUBTEXT: Characters almost NEVER say exactly what they mean. If sad, they talk about something trivial. If angry, they get quiet and precise.
+- ASYMMETRIC: Characters should NOT answer questions directly. Deflect, redirect, answer with unrelated detail, or stay silent. BAD: "Are you okay?" → "No." GOOD: "Are you okay?" → "Did you leave the stove on?"
+- BREAK THE LOOP: Do NOT repeat the same character dynamic every exchange. If A is emotional and B is logical, break that pattern. Let B crack. Let A go cold. Surprise the reader.
+- IMPERFECT SPEECH: Real dialogue has contractions, fragments, interruptions, trailing off, non-sequiturs. Not every line is grammatically complete or a clever comeback.
+- VOICE DIFFERENTIATION: Each character must sound distinct. Different vocabulary, sentence length, verbal habits. A blue-collar character speaks differently from a professor.
+- SILENCE: Sometimes the most powerful dialogue move is a character saying nothing.
+
+PLOT PLAUSIBILITY:
+- Do NOT hand the protagonist exactly what they need at exactly the right moment. If they need a car, make them work for it. If they need a skill, establish it earlier.
+- At least one plan per chapter should go wrong or require adaptation
+- Convenience kills tension. Make obstacles real.
 
 STRUCTURE:
 - This is chapter ${data.chapterNumber} of ${(data.outline as { chapters?: unknown[] })?.chapters?.length || 20}. Do NOT resolve major plot threads

@@ -120,6 +120,12 @@ export const FICTION_BANNED_PHRASES: (string | RegExp)[] = [
   /with a sense of/i,
   /something inside .* shifted/i,
   /despite .* best efforts/i,
+  /a wave of (emotion|grief|sadness|relief|anger|nostalgia|guilt)/i,
+  /the weight of/i,
+  /hung in the air/i,
+  /pierced the silence/i,
+  /broke the silence/i,
+  /sent a chill/i,
 
   // AI OPENER CLICHÉS (extremely common AI tells) - CRITICAL TO DETECT
   /^With a sigh,/im,
@@ -129,6 +135,9 @@ export const FICTION_BANNED_PHRASES: (string | RegExp)[] = [
   /^Quietly,/im,
   /^Finally,/im,
   /^At last,/im,
+  /^Suddenly,/im,
+  /^Carefully,/im,
+  /^Silently,/im,
   /\. With a sigh,/i,
   /\. After a moment,/i,
   /\. Without hesitation,/i,
@@ -136,6 +145,7 @@ export const FICTION_BANNED_PHRASES: (string | RegExp)[] = [
   /\. Quietly,/i,
   /\. Finally,/i,
   /\. At last,/i,
+  /\. Suddenly,/i,
 
   // Academic/essay transitions in fiction
   'moreover',
@@ -158,6 +168,15 @@ export const FICTION_BANNED_PHRASES: (string | RegExp)[] = [
   'world seemed to stop',
   'knees went weak',
   'pulse quickened',
+  'heart pounded',
+  'heart raced',
+  'heart hammered',
+  'fists clenched',
+  'jaw tightened',
+  'jaw clenched',
+  'eyes widened',
+  'let out a breath',
+  /released a breath .* (didn't|hadn't) (know|realize)/i,
 
   // AI dialogue patterns
   'I need you to understand',
@@ -168,14 +187,74 @@ export const FICTION_BANNED_PHRASES: (string | RegExp)[] = [
   'At the end of the day',
   'The thing is',
   'Look, I get it',
+  "And here's the part",
+  "here's the kicker",
 
-  // Overwrought descriptions
+  // Overwrought descriptions (purple prose)
   'a kaleidoscope of',
   'a symphony of',
   'a tapestry of',
   'a whirlwind of',
   'a cascade of',
   'a myriad of',
+  'a mosaic of',
+  'a dance of',
+  'a ballet of',
+  'ghost of a smile',
+  'ghost of a laugh',
+  'velvet voice',
+  'velvet silence',
+  'velvet darkness',
+  'deafening silence',
+  'palpable tension',
+  'pregnant pause',
+  'pregnant silence',
+  /dust motes (dance|float|drift)/i,
+  /cathedral of (trees|light|shadows)/i,
+  /fingers of (light|shadow|dawn|dusk)/i,
+  /(golden|amber|honey) light/i,
+
+  // AI-clinical character voice (characters sounding like robots)
+  'Panic is inefficient',
+  'That is not comforting',
+  /remaining .* was no longer a viable option/i,
+  /the most logical (action|choice|option|course)/i,
+  /analyzed the .* layout/i,
+  /calculated the .* variables/i,
+  /processed the .* information/i,
+  /the .* was a .* error in/i,
+  /a .* waiting to be exploited/i,
+
+  // AI emotional processing (naming emotions instead of showing)
+  /felt a (wave|surge|pang|rush|stab|flicker|flash) of/i,
+  /felt a? ?(deep|profound|sudden|strange|familiar|unexpected) (sense|feeling) of/i,
+  /a? ?(new|strange|familiar)? ?sense of (purpose|clarity|calm|dread|unease|resolve)/i,
+  /realized (with a start|suddenly|in that moment)/i,
+
+  // AI structural clichés
+  'which said everything',
+  'not that it mattered',
+  'and that was that',
+  /and (somehow|strangely), that was (enough|okay|fine)/i,
+  /the world (seemed to|had) (shift|change|transform)/i,
+  /nothing would (ever )?be the same/i,
+  /everything (had )?changed/i,
+
+  // Tier 1 AI vocabulary (words AI overuses across all contexts)
+  'delve',
+  'tapestry',
+  'pivotal',
+  'testament',
+  'vibrant',
+  'realm',
+  'embark',
+  'nuanced',
+  'intricate',
+  'meticulous',
+  'seamless',
+  'paradigm',
+  'unparalleled',
+  'transformative',
 
   // Chapter opening clichés
   /the (morning|evening|night) (sun|moon|air)/i,
@@ -225,22 +304,49 @@ export function getDynamicWritingInstructions(genre: string, bookType: string): 
   if (bookType === 'non-fiction') {
     return `
 === NON-FICTION TONE & VOICE ===
-- VOICE: Authoritative but conversational. Avoid the "academic lecture" tone.
+- VOICE: Authoritative but conversational. Avoid the "academic lecture" tone. Inject personal stance: "I'd argue", "In my experience." AI defaults to neutral objectivity, humans have opinions.
 - EVIDENCE: Use specific examples (e.g., "a 2019 Stanford study") over vague "research shows".
 - ACCURACY: Never fabricate statistics, studies, or citations. If uncertain, describe the principle without fake sources.
 - HOOKS: Rotate through surprising facts, anecdotes, bold claims. NEVER use "Have you ever..." to open.
 - NAMES: Case study names must be UNIQUE and culturally diverse. Never reuse Marcus, Sarah, David.
-- STRUCTURE: Lead with a concrete example, then the theory. Specific-to-general flow.`;
+- STRUCTURE: Lead with a concrete example, then the theory. Specific-to-general flow.
+- RHYTHM: Vary sentence and paragraph length dramatically. Some paragraphs should be a single punchy sentence. AI produces uniform 3-5 sentence paragraphs. Humans don't.
+- TRANSITIONS: Never use "Furthermore", "Moreover", "Additionally" as paragraph starters. Use natural bridges or just start the next point directly.
+- REGISTER SHIFTS: Mix analytical passages with conversational asides. A human author naturally shifts between "here's the data" and "look, this matters because..." AI stays in one register.`;
   }
 
   return `
 === FICTION TONE & PACING ===
-- VOICE: Visceral and sensory-driven. Show emotions through actions ("hands trembled") not labels ("she was terrified").
+- VOICE: Visceral and sensory-driven. Show emotions through BEHAVIOR and OBJECTS, never labels. Not "she was terrified" or "she felt a wave of fear." Instead: "She couldn't get the key in the lock. Her hand wouldn't stop shaking."
 - PACING: Start "In Media Res" (in the middle of action). Jump directly into the scene.
 - NO RECAPS: Do NOT summarize previous chapters in the opening. The reader knows what happened.
-- DIALOGUE: Use subtext. Characters rarely say exactly what they mean. Add contractions and fragments.
+
+=== DIALOGUE RULES (CRITICAL FOR HUMAN-LIKE WRITING) ===
+- SUBTEXT IS KING: Characters almost never say what they actually mean. If a character is sad, they talk about the weather. If they're angry, they get quiet and precise about something trivial.
+- ASYMMETRIC EXCHANGES: Characters should NOT answer questions directly. Deflect, redirect, answer with an unrelated detail, or stay silent. BAD: "Are you okay?" → "No, I'm not okay." GOOD: "Are you okay?" → "Did you leave the stove on?"
+- VOICE DIFFERENTIATION: Each character must sound distinct. Different vocabulary, sentence length, verbal habits. If you can swap character names and the dialogue still works, it has failed.
+- IMPERFECT SPEECH: Real dialogue has contractions, fragments, interruptions, trailing off, talking over each other, and non-sequiturs. Not every line is grammatically complete or a perfect comeback.
+- BREAK THE LOOP: Do NOT write the same dynamic every exchange. If one character is emotional and the other is logical, break that pattern. Let the logical one crack. Let the emotional one go cold. Surprise the reader.
+- SILENCE AS MEANING: Sometimes the most powerful dialogue move is a character saying nothing. Use it.
+
+=== PROSE RHYTHM (CRITICAL FOR AI DETECTION EVASION) ===
+- BURSTINESS: Vary sentence length DRAMATICALLY. Follow a 30-word sentence with a 3-word one. Use fragments. Use occasional run-ons. AI text clusters sentences at 15-20 words. Human writing ranges from 2 to 40+.
+- PARAGRAPH VARIATION: Some paragraphs should be a single sentence. Others should run 6-8 sentences. NEVER make 3+ consecutive paragraphs the same length. AI produces uniform 3-5 sentence paragraphs.
+- UNPREDICTABLE OPENINGS: Do NOT start every paragraph with a topic sentence. Start mid-thought, mid-action, mid-observation. Some paragraphs should begin with dialogue, some with a sensory detail, some with a single word.
+- REGISTER SHIFTS: Let the prose shift from analytical to colloquial within the same passage when the character's mood warrants it. A narrator can go from poetic to blunt in the same paragraph.
 - RHYTHM: Prioritize DIRECT ACTION (Subject-Verb-Object). Limit participial phrases ("Walking to the door...") to once per page.
-- DESCRIPTIONS: Avoid "adjective stacking" (e.g., "the dark, gloomy, ominous shadows"). One modifier is enough.`;
+
+=== DESCRIPTION RULES ===
+- NO ADJECTIVE STACKING: "the dark, gloomy, ominous shadows" is AI. One modifier max per noun. Leave MOST objects unmodified. A door can just be "the door."
+- SELECTIVE DETAIL: Describe 1-2 things per scene vividly and specifically. Leave the rest bare. The reader's brain fills in the gaps. Over-describing every surface, smell, and sound in a room is an AI tell.
+- UNEXPECTED SENSORY DETAILS: Not "metallic smell" and "clicking sounds" every scene. What does the air taste like after rain on hot concrete? What does a wool seat feel like through thin pants? Be specific and surprising.
+- METAPHORS: If the protagonist has a specific profession, use it as a metaphor MAX 2-3 times per chapter. A programmer still thinks in normal human terms 90% of the time.
+
+=== EMOTIONAL PROCESSING (CRITICAL AI TELL) ===
+- NEVER name emotions directly. Not "he felt anger" or "a wave of grief washed over her" or "she realized she was falling for him."
+- Show emotion through: involuntary physical reactions, changed behavior, displacement onto objects or tasks, what the character notices in their environment.
+- LEAVE EMOTIONS UNRESOLVED: Do NOT wrap up emotional beats neatly within the same paragraph. Real people sit with feelings. They don't process, understand, and resolve in three sentences.
+- INTERNAL MONOLOGUE: Human thought is fragmented, associative, and contradictory. Not clean logical narratives. Characters should think in half-formed impressions, circle back, contradict themselves, get distracted.`;
 }
 
 /**

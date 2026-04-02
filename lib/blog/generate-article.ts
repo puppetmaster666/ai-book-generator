@@ -285,14 +285,14 @@ async function generateCoverImage(title: string, primaryKeyword: string): Promis
 
     // Vary the background composition but keep the brand palette consistent
     const backgrounds = [
-      'Flat-lay of an open notebook and scattered book pages on a dark charcoal surface',
-      'Minimalist geometric shapes and lines forming an abstract book or page pattern on dark background',
-      'Stack of books with one open, shot from above on a dark surface with dramatic side lighting',
+      'Flat-lay of an open notebook and scattered book pages on a dark charcoal surface, sharp focus throughout',
+      'Minimalist geometric shapes and lines forming an abstract book or page pattern on dark background, crisp edges',
+      'Stack of books with one open, shot from above on a dark surface with dramatic side lighting, everything in sharp focus',
       'Clean dark gradient background with subtle paper or fabric texture',
-      'Close-up of book pages fanning open with high contrast dramatic lighting, dark tones',
-      'Silhouette of a person reading against a window, moody and editorial',
-      'Abstract flowing lines and dots suggesting AI or neural networks, minimal and dark',
-      'Typewriter keys in close-up with shallow depth of field, dark moody tones',
+      'Dark desk surface with a pen and open book, overhead shot, sharp and detailed',
+      'Dark bookshelf filled with books, straight-on shot, sharp focus, moody lighting',
+      'Abstract dark polygonal or geometric surface with subtle lime highlights, crisp and sharp',
+      'Vintage typewriter on a dark desk, sharp focus, dramatic overhead lighting',
     ];
     const bg = backgrounds[Math.floor(Math.random() * backgrounds.length)];
 
@@ -317,7 +317,7 @@ BACKGROUND:
 - If any accent color is needed, use ONLY lime/chartreuse (#BFFF00)
 - Professional, editorial quality. Clean and minimal.
 
-BANNED: Rainbow colors, neon, lens flares, gradients on text, stock photo look, bright backgrounds.
+BANNED: Rainbow colors, neon, lens flares, gradients on text, stock photo look, bright backgrounds, blurred backgrounds, shallow depth of field, bokeh, out-of-focus elements.
 Think: Apple product page meets editorial magazine. Dark, clean, premium.
 The text MUST be clearly legible and spelled correctly.`;
 

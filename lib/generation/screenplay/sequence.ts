@@ -622,10 +622,15 @@ ${characterPsychology}
 3. VERTICAL WRITING
    Action paragraphs: MAX 3 LINES. Then white space.
    One image per paragraph. Fast. Punchy. Readable.
+   30%+ of action paragraphs should be a SINGLE LINE.
+   Median words per action paragraph: 12-20. If you're averaging 30+, you're writing prose, not a screenplay.
+   Vary paragraph length deliberately: 1 line, 3 lines, 1 line, 2 lines, 1 line. NOT 2, 2, 2, 2.
 
 4. IN MEDIA RES
    Start MID-ACTION. DELETE any "establishing" throat-clearing.
    Jump directly into conflict. No "Character walks in and sits down."
+   SCENE OPENING BAN: NEVER open a scene with a character entering a room, looking around, sitting down, or taking in surroundings. Start with conversation already in progress, action already happening, or a reaction to something we haven't seen yet.
+   SCENE ENDING BAN: NEVER end a scene with a character reflecting, reacting, or staring into the distance. End on the PIVOT: new info, unanswered question, reversal, or mid-exit. Cut BEFORE resolution.
 
 5. SENSORY ACTION
    Use verbs that imply SOUND or FEELING:
@@ -635,7 +640,10 @@ ${characterPsychology}
 6. PHYSICAL BEATS OVER PARENTHETICALS
    Instead of: (beat) or (pause)
    Write: "He adjusts his tie." / "She traces the rim of her glass."
-   Allowed parentheticals: (O.S.), (V.O.), (CONT'D), (into phone)
+   Allowed parentheticals: (O.S.), (V.O.), (CONT'D), (into phone), (to someone), (in Spanish)
+   PARENTHETICAL CAP: Maximum 15% of dialogue blocks should have parentheticals.
+   BANNED parentheticals: (angrily), (sadly), (nervously), (hesitantly), (softly), (firmly), (desperately)
+   If the emotion isn't clear from the line itself, REWRITE THE LINE, don't add a parenthetical.
 
 ${genreTone}
 
@@ -709,6 +717,53 @@ SCENE DISCIPLINE:
    - "And that was that" - BANNED
    End sentences on PHYSICAL NOUNS, not emotional conclusions.
 
+=== CHARACTER INTRODUCTIONS (FIRST APPEARANCE ONLY) ===
+When a character appears for the FIRST TIME, their description must:
+- Be MAX 2 lines. One line is better.
+- Lead with ATTITUDE or VOICE, not a physical catalog
+- Suggest contradiction or tension
+- BAD: "SARAH CHEN (30s), a determined woman with sharp eyes, dark hair, and an air of quiet confidence"
+- GOOD: "SARAH CHEN (30s). A face that's seen more than it should have by now."
+- GOOD: "SARAH CHEN (30s). Looks like she hasn't slept. Doesn't care if you notice."
+One or two SPECIFIC details beat a full inventory. Trust the casting director.
+
+=== DIAGONAL DIALOGUE (ADVANCED SUBTEXT) ===
+In the best scenes, characters are having DIFFERENT conversations simultaneously.
+Person A is talking about the relationship. Person B is talking about dinner.
+The REAL scene is about control, or guilt, or longing, underneath both.
+- At least 1 scene per sequence should feature characters talking AT CROSS-PURPOSES
+- Characters should respond to what they THINK was said, or what they WISH was said, not what was actually said
+- This creates dramatic irony and makes dialogue feel alive
+
+=== EXPOSITION FRAGMENTATION (CRITICAL) ===
+NEVER deliver a piece of exposition cleanly in one scene.
+- Information must arrive in FRAGMENTS across 2-3 scenes minimum
+- At least 30% of exposition should be VISUAL (shown, not said)
+- If a character must explain something, there must be CONFLICT in the scene about something ELSE
+- FORBIDDEN: Characters explaining something both characters already know ("As you know, Bob...")
+- Withhold information. Make the audience work. AI scripts are too efficient at conveying info.
+
+=== TONAL VARIATION (ANTI-AI) ===
+AI scripts maintain eerily consistent tone. Real scripts shift:
+- A thriller must have at least 1 genuinely funny moment per sequence
+- A comedy must have at least 1 moment of quiet sadness or genuine stakes
+- A drama must have at least 1 moment of absurdity or dark humor
+- Tonal whiplash (when earned) is a STRENGTH, not a weakness
+- NEVER let an entire sequence exist in one emotional register
+
+=== SCENE LENGTH VARIATION (CRITICAL) ===
+AI produces scenes of uniform length. Real scripts have massive variation:
+- Include at least 1 scene UNDER half a page (a quick beat, a reaction, a phone call)
+- Include at least 1 scene OVER 3 pages (a set piece, a major confrontation, a key dialogue scene)
+- NEVER write 3+ consecutive scenes of similar length
+- The VARIATION itself creates pacing and rhythm
+
+=== SLUG LINE CRAFT ===
+- Use MINI-SLUGS within a location instead of full slug lines: "AT THE BAR" or "THE HALLWAY" instead of INT. RESTAURANT - BAR AREA - NIGHT
+- Vary time-of-day beyond DAY/NIGHT: use DAWN, DUSK, LATER, CONTINUOUS, MOMENTS LATER, SAME
+- Slug lines can have VOICE: "EXT. THE MIDDLE OF NOWHERE - NIGHT" is valid and more cinematic than "EXT. RURAL ROAD - NIGHT"
+- Drop INT./EXT. for rapid scene changes within the same building
+
 === PUNCTUATION (MANDATORY) ===
 - NEVER use em dashes or en dashes anywhere in dialogue or action lines
 - Use commas, periods, semicolons, or colons instead
@@ -719,11 +774,21 @@ DIALOGUE:
 - "I need you to understand" / "Here's the thing" / "Let me be clear"
 - "With all due respect" / "To be honest" / "The thing is"
 - Characters explaining feelings: "I feel X because Y"
+- Echo dialogue: Character B repeating Character A's key word as a question ("Trust? You want to talk about trust?")
+- The supportive friend speech: A side character delivering a perfectly timed motivational monologue
+- Thesis statements: A character directly stating the theme of the film
+- Transitional dialogue: "We should go." "Where?" "To the warehouse." (just CUT TO the warehouse)
 
 ACTION LINES:
 - "We see" / "We hear" / "We watch" / "The camera"
 - Starting with character names: "John walks to the door"
   Instead: "The door SLAMS. John stands in the frame."
+- Emotion-describing adjectives: "nervously", "sadly", "determinedly" in action lines. Describe BEHAVIOR, not emotion.
+  BAD: "She looks at him nervously." GOOD: "She picks at the label on her water bottle. Won't meet his eyes."
+
+AI VOCABULARY BAN (action lines + dialogue):
+Never use: delve, tapestry, pivotal, testament, vibrant, realm, embark, nuanced, intricate, meticulous, seamless, paradigm, unparalleled, transformative, holistic
+These words are AI fingerprints. Use plain, specific, human language.
 
 === PURPLE PROSE BAN (AI DETECTION TRIGGER) ===
 NEVER USE these AI clichés in action lines:

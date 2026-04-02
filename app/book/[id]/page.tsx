@@ -172,6 +172,7 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
   const [showRestartConfirm, setShowRestartConfirm] = useState(false);
   const [showFirstBookDiscount, setShowFirstBookDiscount] = useState(false);
   const [isFirstCompletedBook, setIsFirstCompletedBook] = useState(false);
+  const [premiseExpanded, setPremiseExpanded] = useState(false);
   const [chapterStatuses, setChapterStatuses] = useState<ChapterCardStatus[]>([]);
   const [serverStartTime, setServerStartTime] = useState<Date | null>(null);
   const [toast, setToast] = useState<{ title: string; message: string; type: 'error' | 'success' | 'info' | 'warning' } | null>(null);
@@ -1291,8 +1292,8 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
           <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-xl">
             <div className="text-center mb-6">
-              <div className="w-16 h-16 bg-amber-50 rounded-full flex items-center justify-center mx-auto mb-4">
-                <RefreshCw className="h-8 w-8 text-amber-600" />
+              <div className="w-16 h-16 bg-neutral-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <RefreshCw className="h-8 w-8 text-neutral-600" />
               </div>
               <h2 className="text-xl font-bold text-neutral-900 mb-2">Restart Generation?</h2>
               <p className="text-neutral-600">
@@ -1313,7 +1314,7 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
               <button
                 onClick={handleRestart}
                 disabled={restarting}
-                className="flex-1 px-4 py-3 bg-amber-600 text-white rounded-xl hover:bg-amber-700 font-medium transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                className="flex-1 px-4 py-3 bg-neutral-900 text-white rounded-xl hover:bg-neutral-800 font-medium transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
               >
                 {restarting ? (
                   <>
@@ -1384,30 +1385,26 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
                 {/* Original Prompt / Premise */}
                 {book.premise && (
                   <div className="mb-4 text-sm">
-                    <p className="text-neutral-500 leading-relaxed line-clamp-3">
+                    <p className={`text-neutral-500 leading-relaxed ${premiseExpanded ? '' : 'line-clamp-3'}`}>
                       {book.premise}
                     </p>
+                    {book.premise.length > 200 && (
+                      <button
+                        onClick={() => setPremiseExpanded(!premiseExpanded)}
+                        className="mt-1 text-xs text-neutral-400 hover:text-neutral-600 transition-colors"
+                      >
+                        {premiseExpanded ? 'Show less' : 'Show more'}
+                      </button>
+                    )}
                   </div>
                 )}
 
-                {/* Genre & Type Info */}
-                {(book.genre || book.bookType) && (
-                  <div className="mb-4 flex flex-wrap gap-2">
-                    {book.bookType && (
-                      <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-neutral-100 text-neutral-600">
-                        {formatLabel(book.bookType)}
-                      </span>
-                    )}
-                    {book.genre && (
-                      <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-neutral-100 text-neutral-600">
-                        {formatLabel(book.genre)}
-                      </span>
-                    )}
-                    {book.bookPreset && (
-                      <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-neutral-100 text-neutral-600">
-                        {formatLabel(book.bookPreset)}
-                      </span>
-                    )}
+                {/* Book Preset (only if different from genre/type already shown above) */}
+                {book.bookPreset && (
+                  <div className="mb-4">
+                    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-neutral-100 text-neutral-600 border border-neutral-200">
+                      {formatLabel(book.bookPreset)}
+                    </span>
                   </div>
                 )}
 
@@ -1415,7 +1412,7 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
                 <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium ${book.status === 'completed'
                   ? 'bg-neutral-900 text-white'
                   : isPreviewComplete
-                    ? 'bg-green-100 text-green-700 border border-green-200'
+                    ? 'bg-neutral-900 text-white'
                     : book.status === 'failed'
                       ? 'bg-red-50 text-red-700 border border-red-200'
                       : isPending
@@ -1437,7 +1434,7 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
                   <button
                     onClick={() => setShowRestartConfirm(true)}
                     disabled={restarting}
-                    className="mt-4 mr-2 inline-flex items-center gap-1.5 px-3 py-1.5 text-sm text-amber-600 hover:text-amber-700 hover:bg-amber-50 rounded-lg transition-colors disabled:opacity-50"
+                    className="mt-4 mr-2 inline-flex items-center gap-1.5 px-3 py-1.5 text-sm text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100 rounded-lg transition-colors disabled:opacity-50"
                   >
                     <RefreshCw className={`h-4 w-4 ${restarting ? 'animate-spin' : ''}`} />
                     {restarting ? 'Restarting...' : 'Restart Generation'}
@@ -1501,18 +1498,18 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
                   {/* Animated initialization graphic */}
                   <div className="relative w-24 h-24 mx-auto mb-6">
                     {/* Outer pulsing ring */}
-                    <div className="absolute inset-0 rounded-full bg-emerald-100 animate-ping opacity-30" />
+                    <div className="absolute inset-0 rounded-full bg-neutral-200 animate-ping opacity-30" />
                     {/* Middle glow ring */}
-                    <div className="absolute inset-2 rounded-full bg-gradient-to-br from-emerald-50 to-emerald-100 animate-pulse" />
+                    <div className="absolute inset-2 rounded-full bg-gradient-to-br from-neutral-50 to-neutral-100 animate-pulse" />
                     {/* Spinning border */}
                     <div className="absolute inset-3 rounded-full border-4 border-neutral-100" />
-                    <div className="absolute inset-3 rounded-full border-4 border-transparent border-t-emerald-500 border-r-emerald-300 animate-spin" />
+                    <div className="absolute inset-3 rounded-full border-4 border-transparent border-t-neutral-900 border-r-neutral-400 animate-spin" />
                     {/* Center icon */}
                     <div className="absolute inset-0 flex items-center justify-center">
                       <div className="relative">
-                        <Zap className="h-8 w-8 text-emerald-600 animate-pulse" />
+                        <Zap className="h-8 w-8 text-neutral-900 animate-pulse" />
                         {/* Spark effect */}
-                        <div className="absolute -top-1 -right-1 w-2 h-2 bg-emerald-400 rounded-full animate-ping" />
+                        <div className="absolute -top-1 -right-1 w-2 h-2 bg-neutral-400 rounded-full animate-ping" />
                       </div>
                     </div>
                   </div>
@@ -1523,13 +1520,13 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
                     Your book is being prepared. This usually takes 15-30 seconds.
                   </p>
                   {/* Animated connection indicator */}
-                  <div className="inline-flex items-center gap-3 text-sm bg-emerald-50 px-4 py-2 rounded-full border border-emerald-200 mb-4">
+                  <div className="inline-flex items-center gap-3 text-sm bg-neutral-100 px-4 py-2 rounded-full border border-neutral-200 mb-4">
                     <div className="flex items-center gap-1">
-                      <div className="w-2 h-2 bg-emerald-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                      <div className="w-2 h-2 bg-emerald-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                      <div className="w-2 h-2 bg-emerald-300 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                      <div className="w-2 h-2 bg-neutral-700 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                      <div className="w-2 h-2 bg-neutral-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                      <div className="w-2 h-2 bg-neutral-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
                     </div>
-                    <span className="text-emerald-700 font-medium">Connecting to AI</span>
+                    <span className="text-neutral-700 font-medium">Connecting to AI</span>
                   </div>
                   <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-4 py-2 inline-block">
                     Please don&apos;t close or refresh this page while we set up your book.
@@ -2126,8 +2123,8 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
           {isPreviewComplete && (
             <div className="bg-white rounded-2xl border border-neutral-200 p-6 sm:p-8 mb-6">
               <div className="text-center mb-6">
-                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Check className="h-8 w-8 text-green-600" />
+                <div className="w-16 h-16 bg-neutral-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Check className="h-8 w-8 text-neutral-900" />
                 </div>
                 <h2 className="text-2xl font-bold text-neutral-900 mb-2">Your Preview is Ready!</h2>
                 <p className="text-neutral-600">
@@ -2142,11 +2139,11 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
 
               {/* Preview Stats */}
               <div className="grid grid-cols-2 gap-4 mb-6">
-                <div className="bg-green-50 rounded-xl p-4 text-center border border-green-100">
-                  <p className="text-2xl font-bold text-green-700">
+                <div className="bg-neutral-900 rounded-xl p-4 text-center">
+                  <p className="text-2xl font-bold text-white">
                     {isIllustrated ? (book.illustrations?.length || 0) : book.chapters.length}
                   </p>
-                  <p className="text-sm text-green-600">Free Preview</p>
+                  <p className="text-sm text-neutral-300">Free Preview</p>
                 </div>
                 <div className="bg-neutral-50 rounded-xl p-4 text-center border border-neutral-100">
                   <p className="text-2xl font-bold text-neutral-400">
