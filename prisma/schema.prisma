@@ -246,16 +246,17 @@ model CreditClaim {
 }
 
 model EmailLog {
-  id        String   @id @default(cuid())
-  to        String
-  subject   String
-  template  String
-  status    String
-  error     String?
-  messageId String?
-  userId    String?
-  metadata  Json?
-  createdAt DateTime @default(now())
+  id          String   @id @default(cuid())
+  to          String
+  subject     String
+  template    String
+  status      String
+  error       String?
+  messageId   String?
+  userId      String?
+  metadata    Json?
+  htmlContent String?  // Store email HTML for resend capability
+  createdAt   DateTime @default(now())
 
   @@index([to])
   @@index([status])

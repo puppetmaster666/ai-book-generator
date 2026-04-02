@@ -203,22 +203,34 @@ export async function POST(request: NextRequest) {
       let failed = 0;
       const delay = (ms: number) => new Promise(r => setTimeout(r, ms));
 
-      // We need the HTML content. Check if it's stored in an EmailBatch or reconstruct from subject.
-      // Since we can't store full HTML in email logs, queue as a batch with the subject
-      // For now, we need to find a matching batch or the original HTML
-      // Check if there's a batch with this subject
-      const existingBatch = await prisma.emailBatch.findFirst({
-        where: { customSubject: subject },
-        orderBy: { createdAt: 'desc' },
-      });
+      // Get the email HTML: first try the email log (new htmlContent field), then fall back to EmailBatch
+      let emailHtml: string | null = null;
 
-      const emailHtml = existingBatch?.customMessage;
+      // Check email logs for stored HTML content
+      const logWithHtml = await prisma.emailLog.findFirst({
+        where: { subject, status: 'sent', htmlContent: { not: null } },
+        orderBy: { createdAt: 'desc' },
+        select: { htmlContent: true },
+      });
+      if (logWithHtml?.htmlContent) {
+        emailHtml = logWithHtml.htmlContent;
+      }
+
+      // Fall back to EmailBatch
+      if (!emailHtml) {
+        const existingBatch = await prisma.emailBatch.findFirst({
+          where: { customSubject: subject },
+          orderBy: { createdAt: 'desc' },
+        });
+        if (existingBatch?.customMessage) {
+          emailHtml = existingBatch.customMessage;
+        }
+      }
 
       if (!emailHtml) {
-        // No stored HTML — queue the emails and tell admin to resend via AI mail
         return NextResponse.json({
           success: false,
-          error: 'No stored email content found for this campaign. Use AI Mail to compose and send to these users.',
+          error: 'No stored email content found for this campaign. This campaign was sent before content storage was enabled. Use AI Mail to compose and resend.',
           unsentEmails,
           unsentCount: unsentEmails.length,
         });
@@ -244,6 +256,7 @@ export async function POST(request: NextRequest) {
               template: 'resend',
               status: result.success ? 'sent' : 'failed',
               error: result.error,
+              htmlContent: emailHtml,
             },
           }).catch(() => {});
 

@@ -110,7 +110,7 @@ export async function POST(request: NextRequest) {
         if (result.success) sent++; else failed++;
 
         await prisma.emailLog.create({
-          data: { to: email, subject: draft.subject, template: 'ai_bulk', status: result.success ? 'sent' : 'failed', error: result.error, metadata: { situation, includeCredits } },
+          data: { to: email, subject: draft.subject, template: 'ai_bulk', status: result.success ? 'sent' : 'failed', error: result.error, htmlContent: draft.html, metadata: { situation, includeCredits } },
         }).catch(() => {});
       } catch {
         failed++;
@@ -185,6 +185,7 @@ export async function POST(request: NextRequest) {
           template: 'ai_custom',
           status: result.success ? 'sent' : 'failed',
           error: result.error,
+          htmlContent: draft.html,
           metadata: { situation, includeCredits },
         },
       }).catch(() => {});
