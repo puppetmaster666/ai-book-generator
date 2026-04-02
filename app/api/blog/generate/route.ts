@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/db';
-import { generateAndPublishArticle } from '@/lib/blog/generate-article';
+import { generateAndPublishArticle, generatePatchNotesArticle } from '@/lib/blog/generate-article';
 
 export const maxDuration = 300; // Each article takes 1-2 min max
 
@@ -19,14 +19,25 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  console.log('[Blog Cron] Triggered - generating new article...');
-  const result = await generateAndPublishArticle();
-
-  if (result.success) {
-    return NextResponse.json({ success: true, title: result.title, slug: result.slug, url: `/blog/${result.slug}` });
+  // First: check if we need a patch notes article for the latest version
+  const patchResult = await generatePatchNotesArticle();
+  if (patchResult && !patchResult.skipped && patchResult.success) {
+    console.log(`[Blog Cron] Patch notes article published: ${patchResult.title}`);
+    // Still generate the regular article too
   }
 
-  return NextResponse.json({ success: false, error: result.error }, { status: 500 });
+  // Then: generate the regular daily SEO article
+  console.log('[Blog Cron] Generating daily article...');
+  const result = await generateAndPublishArticle();
+
+  return NextResponse.json({
+    success: result.success,
+    title: result.title,
+    slug: result.slug,
+    url: result.slug ? `/blog/${result.slug}` : undefined,
+    patchNotes: patchResult?.skipped ? 'already exists' : patchResult?.success ? patchResult.slug : patchResult?.error || 'none',
+    error: result.error,
+  });
 }
 
 // POST - called by admin dashboard (uses session auth)

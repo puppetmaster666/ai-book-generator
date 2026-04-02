@@ -7,6 +7,7 @@ import { prisma } from '@/lib/db';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { SAFETY_SETTINGS } from '@/lib/generation/shared/safety';
 import { TOPIC_POOL, INTERNAL_LINKS, type TopicTemplate } from './topics';
+import { APP_VERSION, CHANGELOG } from '@/lib/version';
 
 /**
  * Pick the next topic to write about.
@@ -428,6 +429,158 @@ export async function generateAndPublishArticle(): Promise<{
   } catch (error) {
     const msg = error instanceof Error ? error.message : 'Unknown error';
     console.error('[Blog] Article generation failed:', msg);
+    return { success: false, error: msg };
+  }
+}
+
+/**
+ * Generate a blog article for the latest patch notes.
+ * Checks if an article for the current version already exists.
+ * Returns null if already published, otherwise generates and publishes.
+ */
+export async function generatePatchNotesArticle(): Promise<{
+  success: boolean;
+  slug?: string;
+  title?: string;
+  error?: string;
+  skipped?: boolean;
+} | null> {
+  try {
+    const latestEntry = CHANGELOG[0];
+    if (!latestEntry) return null;
+
+    // Check if we already published an article for this version
+    const versionSlug = `whats-new-in-v${latestEntry.version.replace(/\./g, '-')}`;
+    const existing = await prisma.blogPost.findUnique({ where: { slug: versionSlug } });
+    if (existing) {
+      console.log(`[Blog] Patch notes article for v${latestEntry.version} already exists, skipping`);
+      return { success: true, skipped: true, slug: existing.slug, title: existing.title };
+    }
+
+    console.log(`[Blog] Generating patch notes article for v${latestEntry.version}...`);
+
+    const highlights = latestEntry.highlights.map((h, i) => `${i + 1}. ${h}`).join('\n');
+
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) throw new Error('GEMINI_API_KEY not set');
+
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({
+      model: 'gemini-3.1-pro-preview',
+      safetySettings: SAFETY_SETTINGS,
+    });
+
+    // Generate article content
+    const prompt = `Write a blog article for DraftMyBook.com announcing version ${latestEntry.version}: "${latestEntry.title}".
+
+TONE: Excited but professional. Written for aspiring authors and creators. Not technical.
+
+UPDATES TO COVER:
+${highlights}
+
+RULES:
+- 600-900 words
+- Never mention AI, automation, pipelines, or technical implementation details
+- NEVER use em dashes or en dashes. Use commas, periods, colons, or semicolons instead
+- Use subheadings (## in markdown)
+- Include a call-to-action at the end encouraging readers to try creating a book
+- Mention DraftMyBook naturally 2-3 times
+- Focus on what's better for the user, not how it works
+- Write like you're telling a friend about exciting improvements
+- Link to /create in the CTA
+
+OUTPUT FORMAT:
+---TITLE---
+A catchy, non-technical title (do NOT include the version number in the title)
+---META---
+Meta description for SEO (under 155 chars, no dashes)
+---EXCERPT---
+Short excerpt (1-2 sentences, no dashes)
+---BODY---
+The full article in markdown`;
+
+    const result = await model.generateContent(prompt);
+    const text = (result.response.text() || '').trim();
+
+    const titleMatch = text.match(/---TITLE---\s*([\s\S]*?)---META---/);
+    const metaMatch = text.match(/---META---\s*([\s\S]*?)---EXCERPT---/);
+    const excerptMatch = text.match(/---EXCERPT---\s*([\s\S]*?)---BODY---/);
+    const bodyMatch = text.match(/---BODY---\s*([\s\S]*?)$/);
+
+    const title = titleMatch?.[1]?.trim() || `What's New at DraftMyBook: ${latestEntry.title}`;
+    const metaDescription = metaMatch?.[1]?.trim() || `DraftMyBook v${latestEntry.version}: ${latestEntry.title}. See what's new for authors and creators.`;
+    const excerpt = excerptMatch?.[1]?.trim() || latestEntry.highlights.slice(0, 2).join('. ') + '.';
+    const markdownBody = bodyMatch?.[1]?.trim() || '';
+
+    if (markdownBody.length < 100) {
+      throw new Error('Generated article too short');
+    }
+
+    // Convert to HTML
+    const content = markdownToHtml(markdownBody);
+
+    // Inject internal links
+    let linkedContent = content;
+    for (const [keyword, url] of Object.entries(INTERNAL_LINKS)) {
+      const regex = new RegExp(`\\b(${keyword})\\b(?![^<]*<\\/a>)`, 'i');
+      linkedContent = linkedContent.replace(regex, `<a href="${url}" style="color: #171717; text-decoration: underline;">$1</a>`);
+    }
+
+    // Generate cover image
+    const imageModel = genAI.getGenerativeModel({
+      model: 'gemini-3-pro-image-preview',
+      safetySettings: SAFETY_SETTINGS,
+    });
+
+    let coverImageUrl: string | null = null;
+    try {
+      const coverPrompt = `Professional blog cover image for a creative writing platform update.
+Theme: "${latestEntry.title}"
+Style: Modern, clean, 16:9 landscape. Dark charcoal (#171717) background with lime green (#BFFF00) accents.
+Show: Open books with colorful illustrations emerging from the pages, creative energy, artistic tools.
+Include small text "v${latestEntry.version}" in a subtle modern font.
+NO other text. Premium, magazine-quality composition. No people's faces.`;
+
+      const imgResult = await imageModel.generateContent(coverPrompt);
+      const parts = imgResult.response.candidates?.[0]?.content?.parts || [];
+      for (const part of parts) {
+        if (part.inlineData?.mimeType?.startsWith('image/')) {
+          coverImageUrl = `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
+          break;
+        }
+      }
+    } catch (coverErr) {
+      console.warn('[Blog] Patch notes cover image failed (continuing without):', coverErr);
+    }
+
+    // Calculate reading time
+    const wordCount = linkedContent.replace(/<[^>]+>/g, '').split(/\s+/).length;
+    const readingTime = Math.max(1, Math.ceil(wordCount / 200));
+
+    // Save
+    const post = await prisma.blogPost.create({
+      data: {
+        title,
+        slug: versionSlug,
+        content: linkedContent,
+        excerpt,
+        metaDescription,
+        keywords: ['update', 'new features', 'book creator', 'writing tools', latestEntry.title.toLowerCase()],
+        primaryKeyword: 'book creator update',
+        coverImageUrl,
+        coverImageAlt: `Cover image for DraftMyBook update: ${latestEntry.title}`,
+        category: 'updates',
+        readingTime,
+        published: true,
+        publishedAt: new Date(),
+      },
+    });
+
+    console.log(`[Blog] Patch notes published: "${title}" at /blog/${versionSlug}`);
+    return { success: true, slug: post.slug, title: post.title };
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : 'Unknown error';
+    console.error('[Blog] Patch notes article failed:', msg);
     return { success: false, error: msg };
   }
 }
