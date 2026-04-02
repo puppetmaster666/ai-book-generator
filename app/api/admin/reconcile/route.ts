@@ -119,32 +119,32 @@ export async function GET(request: NextRequest) {
           data: { reconcileRetries: { increment: 1 } },
         });
 
-        const res = await fetch(`${appUrl}${endpoint}`, {
+        // Fire-and-forget: don't await the response since generation runs for minutes
+        fetch(`${appUrl}${endpoint}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ serverDriven: true }),
+        }).then(res => {
+          if (res.ok) {
+            console.log(`[Reconcile] Successfully triggered generation for "${book.title}" (${book.id})`);
+          } else {
+            res.text().then(body => {
+              console.error(`[Reconcile] Failed to trigger generation for "${book.title}" (${book.id}): ${res.status} ${body.slice(0, 200)}`);
+            });
+          }
+        }).catch(err => {
+          console.error(`[Reconcile] Error triggering generation for "${book.title}" (${book.id}): ${err.message}`);
         });
 
-        if (res.ok) {
-          triggered.push({
-            id: book.id,
-            title: book.title,
-            status: book.status,
-          });
-          console.log(
-            `[Reconcile] Successfully triggered generation for "${book.title}" (${book.id})`
-          );
-        } else {
-          const body = await res.text();
-          errors.push({
-            id: book.id,
-            title: book.title,
-            error: `HTTP ${res.status}: ${body.slice(0, 200)}`,
-          });
-          console.error(
-            `[Reconcile] Failed to trigger generation for "${book.title}" (${book.id}): ${res.status} ${body.slice(0, 200)}`
-          );
-        }
+        // Always count as triggered since we fired the request
+        triggered.push({
+          id: book.id,
+          title: book.title,
+          status: book.status,
+        });
+        console.log(
+          `[Reconcile] Fired generation for "${book.title}" (${book.id})`
+        );
       } catch (err) {
         const message =
           err instanceof Error ? err.message : 'Unknown error';
