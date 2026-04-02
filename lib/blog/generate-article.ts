@@ -391,9 +391,22 @@ export async function generateAndPublishArticle(): Promise<{
     const wordCount = content.replace(/<[^>]+>/g, '').split(/\s+/).length;
     const readingTime = Math.max(1, Math.ceil(wordCount / 200));
 
-    // 7. Save to database
-    const post = await prisma.blogPost.create({
-      data: {
+    // 7. Save to database (upsert to handle slug collisions from concurrent requests)
+    const post = await prisma.blogPost.upsert({
+      where: { slug },
+      update: {
+        title,
+        content,
+        excerpt,
+        metaDescription,
+        keywords,
+        coverImageUrl: cover?.imageUrl || null,
+        coverImageAlt: cover?.altText || null,
+        readingTime,
+        published: true,
+        publishedAt: new Date(),
+      },
+      create: {
         title,
         slug,
         content,
