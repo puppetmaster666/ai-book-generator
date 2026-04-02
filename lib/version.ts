@@ -3,7 +3,7 @@
  * Update this file with each release.
  */
 
-export const APP_VERSION = '2.5.0';
+export const APP_VERSION = '2.5.1';
 
 export interface ChangelogEntry {
   version: string;
@@ -13,6 +13,20 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  {
+    version: '2.5.1',
+    date: '2026-04-02',
+    title: 'Writing Quality & UI Polish',
+    highlights: [
+      'Books and screenplays now read more naturally with improved writing engine',
+      'Surprise Me ideas are now far more creative and varied every time you click',
+      'Book page redesigned with cleaner layout and consistent styling',
+      'You can now expand and read the full premise on any book page',
+      'Added back button to the creation flow so you can go back and edit your idea',
+      'Sharper blog cover images with better visual quality',
+      'Duplicate tags removed from book detail pages',
+    ],
+  },
   {
     version: '2.5.0',
     date: '2026-04-02',

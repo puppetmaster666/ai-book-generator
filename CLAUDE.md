@@ -30,6 +30,20 @@ The app uses a neutral-first design system. Do not introduce new colors outside 
 - Say "your book is being created" not "AI is generating your content"
 
 ## NEVER Use Em Dashes or En Dashes
+- NEVER use em dashes or en dashes anywhere in the codebase, user-facing text, changelogs, comments, or generated content
+- Use commas, periods, semicolons, colons, or rewrite the sentence instead
+- This applies to ALL files: .ts, .tsx, .md, prompts, templates, everything
+
+## Changelog & Versioning
+- Changelog lives in `lib/version.ts` (APP_VERSION + CHANGELOG array)
+- When making notable user-facing changes, add a new entry to the CHANGELOG array at the top
+- **Versioning strategy:** Use PATCH increments (2.5.x) for most releases. Only bump MINOR (2.x.0) for major feature launches. Avoid reaching v3 too soon.
+- Current version: check APP_VERSION in lib/version.ts for the latest
+- Changelog highlights should be user-friendly, non-technical, and never mention AI internals
+- Date format: YYYY-MM-DD
+- Keep highlights concise (1 line each), max 8 per release
+
+## NEVER Use Em Dashes or En Dashes
 - NEVER use — (em dash) or – (en dash) anywhere in the codebase, user-facing text, changelogs, comments, or generated content
 - Use commas, periods, semicolons, colons, or rewrite the sentence instead
 - This applies to ALL files: .ts, .tsx, .md, prompts, templates, everything
