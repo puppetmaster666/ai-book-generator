@@ -91,32 +91,54 @@ Think about:
 - Vocabulary, sentence length, verbal quirks, catchphrases
 - How they handle stress or excitement differently
 
-PART 2 - "story": Write the FULL story as a PAGE-BY-PAGE narrative.
-Use PAGE markers so the story has clear page breaks:
+PART 2 - "story": Write the FULL story as a PAGE-BY-PAGE visual script.
+Each page MUST specify: LOCATION, what we SEE, and what characters SAY/DO.
+
+FORMAT (follow exactly):
 
 PAGE 1:
-The forest was quiet. Too quiet. Luna pressed her ear to the old oak tree and listened.
-"Something's different today," she whispered.
+[Location: Sunny kitchen, morning light streaming through yellow curtains]
+Luna stands on tiptoe at the counter, flour on her nose. A bowl of batter wobbles near the edge.
+LUNA: "Almost... got it..."
+The spoon slips. Batter splashes across the table.
 
 PAGE 2:
-A crack of light split the bark. Luna stumbled back...
+[Location: Front porch, bright afternoon]
+Luna sits on the steps, chin in her hands. A trail of flour footprints leads out the door behind her.
+LUNA: "Maybe pancakes are just too hard."
+A shadow falls over her. Old Mr. Badger peers down, holding a whisk.
+MR. BADGER: "Hard? Nonsense. You just need the right tool."
 
-STORY STRUCTURE RULES (CRITICAL):
-- Write EXACTLY ${bookData.targetChapters} pages (use PAGE markers)
-- Each page: 2-4 sentences of story text
-- Every page must be a CONSEQUENCE of the previous one (Therefore/But logic, NEVER "And then")
+=== STORY STRUCTURE RULES (CRITICAL) ===
+- Write EXACTLY ${bookData.targetChapters} pages with PAGE markers
+- Each page: 2-4 sentences of story text PLUS at least 1 line of dialogue
+- EVERY page starts with [Location: specific place, time of day, key visual detail]
+- EVERY page must be a CONSEQUENCE of the previous one (Therefore/But logic)
   BAD: "Luna went to the forest. And then she found a cave. And then she met a bear."
-  GOOD: "Luna followed the tracks into the forest. But instead of a deer, she found a cave that hummed with strange light. Therefore, she crept closer..."
+  GOOD: "Luna followed the tracks into the forest. But instead of a deer, she found a cave. Therefore, she crept closer..."
+
+=== LOCATION VARIETY (CRITICAL FOR VISUAL DIVERSITY) ===
+- Use AT LEAST ${Math.max(4, Math.floor(bookData.targetChapters * 0.4))} DIFFERENT locations across the story
+- NEVER use the same location more than 3 times
+- Change something visual EVERY page: different room, different outdoor area, different time of day, different weather
+- Example locations: kitchen, garden, riverside, hilltop, bedroom, market, bridge, treehouse, pond, cave, meadow, workshop
+
+=== CHARACTER VARIETY ===
+- The protagonist should NOT appear alone on every single page
+- Include at least 2-3 pages where supporting characters are prominent
+- Show different character GROUPINGS: solo moments, pairs, full group
+- Characters should be in DIFFERENT POSES and ACTIONS on every page (never standing still twice)
+
+=== PACING ===
 - Characters must have GOALS that drive their actions
 - Build REAL tension with stakes the reader cares about
 - Include a clear CLIMAX (page ${Math.floor(bookData.targetChapters * 0.75)}-${Math.floor(bookData.targetChapters * 0.85)}) and satisfying RESOLUTION
 - Each page should end with a HOOK that makes you want to turn the page
-- The story should make sense if you read just the dialogue aloud
 
-TEXT & DIALOGUE:
-- Mix dialogue with narration: "Come on!" called Fox, his tail swishing through the tall grass.
+=== DIALOGUE RULES ===
+- Include dialogue on at least 70% of pages (this is critical; without text the pages feel empty)
 - Each character MUST sound different (use the voice profiles)
-- Include dialogue on at least 60% of pages
+- Mix dialogue with narration: "Come on!" called Fox, his tail swishing through the tall grass.
 - NEVER have characters state emotions: NO "I'm scared!" YES: She gripped the branch tighter.
 - SHOW don't tell: NOT "She was sad" YES "Her ears drooped. She turned away from the window."
 
@@ -126,14 +148,14 @@ BANNED AI DIALOGUE (never write these):
 - "I feel [emotion]" / "I am [emotion]"
 - Any character stating the theme or moral directly
 
-VISUAL CONTRAST (essential for illustration):
-- Alternate between: quiet indoor moments, outdoor action, close-up emotional beats
-- Use sensory language: colors, sounds, textures, weather, light
+=== VISUAL DIRECTION PER PAGE ===
 - Describe what we SEE: physical actions, expressions, body language
 - Include environment interaction (climbing trees, splashing puddles, hiding behind things)
-- Each page should naturally suggest a different illustration
+- Vary camera perspective: wide shots showing the environment, close-ups on faces, overhead views
+- Each page MUST suggest a VISUALLY DISTINCT illustration (different location, different action, different composition)
+- If two pages look like they'd produce the same illustration, REWRITE one of them
 
-TARGET: ~${bookData.targetChapters * 30} words for the full story. Quality over quantity.
+TARGET: ~${bookData.targetChapters * 35} words for the full story. Quality over quantity.
 
 PART 3 - "emotionalBeats": List the emotional journey, one beat per page.
 Example: ["curiosity", "excitement", "worry", "determination", "fear", "courage", "joy", "peace"]
@@ -242,14 +264,39 @@ SCENE DIRECTION FOR ILLUSTRATOR:
 - Describe what we SEE, not what characters feel
   BAD: "Luna felt nervous about the dark cave"
   GOOD: "Luna peeks around a mossy boulder, one paw gripping the rock. The cave mouth yawns ahead, dark and dripping."
-- Vary camera distances:
-  - Wide/establishing shots: show the environment (at least 3 pages)
-  - Medium shots: characters interacting (most pages)
-  - Close-ups: emotional moments, important details (at least 2 pages)
-  - Bird's eye view: show scale, journeys (1-2 pages)
+
+=== VISUAL VARIETY RULES (CRITICAL; DUPLICATE IMAGES = FAILURE) ===
+
+LOCATIONS & SETTINGS:
+- Use AT LEAST ${Math.max(4, Math.floor(bookData.targetChapters * 0.4))} DIFFERENT LOCATIONS
+- Each location should appear only 2-3 times maximum
+- Even within the same location, change the specific area, angle, time of day, or weather
+- If two pages have the same location, they MUST have completely different compositions
+
+CAMERA ANGLES (must vary dramatically):
+- Wide/establishing shots: at least 3 pages (show full environment)
+- Medium shots: characters interacting (but vary left/right/center framing)
+- Close-ups: emotional moments, facial expressions (at least 2 pages)
+- Bird's eye / overhead view: 1-2 pages (show scale, paths, journeys)
+- Low angle (looking up): 1 page (makes characters look powerful or environment imposing)
+- NEVER use the same camera angle more than 3 times in a row
+
+CHARACTER VARIETY:
+- The protagonist should NOT appear in every single illustration; show supporting characters in 2-3 panels alone
+- Vary character groupings: solo, pairs, full group
+- Characters must be in DIFFERENT POSES on every page (never standing still or in the same position twice)
+- Show characters INTERACTING with the environment: climbing, splashing, hiding, reaching, running, jumping, sitting, lying down
+
+COMPOSITION:
+- Each page MUST be visually distinct from every other page
+- Alternate character position in frame: left, right, center, foreground, background
+- Vary the visual weight: some pages busy and detailed, others simple and spacious
 - Include sensory details: lighting (golden hour, moonlight, dappled shade), weather, textures
-- Characters should DO things: running, climbing, reaching, hugging — not just standing
-- Use 4+ different locations across the book
+
+ANTI-DUPLICATION CHECK:
+- Before finalizing each page, mentally compare it to the previous 2 pages
+- If a page would produce a similar illustration to a recent page (same location + same character + similar action), CHANGE IT
+- This is the #1 quality issue. Every page must look like a unique illustration.
 
 TEXT POSITION RULES:
 - Text should NEVER cover the most important part of the illustration
@@ -324,32 +371,32 @@ ${story.emotionalBeats?.join(' → ') || 'unknown'}
 CURRENT PAGE PLAN:
 ${planSummary}
 
-REVIEW CHECKLIST:
+REVIEW CHECKLIST (fix ALL issues found):
 
-1. VISUAL VARIETY:
-   - Are pageStyles varied? (not same style 3x in a row)
-   - Are camera angles varied? (not all "medium shot")
-   - Are there enough different locations? (minimum 4)
-   - Is there at least 1 close-up and 1 wide shot?
-   - Do characters DO things (not just stand/sit)?
+1. VISUAL VARIETY (MOST IMPORTANT):
+   - Are pageStyles varied? (not same style 3x in a row). If not, CHANGE the repeated ones.
+   - Are camera angles varied? (not all "medium shot"). If not, CHANGE at least 3 to different angles.
+   - Are there enough different locations? (minimum 4). If not, MOVE some scenes to new locations.
+   - Is there at least 1 close-up and 1 wide shot? If not, ADD them.
+   - Do characters DO things (not just stand/sit)? If not, ADD physical actions.
+   - DUPLICATE CHECK: Would any two pages produce a similar illustration (same location + same character + similar pose)? If yes, CHANGE one of them to a different location, angle, or action.
 
-2. TEXT LAYOUT:
-   - Are textPositions varied? (not all "bottom-banner")
-   - Is there at least 1 "minimal" or wordless page?
-   - Does text position match the illustration composition?
+2. TEXT CONTENT:
+   - Does every page have text? If any page has empty or missing text, ADD 2-3 sentences from the story.
+   - At least 70% of pages must have dialogue. If not enough, ADD character speech.
+   - Are textPositions varied? (not all "bottom-banner"). If not, CHANGE some.
 
 3. EMOTIONAL PACING:
    - Does the visual intensity build toward the climax?
    - Is the climax page a "full-bleed" or "spread"?
    - Does the ending feel gentle and satisfying?
-   - Are there quiet moments between exciting ones?
 
 4. STORY CLARITY:
    - Can you follow the story from illustrations alone?
    - Does each page logically follow from the previous?
-   - Are transitions clear?
+   - Are transitions clear? If not, ADD transitionNote to the scene.
 
-Fix any issues by outputting a revised "chapters" array. If everything looks good, return it unchanged.
+You MUST fix all issues and return a corrected "chapters" array. Do NOT return the plan unchanged if there are problems.
 
 Output ONLY valid JSON:
 {
