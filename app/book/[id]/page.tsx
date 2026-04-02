@@ -1188,21 +1188,34 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
 
   if (loading || redirectingToComic) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="h-12 w-12 animate-spin text-neutral-900 mx-auto mb-4" />
-          <p className="text-neutral-600">
-            {redirectingToComic ? 'Preparing your illustrated book...' : 'Loading your book...'}
-          </p>
-          {redirectingToComic && (
-            <>
-              <div className="flex items-center justify-center gap-2 mt-4">
-                <Clock className="h-5 w-5 text-neutral-500" />
-                <span className="font-mono text-2xl font-bold text-neutral-900">{formatElapsedTime(elapsedTime)}</span>
-              </div>
-              <p className="text-sm text-neutral-500 mt-2">Creating story outline and character guides...</p>
-            </>
-          )}
+      <div className="min-h-screen bg-white">
+        <Header />
+        <div className="flex items-center justify-center" style={{ minHeight: 'calc(100vh - 100px)' }}>
+          <div className="text-center max-w-md mx-auto px-6">
+            <Loader2 className="h-12 w-12 animate-spin text-neutral-900 mx-auto mb-4" />
+            <p className="text-neutral-600 text-lg font-medium">
+              {redirectingToComic ? 'Preparing your illustrated book...' : 'Loading your book...'}
+            </p>
+            {redirectingToComic && (
+              <>
+                <div className="flex items-center justify-center gap-2 mt-4">
+                  <Clock className="h-5 w-5 text-neutral-500" />
+                  <span className="font-mono text-2xl font-bold text-neutral-900">{formatElapsedTime(elapsedTime)}</span>
+                </div>
+                <p className="text-sm text-neutral-500 mt-3">
+                  Creating story outline, character designs, and visual style guide
+                </p>
+                <p className="text-xs text-neutral-400 mt-1">
+                  This usually takes 3-5 minutes
+                </p>
+                <div className="mt-6 p-4 bg-neutral-50 rounded-xl border border-neutral-100">
+                  <p className="text-sm text-neutral-600">
+                    You can leave this page. Your book will keep generating in the background and you can check progress from the header.
+                  </p>
+                </div>
+              </>
+            )}
+          </div>
         </div>
       </div>
     );

@@ -7,7 +7,7 @@ import Image from 'next/image';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import ConfirmModal from '@/components/ConfirmModal';
-import { Loader2, Check, X, Download, AlertCircle, RefreshCw, StopCircle, Clock, ShieldAlert, Zap, BookOpen } from 'lucide-react';
+import { Loader2, Check, X, Download, AlertCircle, RefreshCw, StopCircle, Clock, ShieldAlert, Zap, BookOpen, ChevronDown } from 'lucide-react';
 
 // Format elapsed time as MM:SS
 function formatTime(seconds: number): string {
@@ -72,6 +72,7 @@ function GenerateComicContent() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [isEmergencyStopping, setIsEmergencyStopping] = useState(false);
   const [error, setError] = useState('');
+  const [expandedPanel, setExpandedPanel] = useState<number | null>(null);
   const [allComplete, setAllComplete] = useState(false);
   const [elapsedTime, setElapsedTime] = useState(0);
   const [isWaitingForOutline, setIsWaitingForOutline] = useState(false);
@@ -793,20 +794,91 @@ function GenerateComicContent() {
                 <div className="p-3">
                   <div className="flex items-center justify-between mb-1">
                     <span className="text-xs text-neutral-500">{bookData?.dialogueStyle === 'bubbles' ? 'Panel' : 'Page'} {panel.number}</span>
-                    {panel.status === 'done' && (
-                      <Check className="h-4 w-4 text-neutral-900" />
-                    )}
+                    <div className="flex items-center gap-1">
+                      {panel.status === 'done' && (
+                        <Check className="h-4 w-4 text-neutral-900" />
+                      )}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setExpandedPanel(expandedPanel === panel.number ? null : panel.number);
+                        }}
+                        className="p-1 hover:bg-neutral-100 rounded transition-colors"
+                        title="See details"
+                      >
+                        <ChevronDown className={`h-3.5 w-3.5 text-neutral-400 transition-transform ${expandedPanel === panel.number ? 'rotate-180' : ''}`} />
+                      </button>
+                    </div>
                   </div>
                   <p className="text-sm text-neutral-900 font-medium line-clamp-1">
                     {panel.title}
                   </p>
-                  <p className="text-xs text-neutral-500 line-clamp-2 mt-1">
-                    {panel.scene?.description || ''}
-                  </p>
-                  {panel.dialogue && panel.dialogue.length > 0 && (
-                    <p className="text-xs text-neutral-600 mt-1">
-                      {panel.dialogue.length} bubble{panel.dialogue.length !== 1 ? 's' : ''}
-                    </p>
+                  {expandedPanel !== panel.number && (
+                    <>
+                      <p className="text-xs text-neutral-500 line-clamp-2 mt-1">
+                        {panel.scene?.description || ''}
+                      </p>
+                      {panel.dialogue && panel.dialogue.length > 0 && (
+                        <p className="text-xs text-neutral-600 mt-1">
+                          {panel.dialogue.length} bubble{panel.dialogue.length !== 1 ? 's' : ''}
+                        </p>
+                      )}
+                    </>
+                  )}
+                  {/* Expanded panel details */}
+                  {expandedPanel === panel.number && (
+                    <div className="mt-2 space-y-2 text-xs">
+                      {panel.text && (
+                        <div>
+                          <span className="text-neutral-400 uppercase tracking-wider text-[10px]">Story text</span>
+                          <p className="text-neutral-700 mt-0.5">{panel.text}</p>
+                        </div>
+                      )}
+                      {panel.scene?.description && (
+                        <div>
+                          <span className="text-neutral-400 uppercase tracking-wider text-[10px]">Scene</span>
+                          <p className="text-neutral-700 mt-0.5">{panel.scene.description}</p>
+                        </div>
+                      )}
+                      {panel.scene?.background && (
+                        <div>
+                          <span className="text-neutral-400 uppercase tracking-wider text-[10px]">Background</span>
+                          <p className="text-neutral-500 mt-0.5">{panel.scene.background}</p>
+                        </div>
+                      )}
+                      {panel.scene?.mood && (
+                        <div className="flex gap-2">
+                          <span className="text-neutral-400">Mood:</span>
+                          <span className="text-neutral-600">{panel.scene.mood}</span>
+                        </div>
+                      )}
+                      {panel.scene?.cameraAngle && (
+                        <div className="flex gap-2">
+                          <span className="text-neutral-400">Camera:</span>
+                          <span className="text-neutral-600">{panel.scene.cameraAngle}</span>
+                        </div>
+                      )}
+                      {panel.dialogue && panel.dialogue.length > 0 && (
+                        <div>
+                          <span className="text-neutral-400 uppercase tracking-wider text-[10px]">Dialogue</span>
+                          {panel.dialogue.map((d, di) => (
+                            <p key={di} className="text-neutral-700 mt-0.5">
+                              <strong>{d.speaker}:</strong> &ldquo;{d.text}&rdquo;
+                            </p>
+                          ))}
+                        </div>
+                      )}
+                      {Object.keys(panel.scene?.characterActions || {}).length > 0 && (
+                        <div>
+                          <span className="text-neutral-400 uppercase tracking-wider text-[10px]">Actions</span>
+                          {Object.entries(panel.scene.characterActions).map(([char, action]) => (
+                            <p key={char} className="text-neutral-600 mt-0.5">
+                              <strong>{char}:</strong> {action}
+                            </p>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   )}
                 </div>
               </div>
