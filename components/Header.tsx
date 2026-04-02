@@ -205,17 +205,32 @@ if (genDropdownRef.current && !genDropdownRef.current.contains(event.target as N
               <div className="relative" ref={genDropdownRef}>
                 <button
                   onClick={() => setGenDropdownOpen(!genDropdownOpen)}
-                  className="flex items-center gap-2 px-3 py-2 rounded-full bg-neutral-100 hover:bg-neutral-200 transition-colors"
+                  className={`flex items-center gap-2 px-3 py-1.5 rounded-full transition-colors ${
+                    variant === 'transparent'
+                      ? 'bg-white/10 hover:bg-white/20'
+                      : 'bg-neutral-100 hover:bg-neutral-200'
+                  }`}
                 >
                   {isGenerating && (
                     <>
                       <div className="relative">
-                        <Loader2 className="h-4 w-4 animate-spin text-neutral-700" />
-                        <span className="absolute -top-1 -right-1 w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                        <Loader2 className={`h-4 w-4 animate-spin ${variant === 'transparent' ? 'text-white' : 'text-neutral-700'}`} />
                       </div>
-                      <span className="text-sm font-medium text-neutral-700 max-w-[120px] truncate">
-                        {generatingBook.title}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className={`text-sm font-medium max-w-[100px] truncate ${variant === 'transparent' ? 'text-white' : 'text-neutral-700'}`}>
+                          {generatingBook.title}
+                        </span>
+                        <span className={`text-xs font-mono tabular-nums ${variant === 'transparent' ? 'text-white/70' : 'text-neutral-500'}`}>
+                          {progress}%
+                        </span>
+                      </div>
+                      {/* Mini progress bar */}
+                      <div className={`w-12 h-1 rounded-full overflow-hidden ${variant === 'transparent' ? 'bg-white/20' : 'bg-neutral-200'}`}>
+                        <div
+                          className={`h-full rounded-full transition-all duration-500 ${variant === 'transparent' ? 'bg-lime-400' : 'bg-neutral-900'}`}
+                          style={{ width: `${Math.max(progress, 3)}%` }}
+                        />
+                      </div>
                     </>
                   )}
                   {isCompleted && (
