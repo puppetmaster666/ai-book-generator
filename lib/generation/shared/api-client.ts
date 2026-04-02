@@ -32,9 +32,8 @@ function getGenAI(): GoogleGenerativeAI {
 }
 
 // Gemini 3.1 Pro for main generation
-// Temperature 0.9 + topP 0.92 + frequencyPenalty 0.4 + presencePenalty 0.3
-// = higher perplexity (less predictable words) + less repetition
-// Research-backed: ICLR 2025 shows this range maximizes quality + creativity
+// Temperature 0.9 + topP 0.92 for higher creativity
+// Note: frequencyPenalty/presencePenalty not supported on preview models
 export function getGeminiPro(): GenerativeModel {
   if (!_geminiPro) {
     _geminiPro = getGenAI().getGenerativeModel({
@@ -45,8 +44,6 @@ export function getGeminiPro(): GenerativeModel {
         topP: 0.92,
         topK: 50,
         maxOutputTokens: 65536,
-        frequencyPenalty: 0.4,
-        presencePenalty: 0.3,
       },
     });
   }
