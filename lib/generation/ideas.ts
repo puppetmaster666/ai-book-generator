@@ -357,13 +357,41 @@ export async function generateBookIdea(category: IdeaCategory = 'random'): Promi
     ? (['novel', 'childrens', 'comic', 'screenplay', 'tv_series', 'short_story'] as const)[Math.floor(Math.random() * 6)]
     : category;
 
-  // Pick random examples from the pool
+  // Pick ONE random example (not a pair — less anchoring)
   const examplePool = IDEA_EXAMPLES[actualCategory];
-  const randomExamples = examplePool[Math.floor(Math.random() * examplePool.length)];
+  const randomPair = examplePool[Math.floor(Math.random() * examplePool.length)];
+  const singleExample = randomPair[Math.floor(Math.random() * randomPair.length)];
 
-  // Pick a random genre hint
+  // Pick TWO different random genre hints for cross-pollination
   const genreHints = GENRE_HINTS[actualCategory];
-  const randomGenre = genreHints[Math.floor(Math.random() * genreHints.length)];
+  const shuffledGenres = [...genreHints].sort(() => Math.random() - 0.5);
+  const randomGenre = shuffledGenres[0];
+  const secondaryGenre = shuffledGenres[1] || shuffledGenres[0];
+
+  // Random narrative constraints to force structural variety
+  const narrativeConstraints = [
+    'Start the idea with the ENDING or consequence, then reveal how it began.',
+    'The protagonist must be over 50 years old.',
+    'The protagonist must be under 12 years old.',
+    'Set this in a country or culture rarely featured in Western media.',
+    'The story must take place entirely within a single building or location.',
+    'The central conflict is between two people who genuinely love each other.',
+    'The protagonist is the antagonist of someone else\'s story.',
+    'The story begins with an ordinary mundane moment that becomes extraordinary.',
+    'There are no villains. The conflict comes from a moral dilemma with no right answer.',
+    'The protagonist has a disability, chronic illness, or neurodivergence that shapes how they experience the story.',
+    'Set this in a time period before 1900.',
+    'Set this in the near future (2030-2050) with one plausible technological change.',
+    'The protagonist is someone society would consider a failure or outcast.',
+    'The story involves a non-romantic relationship (siblings, parent-child, rivals, mentor-student) as the central bond.',
+    'Use an unreliable or unusual perspective: a child, an animal, a ghost, an AI, an object.',
+    'The protagonist does NOT want an adventure and is dragged into one reluctantly.',
+    'The core tension is economic: poverty, debt, inheritance, a business failing.',
+    'Set this during a specific real historical event (a war, a pandemic, an expedition, a revolution).',
+    'The story must involve a fundamental misunderstanding between two characters that drives the entire plot.',
+    'The protagonist has already failed at their main goal before the story begins. This is about what comes after failure.',
+  ];
+  const randomConstraint = narrativeConstraints[Math.floor(Math.random() * narrativeConstraints.length)];
 
   // Build category-specific prompt
   let categoryInstruction = '';
@@ -457,6 +485,11 @@ VARIETY IS ESSENTIAL:
 
   const prompt = `${categoryInstruction}
 
+GENRE BLEND: Combine elements of ${randomGenre} with ${secondaryGenre} for a fresh hybrid concept.
+
+MANDATORY CREATIVE CONSTRAINT (you MUST follow this):
+${randomConstraint}
+
 IMPORTANT RULES:
 - Write exactly 3 to 4 sentences, each one rich with specific details
 - Never use dashes (like - or — or –) anywhere in your response
@@ -465,20 +498,20 @@ IMPORTANT RULES:
 - Include specific character names, settings, and stakes
 - Make every sentence add new compelling information
 - NAMES: Use each character's name ONCE, then pronouns (he/she/they) - avoid repeating the same name
+- Do NOT write anything similar to the example below. It is only for format/length reference.
 
 ${buildDiverseNamePoolsPrompt()}
 
-MAXIMIZE VARIETY - Each generation should feel fresh:
-- Vary protagonist ages, backgrounds, and personalities
-- For visual stories: create distinct character designs that would look unique when illustrated
-- The goal is that if someone generates 10 ideas, all 10 should feel completely different from each other
-- Decide on a setting FIRST, then pick culturally appropriate names from the pools above
+MAXIMIZE VARIETY - Each generation MUST feel completely fresh:
+- Pick a setting FIRST from a place/culture/era you haven't used before
+- Then pick culturally appropriate names from the pools above
+- The protagonist should have an unusual occupation, background, or perspective
+- Avoid default Western/American settings. Think globally: Lagos, Seoul, Mumbai, Bogota, Marrakech, Reykjavik, Manila, Nairobi, Bangkok, Istanbul, Sao Paulo, Osaka
+- Avoid default professions: not another detective, not another writer, not another scientist (unless the constraint specifically calls for one)
+- The hook should be something genuinely surprising, not a familiar trope with a twist
 
-Example of the quality and length expected (but create something COMPLETELY DIFFERENT):
-"${randomExamples[0]}"
-
-Another example (create something TOTALLY DIFFERENT from both examples):
-"${randomExamples[1]}"
+Format/length reference ONLY (write something COMPLETELY DIFFERENT in topic, setting, and characters):
+"${singleExample}"
 
 Now write your unique ${actualCategory === 'childrens' ? "children's book" : actualCategory === 'nonfiction' ? 'non-fiction book' : actualCategory === 'tv_series' ? 'TV series' : actualCategory === 'short_story' ? 'short story' : actualCategory === 'adult_comic' ? 'adult comic' : actualCategory} idea (3-4 detailed sentences, no dashes, end with period):`;
 
