@@ -311,15 +311,18 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
               return;
             }
 
-            // If we got an error response, still try redirecting - the comic page
-            // can show appropriate status/errors
+            // If we got an error response, show it here instead of redirecting to empty comic page
             console.log('Generate response:', genData);
-            router.replace(`/generate-comic?bookId=${id}`);
+            setRedirectingToComic(false);
+            setError(genData.error || 'Generation encountered an issue. It will auto-retry shortly.');
+            setLoading(false);
             return;
           } catch (err) {
             console.error('Error starting visual book generation:', err);
-            // On error, still redirect - comic page can handle recovery
-            router.replace(`/generate-comic?bookId=${id}`);
+            // Don't redirect on error - show the error on this page
+            setRedirectingToComic(false);
+            setError('Something went wrong starting your book. It will auto-retry shortly, or you can try again.');
+            setLoading(false);
             return;
           }
         }
@@ -327,6 +330,7 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
         // Also check if it's a visual book that's already generating/has outline
         // and redirect to the comic generation page
         // Note: Only redirect the ACTUAL owner (not admins viewing) - admins can view the status without running generation
+        // DON'T redirect failed books - let them see the error and retry from the book page
         const isActualOwner = loadedBook?.userId === currentUserId;
         if (isVisual && loadedBook?.status !== 'completed' && loadedBook?.status !== 'failed' && isActualOwner) {
           const hasOutline = loadedBook?.outline && typeof loadedBook.outline === 'object';
