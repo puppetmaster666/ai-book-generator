@@ -280,10 +280,24 @@ Include a sign-off:
     // Wrap in branded template
     const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://draftmybook.com';
 
-    // Add credit redemption CTA if credits are included
-    const creditSection = includeCredits && includeCredits > 0
-      ? getCreditGiftSection(includeCredits, `${APP_URL}/create`)
-      : '';
+    // Add CTA section: credit redemption button if credits, otherwise a "Visit" button
+    let ctaSection = '';
+    if (includeCredits && includeCredits > 0) {
+      ctaSection = getCreditGiftSection(includeCredits, `${APP_URL}/create`);
+    } else {
+      ctaSection = `
+    <div style="text-align: center; margin: 28px 0;">
+      <table cellpadding="0" cellspacing="0" style="margin: 0 auto;">
+        <tr>
+          <td style="background-color: #BFFF00; border-radius: 8px;">
+            <a href="${APP_URL}/create" style="display: inline-block; color: #171717; text-decoration: none; padding: 14px 32px; font-weight: 600; font-size: 15px;">
+              Start Creating
+            </a>
+          </td>
+        </tr>
+      </table>
+    </div>`;
+    }
 
     const brandedHtml = `<!DOCTYPE html>
 <html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
@@ -294,7 +308,7 @@ Include a sign-off:
 </div>
 <div style="padding: 40px 32px;">
 ${htmlBody}
-${creditSection}
+${ctaSection}
 </div>
 <div style="padding: 24px 32px; text-align: center; border-top: 1px solid #e5e5e5;">
 <p style="margin: 0; font-size: 13px; color: #737373;"><a href="${APP_URL}" style="color: #171717; text-decoration: none;">draftmybook.com</a></p>
