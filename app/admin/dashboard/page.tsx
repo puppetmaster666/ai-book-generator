@@ -388,8 +388,8 @@ interface UserInfo {
   credits?: number;
 }
 
-function AIEmailAssistant({ defaultMode = 'single', users = [], totalUsers }: { defaultMode?: 'single' | 'bulk'; users?: UserInfo[]; totalUsers?: number }) {
-  const [mode, setMode] = useState<'single' | 'bulk'>(defaultMode);
+function AIEmailAssistant({ defaultMode = 'single', users = [], totalUsers, initialEmails }: { defaultMode?: 'single' | 'bulk'; users?: UserInfo[]; totalUsers?: number; initialEmails?: string[] }) {
+  const [mode, setMode] = useState<'single' | 'bulk'>(initialEmails?.length ? 'bulk' : defaultMode);
   const [situation, setSituation] = useState('');
   const [recipientEmail, setRecipientEmail] = useState('');
   const [recipientName, setRecipientName] = useState('');
@@ -402,8 +402,8 @@ function AIEmailAssistant({ defaultMode = 'single', users = [], totalUsers }: { 
   // Bulk mode state
   const [joinedAfter, setJoinedAfter] = useState('');
   const [joinedBefore, setJoinedBefore] = useState('');
-  const [bulkTarget, setBulkTarget] = useState<'all' | 'filtered' | 'selected'>('all');
-  const [selectedEmails, setSelectedEmails] = useState<Set<string>>(new Set());
+  const [bulkTarget, setBulkTarget] = useState<'all' | 'filtered' | 'selected'>(initialEmails?.length ? 'selected' : 'all');
+  const [selectedEmails, setSelectedEmails] = useState<Set<string>>(new Set(initialEmails || []));
   const [userSearch, setUserSearch] = useState('');
   const [allUsers, setAllUsers] = useState<UserInfo[]>([]);
   const [loadingAllUsers, setLoadingAllUsers] = useState(false);
@@ -738,6 +738,7 @@ function AdminDashboardContent() {
   const [campaignTotalUsers, setCampaignTotalUsers] = useState(0);
   const [isLoadingCampaigns, setIsLoadingCampaigns] = useState(false);
   const [unsentModal, setUnsentModal] = useState<{ subject: string; users: Array<{ id: string; email: string; name: string | null }>; loading: boolean; resending?: boolean; resendResult?: string } | null>(null);
+  const [preSelectedEmails, setPreSelectedEmails] = useState<string[]>([]);
 
   // Site settings state
   const [trafficWarningEnabled, setTrafficWarningEnabled] = useState(false);
@@ -1469,7 +1470,7 @@ function AdminDashboardContent() {
         {activeSection === 'blog' && <BlogGeneratorCard />}
 
         {/* Bulk Email - redirect to AI Email in bulk mode */}
-        {activeSection === 'bulk-email' && <AIEmailAssistant defaultMode="bulk" users={stats.users} totalUsers={stats.overview.totalUsers} />}
+        {activeSection === 'bulk-email' && <AIEmailAssistant defaultMode="bulk" users={stats.users} totalUsers={stats.overview.totalUsers} initialEmails={preSelectedEmails.length > 0 ? preSelectedEmails : undefined} />}
 
         {/* Overview Cards - Clean monochrome design */}
         {(activeSection === 'overview' || activeSection === 'users' || activeSection === 'books') && (
@@ -2678,6 +2679,17 @@ function AdminDashboardContent() {
                         ) : (
                           <><Send className="h-4 w-4" /> Resend to {unsentModal.users.length} users</>
                         )}
+                      </button>
+                      <button
+                        onClick={() => {
+                          // Pre-select these emails and navigate to AI Mail bulk mode
+                          setPreSelectedEmails(unsentModal.users.map(u => u.email));
+                          setUnsentModal(null);
+                          router.push('/admin/dashboard?section=bulk-email');
+                        }}
+                        className="px-4 py-2.5 border border-neutral-200 rounded-lg text-sm font-medium hover:bg-neutral-50 transition-colors"
+                      >
+                        AI Mail
                       </button>
                       <button
                         onClick={() => {
