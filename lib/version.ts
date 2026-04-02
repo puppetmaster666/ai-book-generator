@@ -3,7 +3,7 @@
  * Update this file with each release.
  */
 
-export const APP_VERSION = '2.4.0';
+export const APP_VERSION = '2.5.0';
 
 export interface ChangelogEntry {
   version: string;
@@ -13,6 +13,21 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  {
+    version: '2.5.0',
+    date: '2026-04-02',
+    title: 'Picture Books & Reliability Overhaul',
+    highlights: [
+      'Completely redesigned picture book engine — richer stories, varied layouts, and professional text integration',
+      'Upgraded art styles across the board — watercolor, cartoon, storybook, fantasy, and all comic styles now look stunning',
+      'Books now generate much more reliably — fewer failures and automatic recovery',
+      'Credit counter and notification bell always visible in the header',
+      'Content that can\'t be generated is automatically softened and retried',
+      'If something still fails, your credit is refunded automatically',
+      'Prompt history — reuse your previous ideas when creating a new book',
+      'Screenplays now write like real scripts — sharper dialogue, varied scene lengths, and no more robotic patterns',
+    ],
+  },
   {
     version: '2.4.0',
     date: '2026-03-29',
