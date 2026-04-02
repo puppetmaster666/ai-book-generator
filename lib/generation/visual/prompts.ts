@@ -214,10 +214,9 @@ export function buildIllustrationPromptFromScene(
         return desc;
       }).join('\n\n');
 
-      // Build a specific consistency reminder for hair and face
+      // Build a specific consistency reminder for ALL physical attributes
       characterConsistencyReminder = relevantChars.map(c => {
-        // Extract key identifiers from physical description for emphasis
-        return `${c.name} MUST have the EXACT same: hair color, hair style, face shape, and distinctive features as described above`;
+        return `${c.name} MUST have the EXACT same: hair color, hair style, facial hair, face shape, body type, height, build, skin tone, clothing, and distinctive features as described above. Do NOT change their physique between panels.`;
       }).join('. ');
     }
   }
@@ -278,11 +277,18 @@ ${characterDescriptions}
   prompt += `Mood: ${scene.mood}. `;
   prompt += `Camera angle: ${scene.cameraAngle}. `;
 
-  // Add style guide if available
+  // Add style guide if available - with STRONG consistency emphasis
   if (visualStyleGuide) {
-    prompt += `Style: ${visualStyleGuide.overallStyle}. `;
-    prompt += `Colors: ${visualStyleGuide.colorPalette}. `;
-    prompt += `Lighting: ${visualStyleGuide.lightingStyle}. `;
+    prompt += `
+=== ART STYLE CONSISTENCY (CRITICAL) ===
+You MUST maintain the EXACT same art style across every illustration. Do NOT switch styles.
+Style: ${visualStyleGuide.overallStyle}.
+Color Palette: ${visualStyleGuide.colorPalette}.
+Lighting: ${visualStyleGuide.lightingStyle}.
+${visualStyleGuide.consistencyRules ? `Rules: ${visualStyleGuide.consistencyRules.join('. ')}.` : ''}
+Every page must look like it belongs in the SAME book. Same line weight, same color treatment, same texture.
+=== END ART STYLE ===
+`;
   }
 
   // Add composition and depth directives for professional cinematography
@@ -316,7 +322,7 @@ ${characterDescriptions}
 
   // Add STRONG consistency reminder for character appearances at the end
   if (characterDescriptions && characterConsistencyReminder) {
-    prompt += `FINAL REMINDER - CHARACTER CONSISTENCY IS CRITICAL: ${characterConsistencyReminder}. DO NOT deviate from the described hair color, hair style, face shape, skin tone, or clothing. The characters must look IDENTICAL across all illustrations. `;
+    prompt += `FINAL REMINDER - CHARACTER CONSISTENCY IS CRITICAL: ${characterConsistencyReminder}. DO NOT deviate from the described hair color, hair style, facial hair, face shape, skin tone, body type, height, build, or clothing. A muscular character STAYS muscular. A bearded character STAYS bearded. A tall character STAYS tall. The characters must look IDENTICAL across all illustrations. `;
     // Add extra emphasis for main character if available
     if (mainCharacterEmphasis) {
       prompt += `${mainCharacterEmphasis} `;
@@ -425,13 +431,17 @@ Use a slightly larger font size than other pages.`;
   }
 
   prompt += `\n\nThe text to include:\n"${text}"\n`;
-  prompt += `\nTEXT STYLE RULES:
+  prompt += `\nTEXT STYLE RULES (must be CONSISTENT across ALL pages):
 - Use a warm, friendly storybook font (serif or rounded sans-serif)
-- Text must be PERFECTLY LEGIBLE — high contrast against background
+- Use the SAME font style and size on EVERY page of the book
+- Text must be PERFECTLY LEGIBLE with high contrast against background
 - Font size: large enough to read comfortably (this is a children's book)
-- Text color: dark brown or black on light backgrounds, white on dark backgrounds
-- If text overlaps illustration, add a soft background gradient or panel for readability
-- Text should feel like part of the page design, not stamped on top\n`;
+- Text color: dark brown (#3D2B1F) on light backgrounds, cream (#FFF8E7) on dark backgrounds
+- Use the SAME text color scheme throughout the book
+- Text background treatment must be CONSISTENT: if using a cream panel on one page, use cream panels throughout
+- If text overlaps illustration, add a soft semi-transparent cream/white panel for readability
+- Text should feel like part of the page design, not stamped on top
+- CONSISTENCY IS KEY: every page must look like it belongs in the same book\n`;
 
   return prompt;
 }

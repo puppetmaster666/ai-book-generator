@@ -53,22 +53,28 @@ Create EXTREMELY DETAILED visual descriptions for each character that an illustr
 For each character provide:
 
 1. Physical Description (BE EXTREMELY SPECIFIC):
-   - EXACT hair color (e.g., "golden blonde", "jet black", "auburn red", "chocolate brown" - NOT just "brown" or "blonde")
+   - EXACT hair color (e.g., "golden blonde", "jet black", "auburn red", "chocolate brown" -- NOT just "brown" or "blonde")
    - EXACT hair style and length (e.g., "shoulder-length wavy hair with side-swept bangs", "short spiky hair", "long straight hair in a ponytail")
    - Face shape (oval, round, square, heart-shaped, angular)
    - Eye color AND eye shape (almond-shaped, round, etc.)
    - Skin tone (fair, olive, tan, dark brown, etc.)
    - Age appearance (child around 6, teenager, young adult in 20s, etc.)
-   - Height/build (tall and lanky, short and stocky, average height with athletic build)
    - Nose shape and any notable facial features
+   - FACIAL HAIR: clean-shaven, stubble, full beard, mustache, goatee, etc. Be explicit. If no facial hair, say "clean-shaven"
 
-2. Clothing: Their CONSISTENT outfit throughout the story (${isNoir ? 'grayscale shading' : 'colors'}, style, accessories they always wear)
+2. Body Type & Physique (CRITICAL for consistency):
+   - Height: specific (e.g., "tall at 6'2", "petite at 5'1", "average height")
+   - Build: specific (e.g., "muscular and broad-shouldered", "thin and wiry", "stocky and compact", "soft and round", "athletic and lean")
+   - Posture: how they carry themselves (e.g., "stands straight with confidence", "slight slouch", "hunched over")
+   - Proportions: relative to other characters (e.g., "towers over the others", "smallest in the group")
 
-3. Distinctive Features: Unique visual identifiers that make them INSTANTLY recognizable (glasses, freckles, a specific accessory, a scar, etc.)
+3. Clothing: Their CONSISTENT outfit throughout the story (${isNoir ? 'grayscale shading' : 'colors'}, style, accessories they always wear)
 
-4. ${isNoir ? 'Grayscale Palette' : 'Color Palette'}: ${isNoir ? '3-4 SPECIFIC grayscale values (like "pure black", "charcoal gray", "light gray", "pure white") - ABSOLUTELY NO COLORS' : '3-4 SPECIFIC hex-describable colors (like "bright red #E74C3C", "navy blue", "sunny yellow")'}
+4. Distinctive Features: Unique visual identifiers that make them INSTANTLY recognizable (glasses, freckles, a specific accessory, a scar, etc.)
 
-5. Expression Notes: Their default facial expression and how they typically emote
+5. ${isNoir ? 'Grayscale Palette' : 'Color Palette'}: ${isNoir ? '3-4 SPECIFIC grayscale values (like "pure black", "charcoal gray", "light gray", "pure white") -- ABSOLUTELY NO COLORS' : '3-4 SPECIFIC hex-describable colors (like "bright red #E74C3C", "navy blue", "sunny yellow")'}
+
+6. Expression Notes: Their default facial expression and how they typically emote
 
 Also provide overall style notes for maintaining consistency across illustrations.
 
