@@ -131,7 +131,7 @@ export default function GeneratingMessage({ type, showTimer = true, size = 'md',
         {messages[messageIndex]}
       </span>
       {showTimer && elapsed > 2 && (
-        <span className={`${sizeClasses.timer} text-neutral-300 tabular-nums`}>
+        <span className={`${sizeClasses.timer} text-neutral-400 tabular-nums`}>
           {formatTime(elapsed)}
         </span>
       )}
