@@ -167,6 +167,7 @@ export async function PATCH(
     if (characters !== undefined) updateData.characters = characters;
     if (targetWords !== undefined) updateData.targetWords = targetWords;
     if (targetChapters !== undefined) updateData.targetChapters = targetChapters;
+    if (body.region !== undefined) updateData.region = body.region;
     const book = await prisma.book.update({
       where: { id },
       data: updateData,

@@ -112,6 +112,7 @@ model Book {
   protagonistPhoto       String?
   protagonistStyled      String?
   contentRating          String         @default("general")
+  region                 String?        // User's region for culturally-appropriate names (auto-detected from IP, editable)
   originalIdea           String?
   paymentMethod          String?
   ipAddress              String?

@@ -1,7 +1,7 @@
 import { getGeminiFlash, getGeminiFlashLight } from './shared/api-client';
 import { parseJSONFromResponse } from './shared/json-utils';
 import { truncateToWordLimit } from './shared/writing-quality';
-import { BANNED_OVERUSED_NAMES, buildNameGuidancePrompt } from './shared/name-variety';
+import { BANNED_OVERUSED_NAMES, buildNameGuidancePrompt, buildNameGuidanceForRegion } from './shared/name-variety';
 import { buildNameSuggestionPrompt, detectCulturalSetting, generateCharacterNameSet, buildDiverseNamePoolsPrompt } from './shared/name-generator';
 
 // Category types for idea generation
@@ -551,7 +551,7 @@ Now write your unique ${actualCategory === 'childrens' ? "children's book" : act
 
 // Expand a simple idea into a full book plan
 // For non-fiction: beginning = introduction, middle = main topics, ending = conclusion
-export async function expandIdea(idea: string, hintBookType?: string): Promise<{
+export async function expandIdea(idea: string, hintBookType?: string, region?: string | null): Promise<{
   title: string;
   genre: string;
   bookType: 'fiction' | 'non-fiction';
@@ -596,7 +596,7 @@ NAME USAGE IN TEXT FIELDS (CRITICAL - AI tends to spam names):
 - In premise/beginning/middle/ending fields: max 2 mentions of any name, then use pronouns
 - This prevents robotic, repetitive writing that readers hate
 
-${buildNameSuggestionPrompt(idea)}
+${region ? buildNameGuidanceForRegion(region, idea) : buildNameSuggestionPrompt(idea)}
 
 CHARACTER VARIETY - Make each character unique and memorable:
 - Use names from the suggestions above OR culturally-appropriate alternatives

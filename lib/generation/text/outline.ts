@@ -2,7 +2,7 @@ import { SAFETY_SETTINGS, sanitizeContentForSafety, isSafetyBlockError } from '.
 import { getGeminiPro, getGeminiFlash } from '../shared/api-client';
 import { parseJSONFromResponse } from '../shared/json-utils';
 import { detectLanguageInstruction, PUNCTUATION_RULES } from '../shared/writing-quality';
-import { buildNameGuidancePrompt, BANNED_OVERUSED_NAMES } from '../shared/name-variety';
+import { buildNameGuidancePrompt, buildNameGuidanceForRegion, BANNED_OVERUSED_NAMES } from '../shared/name-variety';
 import { buildNameSuggestionPrompt } from '../shared/name-generator';
 
 // Threshold for chunked outline generation - books with more chapters use chunked approach
@@ -34,6 +34,7 @@ export async function generateOutline(bookData: {
   writingStyle: string;
   targetWords: number;
   targetChapters: number;
+  region?: string | null;
   onProgress?: (status: string, chaptersCompleted: number, totalChapters: number) => void;
 }): Promise<OutlineResult> {
   // Use chunked generation for large books to avoid timeouts
@@ -60,6 +61,7 @@ async function generateOutlineStandard(bookData: {
   writingStyle: string;
   targetWords: number;
   targetChapters: number;
+  region?: string | null;
   onProgress?: (status: string, chaptersCompleted: number, totalChapters: number) => void;
 }): Promise<OutlineResult> {
   // Try with original content first, then with sanitized content if blocked
@@ -122,7 +124,7 @@ WRITING QUALITY NOTES:
 - Vary chapter openings - never start multiple chapters the same way
 - Use ONLY the characters provided - do not invent major characters
 
-${buildNameGuidancePrompt(bookData.premise, bookData.title, bookData.genre)}
+${bookData.region ? buildNameGuidanceForRegion(bookData.region, bookData.premise, bookData.title, bookData.genre) : buildNameGuidancePrompt(bookData.premise, bookData.title, bookData.genre)}
 ${buildNameSuggestionPrompt(bookData.premise)}
 
 NAME USAGE IN SUMMARIES (CRITICAL - AI tends to spam names):

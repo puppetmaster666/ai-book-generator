@@ -135,6 +135,8 @@ export async function POST(request: NextRequest) {
       bookPreset,
       dialogueStyle,
       contentRating: providedContentRating,
+      // Region for culturally-appropriate names
+      region: providedRegion,
     } = body;
 
     // Determine content rating: use provided value, or look up from preset, or default to 'general'
@@ -189,6 +191,8 @@ export async function POST(request: NextRequest) {
         dialogueStyle: dialogueStyle || null,
         // Content maturity settings
         contentRating,
+        // Region for name demographics
+        region: providedRegion || null,
       },
     });
 

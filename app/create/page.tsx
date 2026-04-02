@@ -461,6 +461,7 @@ export default function CreateBook() {
           targetWords,
           targetChapters,
           userId,
+          region: bookPlan.detectedRegion || null,
         }),
       });
 

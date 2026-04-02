@@ -303,6 +303,118 @@ IMPORTANT: Match character names and backgrounds to this setting. Do not force d
 }
 
 /**
+ * Map ISO country codes to cultural region keys.
+ * Used for auto-detecting the user's region from IP geolocation.
+ */
+const COUNTRY_TO_REGION: Record<string, string> = {
+  // East Asia
+  JP: 'japan', CN: 'china', TW: 'china', HK: 'china',
+  KR: 'korea',
+  // South Asia
+  IN: 'india', PK: 'india', BD: 'india', LK: 'india', NP: 'india',
+  // Middle East
+  SA: 'middle_east', AE: 'middle_east', QA: 'middle_east', KW: 'middle_east',
+  BH: 'middle_east', OM: 'middle_east', IQ: 'middle_east', JO: 'middle_east',
+  LB: 'middle_east', SY: 'middle_east', YE: 'middle_east', IR: 'middle_east',
+  PS: 'middle_east', EG: 'middle_east', LY: 'middle_east',
+  // Africa
+  NG: 'nigeria', GH: 'nigeria', SN: 'nigeria', CM: 'nigeria',
+  KE: 'nigeria', TZ: 'nigeria', UG: 'nigeria', ET: 'nigeria',
+  ZA: 'nigeria', // South Africa uses same pool for now
+  // Europe
+  GB: 'uk', IE: 'uk',
+  FR: 'france', BE: 'france', CH: 'france',
+  DE: 'germany', AT: 'germany',
+  IT: 'italy',
+  ES: 'spain', PT: 'spain',
+  RU: 'russia', UA: 'russia', BY: 'russia',
+  NO: 'scandinavia', SE: 'scandinavia', DK: 'scandinavia', FI: 'scandinavia', IS: 'scandinavia',
+  NL: 'germany', PL: 'germany', CZ: 'germany', HU: 'germany',
+  GR: 'italy', RO: 'italy', BG: 'russia', HR: 'italy',
+  // Americas
+  US: 'usa_general', CA: 'usa_general',
+  MX: 'mexico', GT: 'mexico', HN: 'mexico', SV: 'mexico', NI: 'mexico', CR: 'mexico', PA: 'mexico',
+  CO: 'mexico', VE: 'mexico', PE: 'mexico', CL: 'mexico', EC: 'mexico', BO: 'mexico',
+  AR: 'mexico', UY: 'mexico', PY: 'mexico', CU: 'mexico', DO: 'mexico', PR: 'mexico',
+  BR: 'brazil',
+  // Oceania
+  AU: 'uk', NZ: 'uk',
+  // Southeast Asia (default to general since no specific pool)
+  PH: 'usa_general', TH: 'usa_general', VN: 'usa_general',
+  ID: 'usa_general', MY: 'usa_general', SG: 'usa_general',
+};
+
+/**
+ * User-facing region labels for the region selector UI.
+ */
+export const REGION_OPTIONS: { value: string; label: string }[] = [
+  { value: 'usa_general', label: 'United States / Canada' },
+  { value: 'uk', label: 'United Kingdom / Australia' },
+  { value: 'france', label: 'France' },
+  { value: 'germany', label: 'Germany / Central Europe' },
+  { value: 'italy', label: 'Italy / Southern Europe' },
+  { value: 'spain', label: 'Spain / Latin America' },
+  { value: 'scandinavia', label: 'Scandinavia' },
+  { value: 'russia', label: 'Russia / Eastern Europe' },
+  { value: 'japan', label: 'Japan' },
+  { value: 'korea', label: 'South Korea' },
+  { value: 'china', label: 'China / Taiwan' },
+  { value: 'india', label: 'India / South Asia' },
+  { value: 'middle_east', label: 'Middle East' },
+  { value: 'nigeria', label: 'Africa' },
+  { value: 'mexico', label: 'Mexico / Latin America' },
+  { value: 'brazil', label: 'Brazil' },
+  { value: 'fantasy_medieval', label: 'Fantasy / Medieval' },
+];
+
+/**
+ * Get region key from an ISO country code (from Vercel x-vercel-ip-country header).
+ */
+export function getRegionFromCountryCode(countryCode: string | null): string | null {
+  if (!countryCode) return null;
+  return COUNTRY_TO_REGION[countryCode.toUpperCase()] || null;
+}
+
+/**
+ * Build name guidance prompt using an explicit region (from user selection or IP detection).
+ * Falls back to premise-based detection if no region is provided.
+ */
+export function buildNameGuidanceForRegion(
+  region: string | null,
+  premise: string,
+  title: string = '',
+  genre: string = ''
+): string {
+  // If explicit region provided, use it directly
+  if (region && CULTURAL_SETTINGS[region]) {
+    const setting = CULTURAL_SETTINGS[region];
+    const bannedSection = `
+=== BANNED OVERUSED NAMES (DO NOT USE) ===
+These names are overused by AI. NEVER use any of these:
+${BANNED_OVERUSED_NAMES.slice(0, 30).join(', ')}
+
+Use FRESH, UNIQUE names instead.
+`;
+    return `${bannedSection}
+=== CHARACTER DEMOGRAPHICS: ${setting.region} ===
+${setting.nameGuidance}
+
+DEMOGRAPHIC GUIDANCE:
+${setting.demographicNote}
+
+EXAMPLE NAMES TO USE:
+- Male: ${setting.exampleNames.male.join(', ')}
+- Female: ${setting.exampleNames.female.join(', ')}
+
+IMPORTANT: Match character names and backgrounds to this demographic setting. Names should reflect the actual population of this region. Do not force diversity that does not match the setting. Be authentic to the culture.
+`;
+  }
+
+  // Fall back to premise-based detection
+  return buildNameGuidancePrompt(premise, title, genre);
+}
+
+/**
  * Check if a character name is banned/overused.
  */
 export function isNameBanned(name: string): boolean {

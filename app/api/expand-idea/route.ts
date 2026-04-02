@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { expandIdea } from '@/lib/gemini';
 import { rateLimit, getClientIP } from '@/lib/rate-limit';
+import { getRegionFromCountryCode } from '@/lib/generation/shared/name-variety';
 
 export async function POST(request: NextRequest) {
   try {
@@ -20,10 +21,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Pass bookType to expandIdea (defaults to auto-detect if not provided)
-    const bookPlan = await expandIdea(idea, bookType);
+    // Detect user's region from Vercel geo headers
+    const countryCode = request.headers.get('x-vercel-ip-country');
+    const detectedRegion = getRegionFromCountryCode(countryCode);
 
-    return NextResponse.json(bookPlan);
+    // Pass bookType and region to expandIdea
+    const bookPlan = await expandIdea(idea, bookType, detectedRegion);
+
+    // Include detected region in response so frontend can store it
+    return NextResponse.json({ ...bookPlan, detectedRegion });
   } catch (error) {
     console.error('Error expanding idea:', error);
     return NextResponse.json(

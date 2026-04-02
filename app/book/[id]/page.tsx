@@ -59,6 +59,7 @@ interface Book {
   userId: string | null;
   errorMessage?: string | null;
   premise?: string | null;
+  region?: string | null;
   outline?: {
     chapters: Array<{
       number: number;
@@ -1405,6 +1406,47 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
                     <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-neutral-100 text-neutral-600 border border-neutral-200">
                       {formatLabel(book.bookPreset)}
                     </span>
+                  </div>
+                )}
+
+                {/* Region Selector (editable before generation starts) */}
+                {(isPending || book.status === 'failed') && book.bookType !== 'non-fiction' && (
+                  <div className="mb-4">
+                    <label className="block text-xs text-neutral-400 mb-1">Name region</label>
+                    <select
+                      value={book.region || ''}
+                      onChange={async (e) => {
+                        const newRegion = e.target.value || null;
+                        try {
+                          await fetch(`/api/books/${book.id}`, {
+                            method: 'PATCH',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ region: newRegion }),
+                          });
+                          setBook({ ...book, region: newRegion });
+                        } catch { /* ignore */ }
+                      }}
+                      className="text-sm border border-neutral-200 rounded-lg px-3 py-1.5 bg-white text-neutral-700 focus:outline-none focus:ring-2 focus:ring-neutral-900 focus:border-transparent"
+                    >
+                      <option value="">Auto-detect from story</option>
+                      <option value="usa_general">United States / Canada</option>
+                      <option value="uk">United Kingdom / Australia</option>
+                      <option value="france">France</option>
+                      <option value="germany">Germany / Central Europe</option>
+                      <option value="italy">Italy / Southern Europe</option>
+                      <option value="spain">Spain / Latin America</option>
+                      <option value="scandinavia">Scandinavia</option>
+                      <option value="russia">Russia / Eastern Europe</option>
+                      <option value="japan">Japan</option>
+                      <option value="korea">South Korea</option>
+                      <option value="china">China / Taiwan</option>
+                      <option value="india">India / South Asia</option>
+                      <option value="middle_east">Middle East</option>
+                      <option value="nigeria">Africa</option>
+                      <option value="mexico">Mexico / Latin America</option>
+                      <option value="brazil">Brazil</option>
+                      <option value="fantasy_medieval">Fantasy / Medieval</option>
+                    </select>
                   </div>
                 )}
 

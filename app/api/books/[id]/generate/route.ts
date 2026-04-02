@@ -1116,6 +1116,7 @@ export async function POST(
                 writingStyle: book.writingStyle,
                 targetWords: book.targetWords,
                 targetChapters: book.targetChapters,
+                region: book.region,
                 onProgress: onOutlineProgress,
               });
             } else {
@@ -1133,6 +1134,7 @@ export async function POST(
                   writingStyle: book.writingStyle,
                   targetWords: book.targetWords,
                   targetChapters: book.targetChapters,
+                  region: book.region,
                   onProgress: onOutlineProgress,
                 }),
                 OUTLINE_TIMEOUT_MS,
