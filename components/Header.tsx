@@ -1,6 +1,6 @@
 'use client';
 
-import Link from 'next/link';
+// Using <a> tags instead of next/link to prevent stale client-side navigation on long-lived pages
 import { Menu, X, ChevronDown, LogOut, User, BookOpen, Loader2, Check, AlertCircle, Shield, Bell, Gift, Plus, Coins } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import { useSession, signOut } from 'next-auth/react';
@@ -134,9 +134,9 @@ if (genDropdownRef.current && !genDropdownRef.current.contains(event.target as N
           : 'relative bg-white'
       }`}>
         <div className="max-w-7xl mx-auto flex items-center justify-between">
-          {/* Left Nav - Inline Links (desktop) */}
+          {/* Left Nav - Using <a> tags instead of <a> to prevent stale navigation on long-lived pages */}
           <div className="hidden md:flex items-center gap-8 flex-1">
-            <Link
+            <a
               href="/how-it-works"
               className={`text-sm transition-colors ${
                 variant === 'transparent'
@@ -145,8 +145,8 @@ if (genDropdownRef.current && !genDropdownRef.current.contains(event.target as N
               }`}
             >
               How It Works
-            </Link>
-            <Link
+            </a>
+            <a
               href="/pricing"
               className={`text-sm transition-colors ${
                 variant === 'transparent'
@@ -155,8 +155,8 @@ if (genDropdownRef.current && !genDropdownRef.current.contains(event.target as N
               }`}
             >
               Pricing
-            </Link>
-            <Link
+            </a>
+            <a
               href="/faq"
               className={`text-sm transition-colors ${
                 variant === 'transparent'
@@ -165,8 +165,8 @@ if (genDropdownRef.current && !genDropdownRef.current.contains(event.target as N
               }`}
             >
               FAQ
-            </Link>
-            <Link
+            </a>
+            <a
               href="/blog"
               className={`text-sm transition-colors ${
                 variant === 'transparent'
@@ -175,12 +175,12 @@ if (genDropdownRef.current && !genDropdownRef.current.contains(event.target as N
               }`}
             >
               Blog
-            </Link>
+            </a>
           </div>
 
           {/* Center Logo + Version */}
           <div className="md:absolute md:left-1/2 md:-translate-x-1/2 flex items-center gap-2">
-            <Link
+            <a
               href="/"
               className={`text-2xl font-bold tracking-tight ${
                 variant === 'transparent' ? 'text-white' : 'text-neutral-900'
@@ -188,7 +188,7 @@ if (genDropdownRef.current && !genDropdownRef.current.contains(event.target as N
               style={{ fontFamily: 'FoundersGrotesk, system-ui' }}
             >
               draftmybook
-            </Link>
+            </a>
             <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded-full ${
               variant === 'transparent'
                 ? 'bg-white/10 text-white/60'
@@ -276,13 +276,13 @@ if (genDropdownRef.current && !genDropdownRef.current.contains(event.target as N
                       </div>
                     )}
 
-                    <Link
+                    <a
                       href={generatingBook.isVisualBook ? `/generate-comic?bookId=${generatingBook.id}` : `/book/${generatingBook.id}`}
                       className="block w-full text-center py-2 px-4 bg-neutral-900 text-white text-sm font-medium rounded-lg hover:bg-neutral-800 transition-colors"
                       onClick={() => setGenDropdownOpen(false)}
                     >
                       {isCompleted ? 'View Book' : 'View Progress'}
-                    </Link>
+                    </a>
                     <button
                       onClick={() => { clearGeneratingBook(); setGenDropdownOpen(false); }}
                       className="block w-full text-center py-2 px-4 text-neutral-500 text-xs hover:text-neutral-700 transition-colors mt-2"
@@ -334,14 +334,14 @@ if (genDropdownRef.current && !genDropdownRef.current.contains(event.target as N
                         </div>
                       </div>
                       <div className="px-3 pt-3">
-                        <Link
+                        <a
                           href="/create"
                           className="flex items-center justify-center gap-2 w-full py-2.5 bg-neutral-900 text-white text-sm font-medium rounded-lg hover:bg-neutral-800 transition-colors"
                           onClick={() => setCreditDropdownOpen(false)}
                         >
                           <Plus className="h-4 w-4" />
                           Create a Book
-                        </Link>
+                        </a>
                       </div>
                     </div>
                   )}
@@ -381,7 +381,7 @@ if (genDropdownRef.current && !genDropdownRef.current.contains(event.target as N
 
                       {/* Credit Gift Banner */}
                       {freeCredits > 0 && (
-                        <Link
+                        <a
                           href="/create"
                           className="mx-3 my-2 p-3 bg-lime-50 border border-lime-200 rounded-lg flex items-center gap-2 hover:bg-lime-100 transition-colors"
                           onClick={() => setNotifDropdownOpen(false)}
@@ -393,11 +393,11 @@ if (genDropdownRef.current && !genDropdownRef.current.contains(event.target as N
                             </p>
                             <p className="text-xs text-lime-700">Tap to create a book</p>
                           </div>
-                        </Link>
+                        </a>
                       )}
 
                       {/* Patch Notes */}
-                      <Link
+                      <a
                         href="/changelog"
                         className="mx-3 my-2 p-3 bg-neutral-50 border border-neutral-200 rounded-lg flex items-center gap-2 hover:bg-neutral-100 transition-colors"
                         onClick={() => setNotifDropdownOpen(false)}
@@ -407,7 +407,7 @@ if (genDropdownRef.current && !genDropdownRef.current.contains(event.target as N
                           <p className="text-sm font-medium text-neutral-900">v{APP_VERSION}: {LATEST_CHANGELOG.title}</p>
                           <p className="text-xs text-neutral-500">View patch notes</p>
                         </div>
-                      </Link>
+                      </a>
 
                       {/* Notifications List */}
                       <div className="max-h-48 overflow-y-auto">
@@ -466,31 +466,28 @@ if (genDropdownRef.current && !genDropdownRef.current.contains(event.target as N
                       <p className="font-medium text-sm truncate">{session.user.name || 'User'}</p>
                       <p className="text-xs text-neutral-500 truncate">{session.user.email}</p>
                     </div>
-                    <Link
+                    <a
                       href="/dashboard"
                       className="flex items-center gap-3 px-4 py-2.5 text-sm text-neutral-700 hover:bg-neutral-50 transition-colors"
-                      onClick={() => setDropdownOpen(false)}
                     >
                       <BookOpen className="h-4 w-4" />
                       My Books
-                    </Link>
-                    <Link
+                    </a>
+                    <a
                       href="/create"
                       className="flex items-center gap-3 px-4 py-2.5 text-sm text-neutral-700 hover:bg-neutral-50 transition-colors"
-                      onClick={() => setDropdownOpen(false)}
                     >
                       <User className="h-4 w-4" />
                       Create New Book
-                    </Link>
+                    </a>
                     {isAdmin && (
-                      <Link
+                      <a
                         href="/admin/dashboard"
                         className="flex items-center gap-3 px-4 py-2.5 text-sm text-purple-700 hover:bg-purple-50 transition-colors"
-                        onClick={() => setDropdownOpen(false)}
                       >
                         <Shield className="h-4 w-4" />
                         Admin Dashboard
-                      </Link>
+                      </a>
                     )}
                     <div className="border-t border-neutral-100 mt-1 pt-1">
                       <button
@@ -507,14 +504,14 @@ if (genDropdownRef.current && !genDropdownRef.current.contains(event.target as N
             ) : (
               // Logged out state
               <>
-                <Link href="/login" className={`text-sm animated-underline ${
+                <a href="/login" className={`text-sm animated-underline ${
                   variant === 'transparent'
                     ? 'text-white/80 hover:text-white'
                     : 'text-neutral-600 hover:text-neutral-900'
                 }`}>
                   Log in
-                </Link>
-                <Link
+                </a>
+                <a
                   href="/signup"
                   className={`text-sm px-5 py-2.5 rounded-full transition-colors font-medium ${
                     variant === 'transparent'
@@ -523,7 +520,7 @@ if (genDropdownRef.current && !genDropdownRef.current.contains(event.target as N
                   }`}
                 >
                   Get Started
-                </Link>
+                </a>
               </>
             )}
           </div>
@@ -558,7 +555,7 @@ if (genDropdownRef.current && !genDropdownRef.current.contains(event.target as N
             <div className="flex flex-col gap-4">
               {/* Mobile Generating Book Notification */}
               {generatingBook && (
-                <Link
+                <a
                   href={generatingBook.isVisualBook ? `/generate-comic?bookId=${generatingBook.id}` : `/book/${generatingBook.id}`}
                   className="flex items-center gap-3 p-3 rounded-xl bg-neutral-100 mb-2"
                   onClick={() => setMenuOpen(false)}
@@ -595,7 +592,7 @@ if (genDropdownRef.current && !genDropdownRef.current.contains(event.target as N
                       </div>
                     </>
                   )}
-                </Link>
+                </a>
               )}
 
               {session?.user && (
@@ -620,56 +617,54 @@ if (genDropdownRef.current && !genDropdownRef.current.contains(event.target as N
 
                   {/* Mobile Credit + Notification Bar */}
                   <div className="flex items-center gap-3 pb-4 mb-2 border-b border-neutral-200">
-                    <Link
+                    <a
                       href="/create"
                       className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-neutral-900 text-white rounded-lg text-sm font-medium"
-                      onClick={() => setMenuOpen(false)}
                     >
                       <Coins className="h-4 w-4" />
                       {freeCredits + paidCredits} Credit{freeCredits + paidCredits !== 1 ? 's' : ''} — Create
-                    </Link>
+                    </a>
                     {unreadCount > 0 && (
-                      <Link
+                      <a
                         href="/dashboard"
                         className="relative p-2.5 bg-neutral-100 rounded-lg"
-                        onClick={() => setMenuOpen(false)}
                       >
                         <Bell className="h-5 w-5 text-neutral-600" />
                         <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs font-medium rounded-full flex items-center justify-center">
                           {unreadCount > 9 ? '9+' : unreadCount}
                         </span>
-                      </Link>
+                      </a>
                     )}
                   </div>
                 </>
               )}
 
-              <Link href="/how-it-works" className="text-lg" onClick={() => setMenuOpen(false)}>
+              <a href="/how-it-works" className="text-lg">
                 How it works
-              </Link>
-              <Link href="/pricing" className="text-lg" onClick={() => setMenuOpen(false)}>
+              </a>
+              <a href="/pricing" className="text-lg">
                 Pricing
-              </Link>
-              <Link href="/faq" className="text-lg" onClick={() => setMenuOpen(false)}>
+              </a>
+              <a href="/faq" className="text-lg">
                 FAQ
-              </Link>
-              <Link href="/blog" className="text-lg" onClick={() => setMenuOpen(false)}>
+              </a>
+              <a href="/blog" className="text-lg">
                 Blog
-              </Link>
+              </a>
 
               {session?.user ? (
                 <>
                   <div className="h-px bg-neutral-200 my-4" />
-                  <Link href="/dashboard" className="text-lg" onClick={() => setMenuOpen(false)}>
+                  <a href="/dashboard" className="text-lg">
                     My Books
-                  </Link>
-                  <Link href="/create" className="text-lg" onClick={() => setMenuOpen(false)}>
+                  </a>
+                  <a href="/create" className="text-lg">
                     Create New Book
-                  </Link>
+                  </a>
                   {isAdmin && (
-                    <Link href="/admin/dashboard" className="text-lg text-purple-700" onClick={() => setMenuOpen(false)}>
+                    <a href="/admin/dashboard" className="text-lg text-purple-700">
                       Admin Dashboard
-                    </Link>
+                    </a>
                   )}
                   <button
                     onClick={() => {
@@ -684,16 +679,15 @@ if (genDropdownRef.current && !genDropdownRef.current.contains(event.target as N
               ) : (
                 <>
                   <div className="h-px bg-neutral-200 my-4" />
-                  <Link href="/login" className="text-lg" onClick={() => setMenuOpen(false)}>
+                  <a href="/login" className="text-lg">
                     Log in
-                  </Link>
-                  <Link
+                  </a>
+                  <a
                     href="/signup"
                     className="text-lg bg-neutral-900 text-white px-5 py-3 rounded-full text-center font-medium"
-                    onClick={() => setMenuOpen(false)}
                   >
                     Get Started
-                  </Link>
+                  </a>
                 </>
               )}
             </div>
