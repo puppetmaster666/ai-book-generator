@@ -564,7 +564,14 @@ Pick up AFTER the last event and push toward the next beat sheet milestone.`,
         );
 
         if (postProcessed.hardReject) {
-          console.warn(`[HARD REJECT] Sequence ${nextChapterNum} (attempt ${regenerationAttempts + 1}): ${postProcessed.report.clinicalFound.length} clinical, ${postProcessed.report.onTheNoseFound.length} on-the-nose`);
+          // Log ALL reasons for the hard reject, not just clinical/on-the-nose
+          const rejectReasons = [
+            ...(postProcessed.report.clinicalFound?.length ? [`${postProcessed.report.clinicalFound.length} clinical`] : []),
+            ...(postProcessed.report.onTheNoseFound?.length ? [`${postProcessed.report.onTheNoseFound.length} on-the-nose`] : []),
+            ...(postProcessed.report.bannedPhrasesFound?.length ? [`${postProcessed.report.bannedPhrasesFound.length} banned phrases`] : []),
+            ...(postProcessed.surgicalPrompt ? [`surgical: ${postProcessed.surgicalPrompt.substring(0, 150)}...`] : []),
+          ];
+          console.warn(`[HARD REJECT] Sequence ${nextChapterNum} (attempt ${regenerationAttempts + 1}): ${rejectReasons.join(', ') || 'unknown trigger (check post-processing)'}`);
 
           try {
             const regeneratedResult = await generateScreenplaySequence({
