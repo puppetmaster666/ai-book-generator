@@ -1316,6 +1316,22 @@ async function finalizeBook(id: string, book: {
     },
   });
 
+  // Create in-app notification for the user
+  if (book.userId) {
+    try {
+      await prisma.notification.create({
+        data: {
+          userId: book.userId,
+          type: 'book_complete',
+          title: 'Your book is ready!',
+          message: `"${book.title}" has finished generating. Tap to view and download.`,
+        },
+      });
+    } catch (notifErr) {
+      console.error('Failed to create completion notification:', notifErr);
+    }
+  }
+
   // Send completion email
   const email = book.email || (book.userId ? await getUserEmail(book.userId) : null);
   if (email) {

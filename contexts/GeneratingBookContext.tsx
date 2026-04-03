@@ -87,19 +87,22 @@ export function GeneratingBookProvider({ children }: { children: ReactNode }) {
           bookFormat: status.bookFormat,
         });
 
-        // If completed, show briefly then clear. If failed, clear immediately.
+        // If failed, keep showing for 30 seconds so user sees it
         if (status.status === 'failed') {
-          localStorage.removeItem(STORAGE_KEY);
-          setBookId(null);
-          setGeneratingBook(null);
+          setTimeout(() => {
+            localStorage.removeItem(STORAGE_KEY);
+            setBookId(null);
+            setGeneratingBook(null);
+          }, 30000);
           return;
         }
+        // If completed, keep showing "Ready!" until user clicks or 5 minutes pass
         if (status.status === 'completed') {
           setTimeout(() => {
             localStorage.removeItem(STORAGE_KEY);
             setBookId(null);
             setGeneratingBook(null);
-          }, 10000);
+          }, 300000); // 5 minutes
         }
       } catch (err) {
         console.error('Error fetching generating book status:', err);

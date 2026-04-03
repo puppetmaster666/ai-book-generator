@@ -266,7 +266,7 @@ export default function Dashboard() {
                   </div>
                   <div className="p-4">
                     <h3 className="font-semibold mb-1 truncate">{book.title}</h3>
-                    <p className="text-sm text-neutral-600 mb-2">{book.genre}</p>
+                    <p className="text-sm text-neutral-600 mb-2 capitalize">{book.genre.replace(/_/g, ' ')}</p>
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-1 text-sm">
                         {getStatusIcon(book.status)}
