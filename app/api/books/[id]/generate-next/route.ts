@@ -765,6 +765,13 @@ ${postProcessed.surgicalPrompt}`,
           wordCount,
         },
       });
+      // Detect truncated content (ends mid-word or mid-dialogue)
+      const trimmedContent = sequenceContent.trimEnd();
+      const lastChar = trimmedContent[trimmedContent.length - 1];
+      if (lastChar && !['.', '!', '?', ')', '"', "'", '*'].includes(lastChar)) {
+        console.warn(`[TRUNCATION] Sequence ${nextChapterNum} appears truncated (ends with "${trimmedContent.slice(-20)}")`);
+      }
+
       console.log(`Sequence ${nextChapterNum} saved. Page count: ~${pageCount}`);
 
       // Update book progress with screenplay context

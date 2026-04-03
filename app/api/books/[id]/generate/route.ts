@@ -640,15 +640,12 @@ export async function POST(
     if (book.status !== 'pending' && book.status !== 'completed') {
       console.log(`Retrying ${book.status} book generation for book ${id}`);
 
-      // SAFEGUARD: For text books with progress, don't delete - use /resume endpoint instead
-      // This prevents accidental data loss when client incorrectly calls /generate
-      // EXCEPTION: Admins can force restart any book
-      const bookFormatCheck = book.bookFormat || 'text_only';
-      const isTextOnlyBook = bookFormatCheck === 'text_only';
+      // SAFEGUARD: Any book type with chapter progress should use /generate-next to resume
+      // Only allow /generate to restart if there are no chapters, or if admin explicitly requested full restart
       const hasProgress = book.currentChapter > 0 || book.chapters.length > 0;
 
-      if (isTextOnlyBook && hasProgress && book.outline && !isAdmin) {
-        console.log(`SAFEGUARD: Text book ${id} has ${book.chapters.length} chapters and outline. Refusing to delete. Use /resume instead.`);
+      if (hasProgress && book.outline && !isAdmin) {
+        console.log(`SAFEGUARD: Book ${id} (${book.bookFormat}) has ${book.chapters.length} chapters and outline. Refusing to delete. Use /generate-next to resume.`);
         return NextResponse.json({
           error: 'Book has existing progress. Use /resume endpoint to continue generation.',
           currentChapter: book.currentChapter,
@@ -657,11 +654,11 @@ export async function POST(
       }
 
       if (isAdmin && hasProgress) {
-        console.log(`[Admin] Force restarting book ${id} with ${book.chapters.length} existing chapters`);
+        console.log(`[Admin] Force restarting book ${id} (${book.bookFormat}) with ${book.chapters.length} existing chapters`);
       }
 
-      // Delete any existing chapters and illustrations from failed attempt
-      // This is safe for visual books that need a fresh start
+      // Delete ALL generated content for a clean restart: chapters, illustrations, AND outline
+      // Previously the outline was kept, causing generate-next to skip chapters in a confusing way
       await prisma.illustration.deleteMany({ where: { bookId: id } });
       await prisma.chapter.deleteMany({ where: { bookId: id } });
 
@@ -671,9 +668,13 @@ export async function POST(
           status: 'generating',
           errorMessage: null,
           currentChapter: 0,
+          totalChapters: 0,
           totalWords: 0,
           storySoFar: '',
           characterStates: {},
+          screenplayContext: {},
+          outline: {},
+          reconcileRetries: 0,
         },
       });
     }
@@ -708,7 +709,11 @@ export async function POST(
       }>
     } | null;
 
-    if (!outline) {
+    // Check if outline exists and has chapters (empty {} from restart should regenerate)
+    const hasValidOutline = outline && outline.chapters && outline.chapters.length > 0;
+
+    if (!hasValidOutline) {
+      outline = null; // Ensure clean state
       // Check if this is a screenplay
       if (bookFormat === 'screenplay') {
         // Get format-specific settings from preset
@@ -1140,7 +1145,7 @@ export async function POST(
           status: 'generating',
         },
       });
-    } else {
+    } else if (outline) {
       // Outline already exists (from previous attempt) - just update status to 'generating'
       console.log(`Outline already exists with ${outline.chapters.length} chapters, skipping regeneration`);
       await prisma.book.update({
@@ -1150,6 +1155,11 @@ export async function POST(
           totalChapters: outline.chapters.length,
         },
       });
+    }
+
+    // At this point outline must exist (either just generated or was already valid)
+    if (!outline || !outline.chapters || outline.chapters.length === 0) {
+      throw new Error('Failed to generate outline');
     }
 
     // Step 1.5: Generate visual guides for illustrated books (before any illustrations)
