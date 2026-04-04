@@ -372,8 +372,8 @@ function GenerateComicContent() {
     if (autoStartTriggered.current) return;
     if (panels.length > 0 && !isGenerating && !isLoading) {
       const allPending = panels.every(p => p.status === 'pending');
-      if (allPending && bookData?.paymentStatus === 'completed') {
-        console.log('[AutoStart] All panels pending on paid book, auto-starting generation');
+      if (allPending) {
+        console.log('[AutoStart] All panels pending, auto-starting generation');
         autoStartTriggered.current = true;
         generateAllPanels();
       }
@@ -530,14 +530,14 @@ function GenerateComicContent() {
                 You've generated {panelsGenerated} panel{panelsGenerated > 1 ? 's' : ''}
               </p>
               <p className="text-neutral-400 text-sm mb-6">
-                Unlock the full illustrated book for just $9.99
+                Unlock the full illustrated book for just $4.99
               </p>
               <Link
                 href={`/review?bookId=${bookId}`}
                 className="inline-flex items-center gap-2 px-8 py-4 bg-white text-neutral-900 rounded-full hover:bg-neutral-100 font-medium transition-colors text-lg"
               >
                 <Zap className="h-5 w-5" />
-                Unlock Full Book - $9.99
+                Unlock Full Book - $4.99
               </Link>
             </div>
             <div className="mt-6 text-center">

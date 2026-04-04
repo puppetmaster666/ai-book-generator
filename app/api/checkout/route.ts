@@ -56,6 +56,10 @@ export async function POST(request: NextRequest) {
         amount = PRICING.MONTHLY.price;
         description = 'AI Book Generator - Author Plan (5 generations/month, rollover)';
         break;
+      case 'yearly':
+        amount = PRICING.YEARLY.price;
+        description = 'AI Book Generator - Author Plan Yearly (60 generations/year, rollover)';
+        break;
       default:
         return NextResponse.json(
           { error: 'Invalid product type' },

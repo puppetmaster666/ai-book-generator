@@ -74,7 +74,7 @@ export default function PricingContent() {
               </div>
               <h3 className="text-xl font-semibold mb-1" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>Single Generation</h3>
               <div className="flex items-baseline gap-1 mb-2">
-                <span className="text-4xl font-bold">$9.99</span>
+                <span className="text-4xl font-bold">$4.99</span>
               </div>
               <p className="text-sm text-neutral-500 mb-4">Novel, Comic, Screenplay, or Picture Book</p>
               <ul className="space-y-2 text-sm text-neutral-600 mb-6 flex-grow">
@@ -111,14 +111,14 @@ export default function PricingContent() {
               </div>
               <h3 className="text-xl font-semibold mb-1" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>Author Plan</h3>
               <div className="flex items-baseline gap-1 mb-2">
-                <span className="text-4xl font-bold">$39</span>
+                <span className="text-4xl font-bold">$29</span>
                 <span className="text-neutral-400 text-sm">/mo</span>
               </div>
               <p className="text-sm text-neutral-300 mb-4">5 generations per month</p>
               <ul className="space-y-2 text-sm text-neutral-200 mb-6 flex-grow">
                 <li className="flex items-center gap-2">
                   <Check className="h-4 w-4 text-neutral-400 flex-shrink-0" />
-                  $7.80 per generation
+                  $5.80 per generation
                 </li>
                 <li className="flex items-center gap-2">
                   <Check className="h-4 w-4 text-neutral-400 flex-shrink-0" />
@@ -146,14 +146,14 @@ export default function PricingContent() {
               </div>
               <h3 className="text-xl font-semibold mb-1" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>Yearly Plan</h3>
               <div className="flex items-baseline gap-1 mb-2">
-                <span className="text-4xl font-bold">$299</span>
+                <span className="text-4xl font-bold">$279</span>
                 <span className="text-neutral-400 text-sm">/yr</span>
               </div>
-              <p className="text-sm text-neutral-500 mb-4">50 books per year</p>
+              <p className="text-sm text-neutral-500 mb-4">60 generations per year</p>
               <ul className="space-y-2 text-sm text-neutral-600 mb-6 flex-grow">
                 <li className="flex items-center gap-2">
                   <Check className="h-4 w-4 text-neutral-400 flex-shrink-0" />
-                  $5.98 per book
+                  $4.65 per generation
                 </li>
                 <li className="flex items-center gap-2">
                   <Check className="h-4 w-4 text-neutral-400 flex-shrink-0" />

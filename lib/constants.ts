@@ -2,22 +2,31 @@
 export const PRICING = {
   // Single generation purchase (any type)
   ONE_TIME: {
-    price: 999, // cents
-    priceDisplay: '$9.99',
+    price: 499, // cents
+    priceDisplay: '$4.99',
     credits: 1,
   },
   // Author Plan - monthly subscription with rollover
   MONTHLY: {
-    price: 3900,
-    priceDisplay: '$39',
+    price: 2900,
+    priceDisplay: '$29',
     credits: 5,
     interval: 'month',
     rollover: true, // unused credits roll over to next month
   },
+  // Author Plan - yearly subscription (save vs monthly)
+  YEARLY: {
+    price: 27900,
+    priceDisplay: '$279',
+    priceMonthly: '$23.25',
+    credits: 60,
+    interval: 'year',
+    rollover: true,
+  },
   // Visual books use same pricing as text
   VISUAL: {
-    price: 999, // cents
-    priceDisplay: '$9.99',
+    price: 499, // cents
+    priceDisplay: '$4.99',
   },
 } as const;
 

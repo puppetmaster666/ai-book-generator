@@ -1557,10 +1557,10 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
                 </p>
                 <p className="text-neutral-400 text-sm mb-6">
                   {isIllustrated
-                    ? `Unlock the full ${book.totalChapters || 20}-panel book for just $9.99`
+                    ? `Unlock the full ${book.totalChapters || 20}-panel book for just $4.99`
                     : isScreenplay
-                      ? `Unlock the full ${book.totalChapters}-sequence screenplay for just $9.99`
-                      : `Unlock the full ${book.totalChapters}-chapter book for just $9.99`
+                      ? `Unlock the full ${book.totalChapters}-sequence screenplay for just $4.99`
+                      : `Unlock the full ${book.totalChapters}-chapter book for just $4.99`
                   }
                 </p>
                 <Link
@@ -1568,7 +1568,7 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
                   className="inline-flex items-center gap-2 px-8 py-4 bg-white text-neutral-900 rounded-full hover:bg-neutral-100 font-medium transition-colors text-lg"
                 >
                   <Zap className="h-5 w-5" />
-                  Unlock Full Book - $9.99
+                  Unlock Full Book - $4.99
                 </Link>
               </div>
             </div>
@@ -2245,7 +2245,7 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
                 href={`/review?bookId=${id}`}
                 className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-neutral-900 text-white rounded-xl hover:bg-black font-medium transition-colors mb-3"
               >
-                <Zap className="h-5 w-5" /> Unlock Full Book - $9.99
+                <Zap className="h-5 w-5" /> Unlock Full Book - $4.99
               </Link>
             </div>
           )}

@@ -29,7 +29,7 @@ export default function RefundPolicy() {
             </section>
 
             <section>
-              <h2 className="text-2xl font-semibold mb-4" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>Single Generation Purchases ($9.99)</h2>
+              <h2 className="text-2xl font-semibold mb-4" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>Single Generation Purchases ($4.99)</h2>
               <div className="bg-neutral-50 border border-neutral-200 rounded-xl p-6">
                 <p className="text-neutral-600 leading-relaxed mb-4">
                   <strong>Full refund available if:</strong>
@@ -46,7 +46,7 @@ export default function RefundPolicy() {
             </section>
 
             <section>
-              <h2 className="text-2xl font-semibold mb-4" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>Author Plan ($39/month)</h2>
+              <h2 className="text-2xl font-semibold mb-4" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>Author Plan ($29/month)</h2>
               <div className="bg-neutral-50 border border-neutral-200 rounded-xl p-6">
                 <ul className="list-disc pl-6 text-neutral-600 space-y-2">
                   <li>Cancel anytime before your next billing date</li>
