@@ -45,6 +45,7 @@ interface BookData {
   artStyle: string;
   bookFormat: string;
   dialogueStyle: string;
+  paymentStatus: string;
   characterVisualGuide: object | null;
   visualStyleGuide: object | null;
   outline: {
@@ -364,6 +365,20 @@ function GenerateComicContent() {
 
   // Generate all panels (Now just starts the background process)
   const generateAllPanels = startBackgroundGeneration;
+
+  // Auto-start generation when all panels are pending on a paid book
+  const autoStartTriggered = useRef(false);
+  useEffect(() => {
+    if (autoStartTriggered.current) return;
+    if (panels.length > 0 && !isGenerating && !isLoading) {
+      const allPending = panels.every(p => p.status === 'pending');
+      if (allPending && bookData?.paymentStatus === 'completed') {
+        console.log('[AutoStart] All panels pending on paid book, auto-starting generation');
+        autoStartTriggered.current = true;
+        generateAllPanels();
+      }
+    }
+  }, [panels, isGenerating, isLoading, bookData?.paymentStatus, generateAllPanels]);
 
   // Cancel generation
   const cancelGeneration = useCallback(async () => {
