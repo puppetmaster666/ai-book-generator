@@ -1,11 +1,29 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
-import { ArrowRight, ArrowLeft, Upload, X, Loader2, Sparkles } from 'lucide-react';
+import { ArrowRight, ArrowLeft, Upload, X, Loader2, Sparkles, Clock } from 'lucide-react';
+
+const ROAST_LOADING_MESSAGES = [
+  'Writing insults...',
+  'Studying their worst angles...',
+  'Consulting the burn unit...',
+  'Loading embarrassing scenarios...',
+  'Drafting apology letters in advance...',
+  'Calibrating the cringe meter...',
+  'Sharpening the roast knives...',
+  'Finding their most unflattering poses...',
+  'Warming up the comedy writers...',
+  'Preparing emotional damage...',
+  'Gathering blackmail material...',
+  'Turning up the heat...',
+  'Almost ready to ruin friendships...',
+  'Illustrating their downfall...',
+  'Making art out of their suffering...',
+];
 import type { Metadata } from 'next';
 
 const PERSONALITY_TAGS = [
@@ -56,6 +74,28 @@ export default function RoastPage() {
   const [artStyle, setArtStyle] = useState('shonen');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const [loadingMsgIndex, setLoadingMsgIndex] = useState(0);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const msgRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    if (isSubmitting) {
+      setElapsedSeconds(0);
+      setLoadingMsgIndex(0);
+      timerRef.current = setInterval(() => setElapsedSeconds(s => s + 1), 1000);
+      msgRef.current = setInterval(() => {
+        setLoadingMsgIndex(i => (i + 1) % ROAST_LOADING_MESSAGES.length);
+      }, 3000);
+    } else {
+      if (timerRef.current) clearInterval(timerRef.current);
+      if (msgRef.current) clearInterval(msgRef.current);
+    }
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+      if (msgRef.current) clearInterval(msgRef.current);
+    };
+  }, [isSubmitting]);
 
   const addCharacter = () => {
     if (characters.length < 4) {
@@ -353,25 +393,46 @@ export default function RoastPage() {
 
               {error && <p className="text-red-600 text-sm text-center mb-4">{error}</p>}
 
-              <div className="flex justify-end">
-                <button
-                  onClick={handleSubmit}
-                  disabled={isSubmitting}
-                  className="flex items-center gap-2 px-8 py-4 bg-yellow-400 text-neutral-900 rounded-full font-bold hover:bg-yellow-300 disabled:opacity-50 transition-all hover:scale-105"
-                >
-                  {isSubmitting ? (
-                    <>
-                      <Loader2 className="h-5 w-5 animate-spin" />
-                      Cooking the roast...
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="h-5 w-5" />
-                      Generate Roast
-                    </>
-                  )}
-                </button>
-              </div>
+              {isSubmitting ? (
+                <div className="flex flex-col items-center gap-6 py-8">
+                  {/* Spinner + funny message */}
+                  <div className="relative">
+                    <div className="w-20 h-20 rounded-full border-4 border-neutral-200 border-t-yellow-400 animate-spin" />
+                    <span className="absolute inset-0 flex items-center justify-center text-2xl">
+                      {SEVERITY_LABELS[severity]?.emoji || '🔥'}
+                    </span>
+                  </div>
+
+                  <p className="text-lg font-bold text-neutral-900 transition-all duration-300">
+                    {ROAST_LOADING_MESSAGES[loadingMsgIndex]}
+                  </p>
+
+                  {/* Timer */}
+                  <div className="flex items-center gap-2 text-sm text-neutral-500">
+                    <Clock className="h-4 w-4" />
+                    <span className="font-mono tabular-nums">
+                      {Math.floor(elapsedSeconds / 60)}:{String(elapsedSeconds % 60).padStart(2, '0')}
+                    </span>
+                  </div>
+
+                  {/* Patience notice */}
+                  <div className="bg-neutral-100 rounded-xl px-6 py-3 text-center max-w-sm">
+                    <p className="text-sm text-neutral-600">
+                      This usually takes 2-4 minutes. We are writing the story, drawing every panel, and making sure your friend looks ridiculous. Hang tight.
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex justify-end">
+                  <button
+                    onClick={handleSubmit}
+                    className="flex items-center gap-2 px-8 py-4 bg-yellow-400 text-neutral-900 rounded-full font-bold hover:bg-yellow-300 transition-all hover:scale-105"
+                  >
+                    <Sparkles className="h-5 w-5" />
+                    Generate Roast
+                  </button>
+                </div>
+              )}
             </>
           )}
         </div>
