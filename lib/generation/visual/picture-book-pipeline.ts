@@ -449,6 +449,7 @@ export async function generatePictureBookOutline(bookData: {
   targetChapters: number;
   dialogueStyle: 'prose' | 'bubbles';
   contentRating?: ContentRating;
+  previewOnly?: boolean; // Phase 1: quick 5-panel outline for free preview
   characterVisualGuide?: {
     characters: Array<{
       name: string;
@@ -459,11 +460,14 @@ export async function generatePictureBookOutline(bookData: {
   };
 }): Promise<{ chapters: VisualChapter[] }> {
 
-  console.log(`[PictureBookPipeline] Starting 3-step pipeline for "${bookData.title}" (${bookData.targetChapters} pages)`);
+  const previewPanels = 5;
+  const targetPanels = bookData.previewOnly ? previewPanels : bookData.targetChapters;
+
+  console.log(`[PictureBookPipeline] Starting ${bookData.previewOnly ? 'PREVIEW (5 panels)' : 'FULL'} pipeline for "${bookData.title}" (${targetPanels} pages)`);
   const pipelineStart = Date.now();
 
   // ── Step 1: WRITER ──
-  console.log('[PictureBookPipeline] Step 1: WRITER - Generating story with character depth...');
+  console.log('[PictureBookPipeline] Step 1: WRITER - Generating story...');
   const step1Start = Date.now();
 
   const story = await generatePictureBookStory({
@@ -475,7 +479,7 @@ export async function generatePictureBookOutline(bookData: {
     beginning: bookData.beginning,
     middle: bookData.middle,
     ending: bookData.ending,
-    targetChapters: bookData.targetChapters,
+    targetChapters: targetPanels,
     contentRating: bookData.contentRating,
   });
 
@@ -486,13 +490,13 @@ export async function generatePictureBookOutline(bookData: {
   }
 
   // ── Step 2: DIRECTOR ──
-  console.log('[PictureBookPipeline] Step 2: DIRECTOR - Planning pages with visual direction...');
+  console.log('[PictureBookPipeline] Step 2: DIRECTOR - Planning pages...');
   const step2Start = Date.now();
 
   const pagePlan = await planPages(story, {
     title: bookData.title,
     genre: bookData.genre,
-    targetChapters: bookData.targetChapters,
+    targetChapters: targetPanels,
     characters: bookData.characters,
     contentRating: bookData.contentRating,
     characterVisualGuide: bookData.characterVisualGuide,
@@ -504,24 +508,28 @@ export async function generatePictureBookOutline(bookData: {
     throw new Error('Page planning produced no pages');
   }
 
-  // ── Step 3: EDITOR ──
-  const elapsedSoFar = Date.now() - pipelineStart;
+  // ── Step 3: EDITOR (skip for preview - speed matters) ──
   let finalPlan = pagePlan;
 
-  if (elapsedSoFar < 120000) {
-    console.log('[PictureBookPipeline] Step 3: EDITOR - Quality review...');
-    const step3Start = Date.now();
+  if (!bookData.previewOnly) {
+    const elapsedSoFar = Date.now() - pipelineStart;
+    if (elapsedSoFar < 120000) {
+      console.log('[PictureBookPipeline] Step 3: EDITOR - Quality review...');
+      const step3Start = Date.now();
 
-    finalPlan = await reviewPictureBookQuality(pagePlan, story, {
-      title: bookData.title,
-      genre: bookData.genre,
-      targetChapters: bookData.targetChapters,
-      characters: bookData.characters,
-    });
+      finalPlan = await reviewPictureBookQuality(pagePlan, story, {
+        title: bookData.title,
+        genre: bookData.genre,
+        targetChapters: targetPanels,
+        characters: bookData.characters,
+      });
 
-    console.log(`[PictureBookPipeline] Step 3 took ${Date.now() - step3Start}ms`);
+      console.log(`[PictureBookPipeline] Step 3 took ${Date.now() - step3Start}ms`);
+    } else {
+      console.log(`[PictureBookPipeline] Step 3 EDITOR skipped (${(elapsedSoFar / 1000).toFixed(0)}s elapsed)`);
+    }
   } else {
-    console.log(`[PictureBookPipeline] Step 3 EDITOR skipped (${(elapsedSoFar / 1000).toFixed(0)}s elapsed)`);
+    console.log('[PictureBookPipeline] Step 3 EDITOR skipped (preview mode)');
   }
 
   // ── Validate and fix scene data ──

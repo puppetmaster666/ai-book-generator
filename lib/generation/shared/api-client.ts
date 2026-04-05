@@ -50,11 +50,11 @@ export function getGeminiPro(): GenerativeModel {
   return _geminiPro;
 }
 
-// Gemini 3.1 Pro for fast tasks (outlines, ideas, summaries) — lower temperature
+// Gemini 3 Flash for fast tasks (outlines, ideas, summaries) — lower temperature
 export function getGeminiFlash(): GenerativeModel {
   if (!_geminiFlash) {
     _geminiFlash = getGenAI().getGenerativeModel({
-      model: 'gemini-3.1-pro-preview',
+      model: 'gemini-3-flash-preview',
       safetySettings: SAFETY_SETTINGS,
       generationConfig: {
         temperature: 0.3,
@@ -66,11 +66,11 @@ export function getGeminiFlash(): GenerativeModel {
   return _geminiFlash;
 }
 
-// Gemini 3.1 Pro for quick tasks (idea generation)
+// Gemini 3.1 Flash Lite for quick tasks (idea generation)
 export function getGeminiFlashLight(): GenerativeModel {
   if (!_geminiFlashLight) {
     _geminiFlashLight = getGenAI().getGenerativeModel({
-      model: 'gemini-3.1-pro-preview',
+      model: 'gemini-3.1-flash-lite-preview',
       safetySettings: SAFETY_SETTINGS,
       generationConfig: {
         temperature: 0.9,

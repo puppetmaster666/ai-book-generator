@@ -889,6 +889,7 @@ export async function POST(
                   targetChapters: targetPanelCount,
                   dialogueStyle: dialogueStyle,
                   contentRating: (book.contentRating || 'general') as ContentRating,
+                  previewOnly: !isPaid,
                   characterVisualGuide: book.characterVisualGuide as {
                     characters: Array<{
                       name: string;
@@ -921,6 +922,7 @@ export async function POST(
                   dialogueStyle: dialogueStyle,
                   characterVisualGuide: book.characterVisualGuide as CharacterVisualGuide | undefined,
                   contentRating: (book.contentRating || 'general') as ContentRating,
+                  previewOnly: !isPaid,
                 }),
                 OUTLINE_TIMEOUT_MS,
                 `Picture book outline generation (attempt ${outlineAttempt + 1})`

@@ -527,36 +527,52 @@ function GenerateComicContent() {
   }
 
   if (isWaitingForOutline) {
+    // Estimate which step we're on based on elapsed time
+    const currentStep = outlineElapsed < 15 ? 1 : outlineElapsed < 40 ? 2 : 3;
+
+    const steps = [
+      { num: 1, label: 'Writing the story and dialogue' },
+      { num: 2, label: 'Planning scenes and panel layouts' },
+      { num: 3, label: 'Generating character portraits' },
+    ];
+
     return (
       <div className="min-h-screen bg-white">
         <Header />
         <main className="py-20 px-6">
           <div className="max-w-lg mx-auto text-center">
             <Loader2 className="h-12 w-12 animate-spin mx-auto mb-4 text-neutral-900" />
-            <h2 className="text-2xl font-bold text-neutral-900 mb-2">Preparing Your Comic</h2>
+            <h2 className="text-2xl font-bold text-neutral-900 mb-2">Preparing Your Book</h2>
             <p className="text-neutral-600 mb-4">
-              Writing the script, planning scenes, and preparing panel layouts...
+              Setting up your illustrated book...
             </p>
             {/* Elapsed timer */}
-            <p className="text-2xl font-mono font-bold text-neutral-900 mb-4">{formatTime(outlineElapsed)}</p>
+            <p className="text-2xl font-mono font-bold text-neutral-900 mb-6">{formatTime(outlineElapsed)}</p>
+
+            {/* Progress steps */}
             <div className="space-y-3 text-left max-w-sm mx-auto mb-6">
-              <div className="flex items-center gap-3 text-sm">
-                <div className="w-6 h-6 rounded-full bg-neutral-900 text-white flex items-center justify-center text-xs font-bold">1</div>
-                <span className="text-neutral-700">Writing comic script with character voices</span>
-              </div>
-              <div className="flex items-center gap-3 text-sm">
-                <div className="w-6 h-6 rounded-full bg-neutral-100 text-neutral-400 flex items-center justify-center text-xs font-bold">2</div>
-                <span className="text-neutral-400">Planning scenes and panel layouts</span>
-              </div>
-              <div className="flex items-center gap-3 text-sm">
-                <div className="w-6 h-6 rounded-full bg-neutral-100 text-neutral-400 flex items-center justify-center text-xs font-bold">3</div>
-                <span className="text-neutral-400">Quality review pass</span>
-              </div>
+              {steps.map(step => {
+                const isDone = currentStep > step.num;
+                const isActive = currentStep === step.num;
+                return (
+                  <div key={step.num} className="flex items-center gap-3 text-sm">
+                    <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold transition-colors ${
+                      isDone ? 'bg-neutral-900 text-white' : isActive ? 'bg-neutral-900 text-white' : 'bg-neutral-100 text-neutral-400'
+                    }`}>
+                      {isDone ? <Check className="h-3.5 w-3.5" /> : step.num}
+                    </div>
+                    <span className={isDone ? 'text-neutral-500 line-through' : isActive ? 'text-neutral-900 font-medium' : 'text-neutral-400'}>
+                      {step.label}
+                    </span>
+                    {isActive && <Loader2 className="h-3.5 w-3.5 animate-spin text-neutral-400" />}
+                  </div>
+                );
+              })}
             </div>
-            <div className="flex items-center justify-center gap-2 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-4 py-2.5 max-w-sm mx-auto">
-              <ShieldAlert className="h-4 w-4 flex-shrink-0" />
-              <span>Please don&apos;t close this page while we prepare your book.</span>
-            </div>
+
+            <p className="text-xs text-neutral-400">
+              You can leave this page and come back. We&apos;ll keep working on your book.
+            </p>
           </div>
         </main>
       </div>

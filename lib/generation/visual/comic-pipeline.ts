@@ -442,6 +442,7 @@ export async function generateComicOutline(bookData: {
   targetChapters: number;
   dialogueStyle: 'prose' | 'bubbles';
   contentRating?: ContentRating;
+  previewOnly?: boolean; // Phase 1: quick 5-panel outline for free preview
   characterVisualGuide?: {
     characters: Array<{
       name: string;
@@ -452,11 +453,14 @@ export async function generateComicOutline(bookData: {
   };
 }): Promise<{ chapters: VisualChapter[] }> {
 
-  console.log(`[ComicPipeline] Starting 4-step comic generation for "${bookData.title}" (${bookData.targetChapters} pages)`);
+  const previewPanels = 5;
+  const targetPanels = bookData.previewOnly ? previewPanels : bookData.targetChapters;
+
+  console.log(`[ComicPipeline] Starting ${bookData.previewOnly ? 'PREVIEW (5 panels)' : 'FULL'} comic generation for "${bookData.title}" (${targetPanels} pages)`);
   const pipelineStart = Date.now();
 
   // ── Step 1: WRITER ──
-  console.log('[ComicPipeline] Step 1: WRITER - Generating comic script with character voices...');
+  console.log('[ComicPipeline] Step 1: WRITER - Generating comic script...');
   const step1Start = Date.now();
 
   const script = await generateComicScript({
@@ -468,7 +472,7 @@ export async function generateComicOutline(bookData: {
     beginning: bookData.beginning,
     middle: bookData.middle,
     ending: bookData.ending,
-    targetChapters: bookData.targetChapters,
+    targetChapters: targetPanels,
     contentRating: bookData.contentRating,
   });
 
@@ -487,7 +491,7 @@ export async function generateComicOutline(bookData: {
   const scenePlan = await planScenes(script, {
     title: bookData.title,
     genre: bookData.genre,
-    targetChapters: bookData.targetChapters,
+    targetChapters: targetPanels,
     characters: bookData.characters,
     contentRating: bookData.contentRating,
     characterVisualGuide: bookData.characterVisualGuide,
@@ -500,25 +504,28 @@ export async function generateComicOutline(bookData: {
     throw new Error('Scene planning produced no pages');
   }
 
-  // ── Step 3: EDITOR (skip if running low on time) ──
-  const elapsedSoFar = Date.now() - pipelineStart;
+  // ── Step 3: EDITOR (skip for preview - speed matters) ──
   let finalPlan = scenePlan;
 
-  if (elapsedSoFar < 120000) {
-    // Only run editor if we have time budget left (< 2 minutes used so far)
-    console.log('[ComicPipeline] Step 3: EDITOR - Quality review pass...');
-    const step3Start = Date.now();
+  if (!bookData.previewOnly) {
+    const elapsedSoFar = Date.now() - pipelineStart;
+    if (elapsedSoFar < 120000) {
+      console.log('[ComicPipeline] Step 3: EDITOR - Quality review pass...');
+      const step3Start = Date.now();
 
-    finalPlan = await reviewQuality(scenePlan, script, {
-      title: bookData.title,
-      genre: bookData.genre,
-      targetChapters: bookData.targetChapters,
-      characters: bookData.characters,
-    });
+      finalPlan = await reviewQuality(scenePlan, script, {
+        title: bookData.title,
+        genre: bookData.genre,
+        targetChapters: targetPanels,
+        characters: bookData.characters,
+      });
 
-    console.log(`[ComicPipeline] Step 3 took ${Date.now() - step3Start}ms`);
+      console.log(`[ComicPipeline] Step 3 took ${Date.now() - step3Start}ms`);
+    } else {
+      console.log(`[ComicPipeline] Step 3: EDITOR skipped (${(elapsedSoFar / 1000).toFixed(0)}s elapsed)`);
+    }
   } else {
-    console.log(`[ComicPipeline] Step 3: EDITOR skipped (${(elapsedSoFar / 1000).toFixed(0)}s elapsed, saving time for image generation)`);
+    console.log('[ComicPipeline] Step 3: EDITOR skipped (preview mode)');
   }
 
   // ── Validate scene data ──
