@@ -280,57 +280,18 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
           ((loadedBook?.paymentStatus === 'completed' || loadedBook?.paymentStatus === 'free_preview') &&
            (loadedBook?.status === 'pending' || loadedBook?.status === 'generating' || loadedBook?.status === 'outlining'));
 
-        // If it's a visual book that needs generation AND user is actual owner (not just admin viewing), redirect IMMEDIATELY
-        if (isVisual && needsGeneration && isActualOwnerOrGuest) {
-          setRedirectingToComic(true);
-          startTimeRef.current = Date.now();
-          setGeneratingBookId(id);
+        // Visual books: redirect to generate-comic page for all active states
+        // Don't call /generate from here — generate-comic page handles everything
+        if (isVisual && isActualOwnerOrGuest) {
+          const activeStates = ['pending', 'generating', 'outlining'];
+          const isPaid = loadedBook?.paymentStatus === 'completed' || loadedBook?.paymentStatus === 'free_preview';
+          const isActive = activeStates.includes(loadedBook?.status || '');
 
-          // If generation is already in progress (e.g. triggered by claim-free), skip duplicate trigger
-          const alreadyGenerating = loadedBook?.status === 'outlining' || loadedBook?.status === 'generating';
-
-          if (alreadyGenerating) {
-            console.log('Visual book already generating, redirecting to comic page...');
+          if ((needsGeneration || isActive) && isPaid) {
+            console.log(`Visual book (status: ${loadedBook?.status}), redirecting to comic page...`);
+            setRedirectingToComic(true);
+            setGeneratingBookId(id);
             router.replace(`/generate-comic?bookId=${id}`);
-            return;
-          }
-
-          console.log('Visual book detected, generating outline and redirecting...');
-
-          try {
-            const genRes = await fetch(`/api/books/${id}/generate`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ outlineOnly: true }),
-            });
-            const genData = await genRes.json();
-
-            // Check for content blocked error - don't redirect, show error
-            if (genData.contentBlocked) {
-              setRedirectingToComic(false);
-              setError('Your book content was blocked by AI safety filters. Please create a new book with different content (avoid adult themes, violence, or controversial topics).');
-              setLoading(false);
-              return;
-            }
-
-            // Always redirect to comic generation page for visual books
-            if (genData.success || genData.outlineOnly || genData.alreadyComplete) {
-              router.replace(`/generate-comic?bookId=${id}`);
-              return;
-            }
-
-            // If we got an error response, show it here instead of redirecting to empty comic page
-            console.log('Generate response:', genData);
-            setRedirectingToComic(false);
-            setError(genData.error || 'Generation encountered an issue. It will auto-retry shortly.');
-            setLoading(false);
-            return;
-          } catch (err) {
-            console.error('Error starting visual book generation:', err);
-            // Don't redirect on error - show the error on this page
-            setRedirectingToComic(false);
-            setError('Something went wrong starting your book. It will auto-retry shortly, or you can try again.');
-            setLoading(false);
             return;
           }
         }
