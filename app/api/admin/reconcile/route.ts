@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
     const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
     const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000);
 
-    const MAX_RECONCILE_RETRIES = 5;
+    const MAX_RECONCILE_RETRIES = 2;
 
     // Query 1: Books that were paid but never started (failed, pending, preview_complete)
     // Exclude content_blocked books and books that exceeded retry cap
