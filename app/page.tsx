@@ -900,79 +900,46 @@ export default function Home() {
             </p>
           </div>
 
-          {/* All pricing options */}
-          <div className="grid md:grid-cols-4 gap-5">
-            {/* Free Tier */}
+          {/* Pricing cards - 3 subscription tiers */}
+          <div className="grid md:grid-cols-3 gap-5 max-w-4xl mx-auto">
+            {/* Starter */}
             <button
-              onClick={() => router.push(session ? '/create' : '/signup')}
-              className="group bg-white rounded-2xl p-6 border-2 border-lime-400 hover:border-lime-500 card-hover text-left cursor-pointer"
-            >
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 bg-lime-400 rounded-lg flex items-center justify-center">
-                  <Zap className="h-5 w-5 text-neutral-900" />
-                </div>
-              </div>
-              <h3 className="text-xl font-semibold mb-1" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>Free</h3>
-              <div className="flex items-baseline gap-1 mb-2">
-                <span className="text-4xl font-bold">$0</span>
-              </div>
-              <p className="text-sm text-neutral-500 mb-4">Try it out - no credit card</p>
-              <ul className="space-y-2 text-sm text-neutral-600 mb-6">
-                <li className="flex items-center gap-2">
-                  <Check className="h-4 w-4 text-lime-600 flex-shrink-0" />
-                  Free sample preview
-                </li>
-                <li className="flex items-center gap-2">
-                  <Check className="h-4 w-4 text-lime-600 flex-shrink-0" />
-                  1 chapter or 5 panels
-                </li>
-                <li className="flex items-center gap-2">
-                  <Check className="h-4 w-4 text-lime-600 flex-shrink-0" />
-                  Upgrade to unlock full book
-                </li>
-              </ul>
-              <div className="w-full bg-lime-400 text-neutral-900 py-3 rounded-xl text-sm font-medium text-center group-hover:bg-lime-500 transition-colors">
-                Start Free
-              </div>
-            </button>
-
-            {/* Single Generation */}
-            <button
-              onClick={() => router.push('/create')}
+              onClick={() => router.push(session ? '/checkout?plan=starter_monthly' : '/signup?plan=starter_monthly')}
               className="group bg-white rounded-2xl p-6 border-2 border-neutral-200 hover:border-neutral-900 card-hover text-left cursor-pointer"
             >
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-10 h-10 bg-neutral-100 rounded-lg flex items-center justify-center group-hover:bg-neutral-900 transition-colors">
-                  <BookOpen className="h-5 w-5 text-neutral-700 group-hover:text-white transition-colors" />
+                  <Zap className="h-5 w-5 text-neutral-700 group-hover:text-white transition-colors" />
                 </div>
               </div>
-              <h3 className="text-xl font-semibold mb-1" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>Single Generation</h3>
+              <h3 className="text-xl font-semibold mb-1" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>Starter</h3>
               <div className="flex items-baseline gap-1 mb-2">
-                <span className="text-4xl font-bold">$4.99</span>
+                <span className="text-4xl font-bold">$19.99</span>
+                <span className="text-neutral-400 text-sm">/mo</span>
               </div>
-              <p className="text-sm text-neutral-500 mb-4">Novel, Comic, Screenplay, or Picture Book</p>
+              <p className="text-sm text-neutral-500 mb-4">600 credits/month</p>
               <ul className="space-y-2 text-sm text-neutral-600 mb-6">
                 <li className="flex items-center gap-2">
                   <Check className="h-4 w-4 text-neutral-400 flex-shrink-0" />
-                  Any book type
+                  2 comics or 5 novels
                 </li>
                 <li className="flex items-center gap-2">
                   <Check className="h-4 w-4 text-neutral-400 flex-shrink-0" />
-                  AI cover + formatting
+                  Credits roll over
                 </li>
                 <li className="flex items-center gap-2">
                   <Check className="h-4 w-4 text-neutral-400 flex-shrink-0" />
-                  EPUB or PDF
+                  Cancel anytime
                 </li>
               </ul>
               <div className="w-full bg-neutral-900 text-white py-3 rounded-xl text-sm font-medium text-center group-hover:bg-neutral-800 transition-colors">
-                Create Book
+                Get Starter
               </div>
             </button>
 
-            {/* Author Plan */}
+            {/* Author (highlighted) */}
             <button
-              onClick={() => router.push(session ? '/checkout?plan=monthly' : '/signup?plan=monthly')}
+              onClick={() => router.push(session ? '/checkout?plan=author_monthly' : '/signup?plan=author_monthly')}
               className="group bg-neutral-900 text-white rounded-2xl p-6 border-2 border-neutral-900 card-hover text-left cursor-pointer relative"
             >
               <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-lime-400 text-neutral-900 px-3 py-1 rounded-full text-xs font-medium">
@@ -983,20 +950,20 @@ export default function Home() {
                   <Sparkles className="h-5 w-5 text-white" />
                 </div>
               </div>
-              <h3 className="text-xl font-semibold mb-1" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>Author Plan</h3>
+              <h3 className="text-xl font-semibold mb-1" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>Author</h3>
               <div className="flex items-baseline gap-1 mb-2">
-                <span className="text-4xl font-bold">$29</span>
+                <span className="text-4xl font-bold">$39.99</span>
                 <span className="text-neutral-400 text-sm">/mo</span>
               </div>
-              <p className="text-sm text-neutral-300 mb-4">5 generations per month</p>
+              <p className="text-sm text-neutral-300 mb-4">1,500 credits/month</p>
               <ul className="space-y-2 text-sm text-neutral-200 mb-6">
                 <li className="flex items-center gap-2">
                   <Check className="h-4 w-4 text-neutral-400 flex-shrink-0" />
-                  $7.80 per generation
+                  6 comics or 12 novels
                 </li>
                 <li className="flex items-center gap-2">
                   <Check className="h-4 w-4 text-neutral-400 flex-shrink-0" />
-                  Unused credits roll over
+                  Credits roll over
                 </li>
                 <li className="flex items-center gap-2">
                   <Check className="h-4 w-4 text-neutral-400 flex-shrink-0" />
@@ -1004,13 +971,13 @@ export default function Home() {
                 </li>
               </ul>
               <div className="w-full bg-white text-neutral-900 py-3 rounded-xl text-sm font-medium text-center group-hover:bg-neutral-100 transition-colors">
-                Subscribe
+                Get Author
               </div>
             </button>
 
-            {/* Yearly Plan */}
+            {/* Pro */}
             <button
-              onClick={() => router.push(session ? '/checkout?plan=yearly' : '/signup?plan=yearly')}
+              onClick={() => router.push(session ? '/checkout?plan=pro_monthly' : '/signup?plan=pro_monthly')}
               className="group bg-white rounded-2xl p-6 border-2 border-neutral-200 hover:border-neutral-900 card-hover text-left cursor-pointer"
             >
               <div className="flex items-center gap-3 mb-4">
@@ -1018,30 +985,37 @@ export default function Home() {
                   <Crown className="h-5 w-5 text-neutral-700 group-hover:text-white transition-colors" />
                 </div>
               </div>
-              <h3 className="text-xl font-semibold mb-1" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>Yearly Plan</h3>
+              <h3 className="text-xl font-semibold mb-1" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>Pro</h3>
               <div className="flex items-baseline gap-1 mb-2">
-                <span className="text-4xl font-bold">$299</span>
-                <span className="text-neutral-400 text-sm">/yr</span>
+                <span className="text-4xl font-bold">$69.99</span>
+                <span className="text-neutral-400 text-sm">/mo</span>
               </div>
-              <p className="text-sm text-neutral-500 mb-4">50 books per year</p>
+              <p className="text-sm text-neutral-500 mb-4">4,000 credits/month</p>
               <ul className="space-y-2 text-sm text-neutral-600 mb-6">
                 <li className="flex items-center gap-2">
                   <Check className="h-4 w-4 text-neutral-400 flex-shrink-0" />
-                  $5.98 per book
+                  16 comics or 33 novels
                 </li>
                 <li className="flex items-center gap-2">
                   <Check className="h-4 w-4 text-neutral-400 flex-shrink-0" />
-                  Use anytime within year
+                  Credits roll over
                 </li>
                 <li className="flex items-center gap-2">
                   <Check className="h-4 w-4 text-neutral-400 flex-shrink-0" />
-                  Best for power users
+                  Best for studios
                 </li>
               </ul>
               <div className="w-full bg-neutral-900 text-white py-3 rounded-xl text-sm font-medium text-center group-hover:bg-neutral-800 transition-colors">
-                Get Yearly
+                Get Pro
               </div>
             </button>
+          </div>
+
+          {/* Pay-as-you-go note */}
+          <div className="mt-8 text-center">
+            <p className="text-neutral-600">
+              Or <a href="/pricing" className="underline hover:text-neutral-900 font-medium">pay as you go</a> starting at $4.99 per book. Try a free sample first, no credit card needed.
+            </p>
           </div>
         </div>
       </section>
