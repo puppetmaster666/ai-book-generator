@@ -274,13 +274,18 @@ function GenerateComicContent() {
     };
   }, [bookId, router]);
 
-  // Check if all panels are complete
+  // Check if all panels are complete (for free preview, "all" means first 5)
   useEffect(() => {
     if (panels.length > 0) {
-      const complete = panels.every(p => p.status === 'done');
-      setAllComplete(complete);
+      const isFreePreview = bookData?.paymentStatus === 'free_preview';
+      if (isFreePreview) {
+        const freePanels = panels.filter(p => p.number <= 5);
+        setAllComplete(freePanels.length > 0 && freePanels.every(p => p.status === 'done'));
+      } else {
+        setAllComplete(panels.every(p => p.status === 'done'));
+      }
     }
-  }, [panels]);
+  }, [panels, bookData?.paymentStatus]);
 
   // Background generation trigger
   const startBackgroundGeneration = useCallback(async () => {
@@ -298,9 +303,9 @@ function GenerateComicContent() {
       const data = await res.json();
 
       if (!res.ok) {
-        // Handle preview limit reached
+        // Preview limit reached — not an error, just stop generating
+        // The locked panels + upgrade CTA are shown inline
         if (data.error === 'preview_limit') {
-          setError(`preview_limit:${data.panelsGenerated}:${data.limit}`);
           setIsGenerating(false);
           return;
         }
@@ -519,50 +524,7 @@ function GenerateComicContent() {
     );
   }
 
-  // Check for preview_limit error
-  const isPreviewLimit = error.startsWith('preview_limit:');
-  const previewLimitParts = isPreviewLimit ? error.split(':') : [];
-  const panelsGenerated = isPreviewLimit ? parseInt(previewLimitParts[1]) : 0;
-  const panelLimit = isPreviewLimit ? parseInt(previewLimitParts[2]) : 5;
-
-  if (isPreviewLimit && bookId) {
-    return (
-      <div className="min-h-screen bg-white">
-        <Header />
-        <main className="py-20 px-6">
-          <div className="max-w-lg mx-auto">
-            <div className="bg-gradient-to-br from-neutral-900 to-neutral-800 rounded-2xl p-8 text-white text-center">
-              <div className="w-16 h-16 mx-auto mb-4 bg-white/10 rounded-full flex items-center justify-center">
-                <BookOpen className="h-8 w-8" />
-              </div>
-              <h1 className="text-2xl font-bold mb-2">Your Preview is Ready!</h1>
-              <p className="text-neutral-300 mb-2">
-                You've generated {panelsGenerated} panel{panelsGenerated > 1 ? 's' : ''}
-              </p>
-              <p className="text-neutral-400 text-sm mb-6">
-                Unlock the full illustrated book for just $4.99
-              </p>
-              <Link
-                href={`/review?bookId=${bookId}`}
-                className="inline-flex items-center gap-2 px-8 py-4 bg-white text-neutral-900 rounded-full hover:bg-neutral-100 font-medium transition-colors text-lg"
-              >
-                <Zap className="h-5 w-5" />
-                Unlock Full Book - $4.99
-              </Link>
-            </div>
-            <div className="mt-6 text-center">
-              <Link
-                href={`/book/${bookId}`}
-                className="text-neutral-600 hover:text-neutral-900 underline text-sm"
-              >
-                View your preview panels
-              </Link>
-            </div>
-          </div>
-        </main>
-      </div>
-    );
-  }
+  // preview_limit is handled inline (locked panels + CTA), not as an error page
 
   if (error && !bookData) {
     return (
