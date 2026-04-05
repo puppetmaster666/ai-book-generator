@@ -191,24 +191,33 @@ if (genDropdownRef.current && !genDropdownRef.current.contains(event.target as N
             >
               Blog
             </a>
-            <a
-              href="/roast"
-              className="roast-btn relative inline-flex items-center justify-center px-5 py-2 rounded-full cursor-pointer select-none"
-            >
-              <div className="roast-rays" />
-              <div className="roast-vignette" />
-              <span
-                className="roast-text relative z-20 text-black uppercase tracking-[0.2em]"
-                style={{
-                  fontFamily: "'Oswald', sans-serif",
-                  fontWeight: 900,
-                  fontSize: '14px',
-                  WebkitTextStroke: '0.3px black',
-                }}
+            <div className="relative group">
+              <a
+                href="/roast"
+                className="roast-btn relative inline-flex items-center justify-center px-5 py-2 rounded-full cursor-pointer select-none"
               >
-                ROAST SOMEONE
-              </span>
-            </a>
+                <div className="roast-rays" />
+                <div className="roast-vignette" />
+                <span
+                  className="roast-text relative z-20 text-black uppercase tracking-[0.2em]"
+                  style={{
+                    fontFamily: "'Oswald', sans-serif",
+                    fontWeight: 900,
+                    fontSize: '14px',
+                    WebkitTextStroke: '0.3px black',
+                  }}
+                >
+                  ROAST SOMEONE
+                </span>
+              </a>
+              {/* Speech bubble tooltip */}
+              <div className="roast-tooltip absolute left-1/2 -translate-x-1/2 top-full mt-3 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-200 z-50">
+                <div className="relative bg-white text-neutral-700 text-xs font-medium px-3 py-2 rounded-lg shadow-lg whitespace-nowrap">
+                  Generate a funny roast book about your friend
+                  <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-white rotate-45 shadow-[-1px_-1px_2px_rgba(0,0,0,0.05)]" />
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* Center Logo + Version */}
