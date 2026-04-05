@@ -72,7 +72,7 @@ export default function Home() {
   const [lightboxImage, setLightboxImage] = useState<{ src: string; label: string } | null>(null);
   const [ideaCategory, setIdeaCategory] = useState<IdeaCategory>('random');
   const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
-  const [selectedComicCard, setSelectedComicCard] = useState<number | null>(null);
+  const [selectedComicCard, setSelectedComicCard] = useState<number | null>(2);
   const [showStickyBanner, setShowStickyBanner] = useState(false);
   const [stickyBannerDismissed, setStickyBannerDismissed] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
