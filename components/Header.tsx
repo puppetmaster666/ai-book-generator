@@ -191,6 +191,24 @@ if (genDropdownRef.current && !genDropdownRef.current.contains(event.target as N
             >
               Blog
             </a>
+            <a
+              href="/roast"
+              className="roast-btn relative inline-flex items-center justify-center px-5 py-2 rounded-full cursor-pointer select-none"
+            >
+              <div className="roast-rays" />
+              <div className="roast-vignette" />
+              <span
+                className="roast-text relative z-20 text-white uppercase tracking-wider drop-shadow-[0_4px_10px_rgba(0,0,0,1)]"
+                style={{
+                  fontFamily: "'Oswald', sans-serif",
+                  fontWeight: 700,
+                  fontSize: '13px',
+                  WebkitTextStroke: '0.5px black',
+                }}
+              >
+                ROAST SOMEONE
+              </span>
+            </a>
           </div>
 
           {/* Center Logo + Version */}
@@ -735,6 +753,24 @@ if (genDropdownRef.current && !genDropdownRef.current.contains(event.target as N
               </a>
               <a href="/blog" className="text-lg">
                 Blog
+              </a>
+              <a
+                href="/roast"
+                className="roast-btn relative inline-flex items-center justify-center px-6 py-3 rounded-full cursor-pointer select-none"
+              >
+                <div className="roast-rays" />
+                <div className="roast-vignette" />
+                <span
+                  className="roast-text relative z-20 text-white uppercase tracking-wider drop-shadow-[0_4px_10px_rgba(0,0,0,1)]"
+                  style={{
+                    fontFamily: "'Oswald', sans-serif",
+                    fontWeight: 700,
+                    fontSize: '16px',
+                    WebkitTextStroke: '0.5px black',
+                  }}
+                >
+                  ROAST SOMEONE
+                </span>
               </a>
 
               {session?.user ? (

@@ -1,4 +1,5 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Oswald:wght@700&display=swap');
 @import "tailwindcss";
 
 /* Custom Fonts */
@@ -298,62 +299,55 @@ a, button {
   width: calc(100% + 56px);
 }
 
-/* 3D Roast Button */
+/* Hypnotic Roast Button */
 .roast-btn {
   position: relative;
-  transform-style: preserve-3d;
-  transform: perspective(500px) rotateX(0deg) rotateY(0deg);
-  transition: transform 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94), box-shadow 0.25s ease, border-color 0.25s ease;
-  box-shadow:
-    0 6px 0 0 #1a1a1a,
-    0 8px 20px rgba(0, 0, 0, 0.5);
-  border: 2px solid transparent;
-  background-clip: padding-box;
-}
-
-.roast-btn::before {
-  content: '';
-  position: absolute;
-  inset: -2px;
-  border-radius: 14px;
-  padding: 2px;
-  background: linear-gradient(135deg, #fbbf24, #fef3c7, #f59e0b, #fef9c3, #eab308);
-  background-size: 300% 300%;
-  animation: shimmerBorder 3s ease infinite;
-  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-  pointer-events: none;
+  overflow: hidden;
+  border: 4px solid white;
+  background: black;
+  box-shadow: 0 0 40px rgba(255, 255, 255, 0.2);
+  transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94), box-shadow 0.3s ease;
 }
 
 .roast-btn:hover {
-  transform: perspective(500px) rotateX(-4deg) rotateY(2deg) translateY(-2px);
-  box-shadow:
-    0 8px 0 0 #1a1a1a,
-    0 14px 28px rgba(0, 0, 0, 0.5),
-    0 0 20px rgba(250, 204, 21, 0.3);
+  transform: scale(1.05);
+  box-shadow: 0 0 80px rgba(255, 255, 255, 0.6);
 }
 
 .roast-btn:active {
-  transform: perspective(500px) rotateX(0deg) rotateY(0deg) translateY(2px);
-  box-shadow:
-    0 2px 0 0 #1a1a1a,
-    0 4px 8px rgba(0, 0, 0, 0.4);
+  transform: scale(0.95);
+  box-shadow: 0 0 20px rgba(255, 255, 255, 0.4);
 }
 
-@keyframes shimmerBorder {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
+/* Spinning hypnotic rays */
+.roast-rays {
+  position: absolute;
+  inset: -200%;
+  background: repeating-conic-gradient(from 0deg, #000 0deg 15deg, #fff 15deg 30deg);
+  animation: roastSpin 20s linear infinite;
 }
 
-@keyframes tapeScrollBtn {
-  0% { transform: translateX(0); }
-  100% { transform: translateX(-40px); }
+@keyframes roastSpin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 
-.roast-tape {
-  animation: tapeScrollBtn 1.5s linear infinite;
+/* Inner vignette for depth */
+.roast-vignette {
+  position: absolute;
+  inset: 0;
+  box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.8);
+  pointer-events: none;
+  border-radius: 9999px;
+}
+
+/* Text hover pulse */
+.roast-btn:hover .roast-text {
+  transform: scale(1.1);
+}
+
+.roast-text {
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 .animate-slide-up {

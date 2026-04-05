@@ -313,25 +313,6 @@ export default function Home() {
                 <span className="font-medium">Try free sample - 50,000+ word books in under an hour</span>
               </div>
 
-              {/* 3D Roast Your Friend Button */}
-              <a href="/roast" className="roast-btn group relative overflow-hidden inline-flex items-center gap-3 px-8 py-4 rounded-xl cursor-pointer select-none">
-                {/* Dark background with animated hazard tape overlay */}
-                <div className="absolute inset-0 bg-neutral-900">
-                  <div
-                    className="roast-tape absolute inset-0 opacity-15"
-                    style={{
-                      backgroundImage: 'repeating-linear-gradient(45deg, transparent, transparent 10px, #facc15 10px, #facc15 20px)',
-                      backgroundSize: '28px 28px',
-                      width: 'calc(100% + 40px)',
-                    }}
-                  />
-                </div>
-                {/* Button content */}
-                <span className="relative flex items-center gap-3 text-yellow-400 tracking-wider uppercase" style={{ fontFamily: "'Georgia', 'Times New Roman', serif", fontWeight: 900, fontSize: '15px', letterSpacing: '0.12em' }}>
-                  Roast Your Friend
-                  <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
-                </span>
-              </a>
             </div>
 
             {/* Headline */}
