@@ -598,7 +598,10 @@ function GenerateComicContent() {
               {bookData?.title || 'Generate Illustrated Book'}
             </h1>
             <p className="text-neutral-600">
-              {panels.length} {bookData?.dialogueStyle === 'bubbles' ? 'panels' : 'panels'} • {bookData?.artStyle} style
+              {bookData?.paymentStatus === 'free_preview'
+                ? `5 of ${panels.length} panels (free preview)`
+                : `${panels.length} panels`
+              } • {bookData?.artStyle} style
             </p>
           </div>
 
@@ -633,11 +636,10 @@ function GenerateComicContent() {
               <div className="flex items-center justify-between mt-3 pt-3 border-t border-neutral-100">
                 <div className="flex items-center gap-2 text-sm text-neutral-500">
                   <Clock className="h-3.5 w-3.5" />
-                  <span>~{Math.max(1, Math.ceil((panels.length - doneCount) * 0.15))} min remaining ({Math.ceil(elapsedTime / 60)}m elapsed)</span>
+                  <span>~{Math.max(1, Math.ceil(((bookData?.paymentStatus === 'free_preview' ? 5 : panels.length) - doneCount) * 0.15))} min remaining ({Math.ceil(elapsedTime / 60)}m elapsed)</span>
                 </div>
-                <div className="flex items-center gap-1.5 text-xs text-amber-700 bg-amber-50 px-3 py-1 rounded-full border border-amber-200">
-                  <ShieldAlert className="h-3 w-3" />
-                  <span>Don&apos;t close this page</span>
+                <div className="flex items-center gap-1.5 text-xs text-neutral-500">
+                  <span>You can leave and come back anytime</span>
                 </div>
               </div>
             )}
@@ -651,7 +653,7 @@ function GenerateComicContent() {
                 disabled={isGenerating}
                 className="flex items-center gap-2 px-8 py-4 bg-neutral-900 text-white rounded-full hover:bg-neutral-800 disabled:opacity-50 font-medium transition-all"
               >
-                Generate All {panels.length} {bookData?.dialogueStyle === 'bubbles' ? 'Panels' : 'Panels'}
+                Generate {bookData?.paymentStatus === 'free_preview' ? '5 Preview' : `All ${panels.length}`} Panels
               </button>
             )}
 
@@ -741,7 +743,12 @@ function GenerateComicContent() {
                   </div>
                   <div>
                     <p className="font-semibold text-neutral-900">Generating Your Illustrations</p>
-                    <p className="text-sm text-neutral-600">{generatingCount} {bookData?.dialogueStyle === 'bubbles' ? 'panels' : 'pages'} in progress</p>
+                    <p className="text-sm text-neutral-600">
+                      {bookData?.paymentStatus === 'free_preview'
+                        ? `${Math.min(doneCount, 5)} of 5 preview panels`
+                        : `${doneCount} of ${panels.length} panels`
+                      }
+                    </p>
                   </div>
                 </div>
                 <div className="text-right">
@@ -750,15 +757,10 @@ function GenerateComicContent() {
                 </div>
               </div>
 
-              {/* Warning Message */}
+              {/* Info Message */}
               <div className="px-6 py-4 text-center">
-                <div className="flex items-center justify-center gap-2 text-neutral-800 mb-2">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  <span className="font-medium">Please do not leave this page</span>
-                </div>
                 <p className="text-sm text-neutral-600">
-                  This typically takes <strong>5-10 minutes</strong> for {panels.length} {bookData?.dialogueStyle === 'bubbles' ? 'panels' : 'pages'}.
-                  Images are generated one at a time to ensure quality and reliability.
+                  You can leave this page and come back later. Your book will keep generating in the background.
                 </p>
               </div>
             </div>
@@ -967,10 +969,10 @@ function GenerateComicContent() {
           {pendingCount === panels.length && !isGenerating && (
             <div className="mt-12 text-center text-neutral-500">
               <p className="text-sm">
-                Click the button above to start. All {panels.length} {bookData?.dialogueStyle === 'bubbles' ? 'panels' : 'pages'} will be generated one at a time.
+                Click the button above to start. {bookData?.paymentStatus === 'free_preview' ? '5 preview panels' : `All ${panels.length} panels`} will be generated.
               </p>
               <p className="text-xs mt-2">
-                This typically takes 5-10 minutes depending on the number of illustrations.
+                You can leave this page and come back anytime. Generation continues in the background.
               </p>
             </div>
           )}
