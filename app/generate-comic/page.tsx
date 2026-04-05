@@ -179,7 +179,9 @@ function GenerateComicContent() {
           const userRes = await fetch('/api/user');
           if (userRes.ok) {
             const userData = await userRes.json();
-            setIsAdmin(userData.user?.isAdmin || false);
+            // Only show admin UI for the actual admin, not test accounts
+            const ADMIN_EMAILS = ['lhllparis@gmail.com'];
+            setIsAdmin(userData.user?.isAdmin && ADMIN_EMAILS.includes(session?.user?.email || ''));
           }
         } catch {
           // Ignore - just means not admin
@@ -504,7 +506,9 @@ function GenerateComicContent() {
   // If we are generating in background, we consider non-done/non-error as generating implicitly for the progress bar
   // But strictly, panels remain 'pending' in state until 'done'.
   // We can treat all pending as generating if isGenerating is true for the UI.
-  const pendingCount = panels.filter(p => p.status === 'pending').length;
+  const isFreePreviewGlobal = bookData?.paymentStatus === 'free_preview';
+  const activePanels = isFreePreviewGlobal ? panels.filter(p => p.number <= 5) : panels;
+  const pendingCount = activePanels.filter(p => p.status === 'pending').length;
   const generatingCount = isGenerating ? pendingCount : 0;
 
   // retryPanel matches signature (index: number) -> void
@@ -733,38 +737,62 @@ function GenerateComicContent() {
           </div>
 
           {/* Generating Status with Timer */}
-          {isGenerating && (
-            <div className="mb-8 bg-neutral-100 border border-neutral-300 rounded-2xl overflow-hidden">
+          {isGenerating && (() => {
+            const totalActive = isFreePreviewGlobal ? 5 : panels.length;
+            const genProgress = totalActive > 0 ? Math.round((doneCount / totalActive) * 100) : 0;
+
+            return (
+            <div className="mb-8 bg-white border border-neutral-200 rounded-2xl overflow-hidden">
               {/* Timer Header */}
-              <div className="bg-neutral-200 px-6 py-4 flex items-center justify-between">
+              <div className="px-6 py-4 flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-neutral-300 rounded-full flex items-center justify-center">
-                    <Clock className="h-5 w-5 text-neutral-700" />
-                  </div>
+                  <Loader2 className="h-5 w-5 animate-spin text-neutral-900" />
                   <div>
-                    <p className="font-semibold text-neutral-900">Generating Your Illustrations</p>
-                    <p className="text-sm text-neutral-600">
-                      {bookData?.paymentStatus === 'free_preview'
-                        ? `${Math.min(doneCount, 5)} of 5 preview panels`
-                        : `${doneCount} of ${panels.length} panels`
-                      }
+                    <p className="font-semibold text-neutral-900">Generating Illustrations</p>
+                    <p className="text-sm text-neutral-500">
+                      {doneCount} of {totalActive} panels complete
                     </p>
                   </div>
                 </div>
                 <div className="text-right">
                   <p className="text-2xl font-mono font-bold text-neutral-900">{formatTime(elapsedTime)}</p>
-                  <p className="text-xs text-neutral-500">elapsed</p>
                 </div>
               </div>
 
-              {/* Info Message */}
-              <div className="px-6 py-4 text-center">
-                <p className="text-sm text-neutral-600">
-                  You can leave this page and come back later. Your book will keep generating in the background.
+              {/* Progress bar */}
+              <div className="px-6 pb-2">
+                <div className="h-2 bg-neutral-100 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-neutral-900 transition-all duration-500"
+                    style={{ width: `${Math.max(genProgress, 3)}%` }}
+                  />
+                </div>
+              </div>
+
+              {/* Panel-by-panel progress */}
+              <div className="px-6 py-3 flex gap-1.5">
+                {activePanels.map(p => (
+                  <div
+                    key={p.number}
+                    className={`flex-1 h-1.5 rounded-full transition-colors ${
+                      p.status === 'done' ? 'bg-neutral-900'
+                        : p.status === 'generating' ? 'bg-neutral-400 animate-pulse'
+                        : 'bg-neutral-200'
+                    }`}
+                    title={`Panel ${p.number}: ${p.status}`}
+                  />
+                ))}
+              </div>
+
+              {/* Info */}
+              <div className="px-6 py-3 border-t border-neutral-100">
+                <p className="text-xs text-neutral-400 text-center">
+                  You can leave and come back anytime. Generation continues in the background.
                 </p>
               </div>
             </div>
-          )}
+            );
+          })()}
 
           {error && (
             <div className="mb-8 p-4 bg-neutral-100 border border-neutral-300 rounded-xl text-center text-neutral-700">
