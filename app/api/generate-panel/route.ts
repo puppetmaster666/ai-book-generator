@@ -67,7 +67,7 @@ function buildSpeechBubblePrompt(dialogue: DialogueBubble[]): string {
     const bubbleType = d.type === 'thought' ? 'thought bubble (cloud-shaped)' :
       d.type === 'shout' ? 'jagged/spiky speech bubble' :
         'speech bubble';
-    const position = d.position.replace('-', ' '); // "top-left" -> "top left"
+    const position = (d.position || 'top-left').replace('-', ' '); // "top-left" -> "top left"
 
     return `Speech Bubble ${i + 1}: Draw a ${bubbleType} in the ${position} area of the image. Inside the bubble, write the text: "${d.text}" (spoken by ${d.speaker})`;
   }).join('\n');
