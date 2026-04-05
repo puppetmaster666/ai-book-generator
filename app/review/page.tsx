@@ -725,31 +725,30 @@ function ReviewContent() {
             </p>
           </div>
 
-          {/* First-timer tutorial: animated speech bubble pointing to edit buttons */}
-          {showTutorial && !editingSection && (
-            <div className="relative mb-4 animate-bounce-slow">
-              <div className="bg-neutral-900 text-white rounded-xl px-4 py-3 text-sm flex items-center gap-3 shadow-lg">
-                <Pencil className="h-4 w-4 text-lime-400 flex-shrink-0" />
-                <span>
-                  You can edit the title, story, and characters before generating. Hover over any section and click the pencil icon.
-                </span>
-                <button
-                  onClick={() => {
-                    setShowTutorial(false);
-                    try { localStorage.setItem('review_tutorial_seen', 'true'); } catch {}
-                  }}
-                  className="ml-auto flex-shrink-0 p-1 hover:bg-white/20 rounded transition-colors"
-                >
-                  <X className="h-3.5 w-3.5" />
-                </button>
-              </div>
-              {/* Arrow pointing down */}
-              <div className="absolute left-8 -bottom-2 w-4 h-4 bg-neutral-900 rotate-45" />
-            </div>
-          )}
-
           {/* Book Overview Card */}
           <div className="bg-white rounded-2xl border border-neutral-200 p-8 mb-6">
+            {/* First-timer tutorial: speech bubble pointing at the title edit area */}
+            {showTutorial && !editingSection && (
+              <div className="relative mb-4 animate-bounce-slow">
+                <div className="bg-neutral-900 text-white rounded-xl px-4 py-3 text-sm flex items-center gap-3 shadow-lg">
+                  <Pencil className="h-4 w-4 text-neutral-400 flex-shrink-0" />
+                  <span>
+                    Hover over the title, story, or characters and click the pencil icon to edit before generating.
+                  </span>
+                  <button
+                    onClick={() => {
+                      setShowTutorial(false);
+                      try { localStorage.setItem('review_tutorial_seen', 'true'); } catch {}
+                    }}
+                    className="ml-auto flex-shrink-0 p-1 hover:bg-white/20 rounded transition-colors"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+                {/* Arrow pointing down at the title */}
+                <div className="absolute left-12 -bottom-2 w-4 h-4 bg-neutral-900 rotate-45" />
+              </div>
+            )}
             <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 mb-6">
               <div className="flex-1">
                 {editingSection === 'title' ? (
@@ -831,7 +830,7 @@ function ReviewContent() {
                 {book.bookType}
               </span>
               {book.artStyle && (
-                <span className="px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-sm flex items-center gap-1">
+                <span className="px-3 py-1 bg-neutral-100 text-neutral-700 rounded-full text-sm flex items-center gap-1">
                   <Palette className="h-3 w-3" />
                   {ART_STYLES[book.artStyle as keyof typeof ART_STYLES]?.label || book.artStyle}
                 </span>
@@ -1455,25 +1454,25 @@ function ReviewContent() {
             <h3 className="font-semibold text-lg mb-4">What&apos;s Included</h3>
             <div className="grid md:grid-cols-2 gap-3">
               <div className="flex items-center gap-2 text-sm text-neutral-700">
-                <Check className="h-4 w-4 text-green-600 flex-shrink-0" />
+                <Check className="h-4 w-4 text-neutral-400 flex-shrink-0" />
                 Complete {book.targetChapters}-chapter book
               </div>
               <div className="flex items-center gap-2 text-sm text-neutral-700">
-                <Check className="h-4 w-4 text-green-600 flex-shrink-0" />
+                <Check className="h-4 w-4 text-neutral-400 flex-shrink-0" />
                 AI-generated cover design
               </div>
               {book.bookFormat !== 'text_only' && (
                 <div className="flex items-center gap-2 text-sm text-neutral-700">
-                  <Check className="h-4 w-4 text-green-600 flex-shrink-0" />
+                  <Check className="h-4 w-4 text-neutral-400 flex-shrink-0" />
                   {book.bookFormat === 'picture_book' ? 'Full-page illustrations' : 'Chapter illustrations'}
                 </div>
               )}
               <div className="flex items-center gap-2 text-sm text-neutral-700">
-                <Check className="h-4 w-4 text-green-600 flex-shrink-0" />
+                <Check className="h-4 w-4 text-neutral-400 flex-shrink-0" />
                 EPUB download (Amazon KDP ready)
               </div>
               <div className="flex items-center gap-2 text-sm text-neutral-700">
-                <Check className="h-4 w-4 text-green-600 flex-shrink-0" />
+                <Check className="h-4 w-4 text-neutral-400 flex-shrink-0" />
                 Full commercial rights
               </div>
             </div>
@@ -1499,7 +1498,7 @@ function ReviewContent() {
                       {copiedBlurb ? (
                         <>
                           <CheckCircle2 className="h-3.5 w-3.5 text-green-600" />
-                          <span className="text-green-600">Copied!</span>
+                          <span className="text-neutral-600">Copied!</span>
                         </>
                       ) : (
                         <>
@@ -1535,7 +1534,7 @@ function ReviewContent() {
                       {copiedKeywords ? (
                         <>
                           <CheckCircle2 className="h-3.5 w-3.5 text-green-600" />
-                          <span className="text-green-600">Copied!</span>
+                          <span className="text-neutral-600">Copied!</span>
                         </>
                       ) : (
                         <>
