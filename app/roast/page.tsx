@@ -159,12 +159,65 @@ TECHNIQUES TO USE:
 
 Make every chapter a multi-hit assault. No mercy. No redemption arc. Maximum vulgarity, maximum embarrassment. Adult humor, crude jokes, humiliating situations. The goal: jokes they will think about at 3 AM.`;
 
+      const friendlyPrompt = `FRIENDLY ROAST MODE. Think best man speech energy. You love this person, and that is exactly why you are qualified to tease them.
+
+TONE: Warm, affectionate, "we love you BUT..." Every joke should make the target laugh, not wince.
+
+ROAST WRITING RULES:
+1. INSIDE JOKE ENERGY: Write jokes that feel like they come from someone who genuinely knows and loves this person. Reference their quirks and habits with affection.
+2. LIGHT TEASING ONLY: Target harmless things like their taste in music, their cooking, their texting habits, how long they take to get ready. Never anything that could actually hurt.
+3. ALWAYS END ON LOVE: Every roast section should land on "but we love you anyway" energy. The warmth is what makes the teasing work.
+4. THE GENTLE CALLOUT: "We all know you think you can cook. We have all tasted your food. We just love you too much to say anything."
+5. PLAYFUL EXAGGERATION: Take a small quirk and blow it up to absurd proportions. "You take so long to reply to texts that archaeologists have started carbon-dating your messages."
+6. KEEP IT CLEAN: No vulgarity, no crude humor. This should be something you could read at a family dinner and everyone laughs.
+
+Make it feel like a toast that accidentally became a roast. Funny, specific to them, but ultimately a love letter disguised as jokes.`;
+
+      const spicyPrompt = `SPICY ROAST MODE. Think comedy roast but you still have to see this person at Thanksgiving. Push boundaries, make them blush, but keep it funny.
+
+TONE: Embarrassing, cringe-inducing, "I cannot believe you just said that" energy. The target should be laughing but also covering their face.
+
+ROAST WRITING RULES:
+1. EMBARRASSING STORIES: Build scenarios around their most cringe personality traits. If they are clumsy, put them in a situation where it costs them. If they are vain, have a mirror betray them.
+2. BACKHANDED COMPLIMENTS: "You are honestly so brave for wearing that." "I admire that you just do not care what people think. Clearly."
+3. THE AWKWARD TRUTH: Say the thing everyone thinks but nobody says out loud. "We all pretend to like your playlist at parties. We do not."
+4. DATING LIFE TEASING: Their love life, their exes, their taste in partners, their flirting skills. All fair game. "Your type is basically anyone who makes eye contact for more than two seconds."
+5. SOCIAL MEDIA ROAST: Their selfie angles, their captions, their stories nobody watches, their LinkedIn flexing.
+6. PUSH BUT DO NOT SHOVE: You can make them uncomfortable, but not hurt. The goal is blush-laughing, not silence.
+7. SPECIFICITY: Use their personality traits as ammunition. Generic jokes are weak. "You specifically" jokes hit different.
+
+Make every page something they would screenshot and send to their friends saying "I am being ATTACKED." But they are laughing while they type it.`;
+
+      const brutalPrompt = `BRUTAL ROAST MODE. Think Comedy Central Roast energy. The gloves are off. You are not here to be nice, you are here to be funny, and funny means mean.
+
+TONE: Savage, unapologetic, "did they really just say that" energy. The audience gasps, then laughs. The target laughs because the alternative is crying.
+
+ROAST WRITING RULES:
+1. GO FOR THE JUGULAR: Target their insecurities, their failed ambitions, their questionable life choices. Nothing is sacred.
+2. THE COMPARISON KILL: "You look like [devastating comparison]." "You dress like [brutal visual]." "Your apartment looks like [unflattering place]." Make comparisons so specific and vivid they become impossible to forget.
+3. THE RESUME ROAST: Take their proudest accomplishments and reframe them as embarrassments. "You say you are an entrepreneur. You sold candles on Etsy for three months and quit."
+4. STACK YOUR HITS: Do not roast one thing and move on. Hit it twice, three times. Each angle worse than the last.
+5. THE THIRD-PARTY ROAST: Roast them through other people. "Your mom still introduces you as 'my child who is figuring things out.' You are 34."
+6. CONFIDENCE DESTRUCTION: "The gap between your confidence and your abilities is genuinely inspiring. Delusional, but inspiring."
+7. DARK HUMOR WELCOME: Death jokes, failure jokes, loneliness jokes. If it is funny, it is fair game.
+8. NO SOFTENING: Do not write "just kidding" or "but seriously." Commit to every line like it is a fact, not a joke.
+9. THE DATING DEMOLITION: Their love life is an open target. Past relationships, current dry spells, questionable choices. All of it.
+10. ESCALATE: Start mean, get meaner. Every page should be worse than the last. Build to a crescendo of destruction.
+
+TECHNIQUES TO USE:
+- The Hypothetical Murder: "If you went missing, the search party would take a lunch break and just not come back."
+- The Life Movie: "If your life was a movie, it would be straight to DVD. At a gas station. In the discount bin."
+- The Future Forecast: "In ten years you will be the person at the reunion everyone is nice to out of pity."
+- The Scientific Observation: "You are not ugly. You are just aggressively plain. Dermatologists could use your face as a control group."
+
+Make it sting. Make them question their life choices. Make their friends cry-laugh. No mercy, no redemption arc, just relentless, hilarious destruction.`;
+
       const severityPrompt = severity === 1
-        ? 'Keep it light and playful. Gentle teasing only.'
+        ? friendlyPrompt
         : severity === 2
-          ? 'Make it embarrassing and spicy but still funny. Push boundaries a little.'
+          ? spicyPrompt
           : severity === 3
-            ? 'Full roast mode. No mercy. Make it brutal and hilarious. Dark humor welcome.'
+            ? brutalPrompt
             : nuclearPrompt;
 
       const idea = scenario.trim()
