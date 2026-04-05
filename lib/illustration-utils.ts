@@ -2,8 +2,8 @@ import { ILLUSTRATION_DIMENSIONS } from '@/lib/constants';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { SAFETY_SETTINGS } from '@/lib/generation/shared/safety';
 
-// Timeout for illustration generation (30 seconds) - prevents 504 Gateway Timeout
-export const ILLUSTRATION_TIMEOUT_MS = 30000;
+// Timeout for illustration generation (60 seconds) - allows time for reference image processing
+export const ILLUSTRATION_TIMEOUT_MS = 60000;
 
 // Maximum retries for content-blocked illustrations
 export const MAX_ILLUSTRATION_RETRIES = 3;
