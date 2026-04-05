@@ -596,7 +596,8 @@ NAME USAGE IN TEXT FIELDS (CRITICAL - AI tends to spam names):
 - In premise/beginning/middle/ending fields: max 2 mentions of any name, then use pronouns
 - This prevents robotic, repetitive writing that readers hate
 
-${region ? buildNameGuidanceForRegion(region, idea) : buildNameSuggestionPrompt(idea)}
+${buildNameGuidanceForRegion(null, idea)}
+${region ? `\nFALLBACK REGION (use ONLY if the story has no cultural setting): ${region}` : ''}
 
 CHARACTER VARIETY - Make each character unique and memorable:
 - Use names from the suggestions above OR culturally-appropriate alternatives

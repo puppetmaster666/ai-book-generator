@@ -1493,46 +1493,7 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
                   </div>
                 )}
 
-                {/* Region Selector (editable before generation starts) */}
-                {(isPending || book.status === 'failed') && book.bookType !== 'non-fiction' && (
-                  <div className="mb-4">
-                    <label className="block text-xs text-neutral-400 mb-1">Name region</label>
-                    <select
-                      value={book.region || ''}
-                      onChange={async (e) => {
-                        const newRegion = e.target.value || null;
-                        try {
-                          await fetch(`/api/books/${book.id}`, {
-                            method: 'PATCH',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ region: newRegion }),
-                          });
-                          setBook({ ...book, region: newRegion });
-                        } catch { /* ignore */ }
-                      }}
-                      className="text-sm border border-neutral-200 rounded-lg px-3 py-1.5 bg-white text-neutral-700 focus:outline-none focus:ring-2 focus:ring-neutral-900 focus:border-transparent"
-                    >
-                      <option value="">Auto-detect from story</option>
-                      <option value="usa_general">United States / Canada</option>
-                      <option value="uk">United Kingdom / Australia</option>
-                      <option value="france">France</option>
-                      <option value="germany">Germany / Central Europe</option>
-                      <option value="italy">Italy / Southern Europe</option>
-                      <option value="spain">Spain / Latin America</option>
-                      <option value="scandinavia">Scandinavia</option>
-                      <option value="russia">Russia / Eastern Europe</option>
-                      <option value="japan">Japan</option>
-                      <option value="korea">South Korea</option>
-                      <option value="china">China / Taiwan</option>
-                      <option value="india">India / South Asia</option>
-                      <option value="middle_east">Middle East</option>
-                      <option value="nigeria">Africa</option>
-                      <option value="mexico">Mexico / Latin America</option>
-                      <option value="brazil">Brazil</option>
-                      <option value="fantasy_medieval">Fantasy / Medieval</option>
-                    </select>
-                  </div>
-                )}
+                {/* Region is now set during book creation in the character setup step */}
 
                 {/* Status Badge */}
                 <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium ${book.status === 'completed'
