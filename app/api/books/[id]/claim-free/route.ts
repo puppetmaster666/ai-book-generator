@@ -86,11 +86,8 @@ export async function POST(
         }),
       ]);
 
-      const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-      fetch(`${appUrl}/api/books/${bookId}/generate`, {
-        method: 'POST',
-      }).catch(console.error);
-
+      // Do NOT trigger generation here — the frontend handles it via
+      // generate-comic page or book page to avoid duplicate generation
       return NextResponse.json({
         success: true,
         message: 'Book claimed with credit. Full access!',
@@ -125,11 +122,7 @@ export async function POST(
       }),
     ]);
 
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-    fetch(`${appUrl}/api/books/${bookId}/generate`, {
-      method: 'POST',
-    }).catch(console.error);
-
+    // Do NOT trigger generation here — the frontend handles it
     return NextResponse.json({
       success: true,
       message: 'Book claimed as free preview. Upgrade to unlock the full book!',

@@ -69,6 +69,14 @@ export async function POST(
             return NextResponse.json({ message: 'Book already completed' });
         }
 
+        // GENERATION LOCK: Prevent concurrent generation from duplicate triggers
+        // If book was updated in the last 30 seconds and is actively generating, skip
+        const thirtySecondsAgo = new Date(Date.now() - 30 * 1000);
+        if (book.status === 'generating' && book.updatedAt > thirtySecondsAgo) {
+            console.log(`[Visual Gen] Generation already active for book ${id} (updated ${Math.round((Date.now() - book.updatedAt.getTime()) / 1000)}s ago), skipping duplicate`);
+            return NextResponse.json({ message: 'Generation already in progress', status: book.status });
+        }
+
         // Check payment status and free tier limits
         const isPaid = book.paymentStatus === 'completed';
         const hasSubscription = book.user?.plan === 'monthly';
@@ -125,12 +133,27 @@ export async function POST(
         let activeGenerations = 0;
 
         // Track what we've already done to skip - include both completed AND failed illustrations
-        // Failed illustrations should not be retried in the main generation flow (they have a separate retry endpoint)
-        const existingPanelNumbers = new Set(
-            book.illustrations.map(i => i.position || 0)
-        );
+        // Use position AND chapterId to prevent duplicate generation
+        const existingPanelNumbers = new Set<number>();
+        const existingChapterIds = new Set<string>();
+        for (const ill of book.illustrations) {
+            if (ill.position && ill.position > 0) existingPanelNumbers.add(ill.position);
+            if (ill.chapterId) existingChapterIds.add(ill.chapterId);
+        }
 
-        const pendingChapters = targetChapters.filter(ch => !existingPanelNumbers.has(ch.number));
+        // Also load chapter IDs to cross-reference
+        const chapterRecords = await prisma.chapter.findMany({
+            where: { bookId: id },
+            select: { id: true, number: true },
+        });
+        const chapterIdByNumber = new Map(chapterRecords.map(c => [c.number, c.id]));
+
+        const pendingChapters = targetChapters.filter(ch => {
+            if (existingPanelNumbers.has(ch.number)) return false;
+            const chId = chapterIdByNumber.get(ch.number);
+            if (chId && existingChapterIds.has(chId)) return false;
+            return true;
+        });
 
         // Get visual guides from book data for consistency and copyright protection
         const characterVisualGuide = book.characterVisualGuide as any;
