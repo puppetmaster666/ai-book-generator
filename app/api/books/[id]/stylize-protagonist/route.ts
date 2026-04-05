@@ -222,17 +222,20 @@ DO NOT include any text, words, or labels in the image.`;
             data: stylizedImage!.base64,
           },
         },
-        `Analyze this character illustration and provide a detailed visual description that can be used to consistently recreate this character in other illustrations.
+        `Analyze this character illustration and provide a detailed visual description that MUST be used to consistently recreate this character in EVERY panel of a comic/book. Consistency is critical.
 
-Include:
-1. Face shape and features (eyes, nose, mouth, eyebrows)
-2. Hair color, style, and length
-3. Skin tone
-4. Any distinctive features (freckles, dimples, etc.)
-5. Expression/demeanor
-6. Approximate age appearance
+Include ALL of the following (miss nothing):
+1. Face shape and features (eyes, nose, mouth, eyebrows, jaw)
+2. Hair color, style, length, and any specific details (bangs, parting, texture)
+3. Skin tone (specific shade)
+4. Glasses: Does the character wear glasses? YES or NO. If yes, describe them. If NO, explicitly state "Does NOT wear glasses."
+5. Clothing: Describe EXACTLY what they are wearing (shirt color, style, pants, etc.). This outfit must remain the SAME in every panel.
+6. Accessories: Any jewelry, hats, watches, piercings, tattoos. If none, state "No accessories."
+7. Distinctive features (freckles, dimples, scars, facial hair, etc.)
+8. Body type and build
+9. Approximate age appearance
 
-Format as a single paragraph that could be used as a character reference guide. Be specific about colors and proportions in ${styleConfig.label} art style terms.`
+Format as a single detailed paragraph. Be extremely specific about colors, clothing, and whether they wear glasses or not. This description will be used to ensure the character looks IDENTICAL in every single panel, so do not leave out clothing or accessory details.`
       ]);
     });
 

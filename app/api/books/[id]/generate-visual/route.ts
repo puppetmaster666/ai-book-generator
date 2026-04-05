@@ -345,7 +345,7 @@ export async function POST(
                     // Also add the protagonist description to the prompt for extra emphasis
                     const protagonistDesc = book.protagonistDescription as string | null;
                     if (protagonistDesc) {
-                        illustrationPrompt += `\n\nPROTAGONIST REFERENCE (CRITICAL - match this person's likeness exactly):\n${protagonistDesc}\nThe character "${mainCharName}" MUST look like the reference image provided. This is based on a real person's photo.`;
+                        illustrationPrompt += `\n\nPROTAGONIST REFERENCE (CRITICAL - EXACT MATCH REQUIRED):\n${protagonistDesc}\n\nCONSISTENCY RULES FOR "${mainCharName}" (DO NOT DEVIATE):\n- Face, hair, and skin tone must EXACTLY match the reference image\n- Clothing must be the SAME outfit as in the reference image in EVERY panel. Do NOT change their clothes.\n- If the reference does NOT show glasses, do NOT add glasses. If it shows glasses, ALWAYS include them.\n- Do NOT add or remove accessories, hats, jewelry, or any items not in the reference.\n- Body type and build must stay consistent.\n- This is based on a real person's photo. Accuracy is non-negotiable.`;
                     }
                     console.log(`[Visual Gen] Panel ${chapter.number}: Using protagonist photo reference for "${mainCharName}"`);
                 }

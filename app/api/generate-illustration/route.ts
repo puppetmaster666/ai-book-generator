@@ -244,7 +244,7 @@ export async function POST(request: NextRequest) {
             },
           });
           content.push({
-            text: `Use this reference image to maintain visual consistency for the character "${ref.characterName}". The character should look EXACTLY like they do in this reference image.`,
+            text: `REFERENCE IMAGE for "${ref.characterName}". This character MUST look IDENTICAL in this new panel: same face, same hair, same clothing, same accessories. If the reference shows no glasses, do NOT add glasses. Do NOT change their outfit. Match everything exactly.`,
           });
         });
       } else {
@@ -542,16 +542,15 @@ function buildIllustrationPrompt({
   // Add reference image instructions if provided
   const hasReferenceImages = !!(referenceImages && referenceImages.length > 0);
   if (hasReferenceImages) {
-    prompt += `CHARACTER REFERENCE IMAGES:\n`;
-    prompt += `Reference images are provided below showing how specific characters have appeared in previous illustrations.\n`;
-    prompt += `CRITICAL: These characters MUST look IDENTICAL to their reference images in this new illustration.\n`;
-    prompt += `Match their:\n`;
-    prompt += `- Facial features, hair style, and hair color EXACTLY\n`;
-    prompt += `- Clothing and accessories EXACTLY\n`;
-    prompt += `- Body proportions and build EXACTLY\n`;
-    prompt += `- Color palette EXACTLY\n`;
-    prompt += `- Art style and line work EXACTLY\n`;
-    prompt += `\nThe reference images take HIGHEST PRIORITY for character appearance. If there's any conflict between the written description and the reference image, ALWAYS follow the reference image.\n\n`;
+    prompt += `CHARACTER REFERENCE IMAGES (HIGHEST PRIORITY):\n`;
+    prompt += `Reference images are provided below. These characters MUST look IDENTICAL in this new panel.\n`;
+    prompt += `MATCH EXACTLY:\n`;
+    prompt += `- Face, hair style, hair color, skin tone\n`;
+    prompt += `- SAME clothing/outfit as reference (do NOT change their clothes between panels)\n`;
+    prompt += `- SAME accessories: if reference shows glasses, ALWAYS include glasses. If NO glasses in reference, NEVER add glasses.\n`;
+    prompt += `- Body proportions and build\n`;
+    prompt += `- Art style and color palette\n`;
+    prompt += `\nDO NOT INVENT new clothing, accessories, or features not shown in the reference. The reference image is the single source of truth.\n\n`;
   }
 
   prompt += `CRITICAL REQUIREMENTS:
