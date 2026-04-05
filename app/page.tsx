@@ -604,6 +604,40 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Roast Your Friend Banner */}
+      <section className="relative overflow-hidden bg-neutral-900 py-0">
+        {/* Animated hazard tape background */}
+        <div className="absolute inset-0 opacity-10">
+          <div className="absolute inset-0 animate-tape-scroll" style={{
+            backgroundImage: 'repeating-linear-gradient(45deg, transparent, transparent 20px, #facc15 20px, #facc15 40px)',
+            backgroundSize: '56px 56px',
+          }} />
+        </div>
+
+        <div className="relative max-w-6xl mx-auto px-6 py-10 flex flex-col md:flex-row items-center justify-between gap-6">
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 bg-yellow-400 rounded-2xl flex items-center justify-center flex-shrink-0 rotate-3">
+              <span className="text-2xl">🔥</span>
+            </div>
+            <div>
+              <h2 className="text-xl md:text-2xl font-bold text-white" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>
+                Roast Your Friend
+              </h2>
+              <p className="text-neutral-400 text-sm md:text-base">
+                Turn someone into a comic book character. Upload their face. Watch them suffer.
+              </p>
+            </div>
+          </div>
+          <a
+            href="/roast"
+            className="group inline-flex items-center gap-2 px-6 py-3 bg-yellow-400 text-neutral-900 rounded-full font-bold text-sm hover:bg-yellow-300 transition-all hover:scale-105 flex-shrink-0"
+          >
+            Start Roasting
+            <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+          </a>
+        </div>
+      </section>
+
       {/* Comic Book Showcase - The Weaver's Mark */}
       <section className="py-20 px-6 bg-neutral-50 overflow-hidden">
         <div className="max-w-6xl mx-auto">

@@ -288,6 +288,16 @@ a, button {
   animation: bounceSlow 2s ease-in-out infinite;
 }
 
+@keyframes tapeScroll {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-56px); }
+}
+
+.animate-tape-scroll {
+  animation: tapeScroll 2s linear infinite;
+  width: calc(100% + 56px);
+}
+
 .animate-slide-up {
   animation: slideUp 0.5s ease-out forwards;
 }
