@@ -264,6 +264,16 @@ export async function POST(
                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     const pageSty = (chapter as any).pageStyle as string | undefined;
                     illustrationPrompt += buildPictureBookTextPrompt(chapter.text, textPos, pageSty);
+                } else if (isPictureBook) {
+                    // Picture book page with no text — this should not happen.
+                    // Use the chapter summary as fallback narration text
+                    const fallbackText = chapter.summary || chapter.title || '';
+                    if (fallbackText.trim()) {
+                        illustrationPrompt += buildPictureBookTextPrompt(fallbackText);
+                        console.warn(`[Visual Gen] Page ${chapter.number}: No text field found, using summary as fallback: "${fallbackText.substring(0, 50)}..."`);
+                    } else {
+                        illustrationPrompt += `\nCRITICAL: Do NOT include any text, words, letters, numbers, signs, labels, or written characters anywhere in the image.`;
+                    }
                 } else {
                     illustrationPrompt += `\nCRITICAL: Do NOT include any text, words, letters, numbers, signs, labels, or written characters anywhere in the image.`;
                 }

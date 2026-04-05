@@ -453,6 +453,15 @@ async function generateIllustrationsInParallel(
         const pageSty = (chapter as any).pageStyle as string | undefined;
         illustrationPrompt += buildPictureBookTextPrompt(chapter.text, textPos, pageSty);
         console.log(`Generating illustration with story text for page ${chapter.number} (position: ${textPos || 'default'})...`);
+      } else if (isPictureBook) {
+        // Picture book page with no text field — use summary as fallback
+        const fallbackText = chapter.summary || chapter.title || '';
+        if (fallbackText.trim()) {
+          illustrationPrompt += buildPictureBookTextPrompt(fallbackText);
+          console.warn(`[Generate] Page ${chapter.number}: No text field, using summary fallback: "${fallbackText.substring(0, 50)}..."`);
+        } else {
+          illustrationPrompt += `\n${NO_TEXT_INSTRUCTION}`;
+        }
       } else {
         // No text needed - add explicit no-text instruction
         illustrationPrompt += `\n${NO_TEXT_INSTRUCTION}`;
