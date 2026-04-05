@@ -371,6 +371,22 @@ function GenerateComicContent() {
             return;
           }
 
+          // Detect failed generation
+          if (book.status === 'failed') {
+            setIsGenerating(false);
+            setError(book.errorMessage || 'Generation failed. Please try again.');
+            clearInterval(pollInterval);
+            return;
+          }
+
+          // Detect preview_complete
+          if (book.status === 'preview_complete') {
+            setAllComplete(true);
+            setIsGenerating(false);
+            clearInterval(pollInterval);
+            return;
+          }
+
           // Update panels from DB illustrations
           if (book.illustrations) {
             const illustrationMap = new Map<number, any>();
@@ -795,8 +811,19 @@ function GenerateComicContent() {
           })()}
 
           {error && (
-            <div className="mb-8 p-4 bg-neutral-100 border border-neutral-300 rounded-xl text-center text-neutral-700">
-              {error}
+            <div className="mb-8 p-5 bg-red-50 border border-red-200 rounded-xl text-center">
+              <p className="text-neutral-900 font-medium mb-2">Generation Failed</p>
+              <p className="text-sm text-neutral-600 mb-4">{error}</p>
+              <button
+                onClick={() => {
+                  setError('');
+                  startBackgroundGeneration();
+                }}
+                className="inline-flex items-center gap-2 px-5 py-2.5 bg-neutral-900 text-white rounded-full text-sm font-medium hover:bg-neutral-800 transition-colors"
+              >
+                <RefreshCw className="h-4 w-4" />
+                Retry Generation
+              </button>
             </div>
           )}
 
