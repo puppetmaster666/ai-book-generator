@@ -81,6 +81,8 @@ function GenerateComicContent() {
   const [allComplete, setAllComplete] = useState(false);
   const [elapsedTime, setElapsedTime] = useState(0);
   const [isWaitingForOutline, setIsWaitingForOutline] = useState(false);
+  const [outlineElapsed, setOutlineElapsed] = useState(0);
+  const outlineTimerRef = useRef<NodeJS.Timeout | null>(null);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [showAdminForceConfirm, setShowAdminForceConfirm] = useState(false);
 
@@ -89,6 +91,24 @@ function GenerateComicContent() {
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const outlinePollRef = useRef<NodeJS.Timeout | null>(null);
   const outlineTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Outline preparation timer
+  useEffect(() => {
+    if (isWaitingForOutline) {
+      setOutlineElapsed(0);
+      outlineTimerRef.current = setInterval(() => {
+        setOutlineElapsed(prev => prev + 1);
+      }, 1000);
+    } else {
+      if (outlineTimerRef.current) {
+        clearInterval(outlineTimerRef.current);
+        outlineTimerRef.current = null;
+      }
+    }
+    return () => {
+      if (outlineTimerRef.current) clearInterval(outlineTimerRef.current);
+    };
+  }, [isWaitingForOutline]);
 
   // Timer effect: use server's generationStartedAt so it persists across page loads
   useEffect(() => {
@@ -517,6 +537,8 @@ function GenerateComicContent() {
             <p className="text-neutral-600 mb-4">
               Writing the script, planning scenes, and preparing panel layouts...
             </p>
+            {/* Elapsed timer */}
+            <p className="text-2xl font-mono font-bold text-neutral-900 mb-4">{formatTime(outlineElapsed)}</p>
             <div className="space-y-3 text-left max-w-sm mx-auto mb-6">
               <div className="flex items-center gap-3 text-sm">
                 <div className="w-6 h-6 rounded-full bg-neutral-900 text-white flex items-center justify-center text-xs font-bold">1</div>
@@ -533,7 +555,7 @@ function GenerateComicContent() {
             </div>
             <div className="flex items-center justify-center gap-2 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-4 py-2.5 max-w-sm mx-auto">
               <ShieldAlert className="h-4 w-4 flex-shrink-0" />
-              <span>This takes about 60-90 seconds. Please don&apos;t close this page.</span>
+              <span>Please don&apos;t close this page while we prepare your book.</span>
             </div>
           </div>
         </main>
