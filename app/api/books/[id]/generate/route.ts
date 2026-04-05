@@ -1185,23 +1185,26 @@ export async function POST(
     // Generate visual guides for illustrated books if not already done
     if (formatConfig && formatConfig.illustrationsPerChapter > 0 && book.artStyle && !characterVisualGuide) {
       try {
-        console.log('Generating character visual guide for consistency...');
-        characterVisualGuide = await generateCharacterVisualGuide({
-          title: book.title,
-          genre: book.genre,
-          artStyle: book.artStyle,
-          characters,
-        });
-
-        console.log('Generating visual style guide for consistency...');
-        visualStyleGuide = await generateVisualStyleGuide({
-          title: book.title,
-          genre: book.genre,
-          artStyle: book.artStyle,
-          artStylePrompt: artStyleConfig?.prompt || 'professional illustration',
-          premise: book.premise,
-          bookFormat: book.bookFormat,
-        });
+        // Generate character guide and visual style guide IN PARALLEL (saves ~12s)
+        console.log('Generating character visual guide + style guide in parallel...');
+        const [charGuideResult, styleGuideResult] = await Promise.all([
+          generateCharacterVisualGuide({
+            title: book.title,
+            genre: book.genre,
+            artStyle: book.artStyle,
+            characters,
+          }),
+          generateVisualStyleGuide({
+            title: book.title,
+            genre: book.genre,
+            artStyle: book.artStyle,
+            artStylePrompt: artStyleConfig?.prompt || 'professional illustration',
+            premise: book.premise,
+            bookFormat: book.bookFormat,
+          }),
+        ]);
+        characterVisualGuide = charGuideResult;
+        visualStyleGuide = styleGuideResult;
 
         // Generate character portraits for consistency (AFTER visual guide is created)
         // For unpaid previews: generate face-only portraits (saves ~1 min vs full portraits)

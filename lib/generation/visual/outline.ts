@@ -1,4 +1,4 @@
-import { getGeminiPro } from '../shared/api-client';
+import { getGeminiFlash } from '../shared/api-client';
 import { parseJSONFromResponse } from '../shared/json-utils';
 import { ContentRating, getContentRatingInstructions, detectLanguageInstruction, PUNCTUATION_RULES } from '../shared/writing-quality';
 import { buildNameGuidancePrompt, BANNED_OVERUSED_NAMES } from '../shared/name-variety';
@@ -133,7 +133,7 @@ ${PUNCTUATION_RULES}
 
 Write the complete story now. Make it engaging, unique, and memorable. Include actual dialogue with quotation marks.`;
 
-  const result = await getGeminiPro().generateContent(prompt);
+  const result = await getGeminiFlash().generateContent(prompt);
   const story = (result.response.text() || '').trim();
 
   console.log(`Generated narrative story: ${story.split(/\s+/).length} words`);
@@ -507,7 +507,7 @@ Output ONLY valid JSON with EXACTLY ${sanitizedBookData.targetChapters} chapters
         currentPrompt += `\n\nIMPORTANT SAFETY OVERRIDE: The previous attempt was blocked by content safety filters. You MUST write family-friendly scene descriptions. Use euphemisms and focus on atmosphere rather than graphic details. Keep all content suitable for a general audience.`;
       }
 
-      const result = await getGeminiPro().generateContent(currentPrompt);
+      const result = await getGeminiFlash().generateContent(currentPrompt);
       const response = result.response.text();
 
       // Log finish reason for debugging

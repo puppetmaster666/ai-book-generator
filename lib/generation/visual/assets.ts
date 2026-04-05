@@ -159,15 +159,13 @@ export async function generateCharacterPortraits(data: {
   facePortrait: string;  // Base64 data URL
   fullBodyPortrait: string;  // Base64 data URL
 }>> {
-  const portraits = [];
-
   const modeLabel = data.faceOnly ? '(face only mode)' : '(face + full body)';
-  console.log(`[Portrait Gen] Generating ${data.characterVisualGuide.characters.length} character portraits ${modeLabel}...`);
+  console.log(`[Portrait Gen] Generating ${data.characterVisualGuide.characters.length} character portraits IN PARALLEL ${modeLabel}...`);
 
-  for (const character of data.characterVisualGuide.characters) {
+  // Generate ALL character portraits in parallel (not sequential)
+  const portraitPromises = data.characterVisualGuide.characters.map(async (character) => {
     console.log(`[Portrait Gen] Creating portraits for "${character.name}"...`);
 
-    // Generate face portrait (head and shoulders, neutral expression)
     const faceScene = `Professional character portrait - CLOSE-UP of head and shoulders only, facing forward directly at camera, neutral calm expression, clean solid color background.
 
 CHARACTER: ${character.name}
@@ -190,30 +188,27 @@ CRITICAL REQUIREMENTS:
       artStyle: data.artStyle,
       bookTitle: data.title,
       chapterTitle: `${character.name} Portrait`,
-      bookFormat: 'square', // Square format for portraits
-      characterVisualGuide: undefined, // Don't pass guide to avoid recursion
+      bookFormat: 'square',
+      characterVisualGuide: undefined,
       visualStyleGuide: undefined,
-      referenceImages: undefined, // No references for portraits - this IS the reference
+      referenceImages: undefined,
     });
 
     if (!faceResult) {
       console.error(`[Portrait Gen] FAILED to generate face portrait for "${character.name}"`);
-      continue;
+      return null;
     }
 
     console.log(`[Portrait Gen] Face portrait for "${character.name}"`);
 
-    // Skip full body portrait if faceOnly mode (saves ~20 seconds per character)
     if (data.faceOnly) {
-      portraits.push({
+      return {
         characterName: character.name,
         facePortrait: faceResult.imageUrl,
-        fullBodyPortrait: faceResult.imageUrl, // Use face as fallback for full body
-      });
-      continue;
+        fullBodyPortrait: faceResult.imageUrl,
+      };
     }
 
-    // Generate full body portrait (standing pose, neutral stance)
     const fullBodyScene = `Professional character reference sheet - FULL BODY shot showing character from head to toe, standing in neutral pose, facing forward, clean solid color background.
 
 CHARACTER: ${character.name}
@@ -238,7 +233,7 @@ CRITICAL REQUIREMENTS:
       artStyle: data.artStyle,
       bookTitle: data.title,
       chapterTitle: `${character.name} Full Body Reference`,
-      bookFormat: 'square', // Square format for portraits
+      bookFormat: 'square',
       characterVisualGuide: undefined,
       visualStyleGuide: undefined,
       referenceImages: undefined,
@@ -246,25 +241,24 @@ CRITICAL REQUIREMENTS:
 
     if (!fullBodyResult) {
       console.error(`[Portrait Gen] FAILED to generate full body portrait for "${character.name}"`);
-      // Still save the face portrait if we have it
-      if (faceResult) {
-        portraits.push({
-          characterName: character.name,
-          facePortrait: faceResult.imageUrl,
-          fullBodyPortrait: faceResult.imageUrl, // Use face as fallback
-        });
-      }
-      continue;
+      return {
+        characterName: character.name,
+        facePortrait: faceResult.imageUrl,
+        fullBodyPortrait: faceResult.imageUrl,
+      };
     }
 
     console.log(`[Portrait Gen] Full body portrait for "${character.name}"`);
 
-    portraits.push({
+    return {
       characterName: character.name,
       facePortrait: faceResult.imageUrl,
       fullBodyPortrait: fullBodyResult.imageUrl,
-    });
-  }
+    };
+  });
+
+  const results = await Promise.all(portraitPromises);
+  const portraits = results.filter((p): p is NonNullable<typeof p> => p !== null);
 
   console.log(`[Portrait Gen] Completed ${portraits.length}/${data.characterVisualGuide.characters.length} character portraits`);
   return portraits;
