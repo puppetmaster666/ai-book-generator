@@ -45,7 +45,7 @@ const SEVERITY_LABELS: Record<number, { label: string; emoji: string; descriptio
   1: { label: 'Friendly', emoji: '😄', description: 'Light teasing, nothing mean' },
   2: { label: 'Spicy', emoji: '🌶️', description: 'Embarrassing but still funny' },
   3: { label: 'Brutal', emoji: '💀', description: 'No mercy, real roast energy' },
-  4: { label: 'Nuclear', emoji: '☢️', description: 'Absolutely unhinged, nothing is off limits' },
+  4: { label: 'Nuclear', emoji: '☢️', description: 'Comedy Central Roast level. They will never forgive you.' },
 };
 
 const ART_STYLES = [
@@ -133,13 +133,39 @@ export default function RoastPage() {
         return `${i + 1}. ${parts.join(', ')}`;
       }).join('\n');
 
+      const nuclearPrompt = `NUCLEAR ROAST MODE. Channel the energy of Jeff Ross, Greg Giraldo, Anthony Jeselnik, and Nikki Glaser at their absolute cruelest. This must be the kind of roast that makes people gasp before they laugh.
+
+ROAST WRITING RULES:
+1. SPECIFICITY OVER GENERALITY: Every roast line must feel custom-built for THIS person. Never write a joke that could apply to anyone. Use their name, their personality traits, their habits.
+2. ATTACK THE IDENTITY, NOT THE SURFACE: The meanest roasts target how someone sees themselves. Reframe their achievements as failures. Question their confidence. Imply their friends are pretending to like them.
+3. ZERO SOFTENING: Never write "just kidding," "but seriously," or any hedge. Every line is delivered as absolute truth. No safety net. No winks.
+4. STACK HITS ON THE SAME WOUND: Do not roast one thing and move on. Hit it, then hit it again from a different angle, then a third time. The repetition says "this is not a joke, this is just the truth."
+5. USE COMPLIMENT STRUCTURE: The cruelest roasts sound nice on the surface. "I admire your confidence" is devastating in context. "You are genuinely the most interesting person in any room where you are the only person."
+6. BE FORENSIC: Write as if you have studied the target's entire life, apartment, search history, and dating profile. The invasion of privacy is what stings.
+7. ESCALATE WITHIN EACH SECTION: Each joke must be meaner than the last. The first opens the wound, the second pours salt, the third lights it on fire.
+8. CREATE VIVID IMAGES: "You look like a thumb with a LinkedIn profile" beats "you are boring." Visual insults stick.
+9. USE THE GENEROUS INTERPRETATION TRICK: Give them every benefit of the doubt and make it STILL devastating. "You are doing the best you can. And the fact that THIS is the best you can is... remarkable."
+10. TARGET THE GAP between self-image and reality. Expose the distance between how they see themselves and how the world sees them.
+
+TECHNIQUES TO USE:
+- The Compliment Bomb: Start with genuine praise, then detonate. "You are one of the nicest people I know. And I mean that in the saddest way possible."
+- The False Defense: "Everyone is being so mean. Leave them alone. It is not their fault they peaked in sixth grade."
+- The Comparison Kill: "You dress like your outfit was described to a police sketch artist." "You have the energy of a Craigslist couch listed as 'still good.'"
+- The Future Forecast: Predict a bleak future with comedic specificity.
+- The Obituary: "When they die, the priest at their funeral will struggle. He will say 'they were... present. Definitely present in a lot of rooms.'"
+- The Confidence Autopsy: Attack their right to feel good about themselves. "The amount of confidence you have is one of the great mysteries of our time."
+- The Dating Profile Demolition: "You are the kind of person people settle for after their therapist convinces them their standards are too high."
+- The Life Summary: "If your life was a movie, it would go straight to DVD. Not streaming. Physical DVD. At a gas station."
+
+Make every chapter a multi-hit assault. No mercy. No redemption arc. Maximum vulgarity, maximum embarrassment. Adult humor, crude jokes, humiliating situations. The goal: jokes they will think about at 3 AM.`;
+
       const severityPrompt = severity === 1
         ? 'Keep it light and playful. Gentle teasing only.'
         : severity === 2
           ? 'Make it embarrassing and spicy but still funny. Push boundaries a little.'
           : severity === 3
             ? 'Full roast mode. No mercy. Make it brutal and hilarious. Dark humor welcome.'
-            : 'Absolutely unhinged. Nothing is off limits. Maximum vulgarity, maximum embarrassment. Think comedy roast meets Hangover movie. Adult humor, crude jokes, humiliating situations.';
+            : nuclearPrompt;
 
       const idea = scenario.trim()
         ? `ROAST COMIC: ${scenario.trim()}\n\nSeverity level: ${severityInfo.label} (${severityInfo.description})\n${severityPrompt}\n\nCharacters (these are real people being roasted, make it personal and funny):\n${charDescriptions}`
