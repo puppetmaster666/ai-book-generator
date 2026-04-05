@@ -198,12 +198,12 @@ if (genDropdownRef.current && !genDropdownRef.current.contains(event.target as N
               <div className="roast-rays" />
               <div className="roast-vignette" />
               <span
-                className="roast-text relative z-20 text-white uppercase tracking-wider drop-shadow-[0_4px_10px_rgba(0,0,0,1)]"
+                className="roast-text relative z-20 text-black uppercase tracking-[0.2em]"
                 style={{
                   fontFamily: "'Oswald', sans-serif",
-                  fontWeight: 700,
-                  fontSize: '13px',
-                  WebkitTextStroke: '0.5px black',
+                  fontWeight: 900,
+                  fontSize: '14px',
+                  WebkitTextStroke: '0.3px black',
                 }}
               >
                 ROAST SOMEONE
@@ -761,12 +761,12 @@ if (genDropdownRef.current && !genDropdownRef.current.contains(event.target as N
                 <div className="roast-rays" />
                 <div className="roast-vignette" />
                 <span
-                  className="roast-text relative z-20 text-white uppercase tracking-wider drop-shadow-[0_4px_10px_rgba(0,0,0,1)]"
+                  className="roast-text relative z-20 text-black uppercase tracking-[0.2em]"
                   style={{
                     fontFamily: "'Oswald', sans-serif",
-                    fontWeight: 700,
-                    fontSize: '16px',
-                    WebkitTextStroke: '0.5px black',
+                    fontWeight: 900,
+                    fontSize: '18px',
+                    WebkitTextStroke: '0.3px black',
                   }}
                 >
                   ROAST SOMEONE

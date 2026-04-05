@@ -323,7 +323,7 @@ a, button {
 .roast-rays {
   position: absolute;
   inset: -200%;
-  background: repeating-conic-gradient(from 0deg, #000 0deg 15deg, #fff 15deg 30deg);
+  background: repeating-conic-gradient(from 0deg, #facc15 0deg 15deg, #a3e635 15deg 30deg);
   animation: roastSpin 20s linear infinite;
 }
 
@@ -336,7 +336,7 @@ a, button {
 .roast-vignette {
   position: absolute;
   inset: 0;
-  box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.8);
+  box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.3);
   pointer-events: none;
   border-radius: 9999px;
 }
