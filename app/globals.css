@@ -303,24 +303,48 @@ a, button {
   position: relative;
   transform-style: preserve-3d;
   transform: perspective(500px) rotateX(0deg) rotateY(0deg);
-  transition: transform 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94), box-shadow 0.25s ease;
+  transition: transform 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94), box-shadow 0.25s ease, border-color 0.25s ease;
   box-shadow:
-    0 6px 0 0 #92400e,
-    0 8px 16px rgba(0, 0, 0, 0.35);
+    0 6px 0 0 #1a1a1a,
+    0 8px 20px rgba(0, 0, 0, 0.5);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.roast-btn::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: 14px;
+  padding: 2px;
+  background: linear-gradient(135deg, #fbbf24, #fef3c7, #f59e0b, #fef9c3, #eab308);
+  background-size: 300% 300%;
+  animation: shimmerBorder 3s ease infinite;
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
 }
 
 .roast-btn:hover {
   transform: perspective(500px) rotateX(-4deg) rotateY(2deg) translateY(-2px);
   box-shadow:
-    0 8px 0 0 #92400e,
-    0 12px 24px rgba(0, 0, 0, 0.4);
+    0 8px 0 0 #1a1a1a,
+    0 14px 28px rgba(0, 0, 0, 0.5),
+    0 0 20px rgba(250, 204, 21, 0.3);
 }
 
 .roast-btn:active {
   transform: perspective(500px) rotateX(0deg) rotateY(0deg) translateY(2px);
   box-shadow:
-    0 2px 0 0 #92400e,
-    0 4px 8px rgba(0, 0, 0, 0.3);
+    0 2px 0 0 #1a1a1a,
+    0 4px 8px rgba(0, 0, 0, 0.4);
+}
+
+@keyframes shimmerBorder {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
 }
 
 @keyframes tapeScrollBtn {
