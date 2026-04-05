@@ -48,6 +48,12 @@ The app uses a neutral-first design system. Do not introduce new colors outside 
 - Use commas, periods, semicolons, colons, or rewrite the sentence instead
 - This applies to ALL files: .ts, .tsx, .md, prompts, templates, everything
 
+## Test Account
+- **ffabrevoie@gmail.com** is the permanent test account
+- It auto-resets to first-timer state on every sign-in (freeBookUsed=false, credits=0, all books deleted)
+- Use this account to test the complete new-user flow without creating new accounts
+- The reset logic is in `lib/auth.ts` signIn callback
+
 ## Terminology
 - **"Image books"** means ALL book types that generate images: children's picture books, comics, graphic novels, adult comics, illustrated novels. Any book format that produces illustrations/panels.
 - When the user says "image books", apply changes to ALL visual generation pipelines (picture-book-pipeline, comic-pipeline, generate-visual, generate-illustration, etc.)

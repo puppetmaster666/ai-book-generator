@@ -79,6 +79,29 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     },
     // Auto-verify email for OAuth users (Google verifies emails)
     async signIn({ user, account }) {
+      // TEST ACCOUNT: Reset to first-timer state on every sign-in
+      // This lets us test the full new-user flow without creating new accounts
+      const TEST_ACCOUNTS = ['ffabrevoie@gmail.com'];
+      if (user.email && TEST_ACCOUNTS.includes(user.email.toLowerCase())) {
+        try {
+          const testUser = await prisma.user.findUnique({ where: { email: user.email } });
+          if (testUser) {
+            await prisma.$transaction([
+              prisma.illustration.deleteMany({ where: { book: { userId: testUser.id } } }),
+              prisma.chapter.deleteMany({ where: { book: { userId: testUser.id } } }),
+              prisma.book.deleteMany({ where: { userId: testUser.id } }),
+              prisma.user.update({
+                where: { id: testUser.id },
+                data: { freeBookUsed: false, freeCredits: 0, credits: 0, plan: 'free' },
+              }),
+            ]);
+            console.log(`[Auth] Test account ${user.email} reset to first-timer state`);
+          }
+        } catch (e) {
+          console.error('[Auth] Failed to reset test account:', e);
+        }
+      }
+
       // If signing in via OAuth provider, ensure email is marked as verified
       if (account?.provider === 'google' && user.email) {
         try {
