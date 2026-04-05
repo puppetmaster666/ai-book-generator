@@ -7,7 +7,7 @@ import Image from 'next/image';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import ConfirmModal from '@/components/ConfirmModal';
-import { Loader2, Check, X, Download, AlertCircle, RefreshCw, StopCircle, Clock, ShieldAlert, Zap, BookOpen, ChevronDown } from 'lucide-react';
+import { Loader2, Check, X, Download, AlertCircle, RefreshCw, StopCircle, Clock, ShieldAlert, Zap, BookOpen, ChevronDown, Lock } from 'lucide-react';
 
 // Format elapsed time as MM:SS
 function formatTime(seconds: number): string {
@@ -605,12 +605,16 @@ function GenerateComicContent() {
           <div className="mb-8 bg-white rounded-2xl p-6 border border-neutral-200">
             <div className="flex items-center justify-between text-sm text-neutral-600 mb-2">
               <span>Progress</span>
-              <span>{doneCount} / {panels.length} {bookData?.dialogueStyle === 'bubbles' ? 'panels' : 'panels'} complete</span>
+              {bookData?.paymentStatus === 'free_preview' ? (
+                <span>{Math.min(doneCount, 5)} / 5 free preview panels</span>
+              ) : (
+                <span>{doneCount} / {panels.length} panels complete</span>
+              )}
             </div>
             <div className="h-3 bg-neutral-200 rounded-full overflow-hidden">
               <div
                 className="h-full bg-neutral-900 transition-all duration-300"
-                style={{ width: `${(doneCount / panels.length) * 100}%` }}
+                style={{ width: `${bookData?.paymentStatus === 'free_preview' ? (Math.min(doneCount, 5) / 5) * 100 : (doneCount / panels.length) * 100}%` }}
               />
             </div>
             {(generatingCount > 0 || errorCount > 0) && (
@@ -767,28 +771,34 @@ function GenerateComicContent() {
 
           {/* Panel Grid */}
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-            {panels.map((panel, index) => (
+            {panels.map((panel, index) => {
+              const isFreePreview = bookData?.paymentStatus === 'free_preview';
+              const FREE_PANEL_LIMIT = 5;
+              const isLocked = isFreePreview && panel.number > FREE_PANEL_LIMIT;
+
+              return (
               <div
                 key={panel.number}
-                className="bg-white rounded-xl overflow-hidden border border-neutral-200 shadow-sm"
+                className={`bg-white rounded-xl overflow-hidden border shadow-sm ${isLocked ? 'border-neutral-100 opacity-60' : 'border-neutral-200'}`}
               >
                 {/* Panel Image Area */}
                 <div className="aspect-[3/4] bg-neutral-100 relative">
-                  {panel.status === 'pending' && (
+                  {isLocked ? (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-neutral-50">
+                      <Lock className="h-6 w-6 text-neutral-300 mb-2" />
+                      <span className="text-xs text-neutral-400">Locked</span>
+                    </div>
+                  ) : panel.status === 'pending' ? (
                     <div className="absolute inset-0 flex flex-col items-center justify-center text-neutral-400">
                       <span className="text-3xl font-bold mb-2">{panel.number}</span>
                       <span className="text-xs">Waiting</span>
                     </div>
-                  )}
-
-                  {panel.status === 'generating' && (
+                  ) : panel.status === 'generating' ? (
                     <div className="absolute inset-0 flex flex-col items-center justify-center bg-neutral-50">
                       <Loader2 className="h-8 w-8 animate-spin text-neutral-900 mb-2" />
                       <span className="text-xs text-neutral-600">Generating...</span>
                     </div>
-                  )}
-
-                  {panel.status === 'done' && panel.imageUrl && (
+                  ) : panel.status === 'done' && panel.imageUrl ? (
                     <Image
                       src={panel.imageUrl}
                       alt={`Panel ${panel.number}: ${panel.scene?.description || 'Illustration'}`}
@@ -796,9 +806,7 @@ function GenerateComicContent() {
                       className="object-cover"
                       unoptimized
                     />
-                  )}
-
-                  {panel.status === 'error' && (
+                  ) : panel.status === 'error' ? (
                     <div className="absolute inset-0 flex flex-col items-center justify-center p-4 bg-neutral-100">
                       <X className="h-8 w-8 text-neutral-500 mb-2" />
                       <span className="text-xs text-neutral-600 text-center line-clamp-2">
@@ -812,7 +820,7 @@ function GenerateComicContent() {
                         Retry
                       </button>
                     </div>
-                  )}
+                  ) : null}
                 </div>
 
                 {/* Panel Info */}
@@ -907,8 +915,34 @@ function GenerateComicContent() {
                   )}
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
+
+          {/* Free Preview Upgrade CTA - shows after 5 panels are done */}
+          {bookData?.paymentStatus === 'free_preview' && doneCount >= 5 && !isGenerating && (
+            <div className="mt-8 bg-gradient-to-br from-neutral-900 to-neutral-800 rounded-2xl p-8 text-white text-center">
+              <h2 className="text-2xl font-bold mb-2" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>
+                Like what you see?
+              </h2>
+              <p className="text-neutral-300 mb-1">
+                You&apos;ve previewed {doneCount} of {panels.length} panels.
+              </p>
+              <p className="text-neutral-400 text-sm mb-6">
+                Unlock the complete book with all {panels.length} illustrated panels.
+              </p>
+              <Link
+                href={`/review?bookId=${bookId}`}
+                className="inline-flex items-center gap-2 px-8 py-4 bg-white text-neutral-900 rounded-full hover:bg-neutral-100 font-medium transition-colors text-lg"
+              >
+                <Zap className="h-5 w-5" />
+                Finish My Book: $3.99
+              </Link>
+              <p className="text-neutral-500 text-xs mt-3">
+                Limited time discount
+              </p>
+            </div>
+          )}
 
           {/* Instructions */}
           {pendingCount === panels.length && !isGenerating && (
