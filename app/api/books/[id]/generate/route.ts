@@ -851,8 +851,9 @@ export async function POST(
         }
       } else if (useVisualFlow && dialogueStyle) {
         // For free preview, only target 5 panels. Full book uses the preset's panel count.
-        const targetPanelCount = isPaid ? book.targetChapters : 5;
         const isComicStyle = dialogueStyle === 'bubbles';
+        const maxVisualPanels = isComicStyle ? 24 : 20;
+        const targetPanelCount = isPaid ? Math.min(book.targetChapters, maxVisualPanels) : 5;
 
         // Visual outline with progressive content softening on safety blocks
         const MAX_VISUAL_OUTLINE_ATTEMPTS = 3;
@@ -1325,7 +1326,9 @@ export async function POST(
       // PREVIEW LIMIT: Unpaid visual books get max 5 panels (free preview)
       // This prevents Vercel timeout from trying to generate 20-24 panels
       const FREE_PREVIEW_PANELS = 5;
-      const maxPanels = isPaid ? visualChapters.length : FREE_PREVIEW_PANELS;
+      const isComicFlow = dialogueStyle === 'bubbles';
+      const maxVisualCap = isComicFlow ? 24 : 20;
+      const maxPanels = isPaid ? Math.min(visualChapters.length, maxVisualCap) : FREE_PREVIEW_PANELS;
       const chaptersToGenerate = visualChapters.slice(startChapter - 1, maxPanels);
 
       if (!isPaid && visualChapters.length > FREE_PREVIEW_PANELS) {
@@ -1371,7 +1374,7 @@ export async function POST(
 
       // Step 2b: Save chapters with their illustrations
       // For unpaid books, only save up to maxPanels (preview limit)
-      const panelsToSave = isPaid ? outline.chapters.length : maxPanels;
+      const panelsToSave = isPaid ? Math.min(outline.chapters.length, maxVisualCap) : maxPanels;
       for (let i = startChapter; i <= panelsToSave; i++) {
         const chapterPlan = visualChapters[i - 1];
 

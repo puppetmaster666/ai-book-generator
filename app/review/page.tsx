@@ -313,9 +313,13 @@ function ReviewContent() {
             setIsSaving(false);
             return;
           }
-          // Validate chapters (min 3, max 50)
-          if (editTargetChapters < 3 || editTargetChapters > 50) {
-            setSaveError('Chapter count must be between 3 and 50');
+          // Validate chapters (min 3, max 50; visual books capped at 24)
+          const isVisualBook = book.bookFormat === 'picture_book';
+          const maxChapters = isVisualBook ? 24 : 50;
+          if (editTargetChapters < 3 || editTargetChapters > maxChapters) {
+            setSaveError(isVisualBook
+              ? 'Panel count must be between 3 and 24'
+              : 'Chapter count must be between 3 and 50');
             setIsSaving(false);
             return;
           }
