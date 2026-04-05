@@ -55,19 +55,24 @@ export async function POST(
       return NextResponse.json({ error: 'Book not found' }, { status: 404 });
     }
 
-    // Verify all panels are generated
-    const expectedPanels = book.outline
-      ? ((book.outline as { chapters: unknown[] }).chapters || []).length
-      : book.targetChapters;
-
+    // Count generated panels
     const generatedPanels = book.chapters.filter(ch =>
       ch.illustrations && ch.illustrations.length > 0
     ).length;
 
+    // For free preview, allow assembling with just the preview panels (5)
+    // For paid books, require all panels
+    const isFreePreview = book.paymentStatus === 'free_preview';
+    const expectedPanels = isFreePreview
+      ? Math.min(5, book.targetChapters)
+      : (book.outline
+          ? ((book.outline as { chapters: unknown[] }).chapters || []).length
+          : book.targetChapters);
+
     if (generatedPanels < expectedPanels) {
       return NextResponse.json(
         {
-          error: 'Not all panels generated',
+          error: 'Not all panels generated yet',
           expected: expectedPanels,
           generated: generatedPanels,
         },
@@ -75,11 +80,16 @@ export async function POST(
       );
     }
 
-    console.log(`Assembling book ${id}: ${generatedPanels} panels complete`);
+    console.log(`Assembling book ${id}: ${generatedPanels} panels complete${isFreePreview ? ' (free preview)' : ''}`);
+
+    // For free preview, only include chapters that have illustrations
+    const chaptersToAssemble = isFreePreview
+      ? book.chapters.filter(ch => ch.illustrations && ch.illustrations.length > 0)
+      : book.chapters;
 
     // Calculate total words
     let totalWords = 0;
-    for (const chapter of book.chapters) {
+    for (const chapter of chaptersToAssemble) {
       totalWords += countWords(chapter.content);
     }
 
@@ -112,16 +122,16 @@ export async function POST(
       // Continue without cover — the book is still complete
     }
 
-    // Mark as completed
+    // Mark as completed (or preview_complete for free previews)
     await prisma.book.update({
       where: { id },
       data: {
-        status: 'completed',
+        status: isFreePreview ? 'preview_complete' : 'completed',
         coverImageUrl,
         coverPrompt,
         totalWords,
-        totalChapters: book.chapters.length,
-        currentChapter: book.chapters.length,
+        totalChapters: chaptersToAssemble.length,
+        currentChapter: chaptersToAssemble.length,
         completedAt: new Date(),
       },
     });
