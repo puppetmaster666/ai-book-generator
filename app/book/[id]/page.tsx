@@ -195,6 +195,7 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
   const [showFirstBookDiscount, setShowFirstBookDiscount] = useState(false);
   const [isFirstCompletedBook, setIsFirstCompletedBook] = useState(false);
   const [premiseExpanded, setPremiseExpanded] = useState(false);
+  const [lightboxImage, setLightboxImage] = useState<string | null>(null);
   const [chapterStatuses, setChapterStatuses] = useState<ChapterCardStatus[]>([]);
   const [serverStartTime, setServerStartTime] = useState<Date | null>(null);
   const [toast, setToast] = useState<{ title: string; message: string; type: 'error' | 'success' | 'info' | 'warning' } | null>(null);
@@ -2426,7 +2427,7 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
                         <div
                           key={illustration.id}
                           className="aspect-square rounded-xl overflow-hidden bg-neutral-100 border border-neutral-200 hover:border-neutral-400 transition-colors cursor-pointer group"
-                          onClick={() => router.push(`/book/${id}/image/${illustration.id}`)}
+                          onClick={() => setLightboxImage(illustration.imageUrl!)}
                         >
                           <img
                             src={illustration.imageUrl!}
@@ -2499,6 +2500,27 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
           currentChapter={book.currentChapter}
           bookFormat={book.bookFormat}
         />
+      )}
+
+      {/* Image Lightbox */}
+      {lightboxImage && (
+        <div
+          className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4 cursor-pointer"
+          onClick={() => setLightboxImage(null)}
+        >
+          <button
+            onClick={() => setLightboxImage(null)}
+            className="absolute top-4 right-4 p-2 bg-white/10 hover:bg-white/20 rounded-full transition-colors"
+          >
+            <X className="h-6 w-6 text-white" />
+          </button>
+          <img
+            src={lightboxImage}
+            alt="Full size illustration"
+            className="max-w-full max-h-[90vh] object-contain rounded-lg"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
       )}
     </div>
   );
