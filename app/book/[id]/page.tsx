@@ -1202,25 +1202,61 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
             <p className="text-neutral-600 text-lg font-medium">
               {redirectingToComic ? 'Preparing your illustrated book...' : 'Loading your book...'}
             </p>
-            {redirectingToComic && (
-              <>
-                <div className="flex items-center justify-center gap-2 mt-4">
-                  <Clock className="h-5 w-5 text-neutral-500" />
-                  <span className="font-mono text-2xl font-bold text-neutral-900">{formatElapsedTime(elapsedTime)}</span>
-                </div>
-                <p className="text-sm text-neutral-500 mt-3">
-                  Creating story outline, character designs, and visual style guide
-                </p>
-                <p className="text-xs text-neutral-400 mt-1">
-                  This usually takes 3-5 minutes
-                </p>
-                <div className="mt-6 p-4 bg-neutral-50 rounded-xl border border-neutral-100">
-                  <p className="text-sm text-neutral-600">
-                    You can leave this page. Your book will keep generating in the background and you can check progress from the header.
-                  </p>
-                </div>
-              </>
-            )}
+            {redirectingToComic && (() => {
+              const elapsed = elapsedTime;
+              const currentStep = elapsed < 20 ? 1 : elapsed < 50 ? 2 : elapsed < 80 ? 3 : 4;
+              const progressPct = Math.min(95, Math.round((elapsed / 120) * 100));
+              const steps = [
+                { num: 1, label: 'Expanding your idea into a story' },
+                { num: 2, label: 'Designing characters and visual style' },
+                { num: 3, label: 'Planning scenes and panel layouts' },
+                { num: 4, label: 'Preparing for illustration' },
+              ];
+
+              return (
+                <>
+                  <span className="font-mono text-2xl font-bold text-neutral-900 mt-4 block">{formatElapsedTime(elapsed)}</span>
+
+                  {/* Progress bar */}
+                  <div className="mt-4 w-full max-w-xs mx-auto">
+                    <div className="h-2 bg-neutral-200 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-neutral-900 transition-all duration-1000 ease-out"
+                        style={{ width: `${Math.max(progressPct, 5)}%` }}
+                      />
+                    </div>
+                    <p className="text-xs text-neutral-400 mt-1">{progressPct}%</p>
+                  </div>
+
+                  {/* Step indicators */}
+                  <div className="mt-6 space-y-3 text-left max-w-xs mx-auto">
+                    {steps.map(s => {
+                      const isDone = currentStep > s.num;
+                      const isActive = currentStep === s.num;
+                      return (
+                        <div key={s.num} className="flex items-center gap-3 text-sm">
+                          <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold transition-colors ${
+                            isDone ? 'bg-neutral-900 text-white' : isActive ? 'bg-neutral-900 text-white' : 'bg-neutral-100 text-neutral-400'
+                          }`}>
+                            {isDone ? <Check className="h-3.5 w-3.5" /> : s.num}
+                          </div>
+                          <span className={isDone ? 'text-neutral-400 line-through' : isActive ? 'text-neutral-900 font-medium' : 'text-neutral-400'}>
+                            {s.label}
+                          </span>
+                          {isActive && <Loader2 className="h-3.5 w-3.5 animate-spin text-neutral-400" />}
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  <div className="mt-6 p-4 bg-neutral-50 rounded-xl border border-neutral-100">
+                    <p className="text-sm text-neutral-600">
+                      You can leave this page. Your book will keep generating in the background.
+                    </p>
+                  </div>
+                </>
+              );
+            })()}
           </div>
         </div>
       </div>
