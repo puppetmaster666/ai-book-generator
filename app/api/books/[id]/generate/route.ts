@@ -391,6 +391,8 @@ async function generateIllustrationsInParallel(
     visualStyleGuide?: VisualStyleGuide;
     contentRating?: ContentRating;
     characterPortraits?: CharacterPortrait[];
+    protagonistStyled?: string | null;
+    protagonistDescription?: string | null;
   }
 ): Promise<Map<number, { imageUrl: string; altText: string; width: number; height: number }>> {
   const results = new Map<number, { imageUrl: string; altText: string; width: number; height: number }>();
@@ -470,11 +472,30 @@ async function generateIllustrationsInParallel(
 
       // Build character reference images from portraits for consistency
       const referenceImages: { characterName: string; imageData: string }[] = [];
+      const MAX_REFS = 2;
+      let refCount = 0;
+
+      // PRIORITY 0: Protagonist photo (uploaded by user)
+      const mainCharName = bookData.characters[0]?.name;
+      const sceneCharsLower = chapter.scene.characters?.map((c: string) => c.toLowerCase()) || [];
+      if (bookData.protagonistStyled && mainCharName && sceneCharsLower.includes(mainCharName.toLowerCase())) {
+        referenceImages.push({
+          characterName: `${mainCharName} (MUST match this face exactly)`,
+          imageData: bookData.protagonistStyled,
+        });
+        refCount++;
+        if (bookData.protagonistDescription) {
+          illustrationPrompt += `\n\nPROTAGONIST REFERENCE (CRITICAL - match this person's likeness exactly):\n${bookData.protagonistDescription}\nThe character "${mainCharName}" MUST look like the reference image provided. This is based on a real person's photo.`;
+        }
+        console.log(`[ParallelGen] Panel ${chapter.number}: Using protagonist photo reference for "${mainCharName}"`);
+      }
+
+      // PRIORITY 1: Character portraits (generated)
       if (bookData.characterPortraits && chapter.scene.characters) {
-        const MAX_REFS = 2; // Limit to avoid payload size issues
-        let refCount = 0;
         for (const charName of chapter.scene.characters) {
           if (refCount >= MAX_REFS) break;
+          // Skip protagonist if already added from photo
+          if (bookData.protagonistStyled && mainCharName && charName.toLowerCase() === mainCharName.toLowerCase()) continue;
           const portrait = bookData.characterPortraits.find(
             p => p.characterName.toLowerCase() === charName.toLowerCase()
           );
@@ -1335,19 +1356,26 @@ export async function POST(
         console.log(`[Preview] Limiting unpaid visual book to ${FREE_PREVIEW_PANELS} panels (book has ${visualChapters.length} total)`);
       }
 
-      // Load character portraits from DB for reference images (critical for consistency)
+      // Load character portraits + protagonist photo from DB for reference images
       let portraitsForGen: CharacterPortrait[] | undefined;
+      let protagonistStyled: string | null = null;
+      let protagonistDescription: string | null = null;
       try {
-        const bookWithPortraits = await prisma.book.findUnique({
+        const bookWithRefs = await prisma.book.findUnique({
           where: { id },
-          select: { characterPortraits: true },
+          select: { characterPortraits: true, protagonistStyled: true, protagonistDescription: true },
         });
-        if (bookWithPortraits?.characterPortraits) {
-          portraitsForGen = bookWithPortraits.characterPortraits as unknown as CharacterPortrait[];
+        if (bookWithRefs?.characterPortraits) {
+          portraitsForGen = bookWithRefs.characterPortraits as unknown as CharacterPortrait[];
           console.log(`Loaded ${portraitsForGen.length} character portraits for reference`);
         }
+        protagonistStyled = bookWithRefs?.protagonistStyled as string | null;
+        protagonistDescription = bookWithRefs?.protagonistDescription as string | null;
+        if (protagonistStyled) {
+          console.log(`Loaded protagonist photo reference for generation`);
+        }
       } catch (e) {
-        console.warn('Failed to load character portraits for generation:', e);
+        console.warn('Failed to load character references for generation:', e);
       }
 
       // Step 2a: Generate illustrations in parallel (using scene descriptions from outline)
@@ -1367,6 +1395,8 @@ export async function POST(
           visualStyleGuide: visualStyleGuide || undefined,
           contentRating: (book.contentRating as ContentRating) || 'general',
           characterPortraits: portraitsForGen,
+          protagonistStyled,
+          protagonistDescription,
         }
       );
 

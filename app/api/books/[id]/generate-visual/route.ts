@@ -332,7 +332,11 @@ export async function POST(
                 const characters = book.characters as Array<{ name: string; description: string }> | null;
                 const mainCharName = characters?.[0]?.name;
 
-                if (protagonistStyled && mainCharName && chapter.scene.characters?.includes(mainCharName)) {
+                // Case-insensitive check for protagonist in scene
+                const sceneCharsLower = chapter.scene.characters?.map((c: string) => c.toLowerCase()) || [];
+                const protagonistInScene = mainCharName && sceneCharsLower.includes(mainCharName.toLowerCase());
+
+                if (protagonistStyled && mainCharName && protagonistInScene) {
                     referenceImages.push({
                         characterName: `${mainCharName} (MUST match this face exactly)`,
                         imageData: protagonistStyled,
@@ -349,7 +353,7 @@ export async function POST(
                 if (chapter.scene.characters && Array.isArray(chapter.scene.characters)) {
                     for (const charName of chapter.scene.characters) {
                         // Skip main character if we already added protagonist photo
-                        if (protagonistStyled && charName === mainCharName) continue;
+                        if (protagonistStyled && mainCharName && charName.toLowerCase() === mainCharName.toLowerCase()) continue;
 
                         // PRIORITY 1: Use character portraits if available (canonical references)
                         if (characterPortraits && characterPortraits.length > 0) {
