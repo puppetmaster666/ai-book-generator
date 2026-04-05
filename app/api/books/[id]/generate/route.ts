@@ -877,12 +877,16 @@ export async function POST(
         const targetPanelCount = isPaid ? Math.min(book.targetChapters, maxVisualPanels) : 5;
 
         // Visual outline with progressive content softening on safety blocks
+        // SKIP softening for mature content (e.g. roast books) to preserve the intended tone
+        const isMatureContent = (book.contentRating || 'general') === 'mature';
         const MAX_VISUAL_OUTLINE_ATTEMPTS = 3;
-        const CONTENT_SOFTENING_INSTRUCTIONS = [
-          '', // Attempt 1: no modification
-          `\n\nIMPORTANT CONTENT GUIDELINES: Keep all scenes suitable for general audiences. Replace any violence with dramatic tension. Replace any explicit or mature content with emotional implications. Use "fade to black" for intimate moments. Focus on emotions, atmosphere, and character expressions rather than physical actions.`,
-          `\n\nSTRICT CONTENT POLICY: This must be completely family-friendly. No violence, no mature themes, no conflict descriptions. Focus entirely on positive emotions, beautiful environments, and character dialogue. Think Disney/Pixar level content. Every scene should be safe for all ages.`,
-        ];
+        const CONTENT_SOFTENING_INSTRUCTIONS = isMatureContent
+          ? ['', '', ''] // Never soften mature/roast content
+          : [
+            '', // Attempt 1: no modification
+            `\n\nIMPORTANT CONTENT GUIDELINES: Keep all scenes suitable for general audiences. Replace any violence with dramatic tension. Replace any explicit or mature content with emotional implications. Use "fade to black" for intimate moments. Focus on emotions, atmosphere, and character expressions rather than physical actions.`,
+            `\n\nSTRICT CONTENT POLICY: This must be completely family-friendly. No violence, no mature themes, no conflict descriptions. Focus entirely on positive emotions, beautiful environments, and character dialogue. Think Disney/Pixar level content. Every scene should be safe for all ages.`,
+          ];
 
         for (let outlineAttempt = 0; outlineAttempt < MAX_VISUAL_OUTLINE_ATTEMPTS; outlineAttempt++) {
           try {

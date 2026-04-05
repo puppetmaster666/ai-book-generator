@@ -568,7 +568,16 @@ export async function expandIdea(idea: string, hintBookType?: string, region?: s
   const isNonFiction = hintBookType === 'non-fiction';
 
   // Safety instructions to prevent output blocking
-  const safetyGuidelines = `
+  const isRoastIdea = idea.includes('ROAST COMIC:') || idea.includes('NUCLEAR ROAST MODE');
+  const safetyGuidelines = isRoastIdea ? `
+CONTENT TONE - THIS IS A COMEDY ROAST BOOK:
+- This is an adult comedy roast. The user has opted in to harsh, mean humor.
+- Make the roast PERSONAL to the characters described. Use their names, personalities, and traits as ammunition.
+- Every chapter/scene should contain cutting, specific jokes aimed directly at the characters.
+- Do NOT soften, sanitize, or make it family-friendly. The user chose the roast option for a reason.
+- Think Comedy Central Roast, not a Disney movie. Be savage, be specific, be hilarious.
+- The premise MUST preserve the roast severity level and tone from the user's instructions.
+` : `
 CONTENT SAFETY - CRITICAL:
 - Keep all content suitable for general audiences
 - Avoid graphic violence descriptions - use implied or off-screen action
@@ -663,7 +672,9 @@ JSON format:
       let sanitizedIdea = idea;
 
       // Sanitize on retries with increasingly aggressive filtering
-      if (attempt > 0) {
+      // BUT skip sanitization for roast/mature content to preserve the intended tone
+      const isRoastContent = idea.includes('ROAST COMIC:') || idea.includes('NUCLEAR ROAST MODE');
+      if (attempt > 0 && !isRoastContent) {
         console.log(`[ExpandIdea] Retry ${attempt}: Sanitizing idea to avoid content policy...`);
 
         // Apply all sensitive word patterns
@@ -685,6 +696,8 @@ JSON format:
           const words = sanitizedIdea.split(' ').filter(w => w.length > 3).slice(0, 10);
           sanitizedIdea = `An engaging story about: ${words.join(' ')}. Create a family-friendly interpretation.`;
         }
+      } else if (attempt > 0 && isRoastContent) {
+        console.log(`[ExpandIdea] Retry ${attempt}: Roast content detected, skipping sanitization to preserve tone`);
       }
 
       const sanitizedPrompt = isNonFiction
