@@ -26,7 +26,7 @@ async function main() {
   // Step 1: Generate the article
   console.log('Generating article...');
   const textModel = genAI.getGenerativeModel({
-    model: 'gemini-3.1-pro-preview',
+    model: 'gemini-3-flash-preview',
     safetySettings: SAFETY_SETTINGS,
   });
 

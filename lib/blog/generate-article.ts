@@ -239,7 +239,7 @@ The full article in markdown format`;
   if (!apiKey) throw new Error('GEMINI_API_KEY not set');
   const genAI = new GoogleGenerativeAI(apiKey);
   const model = genAI.getGenerativeModel({
-    model: 'gemini-3.1-pro-preview',
+    model: 'gemini-3-flash-preview',
     safetySettings: SAFETY_SETTINGS,
   });
 
@@ -466,7 +466,7 @@ export async function generatePatchNotesArticle(): Promise<{
 
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({
-      model: 'gemini-3.1-pro-preview',
+      model: 'gemini-3-flash-preview',
       safetySettings: SAFETY_SETTINGS,
     });
 

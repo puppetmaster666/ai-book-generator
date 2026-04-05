@@ -31,13 +31,12 @@ function getGenAI(): GoogleGenerativeAI {
   return _genAI;
 }
 
-// Gemini 3.1 Pro for main generation
-// Temperature 0.9 + topP 0.92 for higher creativity
-// Note: frequencyPenalty/presencePenalty not supported on preview models
+// Gemini Flash for main generation (creative tasks)
+// Uses higher temperature for creative writing
 export function getGeminiPro(): GenerativeModel {
   if (!_geminiPro) {
     _geminiPro = getGenAI().getGenerativeModel({
-      model: 'gemini-3.1-pro-preview',
+      model: 'gemini-3-flash-preview',
       safetySettings: SAFETY_SETTINGS,
       generationConfig: {
         temperature: 0.9,
@@ -50,7 +49,7 @@ export function getGeminiPro(): GenerativeModel {
   return _geminiPro;
 }
 
-// Gemini 3 Flash for fast tasks (outlines, ideas, summaries) — lower temperature
+// Gemini Flash for fast tasks (outlines, ideas, summaries) — lower temperature
 export function getGeminiFlash(): GenerativeModel {
   if (!_geminiFlash) {
     _geminiFlash = getGenAI().getGenerativeModel({
