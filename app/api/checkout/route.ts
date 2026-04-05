@@ -30,6 +30,16 @@ export async function POST(request: NextRequest) {
     let description: string;
 
     switch (productType) {
+      case 'upgrade': // Discounted upgrade from free preview
+        if (!bookId) {
+          return NextResponse.json(
+            { error: 'Book ID required for upgrade' },
+            { status: 400 }
+          );
+        }
+        amount = 399; // $3.99 upgrade price
+        description = 'AI Book Generator - Unlock Full Book (Upgrade)';
+        break;
       case 'one-time':
         if (!bookId) {
           return NextResponse.json(
@@ -116,12 +126,16 @@ export async function POST(request: NextRequest) {
         },
       ],
       mode: productType === 'one-time' ? 'payment' : 'subscription',
-      success_url: productType === 'one-time'
-        ? `${process.env.NEXT_PUBLIC_APP_URL}/book/${bookId}?success=true&session_id={CHECKOUT_SESSION_ID}`
-        : `${process.env.NEXT_PUBLIC_APP_URL}/dashboard?success=true&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: productType === 'one-time'
-        ? `${process.env.NEXT_PUBLIC_APP_URL}/checkout?canceled=true&bookId=${bookId}`
-        : `${process.env.NEXT_PUBLIC_APP_URL}/checkout?canceled=true&plan=${productType}`,
+      success_url: productType === 'upgrade'
+        ? `${process.env.NEXT_PUBLIC_APP_URL}/generate-comic?bookId=${bookId}&upgraded=true`
+        : productType === 'one-time'
+          ? `${process.env.NEXT_PUBLIC_APP_URL}/book/${bookId}?success=true&session_id={CHECKOUT_SESSION_ID}`
+          : `${process.env.NEXT_PUBLIC_APP_URL}/dashboard?success=true&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: productType === 'upgrade'
+        ? `${process.env.NEXT_PUBLIC_APP_URL}/generate-comic?bookId=${bookId}`
+        : productType === 'one-time'
+          ? `${process.env.NEXT_PUBLIC_APP_URL}/checkout?canceled=true&bookId=${bookId}`
+          : `${process.env.NEXT_PUBLIC_APP_URL}/checkout?canceled=true&plan=${productType}`,
       customer_email: email,
       metadata: {
         bookId: bookId || '',

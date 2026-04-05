@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, Suspense, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 import Image from 'next/image';
 import Header from '@/components/Header';
@@ -64,6 +65,8 @@ function GenerateComicContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const bookId = searchParams.get('bookId');
+  const upgraded = searchParams.get('upgraded') === 'true';
+  const { data: session } = useSession();
 
   const [bookData, setBookData] = useState<BookData | null>(null);
   const [panels, setPanels] = useState<Panel[]>([]);
@@ -395,6 +398,20 @@ function GenerateComicContent() {
       }
     }
   }, [panels, isGenerating, isLoading, bookData?.paymentStatus, generateAllPanels]);
+
+  // Auto-continue after upgrade: payment completed, some panels done, locked ones remaining
+  const upgradeTriggered = useRef(false);
+  useEffect(() => {
+    if (upgradeTriggered.current) return;
+    if (upgraded && panels.length > 0 && !isGenerating && !isLoading && bookData?.paymentStatus === 'completed') {
+      const hasPending = panels.some(p => p.status === 'pending');
+      if (hasPending) {
+        console.log('[Upgrade] Payment confirmed, auto-continuing remaining panels');
+        upgradeTriggered.current = true;
+        generateAllPanels();
+      }
+    }
+  }, [upgraded, panels, isGenerating, isLoading, bookData?.paymentStatus, generateAllPanels]);
 
   // Cancel generation - show confirmation first
   const cancelGeneration = useCallback(async () => {
@@ -893,15 +910,33 @@ function GenerateComicContent() {
               <p className="text-neutral-400 text-sm mb-6">
                 Unlock the complete book with all {panels.length} illustrated panels.
               </p>
-              <Link
-                href={`/review?bookId=${bookId}`}
+              <button
+                onClick={async () => {
+                  try {
+                    const res = await fetch('/api/checkout', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        bookId,
+                        email: session?.user?.email || '',
+                        productType: 'upgrade',
+                      }),
+                    });
+                    const data = await res.json();
+                    if (data.url) {
+                      window.location.href = data.url;
+                    }
+                  } catch (err) {
+                    console.error('Checkout error:', err);
+                  }
+                }}
                 className="inline-flex items-center gap-2 px-8 py-4 bg-white text-neutral-900 rounded-full hover:bg-neutral-100 font-medium transition-colors text-lg"
               >
                 <Zap className="h-5 w-5" />
                 Finish My Book: $3.99
-              </Link>
+              </button>
               <p className="text-neutral-500 text-xs mt-3">
-                Limited time discount
+                <span className="line-through">$4.99</span> limited time discount
               </p>
             </div>
           )}
