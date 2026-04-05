@@ -279,6 +279,15 @@ a, button {
   animation: scaleIn 0.3s ease-out forwards;
 }
 
+@keyframes bounceSlow {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+.animate-bounce-slow {
+  animation: bounceSlow 2s ease-in-out infinite;
+}
+
 .animate-slide-up {
   animation: slideUp 0.5s ease-out forwards;
 }

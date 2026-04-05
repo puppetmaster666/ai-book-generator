@@ -88,6 +88,16 @@ function ReviewContent() {
   const [editingSection, setEditingSection] = useState<'title' | 'premise' | 'arcs' | 'characters' | 'length' | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
+  const [showTutorial, setShowTutorial] = useState(false);
+
+  // Check if tutorial should show (first-timer)
+  useEffect(() => {
+    try {
+      if (!localStorage.getItem('review_tutorial_seen')) {
+        setShowTutorial(true);
+      }
+    } catch { /* SSR safety */ }
+  }, []);
 
   // Edit form values
   const [editTitle, setEditTitle] = useState('');
@@ -708,6 +718,29 @@ function ReviewContent() {
               Here&apos;s what we&apos;ll create based on your idea
             </p>
           </div>
+
+          {/* First-timer tutorial: animated speech bubble pointing to edit buttons */}
+          {showTutorial && !editingSection && (
+            <div className="relative mb-4 animate-bounce-slow">
+              <div className="bg-neutral-900 text-white rounded-xl px-4 py-3 text-sm flex items-center gap-3 shadow-lg">
+                <Pencil className="h-4 w-4 text-lime-400 flex-shrink-0" />
+                <span>
+                  You can edit the title, story, and characters before generating. Hover over any section and click the pencil icon.
+                </span>
+                <button
+                  onClick={() => {
+                    setShowTutorial(false);
+                    try { localStorage.setItem('review_tutorial_seen', 'true'); } catch {}
+                  }}
+                  className="ml-auto flex-shrink-0 p-1 hover:bg-white/20 rounded transition-colors"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </div>
+              {/* Arrow pointing down */}
+              <div className="absolute left-8 -bottom-2 w-4 h-4 bg-neutral-900 rotate-45" />
+            </div>
+          )}
 
           {/* Book Overview Card */}
           <div className="bg-white rounded-2xl border border-neutral-200 p-8 mb-6">
