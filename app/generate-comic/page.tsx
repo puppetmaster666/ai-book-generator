@@ -657,26 +657,6 @@ function GenerateComicContent() {
               </button>
             )}
 
-            {isGenerating && (
-              <button
-                onClick={cancelGeneration}
-                disabled={isCancelling}
-                className="flex items-center gap-2 px-8 py-4 bg-neutral-700 text-white rounded-full hover:bg-neutral-600 disabled:opacity-50 font-medium transition-all"
-              >
-                {isCancelling ? (
-                  <>
-                    <Loader2 className="h-5 w-5 animate-spin" />
-                    Cancelling...
-                  </>
-                ) : (
-                  <>
-                    <StopCircle className="h-5 w-5" />
-                    Cancel Generation
-                  </>
-                )}
-              </button>
-            )}
-
             {/* Admin Emergency Stop */}
             {isAdmin && (
               <button
@@ -788,8 +768,29 @@ function GenerateComicContent() {
                 <div className="aspect-[3/4] bg-neutral-100 relative">
                   {isLocked ? (
                     <div className="absolute inset-0 flex flex-col items-center justify-center bg-neutral-50">
-                      <Lock className="h-6 w-6 text-neutral-300 mb-2" />
-                      <span className="text-xs text-neutral-400">Locked</span>
+                      <Lock className="h-5 w-5 text-neutral-300 mb-1" />
+                      <span className="text-xs text-neutral-400 mb-2">Locked</span>
+                      <button
+                        onClick={async (e) => {
+                          e.stopPropagation();
+                          try {
+                            const res = await fetch('/api/checkout', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({
+                                bookId,
+                                email: session?.user?.email || '',
+                                productType: 'upgrade',
+                              }),
+                            });
+                            const data = await res.json();
+                            if (data.url) window.location.href = data.url;
+                          } catch {}
+                        }}
+                        className="px-3 py-1.5 bg-neutral-900 text-white text-xs rounded-full hover:bg-neutral-800 transition-colors"
+                      >
+                        Unlock $3.99
+                      </button>
                     </div>
                   ) : panel.status === 'pending' ? (
                     <div className="absolute inset-0 flex flex-col items-center justify-center text-neutral-400">
@@ -802,13 +803,15 @@ function GenerateComicContent() {
                       <span className="text-xs text-neutral-600">Generating...</span>
                     </div>
                   ) : panel.status === 'done' && panel.imageUrl ? (
-                    <Image
-                      src={panel.imageUrl}
-                      alt={`Panel ${panel.number}: ${panel.scene?.description || 'Illustration'}`}
-                      fill
-                      className="object-cover"
-                      unoptimized
-                    />
+                    <a href={panel.imageUrl} target="_blank" rel="noopener noreferrer" className="block w-full h-full">
+                      <Image
+                        src={panel.imageUrl}
+                        alt={`Panel ${panel.number}: ${panel.scene?.description || 'Illustration'}`}
+                        fill
+                        className="object-cover cursor-pointer hover:opacity-90 transition-opacity"
+                        unoptimized
+                      />
+                    </a>
                   ) : panel.status === 'error' ? (
                     <div className="absolute inset-0 flex flex-col items-center justify-center p-4 bg-neutral-100">
                       <X className="h-8 w-8 text-neutral-500 mb-2" />
