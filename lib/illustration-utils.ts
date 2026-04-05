@@ -1,4 +1,6 @@
 import { ILLUSTRATION_DIMENSIONS } from '@/lib/constants';
+import { GoogleGenerativeAI } from '@google/generative-ai';
+import { SAFETY_SETTINGS } from '@/lib/generation/shared/safety';
 
 // Timeout for illustration generation (30 seconds) - prevents 504 Gateway Timeout
 export const ILLUSTRATION_TIMEOUT_MS = 30000;
@@ -303,4 +305,118 @@ export async function generateIllustrationWithRetry(data: {
 
     console.warn(`Failed to generate illustration after ${MAX_ILLUSTRATION_RETRIES + 1} attempts`);
     return null;
+}
+
+/**
+ * Validate a generated illustration using Gemini vision.
+ * Checks: (1) image has readable text/speech bubbles/narration, (2) image matches the scene description.
+ * Returns { valid, hasText, isRelevant, reason } so callers can decide to retry.
+ */
+export async function validateIllustration(
+    imageBase64: string,
+    mimeType: string,
+    expectedScene: string,
+    expectedText: string | null,
+): Promise<{ valid: boolean; hasText: boolean; isRelevant: boolean; reason: string }> {
+    try {
+        const apiKey = process.env.GEMINI_API_KEY;
+        if (!apiKey) {
+            console.warn('[Validate] No GEMINI_API_KEY, skipping validation');
+            return { valid: true, hasText: true, isRelevant: true, reason: 'skipped' };
+        }
+
+        const genAI = new GoogleGenerativeAI(apiKey);
+        const model = genAI.getGenerativeModel({
+            model: 'gemini-2.0-flash',
+            safetySettings: SAFETY_SETTINGS,
+        });
+
+        // Strip data URL prefix if present
+        const rawBase64 = imageBase64.includes(',') ? imageBase64.split(',')[1] : imageBase64;
+
+        const prompt = `Analyze this illustration for a book. Answer these two questions with YES or NO, then a one-sentence reason.
+
+1. TEXT CHECK: Does this image contain ANY readable text, speech bubbles, narration boxes, or caption text?
+2. RELEVANCE CHECK: Does this image match this scene description: "${expectedScene.substring(0, 200)}"?
+
+Reply in exactly this format:
+TEXT: YES or NO
+RELEVANT: YES or NO
+REASON: one sentence explanation`;
+
+        const result = await model.generateContent([
+            { text: prompt },
+            { inlineData: { mimeType: mimeType || 'image/png', data: rawBase64 } },
+        ]);
+
+        const response = result.response.text().trim();
+        const hasText = /TEXT:\s*YES/i.test(response);
+        const isRelevant = /RELEVANT:\s*YES/i.test(response);
+        const reasonMatch = response.match(/REASON:\s*(.+)/i);
+        const reason = reasonMatch ? reasonMatch[1].trim() : 'unknown';
+
+        const valid = (expectedText ? hasText : true) && isRelevant;
+
+        console.log(`[Validate] hasText=${hasText}, isRelevant=${isRelevant}, valid=${valid}, reason="${reason}"`);
+        return { valid, hasText, isRelevant, reason };
+    } catch (error) {
+        console.warn('[Validate] Validation failed, allowing image:', error instanceof Error ? error.message : error);
+        // Don't block on validation failures
+        return { valid: true, hasText: true, isRelevant: true, reason: 'validation_error' };
+    }
+}
+
+/**
+ * Generate an illustration with post-generation validation.
+ * If the image fails validation (no text, irrelevant content), regenerates once
+ * with a stronger text-focused prompt.
+ */
+export async function generateAndValidateIllustration(data: {
+    scene: string;
+    artStyle: string;
+    characters?: { name: string; description: string }[];
+    setting?: string;
+    bookTitle?: string;
+    chapterTitle?: string;
+    characterVisualGuide?: CharacterVisualGuide;
+    visualStyleGuide?: VisualStyleGuide;
+    bookFormat?: string;
+    referenceImages?: CharacterReferenceImage[];
+    expectedText?: string | null;
+}): Promise<{ imageUrl: string; altText: string; width: number; height: number } | null> {
+    // First attempt: normal generation
+    const result = await generateIllustrationWithRetry(data);
+    if (!result) return null;
+
+    // Skip validation if no text is expected (non-visual books shouldn't reach here, but safety)
+    if (!data.expectedText) return result;
+
+    // Validate the generated image
+    const mimeType = result.imageUrl.match(/data:([^;]+);/)?.[1] || 'image/png';
+    const validation = await validateIllustration(
+        result.imageUrl,
+        mimeType,
+        data.scene,
+        data.expectedText,
+    );
+
+    if (validation.valid) return result;
+
+    // Validation failed. Retry once with stronger text emphasis.
+    console.warn(`[Validate] Image failed validation (hasText=${validation.hasText}, isRelevant=${validation.isRelevant}). Regenerating with stronger prompt...`);
+
+    const textEmphasis = !validation.hasText
+        ? `\n\nMANDATORY TEXT REQUIREMENT (THIS IS THE MOST IMPORTANT PART):\nThe image MUST contain clearly readable text. The text is more important than the illustration itself.\nText to include: "${data.expectedText.substring(0, 150)}"\nPlace the text in a clean, high-contrast area. Make it large and unmissable.\nAn image without text is REJECTED.`
+        : '';
+
+    const relevanceEmphasis = !validation.isRelevant
+        ? `\n\nSCENE ACCURACY (CRITICAL):\nThe image MUST depict this specific scene: ${data.scene.substring(0, 300)}\nDo NOT generate a generic or unrelated image. Match the scene description exactly.`
+        : '';
+
+    const retryResult = await generateIllustrationWithRetry({
+        ...data,
+        scene: data.scene + textEmphasis + relevanceEmphasis,
+    });
+
+    return retryResult || result; // If retry also fails, use original (imperfect > nothing)
 }

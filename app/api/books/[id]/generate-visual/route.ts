@@ -14,7 +14,7 @@ import {
 } from '@/lib/gemini';
 import { getBookReadyEmail, sendEmail } from '@/lib/email';
 import { BOOK_PRESETS, FREE_TIER_LIMITS, type BookPresetKey } from '@/lib/constants';
-import { generateIllustrationWithRetry, type IllustrationAttemptResult } from '@/lib/illustration-utils';
+import { generateAndValidateIllustration, generateIllustrationWithRetry, type IllustrationAttemptResult } from '@/lib/illustration-utils';
 
 // Set max duration for this background task (Vercel Fluid Compute allows 800s on Pro)
 export const maxDuration = 800;
@@ -358,8 +358,9 @@ export async function POST(
                     }
                 }
 
-                // Use shared utility with robust retry/fallback logic
-                const genResult = await generateIllustrationWithRetry({
+                // Use shared utility with validation (checks for text + relevance)
+                const expectedText = chapter.text?.trim() || chapter.summary || null;
+                const genResult = await generateAndValidateIllustration({
                     scene: illustrationPrompt,
                     artStyle: book.artStyle || 'illustration',
                     bookTitle: book.title,
@@ -369,6 +370,7 @@ export async function POST(
                     characterVisualGuide: characterVisualGuide,
                     visualStyleGuide: visualStyleGuide,
                     referenceImages: referenceImages.length > 0 ? referenceImages : undefined,
+                    expectedText,
                 });
 
                 // Build genData format to match existing code below
