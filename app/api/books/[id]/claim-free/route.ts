@@ -39,6 +39,8 @@ export async function POST(
     const hasGiftedCredits = user.freeCredits > 0;
     const hasFreeSample = !user.freeBookUsed;
 
+    console.log(`[claim-free] User ${session.user.id}: credits=${user.credits}, freeCredits=${user.freeCredits}, freeBookUsed=${user.freeBookUsed}, useCredits=${useCredits}, path=${useCredits && (hasSubscriptionCredits || hasGiftedCredits) ? 'CREDIT' : 'FREE_PREVIEW'}`);
+
     // Get the book
     const book = await prisma.book.findUnique({
       where: { id: bookId },
