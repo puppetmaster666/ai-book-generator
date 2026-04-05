@@ -1312,8 +1312,8 @@ function ReviewContent() {
             </div>
           )}
 
-          {/* Promo Code - only show if user is not eligible for free book AND not already paid */}
-          {!freeBookEligible && !isAlreadyPaid && (
+          {/* Promo Code - show for all users who haven't paid yet */}
+          {!isAlreadyPaid && (
             <div className="bg-white rounded-2xl border border-neutral-200 p-6 mb-6">
               <h3 className="font-semibold text-lg mb-4">Have a promo code?</h3>
               <div className="flex gap-2">
