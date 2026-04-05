@@ -372,12 +372,57 @@ export async function generateAndValidateIllustration(data: {
     referenceImages?: CharacterReferenceImage[];
     expectedText?: string | null;
 }): Promise<{ imageUrl: string; altText: string; width: number; height: number } | null> {
-    // If text is expected, add stronger text emphasis to the prompt upfront
-    // instead of validating after (which doubles generation time)
     let scene = data.scene;
     if (data.expectedText && data.expectedText.trim().length > 0) {
         scene += `\n\nMANDATORY: This image MUST contain clearly readable text. An image without visible text will be rejected. The text is as important as the illustration.`;
     }
 
-    return generateIllustrationWithRetry({ ...data, scene });
+    const MAX_TEXT_RETRIES = 2;
+
+    for (let textAttempt = 0; textAttempt <= MAX_TEXT_RETRIES; textAttempt++) {
+        const currentScene = textAttempt === 0
+            ? scene
+            : scene + `\n\nTEXT IS MISSING - CRITICAL FAILURE. The previous image had EMPTY speech bubbles with NO TEXT. Every speech bubble MUST contain the exact dialogue text. Every narration box MUST contain readable text. THE IMAGE WILL BE REJECTED if text is missing.`;
+
+        const result = await generateIllustrationWithRetry({ ...data, scene: currentScene });
+
+        if (!result) return null;
+
+        // If no text expected, skip validation
+        if (!data.expectedText || data.expectedText.trim().length === 0) {
+            return result;
+        }
+
+        // Validate text presence
+        try {
+            const imgResponse = await fetch(result.imageUrl);
+            const imgBuffer = await imgResponse.arrayBuffer();
+            const imgBase64 = Buffer.from(imgBuffer).toString('base64');
+
+            const validation = await validateIllustration(
+                imgBase64,
+                'image/png',
+                data.scene.substring(0, 200),
+                data.expectedText,
+            );
+
+            if (validation.hasText) {
+                console.log(`[TextValidation] Text found in image, validation passed`);
+                return result;
+            }
+
+            if (textAttempt < MAX_TEXT_RETRIES) {
+                console.warn(`[TextValidation] No text found (attempt ${textAttempt + 1}/${MAX_TEXT_RETRIES + 1}), regenerating...`);
+                continue;
+            }
+
+            console.warn(`[TextValidation] Text missing after ${MAX_TEXT_RETRIES + 1} attempts, using best result`);
+            return result;
+        } catch (valError) {
+            console.warn(`[TextValidation] Error (non-fatal):`, valError instanceof Error ? valError.message : valError);
+            return result;
+        }
+    }
+
+    return null;
 }

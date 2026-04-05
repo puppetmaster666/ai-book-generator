@@ -28,6 +28,7 @@ import {
 } from '@/lib/gemini';
 import { createInitialContext, generateSequenceToBeats, type BeatSheet, type CharacterProfile } from '@/lib/screenplay';
 import { extractAndBlacklistFromCharacters } from '@/lib/dna-blacklist';
+import { validateIllustration } from '@/lib/illustration-utils';
 import { countWords } from '@/lib/epub';
 import { BOOK_FORMATS, ART_STYLES, ILLUSTRATION_DIMENSIONS, BOOK_PRESETS, type BookFormatKey, type ArtStyleKey, type BookPresetKey } from '@/lib/constants';
 import { sendEmail, getBookReadyEmail } from '@/lib/email';
@@ -315,8 +316,10 @@ async function generateIllustrationImage(data: {
   visualStyleGuide?: VisualStyleGuide;
   bookFormat?: string;
   referenceImages?: { characterName: string; imageData: string }[];
+  expectedText?: string | null;
 }): Promise<{ imageUrl: string; altText: string; width: number; height: number } | null> {
   let currentScene = data.scene;
+  const MAX_TEXT_VALIDATION_RETRIES = 2;
 
   for (let attempt = 0; attempt <= MAX_ILLUSTRATION_RETRIES; attempt++) {
     if (attempt > 0) {
@@ -332,6 +335,54 @@ async function generateIllustrationImage(data: {
       if (attempt > 0) {
         console.log(`Illustration succeeded on retry attempt ${attempt}`);
       }
+
+      // Validate text presence if this panel needs speech bubbles or narration
+      if (data.expectedText && result.data.imageUrl) {
+        let textValidated = false;
+        for (let valAttempt = 0; valAttempt <= MAX_TEXT_VALIDATION_RETRIES; valAttempt++) {
+          try {
+            // Fetch the image to validate
+            const imgResponse = await fetch(result.data.imageUrl);
+            const imgBuffer = await imgResponse.arrayBuffer();
+            const imgBase64 = Buffer.from(imgBuffer).toString('base64');
+
+            const validation = await validateIllustration(
+              imgBase64,
+              'image/png',
+              data.scene.substring(0, 200),
+              data.expectedText,
+            );
+
+            if (validation.hasText) {
+              console.log(`[TextValidation] Panel has text, passed validation`);
+              textValidated = true;
+              break;
+            }
+
+            if (valAttempt < MAX_TEXT_VALIDATION_RETRIES) {
+              console.warn(`[TextValidation] No text found in panel (attempt ${valAttempt + 1}), regenerating with stronger text instructions...`);
+              // Add stronger text emphasis and regenerate
+              const textBoost = `\n\nTEXT IS MISSING - THIS IS A CRITICAL FAILURE. YOU MUST INCLUDE READABLE TEXT.\nThe previous generation had EMPTY speech bubbles with NO TEXT inside them. This is wrong.\nEvery speech bubble MUST contain the exact dialogue text specified. Every narration box MUST contain text.\nIf you cannot render text in the art style, switch to a simpler text rendering but DO NOT leave bubbles empty.\nTHE IMAGE WILL BE REJECTED if speech bubbles are empty or text is missing.`;
+              const boostedResult = await attemptIllustrationGeneration({
+                ...data,
+                scene: currentScene + textBoost,
+              });
+              if (boostedResult.success && boostedResult.data) {
+                result.data = boostedResult.data;
+                continue; // Validate the new result
+              }
+            }
+          } catch (valError) {
+            console.warn(`[TextValidation] Validation error (non-fatal):`, valError instanceof Error ? valError.message : valError);
+            textValidated = true; // Don't block on validation errors
+            break;
+          }
+        }
+        if (!textValidated) {
+          console.warn(`[TextValidation] Could not get text in panel after ${MAX_TEXT_VALIDATION_RETRIES + 1} attempts, using best result`);
+        }
+      }
+
       return result.data;
     }
 
@@ -516,6 +567,19 @@ async function generateIllustrationsInParallel(
         }
       }
 
+      // Build expected text for validation (only if this panel needs text)
+      let expectedText: string | null = null;
+      if (needsTextBaking) {
+        const textParts: string[] = [];
+        if (hasDialogue && chapter.dialogue) {
+          textParts.push(...chapter.dialogue.map((d: DialogueEntry) => d.text));
+        }
+        if (hasNarration && chapter.text) {
+          textParts.push(chapter.text);
+        }
+        expectedText = textParts.join(' ').substring(0, 200);
+      }
+
       const result = await generateIllustrationImage({
         scene: illustrationPrompt,
         artStyle: bookData.artStyle,
@@ -529,6 +593,7 @@ async function generateIllustrationsInParallel(
         visualStyleGuide: bookData.visualStyleGuide,
         bookFormat: bookData.bookFormat,
         referenceImages: referenceImages.length > 0 ? referenceImages : undefined,
+        expectedText,
       });
 
       if (result) {
