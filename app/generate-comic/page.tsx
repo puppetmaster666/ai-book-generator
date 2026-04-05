@@ -769,12 +769,17 @@ function GenerateComicContent() {
             </div>
           )}
 
-          {/* Panel Grid */}
+          {/* Panel Grid - split into free panels and locked panels for preview users */}
+          {(() => {
+            const isFreePreview = bookData?.paymentStatus === 'free_preview';
+            const FREE_PANEL_LIMIT = 5;
+            const freePanels = isFreePreview ? panels.filter(p => p.number <= FREE_PANEL_LIMIT) : panels;
+            const lockedPanels = isFreePreview ? panels.filter(p => p.number > FREE_PANEL_LIMIT) : [];
+
+            return (<>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-            {panels.map((panel, index) => {
-              const isFreePreview = bookData?.paymentStatus === 'free_preview';
-              const FREE_PANEL_LIMIT = 5;
-              const isLocked = isFreePreview && panel.number > FREE_PANEL_LIMIT;
+            {freePanels.map((panel, index) => {
+              const isLocked = false;
 
               return (
               <div
@@ -945,9 +950,9 @@ function GenerateComicContent() {
             })}
           </div>
 
-          {/* Free Preview Upgrade CTA - shows after 5 panels are done */}
-          {bookData?.paymentStatus === 'free_preview' && doneCount >= 5 && !isGenerating && (
-            <div className="mt-8 bg-gradient-to-br from-neutral-900 to-neutral-800 rounded-2xl p-8 text-white text-center">
+          {/* Free Preview Upgrade CTA - between free and locked panels */}
+          {isFreePreview && doneCount >= 5 && !isGenerating && (
+            <div className="my-6 bg-gradient-to-br from-neutral-900 to-neutral-800 rounded-2xl p-8 text-white text-center">
               <h2 className="text-2xl font-bold mb-2" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>
                 Like what you see?
               </h2>
@@ -970,9 +975,7 @@ function GenerateComicContent() {
                       }),
                     });
                     const data = await res.json();
-                    if (data.url) {
-                      window.location.href = data.url;
-                    }
+                    if (data.url) window.location.href = data.url;
                   } catch (err) {
                     console.error('Checkout error:', err);
                   }
@@ -987,6 +990,30 @@ function GenerateComicContent() {
               </p>
             </div>
           )}
+
+          {/* Locked panels below the CTA */}
+          {lockedPanels.length > 0 && (
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+              {lockedPanels.map((panel) => (
+                <div
+                  key={panel.number}
+                  className="bg-white rounded-xl overflow-hidden border border-neutral-100 opacity-60 shadow-sm"
+                >
+                  <div className="aspect-[3/4] bg-neutral-50 relative">
+                    <div className="absolute inset-0 flex flex-col items-center justify-center">
+                      <Lock className="h-5 w-5 text-neutral-300 mb-1" />
+                      <span className="text-xs text-neutral-400">Panel {panel.number}</span>
+                    </div>
+                  </div>
+                  <div className="p-3">
+                    <p className="text-sm text-neutral-400 font-medium line-clamp-1">{panel.title}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          </>);
+          })()}
 
           {/* Instructions */}
           {pendingCount === panels.length && !isGenerating && (
