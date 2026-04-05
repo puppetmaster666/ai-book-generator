@@ -1246,6 +1246,33 @@ function ReviewContent() {
             </div>
           </div>
 
+          {/* FREE Book CTA for Anonymous Users - ABOVE promo code */}
+          {isAnonymous && bookId && (
+            <div className="mb-6 bg-neutral-50 rounded-2xl border border-neutral-200 p-6">
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 bg-neutral-900 rounded-xl flex items-center justify-center flex-shrink-0">
+                  <Gift className="h-6 w-6 text-white" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-bold text-lg text-neutral-900 mb-1" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>
+                    Try Free Sample
+                  </h3>
+                  <p className="text-sm text-neutral-600 mb-4">
+                    Sign up now to preview your book. No credit card required.
+                  </p>
+                  <Link
+                    href={`/signup?bookId=${bookId}&free=true`}
+                    className="inline-flex items-center gap-2 px-5 py-3 bg-neutral-900 text-white rounded-full font-medium hover:bg-neutral-800 transition-colors"
+                  >
+                    <User className="h-4 w-4" />
+                    Sign Up & Try Sample
+                    <ArrowRight className="h-4 w-4" />
+                  </Link>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Promo Code - only show if user is not eligible for free book AND not already paid */}
           {!freeBookEligible && !isAlreadyPaid && (
             <div className="bg-white rounded-2xl border border-neutral-200 p-6 mb-6">
@@ -1273,7 +1300,7 @@ function ReviewContent() {
                 {promoDiscount ? (
                   <button
                     onClick={clearPromoCode}
-                    className="px-4 py-3 bg-green-100 text-green-700 rounded-xl font-medium flex items-center gap-2"
+                    className="px-4 py-3 bg-neutral-100 text-neutral-700 rounded-xl font-medium flex items-center gap-2"
                   >
                     <Check className="h-4 w-4" />
                     {discountLabel}
@@ -1292,43 +1319,6 @@ function ReviewContent() {
                 <p className="text-xs text-red-600 mt-2">{promoError}</p>
               )}
             </div>
-          )}
-
-          {/* FREE Book CTA for Anonymous Users */}
-          {isAnonymous && bookId && (
-            <>
-              <div className="relative mb-6">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-neutral-200"></div>
-                </div>
-                <div className="relative flex justify-center text-sm">
-                  <span className="px-4 bg-white text-neutral-500">or sign up for free</span>
-                </div>
-              </div>
-              <div className="mb-6 bg-gradient-to-br from-lime-50 to-green-50 rounded-2xl border-2 border-lime-300 p-6">
-                <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 bg-lime-400 rounded-xl flex items-center justify-center flex-shrink-0">
-                    <Gift className="h-6 w-6 text-neutral-900" />
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="font-bold text-lg text-neutral-900 mb-1" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>
-                      Try Free Sample!
-                    </h3>
-                    <p className="text-sm text-neutral-600 mb-4">
-                      Sign up now to preview your book. No credit card required.
-                    </p>
-                    <Link
-                      href={`/signup?bookId=${bookId}&free=true`}
-                      className="inline-flex items-center gap-2 px-5 py-3 bg-neutral-900 text-white rounded-full font-medium hover:bg-neutral-800 transition-colors"
-                    >
-                      <User className="h-4 w-4" />
-                      Sign Up & Try Sample
-                      <ArrowRight className="h-4 w-4" />
-                    </Link>
-                  </div>
-                </div>
-              </div>
-            </>
           )}
 
           {/* Your Details - hide for already paid books or logged-in users (they already have email on file) */}
