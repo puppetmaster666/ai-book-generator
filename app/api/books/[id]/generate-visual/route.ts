@@ -301,14 +301,38 @@ export async function POST(
                     illustrationPrompt += `\nCRITICAL: Do NOT include any text, words, letters, numbers, signs, labels, or written characters anywhere in the image.`;
                 }
 
-                // Build reference images for characters - PREFER portraits, fallback to first appearances
-                // LIMIT: Max 2 characters' portraits to avoid FUNCTION_PAYLOAD_TOO_LARGE error
+                // Build reference images for characters
+                // PRIORITY 0: Protagonist photo (uploaded by user - highest priority)
+                // PRIORITY 1: Character portraits (generated)
+                // PRIORITY 2: First appearance (fallback)
                 const referenceImages: { characterName: string; imageData: string }[] = [];
-                const MAX_PORTRAIT_CHARACTERS = 2; // Vercel payload limit ~4.5MB, each portrait ~500KB-1MB
+                const MAX_PORTRAIT_CHARACTERS = 2;
                 let portraitCount = 0;
+
+                // PRIORITY 0: If user uploaded a protagonist photo, use the styled version as reference
+                const protagonistStyled = book.protagonistStyled as string | null;
+                const characters = book.characters as Array<{ name: string; description: string }> | null;
+                const mainCharName = characters?.[0]?.name;
+
+                if (protagonistStyled && mainCharName && chapter.scene.characters?.includes(mainCharName)) {
+                    referenceImages.push({
+                        characterName: `${mainCharName} (MUST match this face exactly)`,
+                        imageData: protagonistStyled,
+                    });
+                    portraitCount++;
+                    // Also add the protagonist description to the prompt for extra emphasis
+                    const protagonistDesc = book.protagonistDescription as string | null;
+                    if (protagonistDesc) {
+                        illustrationPrompt += `\n\nPROTAGONIST REFERENCE (CRITICAL - match this person's likeness exactly):\n${protagonistDesc}\nThe character "${mainCharName}" MUST look like the reference image provided. This is based on a real person's photo.`;
+                    }
+                    console.log(`[Visual Gen] Panel ${chapter.number}: Using protagonist photo reference for "${mainCharName}"`);
+                }
 
                 if (chapter.scene.characters && Array.isArray(chapter.scene.characters)) {
                     for (const charName of chapter.scene.characters) {
+                        // Skip main character if we already added protagonist photo
+                        if (protagonistStyled && charName === mainCharName) continue;
+
                         // PRIORITY 1: Use character portraits if available (canonical references)
                         if (characterPortraits && characterPortraits.length > 0) {
                             const portrait = characterPortraits.find(p =>
