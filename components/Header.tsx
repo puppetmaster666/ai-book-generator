@@ -3,7 +3,7 @@
 // Using <a> tags instead of next/link to prevent stale client-side navigation on long-lived pages
 import { Menu, X, ChevronDown, LogOut, User, BookOpen, Loader2, Check, AlertCircle, Shield, Bell, Gift, Plus, Coins } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
-import { useSession, signOut } from 'next-auth/react';
+import { useSession, signOut, signIn } from 'next-auth/react';
 import { useGeneratingBook } from '@/contexts/GeneratingBookContext';
 import { APP_VERSION, getLatestChangelog } from '@/lib/version';
 
@@ -33,7 +33,13 @@ export default function Header({ variant = 'default' }: HeaderProps) {
   const [paidCredits, setPaidCredits] = useState(0);
   const [creditBalance, setCreditBalance] = useState(0);
   const [creditDropdownOpen, setCreditDropdownOpen] = useState(false);
+  const [loginDropdownOpen, setLoginDropdownOpen] = useState(false);
+  const [loginEmail, setLoginEmail] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
+  const [loginError, setLoginError] = useState('');
+  const [loginLoading, setLoginLoading] = useState(false);
   const creditDropdownRef = useRef<HTMLDivElement>(null);
+  const loginDropdownRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const genDropdownRef = useRef<HTMLDivElement>(null);
@@ -85,6 +91,9 @@ if (genDropdownRef.current && !genDropdownRef.current.contains(event.target as N
       }
       if (creditDropdownRef.current && !creditDropdownRef.current.contains(event.target as Node)) {
         setCreditDropdownOpen(false);
+      }
+      if (loginDropdownRef.current && !loginDropdownRef.current.contains(event.target as Node)) {
+        setLoginDropdownOpen(false);
       }
     }
     document.addEventListener('mousedown', handleClickOutside);
@@ -496,18 +505,21 @@ if (genDropdownRef.current && !genDropdownRef.current.contains(event.target as N
                 )}
               </div>
             ) : (
-              // Logged out state
-              <>
-                <a href="/login" className={`text-sm animated-underline ${
-                  variant === 'transparent'
-                    ? 'text-white/80 hover:text-white'
-                    : 'text-neutral-600 hover:text-neutral-900'
-                }`}>
+              // Logged out state - inline sign-in dropdown (no page navigation)
+              <div className="relative" ref={loginDropdownRef}>
+                <button
+                  onClick={() => setLoginDropdownOpen(!loginDropdownOpen)}
+                  className={`text-sm animated-underline ${
+                    variant === 'transparent'
+                      ? 'text-white/80 hover:text-white'
+                      : 'text-neutral-600 hover:text-neutral-900'
+                  }`}
+                >
                   Log in
-                </a>
+                </button>
                 <a
                   href="/signup"
-                  className={`text-sm px-5 py-2.5 rounded-full transition-colors font-medium ${
+                  className={`ml-3 text-sm px-5 py-2.5 rounded-full transition-colors font-medium ${
                     variant === 'transparent'
                       ? 'bg-white text-neutral-900 hover:bg-white/90'
                       : 'bg-neutral-900 text-white hover:bg-neutral-800'
@@ -515,7 +527,80 @@ if (genDropdownRef.current && !genDropdownRef.current.contains(event.target as N
                 >
                   Get Started
                 </a>
-              </>
+
+                {loginDropdownOpen && (
+                  <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl border border-neutral-200 shadow-xl p-5 z-50">
+                    <h3 className="font-semibold text-neutral-900 mb-4">Log in to your account</h3>
+
+                    {/* Google Sign In */}
+                    <button
+                      onClick={() => signIn('google', { callbackUrl: window.location.href })}
+                      className="w-full flex items-center justify-center gap-2 px-4 py-2.5 border border-neutral-200 rounded-lg hover:bg-neutral-50 text-sm font-medium text-neutral-700 mb-3 transition-colors"
+                    >
+                      <svg className="h-4 w-4" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+                      Continue with Google
+                    </button>
+
+                    <div className="relative my-3">
+                      <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-neutral-200"></div></div>
+                      <div className="relative flex justify-center text-xs"><span className="px-2 bg-white text-neutral-400">or</span></div>
+                    </div>
+
+                    {/* Email/Password */}
+                    <form onSubmit={async (e) => {
+                      e.preventDefault();
+                      setLoginLoading(true);
+                      setLoginError('');
+                      try {
+                        const result = await signIn('credentials', {
+                          email: loginEmail,
+                          password: loginPassword,
+                          redirect: false,
+                        });
+                        if (result?.error) {
+                          setLoginError('Invalid email or password');
+                        } else {
+                          setLoginDropdownOpen(false);
+                          window.location.reload();
+                        }
+                      } catch {
+                        setLoginError('Something went wrong');
+                      } finally {
+                        setLoginLoading(false);
+                      }
+                    }}>
+                      <input
+                        type="email"
+                        value={loginEmail}
+                        onChange={(e) => setLoginEmail(e.target.value)}
+                        placeholder="Email"
+                        className="w-full px-3 py-2 border border-neutral-200 rounded-lg text-sm mb-2 focus:border-neutral-900 focus:outline-none"
+                        required
+                      />
+                      <input
+                        type="password"
+                        value={loginPassword}
+                        onChange={(e) => setLoginPassword(e.target.value)}
+                        placeholder="Password"
+                        className="w-full px-3 py-2 border border-neutral-200 rounded-lg text-sm mb-3 focus:border-neutral-900 focus:outline-none"
+                        required
+                      />
+                      {loginError && <p className="text-red-600 text-xs mb-2">{loginError}</p>}
+                      <button
+                        type="submit"
+                        disabled={loginLoading}
+                        className="w-full py-2.5 bg-neutral-900 text-white rounded-lg text-sm font-medium hover:bg-neutral-800 disabled:opacity-50 transition-colors"
+                      >
+                        {loginLoading ? 'Logging in...' : 'Log in'}
+                      </button>
+                    </form>
+
+                    <p className="text-xs text-neutral-500 text-center mt-3">
+                      No account? <a href="/signup" className="text-neutral-900 underline">Sign up</a>
+                    </p>
+                  </div>
+                )}
+              </div>
             )}
           </div>
 
@@ -673,8 +758,14 @@ if (genDropdownRef.current && !genDropdownRef.current.contains(event.target as N
               ) : (
                 <>
                   <div className="h-px bg-neutral-200 my-4" />
-                  <a href="/login" className="text-lg">
-                    Log in
+                  <button
+                    onClick={() => signIn('google', { callbackUrl: window.location.href })}
+                    className="text-lg flex items-center gap-2"
+                  >
+                    Log in with Google
+                  </button>
+                  <a href="/login" className="text-lg text-neutral-500">
+                    Log in with email
                   </a>
                   <a
                     href="/signup"
