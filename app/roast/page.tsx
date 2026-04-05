@@ -31,10 +31,10 @@ const SEVERITY_LABELS: Record<number, { label: string; emoji: string; descriptio
 };
 
 const ART_STYLES = [
-  { key: 'manga', label: 'Manga' },
-  { key: 'superhero', label: 'Superhero' },
-  { key: 'noir', label: 'Noir' },
-  { key: 'retro', label: 'Retro Comics' },
+  { key: 'shonen', label: 'Shonen Anime' },
+  { key: 'animated', label: 'Western Animation' },
+  { key: 'realistic', label: 'Realistic' },
+  { key: 'puppet', label: 'Puppet / Doll' },
 ];
 
 interface RoastCharacter {
@@ -53,7 +53,7 @@ export default function RoastPage() {
   ]);
   const [severity, setSeverity] = useState(2);
   const [scenario, setScenario] = useState('');
-  const [artStyle, setArtStyle] = useState('manga');
+  const [artStyle, setArtStyle] = useState('shonen');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
 

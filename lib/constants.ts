@@ -220,6 +220,35 @@ export const ART_STYLES = {
     coverStyle: 'vintage 1950s comic cover with halftone dots, yellowed paper, and limited color palette',
     category: 'comic',
   },
+  // Roast-specific Styles
+  shonen: {
+    label: 'Shonen Anime',
+    description: 'Sharp dramatic anime with bold action poses',
+    prompt: 'professional shonen anime illustration in the style of Buso Renkin and Bleach, sharp clean ink outlines with dynamic line weight, vibrant saturated cel-shaded coloring with hard shadow edges, dramatic lighting with rim-light highlights and lens flare accents, spiky detailed hair with individual strand rendering, large expressive eyes with intense reflections, exaggerated dynamic action poses with foreshortening, speed lines and energy effects radiating from characters, detailed costume and weapon designs with metallic sheen, bold dramatic compositions with diagonal framing, high-contrast color palette with deep blacks and vivid highlights, professional Japanese animation production quality',
+    coverStyle: 'dynamic shonen anime art with sharp lines, dramatic poses, and vibrant cel-shading',
+    category: 'comic',
+  },
+  animated: {
+    label: 'Western Animation',
+    description: 'Clean animated style like classic cartoons',
+    prompt: 'premium Western animation illustration in the style of Batman: The Animated Series and modern Disney animation, clean geometric character designs with strong angular silhouettes, art deco influenced backgrounds with simplified architectural forms, dramatic noir-inspired lighting with bold colored shadows (no black shadows, use deep blues and purples), flat cel-shaded coloring with limited but striking palette, thick confident outlines with consistent weight, exaggerated but grounded character proportions, cinematic widescreen compositions with dramatic camera angles, moody atmospheric backgrounds with gradient skies, stylized but expressive facial features with strong jawlines and distinctive profiles, professional broadcast animation quality',
+    coverStyle: 'stylized Western animation art with clean shapes, dramatic lighting, and bold color palette',
+    category: 'comic',
+  },
+  realistic: {
+    label: 'Realistic',
+    description: 'Photorealistic cinematic style',
+    prompt: 'photorealistic cinematic illustration with professional photography quality, natural skin textures with subsurface scattering and visible pores, accurate facial anatomy with realistic proportions and bone structure, cinematic shallow depth-of-field with bokeh background blur, professional studio or natural lighting with soft diffused key light and subtle fill, detailed fabric textures and realistic clothing wrinkles, environmental storytelling with real-world settings, color graded with film-like tonal curve (slight teal shadows, warm highlights), hyperrealistic hair rendering with individual strands catching light, photographically accurate eye detail with realistic iris patterns, 35mm or 85mm lens perspective, editorial photography meets graphic novel realism',
+    coverStyle: 'photorealistic cinematic portrait with professional lighting and film-quality color grading',
+    category: 'comic',
+  },
+  puppet: {
+    label: 'Puppet / Doll',
+    description: 'Marionette puppet style like Team America',
+    prompt: 'Team America World Police marionette puppet style illustration, characters as realistic wooden and plastic marionette dolls with visible ball joints at shoulders elbows and knees, slightly oversized heads with painted-on facial features and glassy fixed eyes, stiff awkward puppet poses with dangling limbs and unnatural body angles suggesting string control from above, waxy plastic skin texture with visible seam lines along jaw and forehead, miniature set environments built from painted foam and balsa wood, slightly uncanny valley aesthetic mixing realistic detail with obvious artificiality, soft studio lighting on miniature diorama sets, characters wearing meticulously detailed tiny fabric costumes, comedic deadpan expressions on molded plastic faces, stop-motion animation frame quality with shallow depth of field on miniature scale',
+    coverStyle: 'Team America style marionette puppet characters with visible joints on miniature sets',
+    category: 'comic',
+  },
 } as const;
 
 export type ArtStyleKey = keyof typeof ART_STYLES;
