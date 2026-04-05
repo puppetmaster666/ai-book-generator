@@ -78,12 +78,21 @@ export async function POST(
             });
         }
 
-        // GENERATION LOCK: Prevent concurrent generation from duplicate triggers
-        // If book was updated in the last 30 seconds and is actively generating, skip
-        const thirtySecondsAgo = new Date(Date.now() - 30 * 1000);
-        if (book.status === 'generating' && book.updatedAt > thirtySecondsAgo) {
-            console.log(`[Visual Gen] Generation already active for book ${id} (updated ${Math.round((Date.now() - book.updatedAt.getTime()) / 1000)}s ago), skipping duplicate`);
+        // GENERATION LOCK: Atomic check-and-set to prevent concurrent generation
+        // Uses updateMany with a condition so only ONE request can claim the lock
+        if (book.status === 'generating') {
+            console.log(`[Visual Gen] Book ${id} already in generating status, skipping duplicate`);
             return NextResponse.json({ message: 'Generation already in progress', status: book.status });
+        }
+
+        // Atomically set status to generating — only succeeds if status hasn't changed
+        const lockResult = await prisma.book.updateMany({
+            where: { id, status: { not: 'generating' } },
+            data: { status: 'generating' },
+        });
+        if (lockResult.count === 0) {
+            console.log(`[Visual Gen] Failed to acquire generation lock for ${id}, another process got it`);
+            return NextResponse.json({ message: 'Generation already in progress', status: 'generating' });
         }
 
         // Check payment status and free tier limits
