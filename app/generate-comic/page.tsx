@@ -80,6 +80,9 @@ function GenerateComicContent() {
   const [expandedPanel, setExpandedPanel] = useState<number | null>(null);
   const [allComplete, setAllComplete] = useState(false);
   const [lightboxImage, setLightboxImage] = useState<string | null>(null);
+  const [promoCode, setPromoCode] = useState('');
+  const [promoLoading, setPromoLoading] = useState(false);
+  const [promoError, setPromoError] = useState('');
   const [elapsedTime, setElapsedTime] = useState(0);
   const [isWaitingForOutline, setIsWaitingForOutline] = useState(false);
   const [outlineElapsed, setOutlineElapsed] = useState(0);
@@ -988,6 +991,49 @@ function GenerateComicContent() {
               <p className="text-neutral-500 text-xs mt-3">
                 <span className="line-through">$6.99</span> limited time discount
               </p>
+
+              {/* Promo code input */}
+              <div className="mt-6 pt-4 border-t border-white/10">
+                <p className="text-neutral-400 text-xs mb-2">Have a promo code?</p>
+                <div className="flex gap-2 max-w-xs mx-auto">
+                  <input
+                    type="text"
+                    value={promoCode}
+                    onChange={(e) => { setPromoCode(e.target.value.toUpperCase()); setPromoError(''); }}
+                    placeholder="Enter code"
+                    className="flex-1 px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm placeholder-neutral-500 focus:outline-none focus:border-white/40 uppercase"
+                  />
+                  <button
+                    onClick={async () => {
+                      if (!promoCode.trim()) return;
+                      setPromoLoading(true);
+                      setPromoError('');
+                      try {
+                        const res = await fetch('/api/free-order', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ bookId, promoCode, email: session?.user?.email }),
+                        });
+                        const data = await res.json();
+                        if (data.success) {
+                          window.location.reload();
+                        } else {
+                          setPromoError(data.error || 'Invalid code');
+                        }
+                      } catch {
+                        setPromoError('Failed to apply code');
+                      } finally {
+                        setPromoLoading(false);
+                      }
+                    }}
+                    disabled={promoLoading || !promoCode.trim()}
+                    className="px-4 py-2 bg-white text-neutral-900 rounded-lg text-sm font-medium hover:bg-neutral-100 disabled:opacity-50 transition-colors"
+                  >
+                    {promoLoading ? '...' : 'Apply'}
+                  </button>
+                </div>
+                {promoError && <p className="text-red-400 text-xs mt-1">{promoError}</p>}
+              </div>
             </div>
           )}
 
