@@ -705,7 +705,10 @@ JSON format:
         : fictionPrompt.replace(idea, sanitizedIdea);
 
       const result = await getGeminiFlash().generateContent(sanitizedPrompt);
-      const response = result.response.text();
+      const response = result.response.text() || '';
+      if (!response.trim()) {
+        throw new Error('Empty response from AI model');
+      }
 
       const parsed = parseJSONFromResponse(response) as {
         title: string;
