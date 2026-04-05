@@ -414,16 +414,9 @@ function GenerateComicContent() {
               return p;
             }));
 
-            // Check if we are done based on book status or counts
-            const doneCount = book.illustrations.length;
-            const targetCount = Math.min(book.outline?.chapters?.length || 0, 24); // Cap at 24/20
-
-            if (doneCount >= targetCount && targetCount > 0) {
-              // Trigger assembly if not already triggering
-              if (!isAssembling) {
-                assembleBook();
-              }
-            }
+            // Do NOT auto-assemble here - let the user see their panels first
+            // Assembly is triggered by the user clicking the button, or by the
+            // generate-visual route when it finishes all panels for paid books
           }
 
         } catch (e) {
@@ -698,7 +691,7 @@ function GenerateComicContent() {
 
           {/* Action Buttons */}
           <div className="flex flex-wrap gap-4 justify-center mb-8">
-            {pendingCount === panels.length && !isGenerating && (
+            {pendingCount > 0 && doneCount === 0 && !isGenerating && (
               <button
                 onClick={generateAllPanels}
                 disabled={isGenerating}
@@ -742,25 +735,32 @@ function GenerateComicContent() {
               </div>
             )}
 
-            {allComplete && (
-              <button
-                onClick={assembleBook}
-                disabled={isAssembling}
-                className="flex items-center gap-2 px-8 py-4 bg-neutral-900 text-white rounded-full hover:bg-neutral-800 disabled:opacity-50 font-medium transition-all"
-              >
-                {isAssembling ? (
-                  <>
-                    <Loader2 className="h-5 w-5 animate-spin" />
-                    Assembling book...
-                  </>
-                ) : (
-                  <>
-                    <Download className="h-5 w-5" />
-                    Assemble & Download Book
-                  </>
-                )}
-              </button>
-            )}
+            {/* Only show assemble button when ALL expected panels have actual images */}
+            {!isGenerating && (() => {
+              const expectedCount = isFreePreviewGlobal ? 5 : panels.length;
+              const panelsWithImages = activePanels.filter(p => p.status === 'done' && p.imageUrl).length;
+              const allDone = panelsWithImages >= expectedCount && expectedCount > 0;
+
+              return allDone ? (
+                <button
+                  onClick={assembleBook}
+                  disabled={isAssembling}
+                  className="flex items-center gap-2 px-8 py-4 bg-neutral-900 text-white rounded-full hover:bg-neutral-800 disabled:opacity-50 font-medium transition-all"
+                >
+                  {isAssembling ? (
+                    <>
+                      <Loader2 className="h-5 w-5 animate-spin" />
+                      Assembling book...
+                    </>
+                  ) : (
+                    <>
+                      <Download className="h-5 w-5" />
+                      Assemble & Download Book
+                    </>
+                  )}
+                </button>
+              ) : null;
+            })()}
           </div>
 
           {/* Generating Status with Timer */}

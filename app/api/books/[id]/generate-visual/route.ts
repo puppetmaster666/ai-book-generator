@@ -656,16 +656,27 @@ export async function POST(
 
         // If we have some panels but not all processed yet
         if (successfulPanels === 0 && failedPanels === 0 && pendingChapters.length > 0) {
-            // No panels at all - complete failure
-            console.error(`[Visual Gen] ALL panels failed for book ${id}. Marking as failed.`);
+            // No panels at all - complete failure. Auto-refund credits.
+            console.error(`[Visual Gen] ALL panels failed for book ${id}. Marking as failed and refunding.`);
             await prisma.book.update({
                 where: { id },
                 data: {
                     status: 'failed',
-                    errorMessage: 'All panel generations failed. API keys may be exhausted. Please try again later.',
+                    errorMessage: 'All panel generations failed. Your credits have been refunded. Please try again.',
                 },
             });
-            return NextResponse.json({ error: 'All panel generations failed', status: 'failed' }, { status: 500 });
+
+            // Auto-refund credits
+            if (book.userId && book.paymentMethod === 'credits') {
+                const { getCreditCost } = await import('@/lib/constants');
+                const cost = getCreditCost(book.bookPreset);
+                await prisma.user.update({
+                    where: { id: book.userId },
+                    data: { creditBalance: { increment: cost } },
+                });
+                console.log(`[Visual Gen] Refunded ${cost} credits to user ${book.userId}`);
+            }
+            return NextResponse.json({ error: 'All panel generations failed. Credits refunded.', status: 'failed', refunded: true }, { status: 500 });
         }
 
         return NextResponse.json({
@@ -680,20 +691,31 @@ export async function POST(
         const errorMsg = err?.message || 'Unknown error';
         console.error(`[Visual Gen] Background generation error for book ${id}: ${errorMsg}`);
 
-        // Try to mark book as failed
+        // Mark book as failed and auto-refund
         try {
-            await prisma.book.update({
+            const failedBook = await prisma.book.update({
                 where: { id },
                 data: {
                     status: 'failed',
-                    errorMessage: `Generation failed: ${errorMsg.substring(0, 200)}`,
+                    errorMessage: `Generation failed: ${errorMsg.substring(0, 200)}. Credits refunded.`,
                 },
             });
             console.log(`[Visual Gen] Marked book ${id} as failed`);
+
+            // Auto-refund credits
+            if (failedBook.userId && failedBook.paymentMethod === 'credits') {
+                const { getCreditCost } = await import('@/lib/constants');
+                const cost = getCreditCost(failedBook.bookPreset);
+                await prisma.user.update({
+                    where: { id: failedBook.userId },
+                    data: { creditBalance: { increment: cost } },
+                });
+                console.log(`[Visual Gen] Refunded ${cost} credits to user ${failedBook.userId}`);
+            }
         } catch (updateErr) {
             console.error('[Visual Gen] Failed to update book status:', updateErr);
         }
 
-        return NextResponse.json({ error: errorMsg }, { status: 500 });
+        return NextResponse.json({ error: errorMsg, refunded: true }, { status: 500 });
     }
 }
