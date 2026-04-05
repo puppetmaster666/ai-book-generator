@@ -420,11 +420,17 @@ export default function CreateBook() {
     }
   };
 
+  // Progress tracking for the submit process
+  const [submitProgress, setSubmitProgress] = useState(0); // 0-100
+  const [submitStep, setSubmitStep] = useState('');
+
   const handleSubmit = async () => {
     if (!selectedPreset || !idea.trim()) return;
 
     setIsSubmitting(true);
     setError('');
+    setSubmitProgress(0);
+    setSubmitStep('Expanding your idea...');
 
     // Save prompt to history
     savePromptToHistory(idea);
@@ -474,6 +480,9 @@ export default function CreateBook() {
       if (!expandResponse.ok) throw new Error('Failed to expand idea');
       const bookPlan = await expandResponse.json();
 
+      setSubmitProgress(40);
+      setSubmitStep('Creating your book...');
+
       // Get target words and chapters from preset
       const { targetWords, targetChapters } = getTargetFromPreset();
 
@@ -501,9 +510,12 @@ export default function CreateBook() {
 
       const { bookId } = data;
 
+      setSubmitProgress(65);
+
       // Upload protagonist photo if provided (first character with a photo)
       const firstPhotoIndex = characterPhotos.findIndex(p => p !== null);
       if (firstPhotoIndex >= 0 && characterPhotos[firstPhotoIndex] && isIllustrated) {
+        setSubmitStep('Stylizing character photo...');
         try {
           const photoData = characterPhotos[firstPhotoIndex]!;
           const base64 = photoData.includes(',') ? photoData.split(',')[1] : photoData;
@@ -522,8 +534,12 @@ export default function CreateBook() {
         }
       }
 
+      setSubmitProgress(90);
+      setSubmitStep('Finalizing...');
+
       trackGenerateLead(bookId);
       clearFormState();
+      setSubmitProgress(100);
       router.push(`/review?bookId=${bookId}`);
     } catch (err) {
       console.error('Error:', err);
@@ -569,11 +585,17 @@ export default function CreateBook() {
           {step === 'category' && (
             <>
               {isSubmitting ? (
-                <div className="text-center py-20">
+                <div className="text-center py-20 max-w-md mx-auto">
                   <Loader2 className="h-12 w-12 animate-spin mx-auto mb-4 text-neutral-900" />
                   <h2 className="text-xl font-semibold mb-2">Creating your book...</h2>
-                  <p className="text-neutral-600 mb-4">We&apos;re expanding your idea into a full outline</p>
-                  <GeneratingMessage type="outline" size="md" showTimer className="justify-center" />
+                  <p className="text-neutral-600 mb-4">{submitStep}</p>
+                  <div className="h-2 bg-neutral-200 rounded-full overflow-hidden mb-2">
+                    <div
+                      className="h-full bg-neutral-900 transition-all duration-500 ease-out"
+                      style={{ width: `${submitProgress}%` }}
+                    />
+                  </div>
+                  <p className="text-xs text-neutral-400">{submitProgress}%</p>
                 </div>
               ) : (
                 <>
@@ -962,18 +984,13 @@ export default function CreateBook() {
                     disabled={idea.trim().length < 20 || isSubmitting}
                     className="flex items-center gap-2 px-8 py-4 bg-neutral-900 text-white rounded-full hover:bg-neutral-800 disabled:opacity-50 font-medium transition-all hover:scale-105"
                   >
-                    {isSubmitting ? (
-                      <>
-                        <Loader2 className="h-5 w-5 animate-spin" />
-                        Creating your book...
-                      </>
-                    ) : selectedCategory === 'image' ? (
+                    {selectedCategory === 'image' ? (
                       <>
                         Choose Art Style <ArrowRight className="h-5 w-5" />
                       </>
                     ) : (
                       <>
-                        Create Book <ArrowRight className="h-5 w-5" />
+                        Next: Characters <ArrowRight className="h-5 w-5" />
                       </>
                     )}
                   </button>
@@ -1256,27 +1273,26 @@ export default function CreateBook() {
                 <p className="text-red-600 text-sm mb-4 bg-red-50 px-4 py-2 rounded-lg text-center mt-4">{error}</p>
               )}
 
-              <div className="flex justify-center mt-8">
-                <button
-                  onClick={handleSubmit}
-                  disabled={isSubmitting}
-                  className="flex items-center gap-2 px-8 py-4 bg-neutral-900 text-white rounded-full hover:bg-neutral-800 disabled:opacity-50 font-medium transition-all hover:scale-105"
-                >
-                  {isSubmitting ? (
-                    <>
-                      <Loader2 className="h-5 w-5 animate-spin" />
-                      Creating your book...
-                    </>
-                  ) : (
-                    <>
-                      Create {preset.label} <ArrowRight className="h-5 w-5" />
-                    </>
-                  )}
-                </button>
-              </div>
-              {isSubmitting && (
-                <div className="mt-6 text-center">
-                  <GeneratingMessage type="outline" size="md" showTimer className="justify-center" />
+              {isSubmitting ? (
+                <div className="mt-8 max-w-md mx-auto text-center">
+                  <Loader2 className="h-10 w-10 animate-spin mx-auto mb-4 text-neutral-900" />
+                  <h3 className="font-semibold text-neutral-900 mb-2">{submitStep}</h3>
+                  <div className="h-2 bg-neutral-200 rounded-full overflow-hidden mb-2">
+                    <div
+                      className="h-full bg-neutral-900 transition-all duration-500 ease-out"
+                      style={{ width: `${submitProgress}%` }}
+                    />
+                  </div>
+                  <p className="text-xs text-neutral-400">{submitProgress}%</p>
+                </div>
+              ) : (
+                <div className="flex justify-center mt-8">
+                  <button
+                    onClick={handleSubmit}
+                    className="flex items-center gap-2 px-8 py-4 bg-neutral-900 text-white rounded-full hover:bg-neutral-800 font-medium transition-all hover:scale-105"
+                  >
+                    Create {preset.label} <ArrowRight className="h-5 w-5" />
+                  </button>
                 </div>
               )}
             </>
