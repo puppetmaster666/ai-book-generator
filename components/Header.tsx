@@ -31,6 +31,7 @@ export default function Header({ variant = 'default' }: HeaderProps) {
   const [unreadCount, setUnreadCount] = useState(0);
   const [freeCredits, setFreeCredits] = useState(0);
   const [paidCredits, setPaidCredits] = useState(0);
+  const [creditBalance, setCreditBalance] = useState(0);
   const [creditDropdownOpen, setCreditDropdownOpen] = useState(false);
   const creditDropdownRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -57,6 +58,7 @@ export default function Header({ variant = 'default' }: HeaderProps) {
             setUnreadCount(data.unreadCount || 0);
             setFreeCredits(data.freeCredits || 0);
             setPaidCredits(data.credits || 0);
+            setCreditBalance(data.creditBalance || 0);
           }
         })
         .catch(() => {});
@@ -308,7 +310,7 @@ if (genDropdownRef.current && !genDropdownRef.current.contains(event.target as N
                     }`}
                   >
                     <Coins className="h-4 w-4" />
-                    <span className="text-sm font-medium">{freeCredits + paidCredits}</span>
+                    <span className="text-sm font-medium">{creditBalance || (freeCredits + paidCredits)}</span>
                   </button>
 
                   {creditDropdownOpen && (
@@ -316,19 +318,11 @@ if (genDropdownRef.current && !genDropdownRef.current.contains(event.target as N
                       <div className="px-4 pb-3 border-b border-neutral-100">
                         <p className="text-sm font-medium text-neutral-900">Your Credits</p>
                         <div className="mt-2 space-y-1">
-                          {freeCredits > 0 && (
-                            <div className="flex items-center justify-between text-sm">
-                              <span className="text-neutral-500">Free credits</span>
-                              <span className="font-medium text-lime-600">{freeCredits}</span>
-                            </div>
-                          )}
-                          {paidCredits > 0 && (
-                            <div className="flex items-center justify-between text-sm">
-                              <span className="text-neutral-500">Plan credits</span>
-                              <span className="font-medium">{paidCredits}</span>
-                            </div>
-                          )}
-                          {freeCredits === 0 && paidCredits === 0 && (
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-neutral-500">Balance</span>
+                            <span className="font-medium">{creditBalance || (freeCredits + paidCredits)}</span>
+                          </div>
+                          {creditBalance === 0 && freeCredits === 0 && paidCredits === 0 && (
                             <p className="text-sm text-neutral-400">No credits available</p>
                           )}
                         </div>

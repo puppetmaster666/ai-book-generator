@@ -98,6 +98,33 @@ export const CREDIT_COSTS: Record<string, number> = {
   adult_comic: 250,
 };
 
+// Credit packs - one-time credit purchases (no subscription)
+export const CREDIT_PACKS = {
+  single: { credits: 250, price: 499, priceDisplay: '$4.99', label: 'Single Book' },
+  five_pack: { credits: 1100, price: 1999, priceDisplay: '$19.99', label: '5-Pack' },
+  ten_pack: { credits: 2200, price: 3499, priceDisplay: '$34.99', label: '10-Pack' },
+} as const;
+
+// Plan display names
+export const PLAN_NAMES: Record<string, string> = {
+  free: 'Free',
+  starter_monthly: 'Starter',
+  starter_yearly: 'Starter (Yearly)',
+  author_monthly: 'Author',
+  author_yearly: 'Author (Yearly)',
+  pro_monthly: 'Pro',
+  pro_yearly: 'Pro (Yearly)',
+  // Legacy
+  monthly: 'Author (Legacy)',
+  yearly: 'Author Yearly (Legacy)',
+};
+
+// Get credit cost for a book preset
+export function getCreditCost(bookPreset: string | null): number {
+  if (!bookPreset) return 120; // Default to novel cost
+  return CREDIT_COSTS[bookPreset] || 120;
+}
+
 // Free tier limits - hard stop at these limits for unpaid users
 export const FREE_TIER_LIMITS = {
   text_only: { chapters: 1, description: '1 chapter preview' },

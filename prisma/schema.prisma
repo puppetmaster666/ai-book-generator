@@ -14,6 +14,7 @@ model User {
   passwordHash         String?
   plan                 String         @default("free")
   credits              Int            @default(0)
+  creditBalance        Int            @default(0)
   stripeCustomerId     String?
   stripeSubscriptionId String?
   createdAt            DateTime       @default(now())

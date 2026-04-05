@@ -50,6 +50,8 @@ interface ApiResponse {
   hasCredits: boolean;
   userCredits: number;
   userPlan: string;
+  creditBalance: number;
+  creditCost: number;
   error?: string;
 }
 
@@ -70,6 +72,8 @@ function ReviewContent() {
   const [freeBookEligible, setFreeBookEligible] = useState(false);
   const [hasCredits, setHasCredits] = useState(false);
   const [userCredits, setUserCredits] = useState(0);
+  const [creditBalance, setCreditBalance] = useState(0);
+  const [creditCost, setCreditCost] = useState(0);
 
   // User details
   const [email, setEmail] = useState('');
@@ -140,6 +144,8 @@ function ReviewContent() {
           setFreeBookEligible(data.freeBookEligible || false);
           setHasCredits(data.hasCredits || false);
           setUserCredits(data.userCredits || 0);
+          setCreditBalance(data.creditBalance || 0);
+          setCreditCost(data.creditCost || 0);
           // Load protagonist images if available
           if (data.book.protagonistPhoto) {
             setProtagonistPhoto(data.book.protagonistPhoto);
@@ -1606,30 +1612,47 @@ function ReviewContent() {
                 </>
               )}
             </div>
-            <button
-              onClick={handleContinueToCheckout}
-              disabled={isSubmitting}
-              className="flex items-center gap-2 px-8 py-4 bg-white text-neutral-900 rounded-full hover:bg-neutral-100 font-medium transition-all hover:scale-105 disabled:opacity-50"
-            >
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="h-5 w-5 animate-spin" />
-                  Processing...
-                </>
-              ) : isAlreadyPaid ? (
-                <>
-                  Continue <ArrowRight className="h-5 w-5" />
-                </>
-              ) : isFree ? (
-                <>
-                  Generate Book Free <ArrowRight className="h-5 w-5" />
-                </>
-              ) : (
-                <>
-                  Continue to Checkout <ArrowRight className="h-5 w-5" />
-                </>
-              )}
-            </button>
+            {/* Pay with Credits button (if user has enough) */}
+            {!isAlreadyPaid && !isFree && creditBalance >= creditCost && creditCost > 0 && (
+              <button
+                onClick={handleContinueToCheckout}
+                disabled={isSubmitting}
+                className="flex items-center gap-2 px-8 py-4 bg-white text-neutral-900 rounded-full hover:bg-neutral-100 font-medium transition-all hover:scale-105 disabled:opacity-50 mb-3"
+              >
+                {isSubmitting ? (
+                  <><Loader2 className="h-5 w-5 animate-spin" /> Processing...</>
+                ) : (
+                  <>Use {creditCost} Credits <ArrowRight className="h-5 w-5" /></>
+                )}
+              </button>
+            )}
+            {/* Standard checkout / continue button */}
+            {(isAlreadyPaid || isFree || creditBalance < creditCost || creditCost === 0) && (
+              <button
+                onClick={handleContinueToCheckout}
+                disabled={isSubmitting}
+                className="flex items-center gap-2 px-8 py-4 bg-white text-neutral-900 rounded-full hover:bg-neutral-100 font-medium transition-all hover:scale-105 disabled:opacity-50"
+              >
+                {isSubmitting ? (
+                  <><Loader2 className="h-5 w-5 animate-spin" /> Processing...</>
+                ) : isAlreadyPaid ? (
+                  <>Continue <ArrowRight className="h-5 w-5" /></>
+                ) : isFree ? (
+                  <>Generate Book Free <ArrowRight className="h-5 w-5" /></>
+                ) : (
+                  <>Continue to Checkout <ArrowRight className="h-5 w-5" /></>
+                )}
+              </button>
+            )}
+            {/* Credit balance info */}
+            {!isAlreadyPaid && !isFree && session && creditCost > 0 && (
+              <p className="text-neutral-400 text-xs mt-2 text-center">
+                This book costs {creditCost} credits. You have {creditBalance} credits.
+                {creditBalance < creditCost && (
+                  <> <a href="/pricing" className="underline hover:text-white">Get more credits</a></>
+                )}
+              </p>
+            )}
           </div>
 
           {error && (

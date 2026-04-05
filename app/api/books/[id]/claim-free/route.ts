@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/db';
+import { getCreditCost } from '@/lib/constants';
 
 // POST /api/books/[id]/claim-free
-// Claims a book using user's credits (subscription, gifted, or free sample)
+// Claims a book using user's credits or free sample
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -16,10 +17,9 @@ export async function POST(
 
     const { id: bookId } = await params;
 
-    // Get user and check eligibility - include subscription credits!
     const user = await prisma.user.findUnique({
       where: { id: session.user.id },
-      select: { id: true, freeBookUsed: true, freeCredits: true, credits: true },
+      select: { id: true, freeBookUsed: true, freeCredits: true, credits: true, creditBalance: true },
     });
 
     if (!user) {
@@ -32,24 +32,13 @@ export async function POST(
       const body = await request.json();
       useCredits = body.useCredits === true;
     } catch {
-      // No body or invalid JSON — default to free preview
+      // No body or invalid JSON, default to free preview
     }
-
-    const hasSubscriptionCredits = user.credits > 0;
-    const hasGiftedCredits = user.freeCredits > 0;
-    const hasFreeSample = !user.freeBookUsed;
-
-    console.log(`[claim-free] User ${session.user.id}: credits=${user.credits}, freeCredits=${user.freeCredits}, freeBookUsed=${user.freeBookUsed}, useCredits=${useCredits}, path=${useCredits && (hasSubscriptionCredits || hasGiftedCredits) ? 'CREDIT' : 'FREE_PREVIEW'}`);
 
     // Get the book
     const book = await prisma.book.findUnique({
       where: { id: bookId },
-      select: {
-        id: true,
-        userId: true,
-        paymentStatus: true,
-        status: true,
-      },
+      select: { id: true, userId: true, paymentStatus: true, status: true, bookPreset: true },
     });
 
     if (!book) {
@@ -64,41 +53,73 @@ export async function POST(
       return NextResponse.json({ error: 'Book is already paid for' }, { status: 400 });
     }
 
-    if (useCredits && (hasSubscriptionCredits || hasGiftedCredits)) {
-      // CREDIT CONSUMPTION: User explicitly chose to use credits (from review page)
-      // This gives FULL access
-      const useSubCredit = hasSubscriptionCredits;
+    const creditCost = getCreditCost(book.bookPreset);
 
-      await prisma.$transaction([
-        prisma.book.update({
-          where: { id: bookId },
-          data: {
-            userId: session.user.id,
-            paymentStatus: 'completed',
-            paymentMethod: useSubCredit ? 'subscription_credit' : 'free_credit',
-          },
-        }),
-        prisma.user.update({
-          where: { id: session.user.id },
-          data: useSubCredit
-            ? { credits: { decrement: 1 } }
-            : { freeCredits: { decrement: 1 } },
-        }),
-      ]);
+    console.log(`[claim-free] User ${session.user.id}: creditBalance=${user.creditBalance}, freeCredits=${user.freeCredits}, credits=${user.credits}, freeBookUsed=${user.freeBookUsed}, useCredits=${useCredits}, creditCost=${creditCost}`);
 
-      // Do NOT trigger generation here — the frontend handles it via
-      // generate-comic page or book page to avoid duplicate generation
+    if (useCredits) {
+      // CREDIT CONSUMPTION: User explicitly chose to use credits
+      const hasEnoughCredits = user.creditBalance >= creditCost;
+      // Legacy fallback: old credits/freeCredits system
+      const hasLegacyCredits = user.credits > 0 || user.freeCredits > 0;
+
+      if (!hasEnoughCredits && !hasLegacyCredits) {
+        return NextResponse.json({
+          error: 'Not enough credits',
+          creditCost,
+          creditBalance: user.creditBalance,
+        }, { status: 400 });
+      }
+
+      if (hasEnoughCredits) {
+        // New credit system: deduct creditBalance by cost
+        await prisma.$transaction([
+          prisma.book.update({
+            where: { id: bookId },
+            data: {
+              userId: session.user.id,
+              paymentStatus: 'completed',
+              paymentMethod: 'credits',
+            },
+          }),
+          prisma.user.update({
+            where: { id: session.user.id },
+            data: { creditBalance: { decrement: creditCost } },
+          }),
+        ]);
+      } else {
+        // Legacy: deduct old credits (1 credit = 1 book)
+        const useSubCredit = user.credits > 0;
+        await prisma.$transaction([
+          prisma.book.update({
+            where: { id: bookId },
+            data: {
+              userId: session.user.id,
+              paymentStatus: 'completed',
+              paymentMethod: useSubCredit ? 'subscription_credit' : 'free_credit',
+            },
+          }),
+          prisma.user.update({
+            where: { id: session.user.id },
+            data: useSubCredit
+              ? { credits: { decrement: 1 } }
+              : { freeCredits: { decrement: 1 } },
+          }),
+        ]);
+      }
+
       return NextResponse.json({
         success: true,
-        message: 'Book claimed with credit. Full access!',
+        message: 'Book claimed with credits. Full access!',
         bookId,
         isFullAccess: true,
-        creditType: useSubCredit ? 'subscription credit' : 'gifted credit',
+        creditType: 'credits',
+        creditCost,
       });
     }
 
-    // FREE PREVIEW: Default path (signup flow, or user with no credits)
-    if (!hasFreeSample) {
+    // FREE PREVIEW: Default path (signup flow)
+    if (user.freeBookUsed) {
       return NextResponse.json(
         { error: 'Free sample already used. Please upgrade to create more books.' },
         { status: 400 }
@@ -116,13 +137,10 @@ export async function POST(
       }),
       prisma.user.update({
         where: { id: session.user.id },
-        data: {
-          freeBookUsed: true,
-        },
+        data: { freeBookUsed: true },
       }),
     ]);
 
-    // Do NOT trigger generation here — the frontend handles it
     return NextResponse.json({
       success: true,
       message: 'Book claimed as free preview. Upgrade to unlock the full book!',

@@ -70,20 +70,25 @@ export async function GET(
     const userIdToCheck = book.userId
       ? (book.userId === sessionUserId ? book.userId : null) // Only show credits if it's their book
       : sessionUserId; // Book has no owner, show viewer's credits
+    let creditBalance = 0;
+    let creditCost = 0;
     if (userIdToCheck) {
+      const { getCreditCost } = await import('@/lib/constants');
+      creditCost = getCreditCost(book.bookPreset);
+
       const user = await prisma.user.findUnique({
         where: { id: userIdToCheck },
-        select: { freeBookUsed: true, freeCredits: true, credits: true, plan: true },
+        select: { freeBookUsed: true, freeCredits: true, credits: true, creditBalance: true, plan: true },
       });
       if (user) {
-        // Separate free preview (limited) from gifted credits (full access)
+        creditBalance = user.creditBalance;
         canClaimFreePreview = !user.freeBookUsed;
         hasGiftedCredits = user.freeCredits > 0;
         const hasSubscriptionCredits = user.credits > 0;
-        // User is eligible for free claim if they have any type of credit
-        freeBookEligible = canClaimFreePreview || hasGiftedCredits || hasSubscriptionCredits;
-        hasCredits = user.freeCredits > 0 || user.credits > 0;
-        userCredits = user.freeCredits + user.credits;
+        const hasNewCredits = user.creditBalance >= creditCost;
+        freeBookEligible = canClaimFreePreview || hasGiftedCredits || hasSubscriptionCredits || hasNewCredits;
+        hasCredits = hasNewCredits || user.freeCredits > 0 || user.credits > 0;
+        userCredits = user.creditBalance; // Show credit balance as primary
         userPlan = user.plan;
       }
       // Check if this is user's first completed book (for discount popup)
@@ -115,11 +120,13 @@ export async function GET(
     return NextResponse.json({
       book: transformedBook,
       freeBookEligible,
-      canClaimFreePreview, // Limited preview (free sample)
-      hasGiftedCredits, // Full access via admin-gifted credits
+      canClaimFreePreview,
+      hasGiftedCredits,
       hasCredits,
       userCredits,
       userPlan,
+      creditBalance,
+      creditCost,
       isFirstCompletedBook
     });
   } catch (error) {
