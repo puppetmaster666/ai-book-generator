@@ -347,7 +347,7 @@ export async function POST(
                             const portrait = characterPortraits.find(p =>
                                 p.characterName.toLowerCase() === charName.toLowerCase()
                             );
-                            if (portrait && portraitCount < MAX_PORTRAIT_CHARACTERS) {
+                            if (portrait && portrait.facePortrait && portraitCount < MAX_PORTRAIT_CHARACTERS) {
                                 // Only add face portrait if multiple characters (to reduce payload)
                                 // Add both if only 1-2 characters in scene
                                 const sceneCharCount = chapter.scene.characters.length;

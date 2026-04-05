@@ -478,7 +478,7 @@ async function generateIllustrationsInParallel(
           const portrait = bookData.characterPortraits.find(
             p => p.characterName.toLowerCase() === charName.toLowerCase()
           );
-          if (portrait) {
+          if (portrait && portrait.facePortrait) {
             // Use face portrait for multi-character scenes, both for 1-2 character scenes
             referenceImages.push({
               characterName: `${charName} (face reference)`,

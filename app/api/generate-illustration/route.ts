@@ -225,12 +225,15 @@ export async function POST(request: NextRequest) {
       // Build content array with reference images if provided
       const content: Array<string | { text: string } | { inlineData: { data: string; mimeType: string } }> = [];
 
-      if (referenceImages && referenceImages.length > 0) {
-        console.log(`[Illustration] Using ${referenceImages.length} reference image(s) for character consistency`);
+      // Filter out any references with missing image data
+      const validRefs = referenceImages?.filter((ref: CharacterReferenceImage) => ref.imageData);
+
+      if (validRefs && validRefs.length > 0) {
+        console.log(`[Illustration] Using ${validRefs.length} reference image(s) for character consistency`);
         content.push({ text: currentPrompt });
 
         // Add each reference image to the content
-        referenceImages.forEach((ref: CharacterReferenceImage) => {
+        validRefs.forEach((ref: CharacterReferenceImage) => {
           // Remove data URL prefix if present (e.g., "data:image/png;base64,")
           const base64Data = ref.imageData.replace(/^data:image\/\w+;base64,/, '');
 
