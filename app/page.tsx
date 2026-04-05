@@ -328,7 +328,6 @@ export default function Home() {
                 </div>
                 {/* Button content */}
                 <span className="relative flex items-center gap-2.5 text-neutral-900 font-bold text-sm">
-                  <span className="text-lg">🔥</span>
                   Roast Your Friend
                   <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
                 </span>
