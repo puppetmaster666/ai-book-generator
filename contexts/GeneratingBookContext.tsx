@@ -11,6 +11,7 @@ interface GeneratingBook {
   totalWords: number;
   isVisualBook: boolean;
   bookFormat?: string;
+  illustrationCount?: number;
 }
 
 interface GeneratingBookContextType {
@@ -85,6 +86,7 @@ export function GeneratingBookProvider({ children }: { children: ReactNode }) {
           totalWords: status.totalWords,
           isVisualBook,
           bookFormat: status.bookFormat,
+          illustrationCount: status.illustrationCount || 0,
         });
 
         // If failed, keep showing for 30 seconds so user sees it

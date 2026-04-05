@@ -115,8 +115,12 @@ if (genDropdownRef.current && !genDropdownRef.current.contains(event.target as N
   };
 
   // Calculate progress percentage
+  // For visual books, use illustration count instead of currentChapter
+  const isVisualBook = generatingBook?.isVisualBook || generatingBook?.bookFormat === 'picture_book';
   const progress = generatingBook?.totalChapters
-    ? Math.round((generatingBook.currentChapter / generatingBook.totalChapters) * 100)
+    ? isVisualBook
+      ? Math.round(((generatingBook.illustrationCount || 0) / generatingBook.totalChapters) * 100)
+      : Math.round((generatingBook.currentChapter / generatingBook.totalChapters) * 100)
     : 0;
 
   const isGenerating = generatingBook?.status === 'generating' || generatingBook?.status === 'outlining' || generatingBook?.status === 'pending';
@@ -263,7 +267,9 @@ if (genDropdownRef.current && !genDropdownRef.current.contains(event.target as N
                     <div className="mb-3">
                       <p className="font-medium text-sm text-neutral-900 truncate">{generatingBook.title}</p>
                       <p className="text-xs text-neutral-500 mt-0.5">
-                        {isGenerating && `${generatingBook.bookFormat === 'screenplay' || generatingBook.bookFormat === 'tv_series' ? 'Sequence' : 'Chapter'} ${generatingBook.currentChapter} of ${generatingBook.totalChapters}`}
+                        {isGenerating && (isVisualBook
+                          ? `${generatingBook.illustrationCount || 0} of ${generatingBook.totalChapters} panels`
+                          : `${generatingBook.bookFormat === 'screenplay' || generatingBook.bookFormat === 'tv_series' ? 'Sequence' : 'Chapter'} ${generatingBook.currentChapter} of ${generatingBook.totalChapters}`)}
                         {isCompleted && 'Generation complete!'}
                         {isFailed && 'Generation failed - click to retry'}
                       </p>
@@ -648,7 +654,7 @@ if (genDropdownRef.current && !genDropdownRef.current.contains(event.target as N
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-neutral-900 truncate">{generatingBook.title}</p>
                         <p className="text-xs text-neutral-500">
-                          Chapter {generatingBook.currentChapter}/{generatingBook.totalChapters} • {progress}%
+                          {isVisualBook ? `${generatingBook.illustrationCount || 0}/${generatingBook.totalChapters} panels` : `Chapter ${generatingBook.currentChapter}/${generatingBook.totalChapters}`} • {progress}%
                         </p>
                       </div>
                     </>

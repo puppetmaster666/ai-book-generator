@@ -824,22 +824,48 @@ function GenerateComicContent() {
             );
           })()}
 
-          {error && (
-            <div className="mb-8 p-5 bg-red-50 border border-red-200 rounded-xl text-center">
-              <p className="text-neutral-900 font-medium mb-2">Generation Failed</p>
-              <p className="text-sm text-neutral-600 mb-4">{error}</p>
-              <button
-                onClick={() => {
-                  setError('');
-                  startBackgroundGeneration();
-                }}
-                className="inline-flex items-center gap-2 px-5 py-2.5 bg-neutral-900 text-white rounded-full text-sm font-medium hover:bg-neutral-800 transition-colors"
-              >
-                <RefreshCw className="h-4 w-4" />
-                Retry Generation
-              </button>
+          {error && (() => {
+            const failedPanelsList = panels.filter(p => p.status === 'error');
+            const missingPanels = activePanels.filter(p => p.status === 'pending' && doneCount > 0);
+
+            return (
+            <div className="mb-8 p-5 bg-red-50 border border-red-200 rounded-xl">
+              <p className="text-neutral-900 font-medium mb-2 text-center">Generation Issue</p>
+              <p className="text-sm text-neutral-600 mb-3 text-center">{error}</p>
+
+              {/* Show which panels failed */}
+              {(failedPanelsList.length > 0 || missingPanels.length > 0) && (
+                <div className="mb-4 text-sm text-neutral-600">
+                  {failedPanelsList.map(p => (
+                    <div key={p.number} className="flex items-center gap-2 py-1">
+                      <X className="h-3.5 w-3.5 text-red-500 flex-shrink-0" />
+                      <span>Panel {p.number}: {p.error || 'Failed'}</span>
+                    </div>
+                  ))}
+                  {missingPanels.map(p => (
+                    <div key={p.number} className="flex items-center gap-2 py-1">
+                      <AlertCircle className="h-3.5 w-3.5 text-neutral-400 flex-shrink-0" />
+                      <span>Panel {p.number}: Not generated</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div className="flex justify-center gap-3">
+                <button
+                  onClick={() => {
+                    setError('');
+                    startBackgroundGeneration();
+                  }}
+                  className="inline-flex items-center gap-2 px-5 py-2.5 bg-neutral-900 text-white rounded-full text-sm font-medium hover:bg-neutral-800 transition-colors"
+                >
+                  <RefreshCw className="h-4 w-4" />
+                  Retry Failed Panels
+                </button>
+              </div>
             </div>
-          )}
+            );
+          })()}
 
           {/* Panel Grid - split into free panels and locked panels for preview users */}
           {(() => {
