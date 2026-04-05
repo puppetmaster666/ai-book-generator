@@ -159,6 +159,10 @@ export default function RoastPage() {
       if (!expandRes.ok) throw new Error('Failed to create roast story');
       const bookPlan = await expandRes.json();
 
+      // Override AI defaults for roast format (12 panels, not 20-24)
+      delete bookPlan.targetChapters;
+      delete bookPlan.targetWords;
+
       // Create book
       const bookRes = await fetch('/api/books', {
         method: 'POST',
@@ -170,7 +174,7 @@ export default function RoastPage() {
           artStyle,
           dialogueStyle: 'bubbles',
           targetWords: 600,
-          targetChapters: 12, // Shorter, punchier
+          targetChapters: 12,
           userId: (session?.user as any)?.id || null,
           contentRating: severity >= 3 ? 'mature' : 'general',
         }),

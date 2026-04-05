@@ -5,8 +5,8 @@ import { SAFETY_SETTINGS } from '@/lib/generation/shared/safety';
 // Timeout for illustration generation (60 seconds) - allows time for reference image processing
 export const ILLUSTRATION_TIMEOUT_MS = 60000;
 
-// Maximum retries for content-blocked illustrations
-export const MAX_ILLUSTRATION_RETRIES = 3;
+// Maximum retries: 1 retry only (on timeout). Safety blocks don't retry.
+export const MAX_ILLUSTRATION_RETRIES = 1;
 
 // Types for visual guides
 export type CharacterVisualGuide = {
@@ -274,32 +274,20 @@ export async function generateIllustrationWithRetry(data: {
             return result.data;
         }
 
-        // If blocked, try with sanitized version
-        if (result.blocked && attempt < MAX_ILLUSTRATION_RETRIES) {
-            if (attempt < 2) {
-                // Retries 1-2: Progressively sanitize the original prompt
-                currentScene = sanitizeSceneForRetry(data.scene, attempt + 1);
-                console.log(`Sanitizing prompt (level ${attempt + 1}) and retrying...`);
-            } else {
-                // Final retry: Use a completely safe fallback scene
-                currentScene = generateFallbackScene(
-                    data.chapterTitle || 'Chapter',
-                    data.bookTitle || 'Book',
-                    data.setting || 'a peaceful environment'
-                );
-                console.log(`Using fallback atmospheric scene for final retry...`);
-            }
-            continue;
+        // Safety blocks: DON'T retry (wastes money, usually fails again)
+        if (result.blocked) {
+            console.warn(`Illustration blocked by safety filter, NOT retrying (saves API cost)`);
+            break;
         }
 
-        // If timed out, try one more time with simpler prompt
-        if (result.timedOut && attempt === 0) {
+        // Timeouts: retry once with simpler prompt (transient, worth one retry)
+        if (result.timedOut && attempt < MAX_ILLUSTRATION_RETRIES) {
             currentScene = sanitizeSceneForRetry(data.scene, 2);
-            console.log(`Timed out, retrying with simplified prompt...`);
+            console.log(`Timed out, retrying once with simplified prompt...`);
             continue;
         }
 
-        // Other errors or final failure - stop retrying
+        // Other errors - stop
         break;
     }
 
