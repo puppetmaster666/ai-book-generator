@@ -79,6 +79,7 @@ function GenerateComicContent() {
   const [error, setError] = useState('');
   const [expandedPanel, setExpandedPanel] = useState<number | null>(null);
   const [allComplete, setAllComplete] = useState(false);
+  const [lightboxImage, setLightboxImage] = useState<string | null>(null);
   const [elapsedTime, setElapsedTime] = useState(0);
   const [isWaitingForOutline, setIsWaitingForOutline] = useState(false);
   const [outlineElapsed, setOutlineElapsed] = useState(0);
@@ -819,15 +820,18 @@ function GenerateComicContent() {
                       <span className="text-xs text-neutral-600">Generating...</span>
                     </div>
                   ) : panel.status === 'done' && panel.imageUrl ? (
-                    <a href={panel.imageUrl} target="_blank" rel="noopener noreferrer" className="block w-full h-full">
+                    <div
+                      onClick={() => setLightboxImage(panel.imageUrl!)}
+                      className="w-full h-full cursor-pointer"
+                    >
                       <Image
                         src={panel.imageUrl}
                         alt={`Panel ${panel.number}: ${panel.scene?.description || 'Illustration'}`}
                         fill
-                        className="object-cover cursor-pointer hover:opacity-90 transition-opacity"
+                        className="object-cover hover:opacity-90 transition-opacity"
                         unoptimized
                       />
-                    </a>
+                    </div>
                   ) : panel.status === 'error' ? (
                     <div className="absolute inset-0 flex flex-col items-center justify-center p-4 bg-neutral-100">
                       <X className="h-8 w-8 text-neutral-500 mb-2" />
@@ -1023,6 +1027,27 @@ function GenerateComicContent() {
         cancelText="Cancel"
         type="danger"
       />
+
+      {/* Image Lightbox */}
+      {lightboxImage && (
+        <div
+          className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4 cursor-pointer"
+          onClick={() => setLightboxImage(null)}
+        >
+          <button
+            onClick={() => setLightboxImage(null)}
+            className="absolute top-4 right-4 p-2 bg-white/10 hover:bg-white/20 rounded-full transition-colors"
+          >
+            <X className="h-6 w-6 text-white" />
+          </button>
+          <img
+            src={lightboxImage}
+            alt="Full size panel"
+            className="max-w-full max-h-[90vh] object-contain rounded-lg"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
     </div>
   );
 }
