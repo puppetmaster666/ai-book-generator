@@ -69,6 +69,15 @@ export async function POST(
             return NextResponse.json({ message: 'Book already completed' });
         }
 
+        // If book was preview_complete but now paid, reset status to allow continuation
+        if (book.status === 'preview_complete' && book.paymentStatus === 'completed') {
+            console.log(`[Visual Gen] Book ${id} upgraded from preview, resetting status to generating`);
+            await prisma.book.update({
+                where: { id },
+                data: { status: 'generating' },
+            });
+        }
+
         // GENERATION LOCK: Prevent concurrent generation from duplicate triggers
         // If book was updated in the last 30 seconds and is actively generating, skip
         const thirtySecondsAgo = new Date(Date.now() - 30 * 1000);

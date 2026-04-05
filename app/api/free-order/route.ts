@@ -129,6 +129,8 @@ export async function POST(request: NextRequest) {
         data: {
           paymentStatus: 'completed',
           paymentId: `promo_${code}_${Date.now()}`,
+          // Reset status so generation can continue for upgraded preview books
+          ...(book.status === 'preview_complete' || book.status === 'failed' ? { status: 'generating' } : {}),
         },
       }),
     ]);
