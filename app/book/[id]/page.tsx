@@ -277,7 +277,8 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
           loadedBook?.bookPreset === 'comic_story' ||
           loadedBook?.bookPreset === 'childrens_picture';
         const needsGeneration = success === 'true' ||
-          ((loadedBook?.paymentStatus === 'completed' || loadedBook?.paymentStatus === 'free_preview') && loadedBook?.status === 'pending');
+          ((loadedBook?.paymentStatus === 'completed' || loadedBook?.paymentStatus === 'free_preview') &&
+           (loadedBook?.status === 'pending' || loadedBook?.status === 'generating' || loadedBook?.status === 'outlining'));
 
         // If it's a visual book that needs generation AND user is actual owner (not just admin viewing), redirect IMMEDIATELY
         if (isVisual && needsGeneration && isActualOwnerOrGuest) {
