@@ -566,6 +566,7 @@ function ReviewContent() {
         const response = await fetch(`/api/books/${bookId}/claim-free`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ useCredits: hasCredits }),
         });
 
         const data = await response.json();
