@@ -282,7 +282,7 @@ if (genDropdownRef.current && !genDropdownRef.current.contains(event.target as N
                           />
                         </div>
                         <p className="text-xs text-neutral-400 mt-2">
-                          {generatingBook.totalWords.toLocaleString()} words written
+                          {progress}% complete
                         </p>
                       </div>
                     )}
