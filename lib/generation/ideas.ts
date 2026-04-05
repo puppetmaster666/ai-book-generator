@@ -568,15 +568,16 @@ export async function expandIdea(idea: string, hintBookType?: string, region?: s
   const isNonFiction = hintBookType === 'non-fiction';
 
   // Safety instructions to prevent output blocking
-  const isRoastIdea = idea.includes('ROAST COMIC:') || idea.includes('NUCLEAR ROAST MODE');
+  const isRoastIdea = idea.includes('EMBARRASSING COMIC ABOUT A REAL PERSON:') || idea.includes('NUCLEAR MODE');
   const safetyGuidelines = isRoastIdea ? `
-CONTENT TONE - THIS IS A COMEDY ROAST BOOK:
-- This is an adult comedy roast. The user has opted in to harsh, mean humor.
-- Make the roast PERSONAL to the characters described. Use their names, personalities, and traits as ammunition.
-- Every chapter/scene should contain cutting, specific jokes aimed directly at the characters.
-- Do NOT soften, sanitize, or make it family-friendly. The user chose the roast option for a reason.
-- Think Comedy Central Roast, not a Disney movie. Be savage, be specific, be hilarious.
-- The premise MUST preserve the roast severity level and tone from the user's instructions.
+THIS IS A MEAN COMEDY COMIC. THE USER OPTED IN TO THIS:
+- The comic makes fun of a real person through embarrassing situations and cruel narration. The story IS the insult.
+- Do NOT write a story about a "roast event" or "roast ceremony." The comic itself roasts them through the plot.
+- Do NOT invent specific cities, countries, or fancy locations. Use generic everyday settings unless the user specified a location.
+- Do NOT use intellectual or literary language. Write like a funny, mean friend. Simple words, short sentences, punchy jokes.
+- The premise must describe embarrassing SCENES and SITUATIONS, not describe what a roast would be like.
+- Every scene must contain at least one joke or embarrassing moment aimed at the target.
+- Use the target's personality traits as ammunition. Make it personal.
 ` : `
 CONTENT SAFETY - CRITICAL:
 - Keep all content suitable for general audiences
@@ -673,7 +674,7 @@ JSON format:
 
       // Sanitize on retries with increasingly aggressive filtering
       // BUT skip sanitization for roast/mature content to preserve the intended tone
-      const isRoastContent = idea.includes('ROAST COMIC:') || idea.includes('NUCLEAR ROAST MODE');
+      const isRoastContent = idea.includes('EMBARRASSING COMIC ABOUT A REAL PERSON:') || idea.includes('NUCLEAR MODE');
       if (attempt > 0 && !isRoastContent) {
         console.log(`[ExpandIdea] Retry ${attempt}: Sanitizing idea to avoid content policy...`);
 
