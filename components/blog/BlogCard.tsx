@@ -26,11 +26,11 @@ function formatDate(date: Date | null): string {
 }
 
 const CATEGORY_COLORS: Record<string, string> = {
-  guides: 'bg-blue-50 text-blue-700',
-  tutorials: 'bg-emerald-50 text-emerald-700',
-  tips: 'bg-amber-50 text-amber-700',
-  comparisons: 'bg-purple-50 text-purple-700',
-  inspiration: 'bg-pink-50 text-pink-700',
+  guides: 'bg-neutral-100 text-neutral-700',
+  tutorials: 'bg-neutral-100 text-neutral-700',
+  tips: 'bg-neutral-100 text-neutral-700',
+  comparisons: 'bg-neutral-100 text-neutral-700',
+  inspiration: 'bg-neutral-100 text-neutral-700',
 };
 
 export default function BlogCard({ post }: BlogCardProps) {

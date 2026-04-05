@@ -16,7 +16,7 @@ export default function HowItWorksContent() {
       <main className="py-16 px-6">
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-16">
-            <div className="inline-flex items-center gap-2 bg-green-50 text-green-700 px-4 py-2 rounded-full text-sm mb-6">
+            <div className="inline-flex items-center gap-2 bg-neutral-100 text-neutral-700 px-4 py-2 rounded-full text-sm mb-6">
               <FileCheck className="h-4 w-4" />
               Amazon KDP Ready Output
             </div>
@@ -55,9 +55,9 @@ export default function HowItWorksContent() {
                   Full-length novels with 50,000+ words, natural prose, and story consistency.
                 </p>
                 <ul className="text-xs text-neutral-500 space-y-1">
-                  <li className="flex items-center gap-1"><Check className="h-3 w-3 text-green-600" /> Human-quality writing</li>
-                  <li className="flex items-center gap-1"><Check className="h-3 w-3 text-green-600" /> EPUB download</li>
-                  <li className="flex items-center gap-1"><Check className="h-3 w-3 text-green-600" /> AI-generated cover</li>
+                  <li className="flex items-center gap-1"><Check className="h-3 w-3 text-neutral-400" /> Human-quality writing</li>
+                  <li className="flex items-center gap-1"><Check className="h-3 w-3 text-neutral-400" /> EPUB download</li>
+                  <li className="flex items-center gap-1"><Check className="h-3 w-3 text-neutral-400" /> AI-generated cover</li>
                 </ul>
               </div>
               <div className="bg-neutral-50 rounded-xl p-6 border border-neutral-200">
@@ -69,9 +69,9 @@ export default function HowItWorksContent() {
                   Illustrated stories with 20 full-page images in various art styles.
                 </p>
                 <ul className="text-xs text-neutral-500 space-y-1">
-                  <li className="flex items-center gap-1"><Check className="h-3 w-3 text-green-600" /> Watercolor, Cartoon, Storybook styles</li>
-                  <li className="flex items-center gap-1"><Check className="h-3 w-3 text-green-600" /> PDF download</li>
-                  <li className="flex items-center gap-1"><Check className="h-3 w-3 text-green-600" /> AI-generated illustrations</li>
+                  <li className="flex items-center gap-1"><Check className="h-3 w-3 text-neutral-400" /> Watercolor, Cartoon, Storybook styles</li>
+                  <li className="flex items-center gap-1"><Check className="h-3 w-3 text-neutral-400" /> PDF download</li>
+                  <li className="flex items-center gap-1"><Check className="h-3 w-3 text-neutral-400" /> AI-generated illustrations</li>
                 </ul>
               </div>
               <div className="bg-neutral-50 rounded-xl p-6 border border-neutral-200">
@@ -83,9 +83,9 @@ export default function HowItWorksContent() {
                   Visual stories with dialogue subtext and page-turn hooks across 24 illustrated pages.
                 </p>
                 <ul className="text-xs text-neutral-500 space-y-1">
-                  <li className="flex items-center gap-1"><Check className="h-3 w-3 text-green-600" /> Noir, Manga, Superhero, Retro styles</li>
-                  <li className="flex items-center gap-1"><Check className="h-3 w-3 text-green-600" /> Natural dialogue with subtext</li>
-                  <li className="flex items-center gap-1"><Check className="h-3 w-3 text-green-600" /> Speech bubbles on images</li>
+                  <li className="flex items-center gap-1"><Check className="h-3 w-3 text-neutral-400" /> Noir, Manga, Superhero, Retro styles</li>
+                  <li className="flex items-center gap-1"><Check className="h-3 w-3 text-neutral-400" /> Natural dialogue with subtext</li>
+                  <li className="flex items-center gap-1"><Check className="h-3 w-3 text-neutral-400" /> Speech bubbles on images</li>
                 </ul>
               </div>
             </div>
@@ -107,10 +107,10 @@ export default function HowItWorksContent() {
                     Start with a simple description of your book idea. Choose your book type&mdash;novel, children&apos;s picture book, or comic&mdash;and we&apos;ll tailor the experience accordingly.
                   </p>
                   <ul className="grid sm:grid-cols-2 gap-2 text-sm text-neutral-600">
-                    <li className="flex items-center gap-2"><Check className="h-4 w-4 text-green-600" /> Choose book type and genre</li>
-                    <li className="flex items-center gap-2"><Check className="h-4 w-4 text-green-600" /> Select art style (for visual books)</li>
-                    <li className="flex items-center gap-2"><Check className="h-4 w-4 text-green-600" /> Describe characters and plot</li>
-                    <li className="flex items-center gap-2"><Check className="h-4 w-4 text-green-600" /> Set writing style preferences</li>
+                    <li className="flex items-center gap-2"><Check className="h-4 w-4 text-neutral-400" /> Choose book type and genre</li>
+                    <li className="flex items-center gap-2"><Check className="h-4 w-4 text-neutral-400" /> Select art style (for visual books)</li>
+                    <li className="flex items-center gap-2"><Check className="h-4 w-4 text-neutral-400" /> Describe characters and plot</li>
+                    <li className="flex items-center gap-2"><Check className="h-4 w-4 text-neutral-400" /> Set writing style preferences</li>
                   </ul>
                 </div>
               </div>
@@ -132,10 +132,10 @@ export default function HowItWorksContent() {
                     descriptions with causal chain logic and dialogue subtext.
                   </p>
                   <ul className="grid sm:grid-cols-2 gap-2 text-sm text-neutral-600">
-                    <li className="flex items-center gap-2"><Check className="h-4 w-4 text-green-600" /> Structured by book type</li>
-                    <li className="flex items-center gap-2"><Check className="h-4 w-4 text-green-600" /> Cause-and-effect story logic</li>
-                    <li className="flex items-center gap-2"><Check className="h-4 w-4 text-green-600" /> Character arc planning</li>
-                    <li className="flex items-center gap-2"><Check className="h-4 w-4 text-green-600" /> Page-turn hooks and transitions</li>
+                    <li className="flex items-center gap-2"><Check className="h-4 w-4 text-neutral-400" /> Structured by book type</li>
+                    <li className="flex items-center gap-2"><Check className="h-4 w-4 text-neutral-400" /> Cause-and-effect story logic</li>
+                    <li className="flex items-center gap-2"><Check className="h-4 w-4 text-neutral-400" /> Character arc planning</li>
+                    <li className="flex items-center gap-2"><Check className="h-4 w-4 text-neutral-400" /> Page-turn hooks and transitions</li>
                   </ul>
                 </div>
               </div>
@@ -156,10 +156,10 @@ export default function HowItWorksContent() {
                     natural-sounding prose and story consistency. Each chapter goes through multiple refinement passes.
                   </p>
                   <ul className="grid sm:grid-cols-2 gap-2 text-sm text-neutral-600">
-                    <li className="flex items-center gap-2"><Check className="h-4 w-4 text-green-600" /> Novels: 2,000-5,000 words/chapter</li>
-                    <li className="flex items-center gap-2"><Check className="h-4 w-4 text-green-600" /> Comics: Speech bubbles on art</li>
-                    <li className="flex items-center gap-2"><Check className="h-4 w-4 text-green-600" /> Picture books: Text under images</li>
-                    <li className="flex items-center gap-2"><Check className="h-4 w-4 text-green-600" /> Professional editing pass</li>
+                    <li className="flex items-center gap-2"><Check className="h-4 w-4 text-neutral-400" /> Novels: 2,000-5,000 words/chapter</li>
+                    <li className="flex items-center gap-2"><Check className="h-4 w-4 text-neutral-400" /> Comics: Speech bubbles on art</li>
+                    <li className="flex items-center gap-2"><Check className="h-4 w-4 text-neutral-400" /> Picture books: Text under images</li>
+                    <li className="flex items-center gap-2"><Check className="h-4 w-4 text-neutral-400" /> Professional editing pass</li>
                   </ul>
                 </div>
               </div>
@@ -177,8 +177,8 @@ export default function HowItWorksContent() {
               </div>
               <div className="grid md:grid-cols-3 gap-6">
                 <div className="bg-white rounded-xl p-5 border border-neutral-200">
-                  <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center mb-3">
-                    <Shield className="h-5 w-5 text-green-700" />
+                  <div className="w-10 h-10 bg-neutral-100 rounded-lg flex items-center justify-center mb-3">
+                    <Shield className="h-5 w-5 text-neutral-700" />
                   </div>
                   <h3 className="font-semibold mb-2">Anti-AI Detection</h3>
                   <p className="text-sm text-neutral-600">
@@ -187,8 +187,8 @@ export default function HowItWorksContent() {
                   </p>
                 </div>
                 <div className="bg-white rounded-xl p-5 border border-neutral-200">
-                  <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mb-3">
-                    <RefreshCw className="h-5 w-5 text-blue-700" />
+                  <div className="w-10 h-10 bg-neutral-100 rounded-lg flex items-center justify-center mb-3">
+                    <RefreshCw className="h-5 w-5 text-neutral-700" />
                   </div>
                   <h3 className="font-semibold mb-2">Story Memory</h3>
                   <p className="text-sm text-neutral-600">
@@ -197,8 +197,8 @@ export default function HowItWorksContent() {
                   </p>
                 </div>
                 <div className="bg-white rounded-xl p-5 border border-neutral-200">
-                  <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center mb-3">
-                    <Pencil className="h-5 w-5 text-purple-700" />
+                  <div className="w-10 h-10 bg-neutral-100 rounded-lg flex items-center justify-center mb-3">
+                    <Pencil className="h-5 w-5 text-neutral-700" />
                   </div>
                   <h3 className="font-semibold mb-2">Professional Polish</h3>
                   <p className="text-sm text-neutral-600">
@@ -224,10 +224,10 @@ export default function HowItWorksContent() {
                     comic books and picture books come as PDF files. All formats are ready for Amazon KDP.
                   </p>
                   <ul className="grid sm:grid-cols-2 gap-2 text-sm text-neutral-600">
-                    <li className="flex items-center gap-2"><Check className="h-4 w-4 text-green-600" /> Novels: EPUB 3.0 format</li>
-                    <li className="flex items-center gap-2"><Check className="h-4 w-4 text-green-600" /> Visual books: High-res PDF</li>
-                    <li className="flex items-center gap-2"><Check className="h-4 w-4 text-green-600" /> Cover at 1600x2560px (KDP spec)</li>
-                    <li className="flex items-center gap-2"><Check className="h-4 w-4 text-green-600" /> Full commercial rights</li>
+                    <li className="flex items-center gap-2"><Check className="h-4 w-4 text-neutral-400" /> Novels: EPUB 3.0 format</li>
+                    <li className="flex items-center gap-2"><Check className="h-4 w-4 text-neutral-400" /> Visual books: High-res PDF</li>
+                    <li className="flex items-center gap-2"><Check className="h-4 w-4 text-neutral-400" /> Cover at 1600x2560px (KDP spec)</li>
+                    <li className="flex items-center gap-2"><Check className="h-4 w-4 text-neutral-400" /> Full commercial rights</li>
                   </ul>
                 </div>
               </div>
@@ -243,12 +243,12 @@ export default function HowItWorksContent() {
               Every book we generate is formatted to meet Amazon Kindle Direct Publishing requirements:
             </p>
             <ul className="grid sm:grid-cols-2 gap-3 text-sm text-neutral-300">
-              <li className="flex items-center gap-2"><Check className="h-4 w-4 text-green-400" /> Proper metadata (title, author, language)</li>
-              <li className="flex items-center gap-2"><Check className="h-4 w-4 text-green-400" /> Cover dimensions meet KDP specs</li>
-              <li className="flex items-center gap-2"><Check className="h-4 w-4 text-green-400" /> EPUB: Reflowable text, embedded fonts</li>
-              <li className="flex items-center gap-2"><Check className="h-4 w-4 text-green-400" /> PDF: Print-ready resolution</li>
-              <li className="flex items-center gap-2"><Check className="h-4 w-4 text-green-400" /> Clean chapter/page breaks</li>
-              <li className="flex items-center gap-2"><Check className="h-4 w-4 text-green-400" /> Navigable table of contents</li>
+              <li className="flex items-center gap-2"><Check className="h-4 w-4 text-neutral-400" /> Proper metadata (title, author, language)</li>
+              <li className="flex items-center gap-2"><Check className="h-4 w-4 text-neutral-400" /> Cover dimensions meet KDP specs</li>
+              <li className="flex items-center gap-2"><Check className="h-4 w-4 text-neutral-400" /> EPUB: Reflowable text, embedded fonts</li>
+              <li className="flex items-center gap-2"><Check className="h-4 w-4 text-neutral-400" /> PDF: Print-ready resolution</li>
+              <li className="flex items-center gap-2"><Check className="h-4 w-4 text-neutral-400" /> Clean chapter/page breaks</li>
+              <li className="flex items-center gap-2"><Check className="h-4 w-4 text-neutral-400" /> Navigable table of contents</li>
             </ul>
           </div>
 
