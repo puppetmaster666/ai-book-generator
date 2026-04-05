@@ -276,15 +276,23 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
           loadedBook?.bookPreset === 'comic_story' ||
           loadedBook?.bookPreset === 'childrens_picture';
         const needsGeneration = success === 'true' ||
-          (loadedBook?.paymentStatus === 'completed' && loadedBook?.status === 'pending');
+          ((loadedBook?.paymentStatus === 'completed' || loadedBook?.paymentStatus === 'free_preview') && loadedBook?.status === 'pending');
 
         // If it's a visual book that needs generation AND user is actual owner (not just admin viewing), redirect IMMEDIATELY
         if (isVisual && needsGeneration && isActualOwnerOrGuest) {
           setRedirectingToComic(true);
-          // Start timer for preparation phase
           startTimeRef.current = Date.now();
-          // Set generating book ID for header notification (visual books require staying on page)
           setGeneratingBookId(id);
+
+          // If generation is already in progress (e.g. triggered by claim-free), skip duplicate trigger
+          const alreadyGenerating = loadedBook?.status === 'outlining' || loadedBook?.status === 'generating';
+
+          if (alreadyGenerating) {
+            console.log('Visual book already generating, redirecting to comic page...');
+            router.replace(`/generate-comic?bookId=${id}`);
+            return;
+          }
+
           console.log('Visual book detected, generating outline and redirecting...');
 
           try {
@@ -304,8 +312,6 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
             }
 
             // Always redirect to comic generation page for visual books
-            // Even if outline generation returned an unexpected response,
-            // the comic page can handle resuming from wherever we are
             if (genData.success || genData.outlineOnly || genData.alreadyComplete) {
               router.replace(`/generate-comic?bookId=${id}`);
               return;

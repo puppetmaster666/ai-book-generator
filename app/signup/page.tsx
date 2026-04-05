@@ -56,16 +56,31 @@ function SignupContent() {
         if (bookId && isFreeBook) {
           setIsClaiming(true);
           const result = await claimBook();
+
           if (result.success) {
-            // Redirect to book page to start generation
-            router.push(`/book/${bookId}`);
+            // Fetch book to determine if visual (needs /generate-comic) or text (needs /book/[id])
+            try {
+              const bookRes = await fetch(`/api/books/${bookId}`);
+              if (bookRes.ok) {
+                const bookData = await bookRes.json();
+                const b = bookData.book;
+                const isVisual = b?.bookFormat === 'picture_book' || b?.dialogueStyle === 'bubbles' ||
+                  b?.bookPreset === 'comic_story' || b?.bookPreset === 'childrens_picture';
+                if (isVisual) {
+                  // Visual books go directly to the comic generation page
+                  // The claim-free endpoint already triggered generation in the background
+                  router.push(`/generate-comic?bookId=${bookId}`);
+                  return;
+                }
+              }
+            } catch {
+              // Fall through to default redirect
+            }
+            router.push(`/book/${bookId}?success=true`);
             return;
           } else {
-            // Show error but still redirect to book page - the user is authenticated
-            // They can see their book status there
             console.error('Claim failed:', result.error);
             setError(result.error || 'Failed to claim free book');
-            // Still redirect to book page - they're logged in and own the book now
             router.push(`/book/${bookId}`);
             return;
           }
