@@ -7,6 +7,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
+import { useGeneratingBook } from '@/contexts/GeneratingBookContext';
 import ConfirmModal from '@/components/ConfirmModal';
 import { Loader2, Check, X, Download, AlertCircle, RefreshCw, StopCircle, Clock, ShieldAlert, Zap, BookOpen, ChevronDown, Lock } from 'lucide-react';
 
@@ -67,6 +68,7 @@ function GenerateComicContent() {
   const bookId = searchParams.get('bookId');
   const upgraded = searchParams.get('upgraded') === 'true';
   const { data: session } = useSession();
+  const { setGeneratingBookId } = useGeneratingBook();
 
   const [bookData, setBookData] = useState<BookData | null>(null);
   const [panels, setPanels] = useState<Panel[]>([]);
@@ -95,6 +97,15 @@ function GenerateComicContent() {
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const outlinePollRef = useRef<NodeJS.Timeout | null>(null);
   const outlineTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Sync generation state to header progress bar
+  useEffect(() => {
+    if ((isGenerating || isWaitingForOutline) && bookId) {
+      setGeneratingBookId(bookId);
+    } else if (!isGenerating && !isWaitingForOutline) {
+      setGeneratingBookId(null);
+    }
+  }, [isGenerating, isWaitingForOutline, bookId, setGeneratingBookId]);
 
   // Outline preparation timer
   useEffect(() => {
