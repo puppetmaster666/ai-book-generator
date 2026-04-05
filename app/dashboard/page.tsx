@@ -6,7 +6,7 @@ import { useSession } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
-import { BookOpen, Plus, Download, Clock, Check, AlertCircle, Zap, Star } from 'lucide-react';
+import { BookOpen, Plus, Download, Clock, Check, AlertCircle, Zap, Star, Trash2 } from 'lucide-react';
 import { trackRedditPurchase } from '@/lib/reddit-pixel';
 import { PRICING } from '@/lib/constants';
 
@@ -272,9 +272,28 @@ export default function Dashboard() {
                         {getStatusIcon(book.status)}
                         <span className="capitalize text-neutral-600">{book.status}</span>
                       </div>
-                      {book.status === 'completed' && (
-                        <Download className="h-4 w-4 text-neutral-900" />
-                      )}
+                      <div className="flex items-center gap-2">
+                        {book.status === 'completed' && (
+                          <Download className="h-4 w-4 text-neutral-900" />
+                        )}
+                        <button
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            if (confirm(`Delete "${book.title}"?`)) {
+                              fetch(`/api/books/${book.id}`, { method: 'DELETE' })
+                                .then(res => {
+                                  if (res.ok) setBooks(prev => prev.filter(b => b.id !== book.id));
+                                })
+                                .catch(() => {});
+                            }
+                          }}
+                          className="p-1 rounded-lg text-neutral-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                          title="Delete book"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </Link>

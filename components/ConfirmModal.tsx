@@ -38,11 +38,11 @@ const colors = {
         confirmBtn: 'bg-amber-600 hover:bg-amber-700 text-white',
     },
     info: {
-        bg: 'bg-blue-50',
-        border: 'border-blue-200',
-        icon: 'text-blue-600',
-        title: 'text-blue-900',
-        confirmBtn: 'bg-blue-600 hover:bg-blue-700 text-white',
+        bg: 'bg-neutral-50',
+        border: 'border-neutral-200',
+        icon: 'text-neutral-600',
+        title: 'text-neutral-900',
+        confirmBtn: 'bg-neutral-900 hover:bg-neutral-800 text-white',
     },
     question: {
         bg: 'bg-neutral-50',

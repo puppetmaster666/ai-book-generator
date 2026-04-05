@@ -380,22 +380,21 @@ function GenerateComicContent() {
     }
   }, [panels, isGenerating, isLoading, bookData?.paymentStatus, generateAllPanels]);
 
-  // Cancel generation
+  // Cancel generation - show confirmation first
   const cancelGeneration = useCallback(async () => {
-    setIsCancelling(true);
-    // For background process, we can't easily "cancel" the running server request without an API.
-    // We'll just stop polling and redirect user home.
-    // Ideally we'd have a cancel endpoint.
-
-    setIsGenerating(false);
-    setIsCancelling(false);
-
-    // Show styled confirmation modal
     setShowCancelConfirm(true);
   }, []);
 
-  // Handle cancel confirmation
-  const handleCancelConfirm = useCallback(() => {
+  // Handle cancel confirmation - actually stop server-side generation
+  const handleCancelConfirm = useCallback(async () => {
+    setIsCancelling(true);
+    try {
+      await fetch(`/api/books/${bookId}/cancel`, { method: 'POST' });
+    } catch {
+      // Continue to redirect even if cancel fails
+    }
+    setIsGenerating(false);
+    setIsCancelling(false);
     router.push(`/book/${bookId}`);
   }, [bookId, router]);
 
@@ -921,11 +920,11 @@ function GenerateComicContent() {
         isOpen={showCancelConfirm}
         onClose={() => setShowCancelConfirm(false)}
         onConfirm={handleCancelConfirm}
-        title="Generation in Progress"
-        message="Generation will continue in the background. Do you want to go to the book page to verify later?"
-        confirmText="Go to Book Page"
-        cancelText="Stay Here"
-        type="info"
+        title="Cancel Generation?"
+        message="This will stop generating new panels. Any panels already completed will be saved."
+        confirmText="Stop Generation"
+        cancelText="Keep Going"
+        type="warning"
       />
 
       {/* Admin Force Complete Confirmation Modal */}
