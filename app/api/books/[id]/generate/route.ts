@@ -850,8 +850,8 @@ export async function POST(
           }
         }
       } else if (useVisualFlow && dialogueStyle) {
-        // Use the preset's panel count from targetChapters (20 for picture books, 24 for comics)
-        const targetPanelCount = book.targetChapters;
+        // For free preview, only target 5 panels. Full book uses the preset's panel count.
+        const targetPanelCount = isPaid ? book.targetChapters : 5;
         const isComicStyle = dialogueStyle === 'bubbles';
 
         // Visual outline with progressive content softening on safety blocks
