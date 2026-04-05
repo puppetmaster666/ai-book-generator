@@ -936,7 +936,7 @@ function GenerateComicContent() {
                 Finish My Book: $3.99
               </button>
               <p className="text-neutral-500 text-xs mt-3">
-                <span className="line-through">$4.99</span> limited time discount
+                <span className="line-through">$6.99</span> limited time discount
               </p>
             </div>
           )}

@@ -37,8 +37,8 @@ export async function POST(request: NextRequest) {
             { status: 400 }
           );
         }
-        amount = 399; // $3.99 upgrade price
-        description = 'AI Book Generator - Unlock Full Book (Upgrade)';
+        amount = PRICING.UPGRADE.price;
+        description = 'DraftMyBook - Unlock Full Book (Upgrade)';
         break;
       case 'one-time':
         if (!bookId) {
@@ -47,19 +47,18 @@ export async function POST(request: NextRequest) {
             { status: 400 }
           );
         }
-        // Get book format to determine price
+        // Get book format to determine price: $6.99 for visual, $4.99 for text
         const book = await prisma.book.findUnique({
           where: { id: bookId },
           select: { bookFormat: true },
         });
 
-        // Set price based on book format
         if (book?.bookFormat === 'picture_book') {
           amount = PRICING.VISUAL.price;
-          description = 'AI Book Generator - Visual Book';
+          description = 'DraftMyBook - Visual Book';
         } else {
           amount = PRICING.ONE_TIME.price;
-          description = 'AI Book Generator - Single Generation';
+          description = 'DraftMyBook - Single Book';
         }
         break;
       case 'monthly':
