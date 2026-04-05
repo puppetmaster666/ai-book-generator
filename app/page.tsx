@@ -306,20 +306,33 @@ export default function Home() {
         {/* Hero Content */}
         <div className="relative z-10 flex-1 flex items-center justify-center px-6 pt-24 pb-16">
           <div className="max-w-4xl mx-auto text-center">
-            {/* What's New + Badge */}
-            <div className="flex flex-col items-center gap-3 mb-8">
-              <Link
-                href="/changelog"
-                className="inline-flex items-center gap-2 bg-lime-400/20 backdrop-blur-md px-4 py-2.5 sm:py-1.5 rounded-full text-xs text-lime-300 border border-lime-400/30 hover:bg-lime-400/30 transition-colors cursor-pointer"
-              >
-                <span className="w-1.5 h-1.5 bg-lime-400 rounded-full animate-pulse" />
-                <span>New in v{APP_VERSION}: {LATEST_CHANGELOG.title}</span>
-                <span className="text-lime-400/60">&rarr;</span>
-              </Link>
+            {/* Badge + Roast Button */}
+            <div className="flex flex-col items-center gap-4 mb-8">
               <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-md px-5 py-2.5 rounded-full text-sm text-white border border-white/20 shadow-lg">
                 <Zap className={`h-4 w-4 ${ACCENT.text} animate-pulse`} />
                 <span className="font-medium">Try free sample - 50,000+ word books in under an hour</span>
               </div>
+
+              {/* 3D Roast Your Friend Button */}
+              <a href="/roast" className="roast-btn group relative overflow-hidden inline-flex items-center gap-3 px-7 py-3.5 rounded-xl cursor-pointer select-none">
+                {/* Animated yellow hazard tape background */}
+                <div className="absolute inset-0 bg-yellow-400">
+                  <div
+                    className="roast-tape absolute inset-0"
+                    style={{
+                      backgroundImage: 'repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(0,0,0,0.08) 10px, rgba(0,0,0,0.08) 20px)',
+                      backgroundSize: '28px 28px',
+                      width: 'calc(100% + 40px)',
+                    }}
+                  />
+                </div>
+                {/* Button content */}
+                <span className="relative flex items-center gap-2.5 text-neutral-900 font-bold text-sm">
+                  <span className="text-lg">🔥</span>
+                  Roast Your Friend
+                  <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                </span>
+              </a>
             </div>
 
             {/* Headline */}
@@ -537,7 +550,7 @@ export default function Home() {
               </span>
             </div>
 
-            {/* Hero CTAs */}
+            {/* Hero bottom CTAs */}
             <div className="mt-12 flex flex-wrap items-center justify-center gap-6">
               {/* Watch Demo Button */}
               <button
@@ -550,26 +563,15 @@ export default function Home() {
                 <span className="text-sm font-medium">Watch how it works</span>
               </button>
 
-              {/* 3D Roast Your Friend Button */}
-              <a href="/roast" className="roast-btn group relative overflow-hidden inline-flex items-center gap-3 px-7 py-3.5 rounded-xl cursor-pointer select-none">
-                {/* Animated yellow hazard tape background */}
-                <div className="absolute inset-0 bg-yellow-400">
-                  <div
-                    className="roast-tape absolute inset-0"
-                    style={{
-                      backgroundImage: 'repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(0,0,0,0.08) 10px, rgba(0,0,0,0.08) 20px)',
-                      backgroundSize: '28px 28px',
-                      width: 'calc(100% + 40px)',
-                    }}
-                  />
-                </div>
-                {/* Button content */}
-                <span className="relative flex items-center gap-2.5 text-neutral-900 font-bold text-sm">
-                  <span className="text-lg">🔥</span>
-                  Roast Your Friend
-                  <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
-                </span>
-              </a>
+              {/* Patch Notes */}
+              <Link
+                href="/changelog"
+                className="inline-flex items-center gap-2 bg-lime-400/20 backdrop-blur-md px-4 py-2.5 sm:py-1.5 rounded-full text-xs text-lime-300 border border-lime-400/30 hover:bg-lime-400/30 transition-colors cursor-pointer"
+              >
+                <span className="w-1.5 h-1.5 bg-lime-400 rounded-full animate-pulse" />
+                <span>New in v{APP_VERSION}: {LATEST_CHANGELOG.title}</span>
+                <span className="text-lime-400/60">&rarr;</span>
+              </Link>
             </div>
           </div>
         </div>
