@@ -409,6 +409,9 @@ function GenerateComicContent() {
             setPanels(prev => prev.map(p => {
               const ill = illustrationMap.get(p.number);
               if (ill) {
+                if (ill.status === 'failed') {
+                  return { ...p, status: 'error', error: ill.errorMessage || 'Failed to generate' };
+                }
                 return { ...p, status: 'done', imageUrl: ill.imageUrl };
               }
               return p;

@@ -648,16 +648,26 @@ export async function POST(
             // All panels have been attempted - check if any failed
             if (failedPanels > 0) {
                 console.log(`[Visual Gen] Book ${id} has ${failedPanels} failed panels that need retry`);
+
+                // Set book status to failed so user sees the issue and can retry
+                await prisma.book.update({
+                    where: { id },
+                    data: {
+                        status: 'failed',
+                        errorMessage: `${failedPanels} panel(s) failed to generate. Click retry to regenerate them.`,
+                    },
+                });
+
                 return NextResponse.json({
-                    success: true,
+                    success: false,
                     status: 'completed_with_failures',
                     panelsCompleted: successfulPanels,
                     panelsFailed: failedPanels,
-                    message: `Generation complete but ${failedPanels} panel(s) failed. Use retry to regenerate them.`,
+                    message: `${failedPanels} panel(s) failed. Retry to regenerate them.`,
                 });
             }
 
-            // Full book with all panels successful - proceed with assembly
+            // ALL panels successful - only then proceed with assembly
             const assembleUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/books/${id}/assemble`;
             await fetch(assembleUrl, { method: 'POST' });
             return NextResponse.json({ success: true, status: 'completed', panelsCompleted: successfulPanels });

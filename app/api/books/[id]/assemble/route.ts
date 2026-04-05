@@ -55,10 +55,22 @@ export async function POST(
       return NextResponse.json({ error: 'Book not found' }, { status: 404 });
     }
 
-    // Count generated panels
+    // Count panels with SUCCESSFUL illustrations (not failed ones)
     const generatedPanels = book.chapters.filter(ch =>
-      ch.illustrations && ch.illustrations.length > 0
+      ch.illustrations && ch.illustrations.some(ill => ill.imageUrl && ill.status !== 'failed')
     ).length;
+
+    // Check for failed panels
+    const failedPanels = book.illustrations.filter(ill => ill.status === 'failed').length;
+    if (failedPanels > 0) {
+      return NextResponse.json(
+        {
+          error: `${failedPanels} panel(s) failed to generate. Please retry them before assembling.`,
+          failedPanels,
+        },
+        { status: 400 }
+      );
+    }
 
     // For free preview, allow assembling with just the preview panels (5)
     // For paid books, require all panels
