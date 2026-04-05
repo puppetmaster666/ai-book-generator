@@ -46,6 +46,7 @@ interface BookData {
   bookFormat: string;
   dialogueStyle: string;
   paymentStatus: string;
+  generationStartedAt: string | null;
   characterVisualGuide: object | null;
   visualStyleGuide: object | null;
   outline: {
@@ -86,12 +87,22 @@ function GenerateComicContent() {
   const outlinePollRef = useRef<NodeJS.Timeout | null>(null);
   const outlineTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Timer effect
+  // Timer effect: use server's generationStartedAt so it persists across page loads
   useEffect(() => {
     if (isGenerating) {
-      setElapsedTime(0);
+      // Calculate initial elapsed from server timestamp
+      if (bookData?.generationStartedAt) {
+        const startTime = new Date(bookData.generationStartedAt).getTime();
+        setElapsedTime(Math.floor((Date.now() - startTime) / 1000));
+      }
+
       timerRef.current = setInterval(() => {
-        setElapsedTime(prev => prev + 1);
+        if (bookData?.generationStartedAt) {
+          const startTime = new Date(bookData.generationStartedAt).getTime();
+          setElapsedTime(Math.floor((Date.now() - startTime) / 1000));
+        } else {
+          setElapsedTime(prev => prev + 1);
+        }
       }, 1000);
     } else {
       if (timerRef.current) {
