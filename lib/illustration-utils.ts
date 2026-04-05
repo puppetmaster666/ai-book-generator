@@ -367,9 +367,9 @@ REASON: one sentence explanation`;
 }
 
 /**
- * Generate an illustration with post-generation validation.
- * If the image fails validation (no text, irrelevant content), regenerates once
- * with a stronger text-focused prompt.
+ * Generate an illustration with stronger text emphasis in the prompt.
+ * Validation is NOT done inline (too slow, adds 3-5s per panel).
+ * Instead, the prompt itself is made more aggressive about text requirements.
  */
 export async function generateAndValidateIllustration(data: {
     scene: string;
@@ -384,39 +384,12 @@ export async function generateAndValidateIllustration(data: {
     referenceImages?: CharacterReferenceImage[];
     expectedText?: string | null;
 }): Promise<{ imageUrl: string; altText: string; width: number; height: number } | null> {
-    // First attempt: normal generation
-    const result = await generateIllustrationWithRetry(data);
-    if (!result) return null;
+    // If text is expected, add stronger text emphasis to the prompt upfront
+    // instead of validating after (which doubles generation time)
+    let scene = data.scene;
+    if (data.expectedText && data.expectedText.trim().length > 0) {
+        scene += `\n\nMANDATORY: This image MUST contain clearly readable text. An image without visible text will be rejected. The text is as important as the illustration.`;
+    }
 
-    // Skip validation if no text is expected (non-visual books shouldn't reach here, but safety)
-    if (!data.expectedText) return result;
-
-    // Validate the generated image
-    const mimeType = result.imageUrl.match(/data:([^;]+);/)?.[1] || 'image/png';
-    const validation = await validateIllustration(
-        result.imageUrl,
-        mimeType,
-        data.scene,
-        data.expectedText,
-    );
-
-    if (validation.valid) return result;
-
-    // Validation failed. Retry once with stronger text emphasis.
-    console.warn(`[Validate] Image failed validation (hasText=${validation.hasText}, isRelevant=${validation.isRelevant}). Regenerating with stronger prompt...`);
-
-    const textEmphasis = !validation.hasText
-        ? `\n\nMANDATORY TEXT REQUIREMENT (THIS IS THE MOST IMPORTANT PART):\nThe image MUST contain clearly readable text. The text is more important than the illustration itself.\nText to include: "${data.expectedText.substring(0, 150)}"\nPlace the text in a clean, high-contrast area. Make it large and unmissable.\nAn image without text is REJECTED.`
-        : '';
-
-    const relevanceEmphasis = !validation.isRelevant
-        ? `\n\nSCENE ACCURACY (CRITICAL):\nThe image MUST depict this specific scene: ${data.scene.substring(0, 300)}\nDo NOT generate a generic or unrelated image. Match the scene description exactly.`
-        : '';
-
-    const retryResult = await generateIllustrationWithRetry({
-        ...data,
-        scene: data.scene + textEmphasis + relevanceEmphasis,
-    });
-
-    return retryResult || result; // If retry also fails, use original (imperfect > nothing)
+    return generateIllustrationWithRetry({ ...data, scene });
 }
