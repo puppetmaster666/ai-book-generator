@@ -9,7 +9,7 @@ import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { useGeneratingBook } from '@/contexts/GeneratingBookContext';
 import ConfirmModal from '@/components/ConfirmModal';
-import { Loader2, Check, X, Download, AlertCircle, RefreshCw, StopCircle, Clock, ShieldAlert, Zap, BookOpen, ChevronDown, Lock } from 'lucide-react';
+import { Loader2, Check, X, Download, AlertCircle, RefreshCw, StopCircle, Clock, ShieldAlert, Zap, BookOpen, ChevronDown, Lock, Pencil } from 'lucide-react';
 
 // Format elapsed time as MM:SS
 function formatTime(seconds: number): string {
@@ -82,6 +82,8 @@ function GenerateComicContent() {
   const [expandedPanel, setExpandedPanel] = useState<number | null>(null);
   const [allComplete, setAllComplete] = useState(false);
   const [lightboxImage, setLightboxImage] = useState<string | null>(null);
+  const [editingPanelPrompt, setEditingPanelPrompt] = useState<number | null>(null);
+  const [editedPrompt, setEditedPrompt] = useState('');
   const [promoCode, setPromoCode] = useState('');
   const [promoLoading, setPromoLoading] = useState(false);
   const [promoError, setPromoError] = useState('');
@@ -998,8 +1000,66 @@ function GenerateComicContent() {
                       )}
                       {panel.scene?.description && (
                         <div>
-                          <span className="text-neutral-400 uppercase tracking-wider text-[10px]">Scene</span>
-                          <p className="text-neutral-700 mt-0.5">{panel.scene.description}</p>
+                          <span className="text-neutral-400 uppercase tracking-wider text-[10px]">Scene prompt</span>
+                          {editingPanelPrompt === panel.number ? (
+                            <div className="mt-1">
+                              <textarea
+                                value={editedPrompt}
+                                onChange={(e) => setEditedPrompt(e.target.value)}
+                                rows={3}
+                                className="w-full px-2 py-1.5 border border-neutral-300 rounded-lg text-xs focus:border-neutral-900 focus:outline-none resize-none"
+                              />
+                              <div className="flex gap-2 mt-1">
+                                <button
+                                  onClick={async () => {
+                                    // Save edited prompt to DB
+                                    try {
+                                      await fetch(`/api/books/${bookId}`, {
+                                        method: 'PATCH',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({
+                                          updatePanelScene: { number: panel.number, description: editedPrompt },
+                                        }),
+                                      });
+                                      // Update local state
+                                      setPanels(prev => prev.map(p =>
+                                        p.number === panel.number
+                                          ? { ...p, scene: { ...p.scene, description: editedPrompt }, status: 'pending', error: undefined }
+                                          : p
+                                      ));
+                                      setEditingPanelPrompt(null);
+                                    } catch { /* ignore */ }
+                                  }}
+                                  className="px-2 py-1 bg-neutral-900 text-white rounded text-[10px] font-medium"
+                                >
+                                  Save
+                                </button>
+                                <button
+                                  onClick={() => setEditingPanelPrompt(null)}
+                                  className="px-2 py-1 text-neutral-500 text-[10px]"
+                                >
+                                  Cancel
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="flex items-start gap-1 mt-0.5">
+                              <p className="text-neutral-700 flex-1">{panel.scene.description}</p>
+                              {(panel.status === 'error' || panel.status === 'pending') && (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setEditingPanelPrompt(panel.number);
+                                    setEditedPrompt(panel.scene?.description || '');
+                                  }}
+                                  className="text-neutral-400 hover:text-neutral-900 flex-shrink-0 mt-0.5"
+                                  title="Edit scene prompt"
+                                >
+                                  <Pencil className="h-3 w-3" />
+                                </button>
+                              )}
+                            </div>
+                          )}
                         </div>
                       )}
                       {panel.scene?.background && (

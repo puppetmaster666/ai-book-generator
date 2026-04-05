@@ -175,11 +175,35 @@ export async function PATCH(
     if (targetWords !== undefined) updateData.targetWords = targetWords;
     if (targetChapters !== undefined) updateData.targetChapters = targetChapters;
     if (body.region !== undefined) updateData.region = body.region;
-    const book = await prisma.book.update({
+
+    // Update a specific panel's scene description (for editing failed panel prompts)
+    if (body.updatePanelScene) {
+      const { number, description } = body.updatePanelScene;
+      const book = await prisma.book.findUnique({ where: { id }, select: { outline: true } });
+      if (book?.outline) {
+        const outline = book.outline as { chapters: Array<{ number: number; scene?: { description?: string } }> };
+        const chapter = outline.chapters.find(c => c.number === number);
+        if (chapter?.scene) {
+          chapter.scene.description = description;
+          updateData.outline = outline;
+        }
+      }
+      // Also update the chapter's sceneDescription in DB
+      await prisma.chapter.updateMany({
+        where: { bookId: id, number },
+        data: { sceneDescription: { description } as any },
+      });
+      // Delete failed illustration so it can be regenerated
+      await prisma.illustration.deleteMany({
+        where: { bookId: id, position: number, status: 'failed' },
+      });
+    }
+
+    const updatedBook = await prisma.book.update({
       where: { id },
       data: updateData,
     });
-    return NextResponse.json({ book });
+    return NextResponse.json({ book: updatedBook });
   } catch (error) {
     console.error('Error updating book:', error);
     return NextResponse.json(

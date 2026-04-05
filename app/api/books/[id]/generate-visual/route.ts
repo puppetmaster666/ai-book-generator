@@ -562,46 +562,45 @@ export async function POST(
             }
         };
 
-        // Process all pending in parallel batches
-        // We do ALL of them. The 5 min timeout is the hard limit.
+        // Process panels ONE AT A TIME, sequentially
+        // Stop on first failure so user can review, edit prompt, and retry
+        // No wasted API calls, no duplicates, no mystery failures
         let totalFailures = 0;
         let totalSuccesses = 0;
         let stoppedDueToTimeout = false;
+        let stoppedDueToFailure = false;
 
-        for (let i = 0; i < pendingChapters.length; i += CONCURRENCY) {
-            // Check timeout before starting new batch
+        for (let i = 0; i < pendingChapters.length; i++) {
+            // Check timeout
             if (isApproachingTimeout()) {
-                console.log(`[Visual Gen] Timeout approaching after ${Math.floor((Date.now() - generationStartTime) / 1000)}s, stopping gracefully`);
+                console.log(`[Visual Gen] Timeout approaching after ${Math.floor((Date.now() - generationStartTime) / 1000)}s, stopping`);
                 stoppedDueToTimeout = true;
                 break;
             }
 
-            // Update book timestamp as "heartbeat" so stale detection knows we're active
-            // This prevents the 7-minute stale timeout from triggering during long visual generations
+            // Heartbeat update
             await prisma.book.update({
                 where: { id },
-                data: { status: 'generating' }, // updatedAt auto-updates
+                data: { status: 'generating' },
             });
 
-            const chunk = pendingChapters.slice(i, i + CONCURRENCY);
-            const batchResults = await Promise.all(chunk.map(ch => generateOne(ch)));
+            const chapter = pendingChapters[i];
+            console.log(`[Visual Gen] Generating panel ${chapter.number} of ${targetChapters.length} (${i + 1}/${pendingChapters.length} pending)...`);
 
-            for (const result of batchResults) {
-                if (result.success) {
-                    totalSuccesses++;
-                } else {
-                    totalFailures++;
-                }
+            const result = await generateOne(chapter);
+
+            if (result.success) {
+                totalSuccesses++;
+            } else {
+                totalFailures++;
+                // Stop on first failure — let user see the error and retry/edit
+                console.log(`[Visual Gen] Panel ${chapter.number} failed, stopping generation. User can retry.`);
+                stoppedDueToFailure = true;
+                break;
             }
 
             // Log progress
-            const successfulPanels = await prisma.illustration.count({
-                where: { bookId: id, status: 'completed' }
-            });
-            const failedPanels = await prisma.illustration.count({
-                where: { bookId: id, status: 'failed' }
-            });
-            console.log(`[Visual Gen] Batch complete: ${successfulPanels} success, ${failedPanels} failed of ${targetChapters.length} total`);
+            console.log(`[Visual Gen] Panel ${chapter.number} done. ${totalSuccesses} success, ${totalFailures} failed of ${targetChapters.length} total`);
         }
 
         // Check completion status
@@ -615,15 +614,24 @@ export async function POST(
 
         console.log(`[Visual Gen] Generation finished: ${successfulPanels} success, ${failedPanels} failed of ${targetChapters.length} total`);
 
-        // If stopped due to timeout, return partial status so client can retry
-        if (stoppedDueToTimeout) {
+        // Stopped due to timeout or failure — mark as failed so user can retry
+        if (stoppedDueToTimeout || stoppedDueToFailure) {
+            const reason = stoppedDueToFailure
+                ? `Panel generation failed. ${successfulPanels} of ${targetChapters.length} panels completed. Retry to continue.`
+                : `Generation paused due to timeout. ${successfulPanels} panels completed. Retry to continue.`;
+
+            await prisma.book.update({
+                where: { id },
+                data: { status: 'failed', errorMessage: reason },
+            });
+
             return NextResponse.json({
-                success: true,
-                status: 'timeout',
+                success: false,
+                status: stoppedDueToFailure ? 'stopped_on_failure' : 'timeout',
                 panelsCompleted: successfulPanels,
                 panelsFailed: failedPanels,
                 panelsRemaining: targetChapters.length - totalPanels,
-                message: 'Generation paused due to timeout. Refresh to continue or retry failed panels.',
+                message: reason,
             });
         }
 
