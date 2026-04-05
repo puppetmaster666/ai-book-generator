@@ -126,6 +126,9 @@ export default function CreateBook() {
   const [promptHistory, setPromptHistory] = useState<string[]>([]);
   // Character setup state (collected before outline)
   const [characterNames, setCharacterNames] = useState<string[]>(['', '']);
+  const [characterClothing, setCharacterClothing] = useState<string[]>(['', '']);
+  const [characterPersonality, setCharacterPersonality] = useState<string[]>(['', '']);
+  const [characterEthnicity, setCharacterEthnicity] = useState<string[]>(['', '']);
   const [characterPhotos, setCharacterPhotos] = useState<(string | null)[]>([null, null]);
   const [storyRegion, setStoryRegion] = useState<string>('');
 
@@ -441,10 +444,20 @@ export default function CreateBook() {
       // Check if this is an illustrated book
       const isIllustrated = preset.format !== 'text_only' && preset.format !== 'screenplay';
 
-      // Build idea with character names if provided
-      const charNamesList = characterNames.filter(n => n.trim());
-      const ideaWithChars = charNamesList.length > 0
-        ? `${idea}\n\nMain character names: ${charNamesList.join(', ')}`
+      // Build idea with character details if provided
+      const charDetails = characterNames
+        .map((name, i) => {
+          if (!name.trim()) return null;
+          const parts = [name.trim()];
+          if (characterEthnicity[i]?.trim()) parts.push(characterEthnicity[i].trim());
+          if (characterPersonality[i]?.trim()) parts.push(`personality: ${characterPersonality[i].trim()}`);
+          if (characterClothing[i]?.trim()) parts.push(`wears: ${characterClothing[i].trim()}`);
+          return parts.join(', ');
+        })
+        .filter(Boolean);
+
+      const ideaWithChars = charDetails.length > 0
+        ? `${idea}\n\nCharacters:\n${charDetails.map((d, i) => `${i + 1}. ${d}`).join('\n')}`
         : idea;
 
       const expandResponse = await fetch('/api/expand-idea', {
@@ -1071,41 +1084,85 @@ export default function CreateBook() {
               </div>
 
               <div className="max-w-xl mx-auto space-y-6">
-                {/* Character Names */}
+                {/* Characters */}
                 <div className="bg-white rounded-2xl border border-neutral-200 p-6">
-                  <h3 className="font-semibold text-neutral-900 mb-4">Character Names</h3>
-                  <div className="space-y-3">
+                  <h3 className="font-semibold text-neutral-900 mb-1">Characters</h3>
+                  <p className="text-sm text-neutral-500 mb-4">Leave any field empty to let the AI decide</p>
+                  <div className="space-y-5">
                     {characterNames.map((name, i) => (
-                      <div key={i} className="flex items-center gap-3">
-                        <span className="text-xs text-neutral-400 w-16">{i === 0 ? 'Main' : `Char ${i + 1}`}</span>
-                        <input
-                          type="text"
-                          value={name}
-                          onChange={(e) => {
-                            const updated = [...characterNames];
-                            updated[i] = e.target.value;
-                            setCharacterNames(updated);
-                          }}
-                          placeholder={i === 0 ? 'Protagonist name' : 'Supporting character'}
-                          className="flex-1 px-4 py-2.5 border border-neutral-200 rounded-xl focus:border-neutral-900 focus:outline-none text-sm"
-                        />
+                      <div key={i} className="relative">
                         {i > 1 && (
                           <button
                             onClick={() => {
                               setCharacterNames(characterNames.filter((_, idx) => idx !== i));
+                              setCharacterClothing(characterClothing.filter((_, idx) => idx !== i));
+                              setCharacterPersonality(characterPersonality.filter((_, idx) => idx !== i));
+                              setCharacterEthnicity(characterEthnicity.filter((_, idx) => idx !== i));
                               setCharacterPhotos(characterPhotos.filter((_, idx) => idx !== i));
                             }}
-                            className="p-1 text-neutral-400 hover:text-neutral-600"
+                            className="absolute -top-1 -right-1 p-1 text-neutral-400 hover:text-neutral-600"
                           >
                             <X className="h-4 w-4" />
                           </button>
                         )}
+                        <p className="text-xs font-medium text-neutral-400 uppercase tracking-wider mb-2">
+                          {i === 0 ? 'Protagonist' : `Character ${i + 1}`}
+                        </p>
+                        <div className="grid grid-cols-2 gap-2">
+                          <input
+                            type="text"
+                            value={name}
+                            onChange={(e) => {
+                              const updated = [...characterNames];
+                              updated[i] = e.target.value;
+                              setCharacterNames(updated);
+                            }}
+                            placeholder="Name"
+                            className="px-3 py-2 border border-neutral-200 rounded-lg focus:border-neutral-900 focus:outline-none text-sm"
+                          />
+                          <input
+                            type="text"
+                            value={characterEthnicity[i] || ''}
+                            onChange={(e) => {
+                              const updated = [...characterEthnicity];
+                              updated[i] = e.target.value;
+                              setCharacterEthnicity(updated);
+                            }}
+                            placeholder="Ethnicity"
+                            className="px-3 py-2 border border-neutral-200 rounded-lg focus:border-neutral-900 focus:outline-none text-sm"
+                          />
+                          <input
+                            type="text"
+                            value={characterPersonality[i] || ''}
+                            onChange={(e) => {
+                              const updated = [...characterPersonality];
+                              updated[i] = e.target.value;
+                              setCharacterPersonality(updated);
+                            }}
+                            placeholder="Personality (e.g. shy, brave)"
+                            className="px-3 py-2 border border-neutral-200 rounded-lg focus:border-neutral-900 focus:outline-none text-sm"
+                          />
+                          <input
+                            type="text"
+                            value={characterClothing[i] || ''}
+                            onChange={(e) => {
+                              const updated = [...characterClothing];
+                              updated[i] = e.target.value;
+                              setCharacterClothing(updated);
+                            }}
+                            placeholder="Clothing style"
+                            className="px-3 py-2 border border-neutral-200 rounded-lg focus:border-neutral-900 focus:outline-none text-sm"
+                          />
+                        </div>
                       </div>
                     ))}
                     {characterNames.length < 5 && (
                       <button
                         onClick={() => {
                           setCharacterNames([...characterNames, '']);
+                          setCharacterClothing([...characterClothing, '']);
+                          setCharacterPersonality([...characterPersonality, '']);
+                          setCharacterEthnicity([...characterEthnicity, '']);
                           setCharacterPhotos([...characterPhotos, null]);
                         }}
                         className="text-sm text-neutral-500 hover:text-neutral-900 transition-colors"
