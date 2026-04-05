@@ -105,7 +105,7 @@ const ART_STYLE_IMAGES: Partial<Record<ArtStyleKey, string>> = {
 export default function CreateBook() {
   const router = useRouter();
   const { data: session } = useSession();
-  const [step, setStep] = useState<'category' | 'subtype' | 'idea' | 'style'>('category');
+  const [step, setStep] = useState<'category' | 'subtype' | 'idea' | 'style' | 'characters'>('category');
   const [selectedCategory, setSelectedCategory] = useState<CategoryType | null>(null);
   const [selectedPreset, setSelectedPreset] = useState<BookPresetKey | null>(null);
   const [selectingCategory, setSelectingCategory] = useState<CategoryType | null>(null);
@@ -124,6 +124,10 @@ export default function CreateBook() {
   const [isParsingFile, setIsParsingFile] = useState(false);
   const [showPromptHistory, setShowPromptHistory] = useState(false);
   const [promptHistory, setPromptHistory] = useState<string[]>([]);
+  // Character setup state (collected before outline)
+  const [characterNames, setCharacterNames] = useState<string[]>(['', '']);
+  const [characterPhotos, setCharacterPhotos] = useState<(string | null)[]>([null, null]);
+  const [storyRegion, setStoryRegion] = useState<string>('');
 
   // Get user ID from session if logged in
   const userId = (session?.user as { id?: string })?.id;
@@ -398,12 +402,16 @@ export default function CreateBook() {
 
   const handleContinue = () => {
     if (!selectedPreset) return;
-    const preset = BOOK_PRESETS[selectedPreset];
 
-    // Only image books need the style step
+    // Flow: idea → style (image books) → characters → submit
     const needsStyleStep = selectedCategory === 'image';
     if (needsStyleStep && step === 'idea') {
       setStep('style');
+    } else if (step === 'idea' || step === 'style') {
+      // Go to character setup before submitting
+      setStep('characters');
+    } else if (step === 'characters') {
+      handleSubmit();
     } else {
       handleSubmit();
     }
@@ -433,11 +441,17 @@ export default function CreateBook() {
       // Check if this is an illustrated book
       const isIllustrated = preset.format !== 'text_only' && preset.format !== 'screenplay';
 
+      // Build idea with character names if provided
+      const charNamesList = characterNames.filter(n => n.trim());
+      const ideaWithChars = charNamesList.length > 0
+        ? `${idea}\n\nMain character names: ${charNamesList.join(', ')}`
+        : idea;
+
       const expandResponse = await fetch('/api/expand-idea', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          idea,
+          idea: ideaWithChars,
           bookType,
           isIllustrated,
           isScreenplay: preset.format === 'screenplay',
@@ -462,7 +476,7 @@ export default function CreateBook() {
           targetWords,
           targetChapters,
           userId,
-          region: bookPlan.detectedRegion || null,
+          region: storyRegion || bookPlan.detectedRegion || null,
         }),
       });
 
@@ -473,6 +487,28 @@ export default function CreateBook() {
       }
 
       const { bookId } = data;
+
+      // Upload protagonist photo if provided (first character with a photo)
+      const firstPhotoIndex = characterPhotos.findIndex(p => p !== null);
+      if (firstPhotoIndex >= 0 && characterPhotos[firstPhotoIndex] && isIllustrated) {
+        try {
+          const photoData = characterPhotos[firstPhotoIndex]!;
+          const base64 = photoData.includes(',') ? photoData.split(',')[1] : photoData;
+          const mimeMatch = photoData.match(/data:([^;]+);/);
+          await fetch(`/api/books/${bookId}/stylize-protagonist`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              imageBase64: base64,
+              mimeType: mimeMatch?.[1] || 'image/jpeg',
+            }),
+          });
+        } catch (err) {
+          console.error('Failed to upload protagonist photo:', err);
+          // Non-fatal, continue to review
+        }
+      }
+
       trackGenerateLead(bookId);
       clearFormState();
       router.push(`/review?bookId=${bookId}`);
@@ -1005,8 +1041,168 @@ export default function CreateBook() {
 
               <div className="flex justify-center">
                 <button
+                  onClick={() => setStep('characters')}
+                  disabled={!selectedArtStyle}
+                  className="flex items-center gap-2 px-8 py-4 bg-neutral-900 text-white rounded-full hover:bg-neutral-800 disabled:opacity-50 font-medium transition-all hover:scale-105"
+                >
+                  Next: Character Setup <ArrowRight className="h-5 w-5" />
+                </button>
+              </div>
+            </>
+          )}
+
+          {/* Step: Character Setup (before outline) */}
+          {step === 'characters' && preset && (
+            <>
+              <button
+                onClick={() => setStep(selectedCategory === 'image' ? 'style' : 'idea')}
+                className="flex items-center gap-2 text-neutral-600 hover:text-neutral-900 mb-8 transition-colors"
+              >
+                <ArrowLeft className="h-5 w-5" /> Back
+              </button>
+
+              <div className="text-center mb-8">
+                <h1 className="text-3xl md:text-4xl font-bold tracking-tight mb-4" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>
+                  Set up your characters
+                </h1>
+                <p className="text-lg text-neutral-600">
+                  Optional: name your characters, upload a photo, and set the story location
+                </p>
+              </div>
+
+              <div className="max-w-xl mx-auto space-y-6">
+                {/* Character Names */}
+                <div className="bg-white rounded-2xl border border-neutral-200 p-6">
+                  <h3 className="font-semibold text-neutral-900 mb-4">Character Names</h3>
+                  <div className="space-y-3">
+                    {characterNames.map((name, i) => (
+                      <div key={i} className="flex items-center gap-3">
+                        <span className="text-xs text-neutral-400 w-16">{i === 0 ? 'Main' : `Char ${i + 1}`}</span>
+                        <input
+                          type="text"
+                          value={name}
+                          onChange={(e) => {
+                            const updated = [...characterNames];
+                            updated[i] = e.target.value;
+                            setCharacterNames(updated);
+                          }}
+                          placeholder={i === 0 ? 'Protagonist name' : 'Supporting character'}
+                          className="flex-1 px-4 py-2.5 border border-neutral-200 rounded-xl focus:border-neutral-900 focus:outline-none text-sm"
+                        />
+                        {i > 1 && (
+                          <button
+                            onClick={() => {
+                              setCharacterNames(characterNames.filter((_, idx) => idx !== i));
+                              setCharacterPhotos(characterPhotos.filter((_, idx) => idx !== i));
+                            }}
+                            className="p-1 text-neutral-400 hover:text-neutral-600"
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                    {characterNames.length < 5 && (
+                      <button
+                        onClick={() => {
+                          setCharacterNames([...characterNames, '']);
+                          setCharacterPhotos([...characterPhotos, null]);
+                        }}
+                        className="text-sm text-neutral-500 hover:text-neutral-900 transition-colors"
+                      >
+                        + Add another character
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Character Photo Upload (only for image books) */}
+                {selectedCategory === 'image' && (
+                  <div className="bg-white rounded-2xl border border-neutral-200 p-6">
+                    <h3 className="font-semibold text-neutral-900 mb-1">Character Photo</h3>
+                    <p className="text-sm text-neutral-500 mb-4">Upload a photo to base the main character&apos;s appearance on</p>
+                    <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-neutral-200 rounded-xl cursor-pointer hover:border-neutral-400 transition-colors">
+                      {characterPhotos[0] ? (
+                        <div className="relative w-20 h-20">
+                          <img src={characterPhotos[0]} alt="Character" className="w-full h-full object-cover rounded-lg" />
+                          <button
+                            onClick={(e) => {
+                              e.preventDefault();
+                              const updated = [...characterPhotos];
+                              updated[0] = null;
+                              setCharacterPhotos(updated);
+                            }}
+                            className="absolute -top-2 -right-2 bg-neutral-900 text-white rounded-full p-0.5"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="text-center">
+                          <Upload className="h-6 w-6 text-neutral-400 mx-auto mb-1" />
+                          <span className="text-sm text-neutral-500">Click to upload a face photo</span>
+                        </div>
+                      )}
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            const reader = new FileReader();
+                            reader.onload = () => {
+                              const updated = [...characterPhotos];
+                              updated[0] = reader.result as string;
+                              setCharacterPhotos(updated);
+                            };
+                            reader.readAsDataURL(file);
+                          }
+                        }}
+                      />
+                    </label>
+                  </div>
+                )}
+
+                {/* Story Region/Country */}
+                <div className="bg-white rounded-2xl border border-neutral-200 p-6">
+                  <h3 className="font-semibold text-neutral-900 mb-1">Story Location</h3>
+                  <p className="text-sm text-neutral-500 mb-4">Where does the story take place? This affects character names and cultural details.</p>
+                  <select
+                    value={storyRegion}
+                    onChange={(e) => setStoryRegion(e.target.value)}
+                    className="w-full px-4 py-2.5 border border-neutral-200 rounded-xl focus:border-neutral-900 focus:outline-none text-sm bg-white"
+                  >
+                    <option value="">Auto-detect from story</option>
+                    <option value="usa_general">United States / Canada</option>
+                    <option value="uk">United Kingdom / Australia</option>
+                    <option value="france">France</option>
+                    <option value="germany">Germany / Central Europe</option>
+                    <option value="italy">Italy / Southern Europe</option>
+                    <option value="spain">Spain / Latin America</option>
+                    <option value="scandinavia">Scandinavia</option>
+                    <option value="russia">Russia / Eastern Europe</option>
+                    <option value="japan">Japan</option>
+                    <option value="korea">South Korea</option>
+                    <option value="china">China / Taiwan</option>
+                    <option value="india">India / South Asia</option>
+                    <option value="middle_east">Middle East</option>
+                    <option value="nigeria">Africa</option>
+                    <option value="mexico">Mexico / Latin America</option>
+                    <option value="brazil">Brazil</option>
+                    <option value="fantasy_medieval">Fantasy / Medieval</option>
+                  </select>
+                </div>
+              </div>
+
+              {error && (
+                <p className="text-red-600 text-sm mb-4 bg-red-50 px-4 py-2 rounded-lg text-center mt-4">{error}</p>
+              )}
+
+              <div className="flex justify-center mt-8">
+                <button
                   onClick={handleSubmit}
-                  disabled={!selectedArtStyle || isSubmitting}
+                  disabled={isSubmitting}
                   className="flex items-center gap-2 px-8 py-4 bg-neutral-900 text-white rounded-full hover:bg-neutral-800 disabled:opacity-50 font-medium transition-all hover:scale-105"
                 >
                   {isSubmitting ? (
