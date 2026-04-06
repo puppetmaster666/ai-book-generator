@@ -226,7 +226,49 @@ async function attemptIllustrationGeneration(data: {
   visualStyleGuide?: VisualStyleGuide;
   bookFormat?: string;
   referenceImages?: { characterName: string; imageData: string }[];
+  useFlux?: boolean;
 }): Promise<IllustrationAttemptResult> {
+  // If useFlux is set, use RunPod/ComfyUI instead of Gemini
+  if (data.useFlux) {
+    try {
+      const { runComfyWorkflow, isRunPodConfigured } = await import('@/lib/runpod');
+      const { buildComicPanelWorkflow, buildFluxPrompt } = await import('@/lib/comfyui-workflows');
+
+      if (!isRunPodConfigured()) {
+        console.warn('[Illustration] RunPod not configured, falling back to Gemini');
+        // Fall through to Gemini below
+      } else {
+        console.log('[Illustration] Using RunPod/Flux for uncensored image generation');
+        const prompt = buildFluxPrompt(data.scene, '', data.artStyle);
+        const { workflow, images } = buildComicPanelWorkflow({
+          prompt,
+          width: 832,
+          height: 1216,
+          steps: 20,
+          cfg: 1,
+          model: 'flux',
+        });
+
+        const results = await runComfyWorkflow(workflow, images, ILLUSTRATION_TIMEOUT_MS);
+
+        if (results.length > 0) {
+          const base64 = results[0];
+          const imageUrl = base64.startsWith('data:') ? base64 : `data:image/png;base64,${base64}`;
+          return {
+            success: true,
+            blocked: false,
+            timedOut: false,
+            data: { imageUrl, altText: data.scene.substring(0, 100), width: 832, height: 1216 },
+          };
+        }
+        throw new Error('RunPod returned no images');
+      }
+    } catch (fluxError) {
+      const errMsg = fluxError instanceof Error ? fluxError.message : 'Flux generation failed';
+      console.error('[Illustration] Flux error:', errMsg);
+      return { success: false, blocked: false, timedOut: errMsg.includes('timed out'), data: null };
+    }
+  }
   try {
     // Build base URL - check multiple env vars in order of preference
     // VERCEL_URL doesn't include protocol, so we need to add it
@@ -317,6 +359,7 @@ async function generateIllustrationImage(data: {
   bookFormat?: string;
   referenceImages?: { characterName: string; imageData: string }[];
   expectedText?: string | null;
+  useFlux?: boolean;
 }): Promise<{ imageUrl: string; altText: string; width: number; height: number } | null> {
   let currentScene = data.scene;
   const MAX_TEXT_VALIDATION_RETRIES = 2;
@@ -601,6 +644,9 @@ async function generateIllustrationsInParallel(
         expectedText = textParts.join(' ').substring(0, 200);
       }
 
+      // Use Flux for mature/roast content, Gemini for everything else
+      const useFlux = bookData.contentRating === 'mature';
+
       const result = await generateIllustrationImage({
         scene: illustrationPrompt,
         artStyle: bookData.artStyle,
@@ -614,13 +660,43 @@ async function generateIllustrationsInParallel(
         visualStyleGuide: bookData.visualStyleGuide,
         bookFormat: bookData.bookFormat,
         referenceImages: referenceImages.length > 0 ? referenceImages : undefined,
-        expectedText,
+        expectedText: useFlux ? null : expectedText, // Flux images get text via Sharp overlay, not baked in
+        useFlux,
       });
 
       if (result) {
+        let finalImageUrl = result.imageUrl;
+
+        // For Flux images: overlay speech bubbles and narration via Sharp
+        // (Flux generates art only, no text in image)
+        if (useFlux && (hasDialogue || hasNarration)) {
+          try {
+            const { overlayTextOnImage, mapDialoguePosition } = await import('@/lib/text-overlay');
+            const validDialogue = (chapter.dialogue || []).filter(
+              (d: DialogueEntry) => d && typeof d.text === 'string' && d.text.trim()
+            );
+            finalImageUrl = await overlayTextOnImage({
+              imageBase64: finalImageUrl,
+              dialogue: validDialogue.length > 0 ? validDialogue.map((d: DialogueEntry, idx: number) => ({
+                speaker: d.speaker,
+                text: d.text,
+                position: mapDialoguePosition(d.position, idx, validDialogue.length),
+                type: d.type || 'speech',
+              })) : undefined,
+              narration: hasNarration && chapter.text ? {
+                text: chapter.text,
+                position: 'top' as const,
+              } : undefined,
+            });
+            console.log(`[Flux] Text overlay applied to panel ${chapter.number}`);
+          } catch (overlayErr) {
+            console.warn(`[Flux] Text overlay failed for panel ${chapter.number}:`, overlayErr instanceof Error ? overlayErr.message : overlayErr);
+          }
+        }
+
         return {
           chapterNumber: chapter.number,
-          imageUrl: result.imageUrl,
+          imageUrl: finalImageUrl,
           altText: chapter.scene.description,
           width: result.width,
           height: result.height,

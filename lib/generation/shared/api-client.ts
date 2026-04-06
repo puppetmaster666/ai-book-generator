@@ -1,5 +1,6 @@
 import { GoogleGenerativeAI, GenerativeModel } from '@google/generative-ai';
 import { SAFETY_SETTINGS } from './safety';
+import { generateWithMistral, isMistralConfigured } from '@/lib/mistral';
 
 // Timeout: 700s - Vercel Fluid Compute allows up to 800s
 const SAFETY_TIMEOUT_MS = 700000;
@@ -95,6 +96,37 @@ export function getGeminiImage(): GenerativeModel {
 // Review uses the same key — separate model instance not needed
 export function getGeminiFlashForReview(): GenerativeModel {
   return getGeminiFlash();
+}
+
+/**
+ * Generate text with the appropriate AI provider.
+ * Uses Mistral for mature/roast content (uncensored), Gemini for everything else.
+ */
+export async function generateTextWithProvider(
+  prompt: string,
+  options?: {
+    contentRating?: string;
+    temperature?: number;
+    maxTokens?: number;
+  }
+): Promise<string> {
+  const isMature = options?.contentRating === 'mature';
+
+  if (isMature && isMistralConfigured()) {
+    console.log('[AI Provider] Using Mistral (uncensored) for mature content');
+    return generateWithMistral(
+      [{ role: 'user', content: prompt }],
+      {
+        temperature: options?.temperature ?? 0.8,
+        maxTokens: options?.maxTokens ?? 16384,
+      }
+    );
+  }
+
+  // Default: Gemini
+  const model = (options?.temperature ?? 0.3) > 0.5 ? getGeminiPro() : getGeminiFlash();
+  const result = await model.generateContent(prompt);
+  return result.response.text() || '';
 }
 
 // Legacy exports — no-ops since we have one key

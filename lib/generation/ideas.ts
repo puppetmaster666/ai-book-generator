@@ -1,4 +1,4 @@
-import { getGeminiFlash, getGeminiFlashLight } from './shared/api-client';
+import { getGeminiFlash, getGeminiFlashLight, generateTextWithProvider } from './shared/api-client';
 import { parseJSONFromResponse } from './shared/json-utils';
 import { truncateToWordLimit } from './shared/writing-quality';
 import { BANNED_OVERUSED_NAMES, buildNameGuidancePrompt, buildNameGuidanceForRegion } from './shared/name-variety';
@@ -705,8 +705,10 @@ JSON format:
         ? nonFictionPrompt.replace(idea, sanitizedIdea)
         : fictionPrompt.replace(idea, sanitizedIdea);
 
-      const result = await getGeminiFlash().generateContent(sanitizedPrompt);
-      const response = result.response.text() || '';
+      // Use Mistral for roast/mature content, Gemini for everything else
+      const response = isRoastContent
+        ? await generateTextWithProvider(sanitizedPrompt, { contentRating: 'mature', temperature: 0.7 })
+        : await (async () => { const r = await getGeminiFlash().generateContent(sanitizedPrompt); return r.response.text() || ''; })();
       if (!response.trim()) {
         throw new Error('Empty response from AI model');
       }
