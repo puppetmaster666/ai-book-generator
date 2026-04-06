@@ -238,16 +238,17 @@ async function attemptIllustrationGeneration(data: {
         console.warn('[Illustration] RunPod not configured, falling back to Gemini');
         // Fall through to Gemini below
       } else {
-        console.log('[Illustration] Using RunPod/Flux for uncensored image generation');
-        const prompt = buildFluxPrompt(data.scene, '', data.artStyle);
+        console.log('[Illustration] Using RunPod/Pony V6 for uncensored image generation');
+        const { buildPonyPrompt } = await import('@/lib/comfyui-workflows');
+        const prompt = buildPonyPrompt(data.scene, '', data.artStyle);
         const { workflow, images } = buildComicPanelWorkflow({
           prompt,
-          width: 832,
-          height: 1216,
-          steps: 20,
-          cfg: 1,
-          model: 'flux',
-          nsfw: true, // Apply NSFW LoRA for explicit content
+          width: 1024,
+          height: 1024,
+          steps: 25,
+          cfg: 7,
+          model: 'sdxl',
+          checkpoint: 'ponyDiffusionV6XL.safetensors',
         });
 
         const results = await runComfyWorkflow(workflow, images, ILLUSTRATION_TIMEOUT_MS);

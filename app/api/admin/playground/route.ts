@@ -68,21 +68,25 @@ export async function POST(request: NextRequest) {
     if (mode === 'image') {
       if (provider === 'runpod') {
         const { runComfyWorkflow, isRunPodConfigured } = await import('@/lib/runpod');
-        const { buildComicPanelWorkflow, buildFluxPrompt } = await import('@/lib/comfyui-workflows');
+        const { buildComicPanelWorkflow, buildFluxPrompt, buildPonyPrompt } = await import('@/lib/comfyui-workflows');
 
         if (!isRunPodConfigured()) {
           return NextResponse.json({ error: 'RUNPOD_API_KEY and RUNPOD_COMFYUI_ENDPOINT_ID not configured' }, { status: 503 });
         }
 
-        const fluxPrompt = buildFluxPrompt(prompt, '', 'realistic');
+        // Use Pony V6 for NSFW (fully explicit capable), Flux for SFW
+        const useModel = nsfw ? 'sdxl' : 'flux';
+        const imgPrompt = nsfw
+          ? buildPonyPrompt(prompt, '', 'realistic')
+          : buildFluxPrompt(prompt, '', 'realistic');
         const { workflow, images } = buildComicPanelWorkflow({
-          prompt: fluxPrompt,
-          width: 832,
-          height: 1216,
-          steps: 20,
-          cfg: 1,
-          model: 'flux',
-          nsfw: nsfw || false,
+          prompt: imgPrompt,
+          width: nsfw ? 1024 : 832,
+          height: nsfw ? 1024 : 1216,
+          steps: nsfw ? 25 : 20,
+          cfg: nsfw ? 7 : 1,
+          model: useModel,
+          checkpoint: nsfw ? 'ponyDiffusionV6XL.safetensors' : undefined,
         });
 
         const results = await runComfyWorkflow(workflow, images, 120000);
