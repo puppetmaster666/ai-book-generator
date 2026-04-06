@@ -600,7 +600,7 @@ async function generateIllustrationsInParallel(
           refCount++;
         }
         if (bookData.protagonistDescription) {
-          illustrationPrompt += `\n\nPROTAGONIST REFERENCE (CRITICAL - MATCH FACE EXACTLY):\n${bookData.protagonistDescription}\n\nCONSISTENCY RULES FOR "${mainCharName}":\n- Face, hair, and skin tone must EXACTLY match the reference image in every panel.\n- If the reference does NOT show glasses, do NOT add glasses. If it shows glasses, ALWAYS include them.\n- Body type and build must stay consistent.\n- Clothing can change based on the scene (gym clothes, work clothes, casual, etc.) but the FACE must always be recognizable as the same person.\n- This is based on a real person's photo. Face accuracy is non-negotiable.`;
+          illustrationPrompt += `\n\nPROTAGONIST REFERENCE (CRITICAL - MATCH FACE EXACTLY):\n${bookData.protagonistDescription}\n\nCONSISTENCY RULES FOR "${mainCharName}":\n- The REFERENCE IMAGE provided is the ULTIMATE authority. Match it EXACTLY.\n- If the person in the reference image does NOT wear glasses, you MUST NOT draw glasses. Ignore any text description that says otherwise.\n- Face, hair style, hair color, skin tone, facial hair must EXACTLY match the reference IMAGE (not the text description if they conflict).\n- Body type and build must stay consistent.\n- Clothing changes based on the scene but the FACE must always be the same person.\n- When in doubt, look at the reference IMAGE, not the text description.`;
         }
         console.log(`[ParallelGen] Panel ${chapter.number}: Using protagonist photo reference for "${mainCharName}"`);
       }

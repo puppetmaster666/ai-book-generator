@@ -12,39 +12,9 @@
  */
 
 import sharp from 'sharp';
-import { readFileSync } from 'fs';
-import { join } from 'path';
 
-// ─── Font Embedding ───
-// Load comic fonts as base64 for reliable SVG rendering on any server
-
-let bangersBase64: string | null = null;
-let comicNeueBase64: string | null = null;
-
-function loadFonts() {
-  if (!bangersBase64) {
-    try {
-      bangersBase64 = readFileSync(join(process.cwd(), 'public/fonts/Bangers-Regular.ttf')).toString('base64');
-    } catch { bangersBase64 = ''; }
-  }
-  if (!comicNeueBase64) {
-    try {
-      comicNeueBase64 = readFileSync(join(process.cwd(), 'public/fonts/ComicNeue-Bold.ttf')).toString('base64');
-    } catch { comicNeueBase64 = ''; }
-  }
-}
-
-function getFontStyles(): string {
-  loadFonts();
-  const parts: string[] = [];
-  if (comicNeueBase64) {
-    parts.push(`@font-face { font-family: 'ComicNeue'; src: url(data:font/ttf;base64,${comicNeueBase64}) format('truetype'); font-weight: bold; }`);
-  }
-  if (bangersBase64) {
-    parts.push(`@font-face { font-family: 'Bangers'; src: url(data:font/ttf;base64,${bangersBase64}) format('truetype'); }`);
-  }
-  return parts.length > 0 ? `<defs><style>${parts.join('\n')}</style></defs>` : '';
-}
+// Use system fonts that are guaranteed to exist on Vercel/Linux
+// Custom font embedding via base64 @font-face doesn't work with Sharp's librsvg
 
 // ─── Types ───
 
@@ -70,9 +40,10 @@ interface TextOverlayInput {
 
 // ─── Constants ───
 
-const DIALOGUE_FONT = "'ComicNeue', 'Comic Neue', 'Comic Sans MS', sans-serif";
-const NARRATION_FONT = "'Georgia', 'Times New Roman', serif";
-const SFX_FONT = "'Bangers', 'Impact', sans-serif";
+// Fonts guaranteed to exist on Linux/Vercel (DejaVu Sans is always present)
+const DIALOGUE_FONT = "'DejaVu Sans', 'Liberation Sans', 'Arial', sans-serif";
+const NARRATION_FONT = "'DejaVu Serif', 'Liberation Serif', 'Times New Roman', serif";
+const SFX_FONT = "'DejaVu Sans', 'Impact', sans-serif";
 
 const DIALOGUE_SIZE = 16;
 const DIALOGUE_LINE_HEIGHT = 19;
@@ -351,7 +322,6 @@ export async function overlayTextOnImage(input: TextOverlayInput): Promise<strin
 
   // Build the SVG with embedded fonts and a shadow filter
   const svgOverlay = `<svg xmlns="http://www.w3.org/2000/svg" width="${imgWidth}" height="${imgHeight}">
-  ${getFontStyles()}
   <defs>
     <filter id="shadow" x="-10%" y="-10%" width="130%" height="130%">
       <feGaussianBlur in="SourceAlpha" stdDeviation="${BUBBLE_SHADOW_BLUR}"/>
