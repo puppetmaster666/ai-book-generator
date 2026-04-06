@@ -102,7 +102,7 @@ export async function POST(request: NextRequest) {
           steps: nsfw ? 25 : 20,
           cfg: nsfw ? 7 : 1,
           model: useModel,
-          checkpoint: nsfw ? 'ponyDiffusionV6XL.safetensors' : undefined,
+          checkpoint: nsfw ? 'lustifySDXLNSFW_apexV8.safetensors' : undefined,
         });
 
         const results = await runComfyWorkflow(workflow, images, 120000);

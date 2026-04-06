@@ -250,7 +250,7 @@ async function attemptIllustrationGeneration(data: {
           steps: 25,
           cfg: 7,
           model: 'sdxl',
-          checkpoint: 'ponyDiffusionV6XL.safetensors',
+          checkpoint: 'lustifySDXLNSFW_apexV8.safetensors',
         });
 
         const results = await runComfyWorkflow(workflow, images, ILLUSTRATION_TIMEOUT_MS);

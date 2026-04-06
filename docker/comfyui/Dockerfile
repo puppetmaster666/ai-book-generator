@@ -1,35 +1,21 @@
 FROM runpod/worker-comfyui:5.1.0-base
 
-# Install custom nodes for character consistency and LoRA support
+# Install custom nodes for character consistency
 RUN comfy-node-install comfyui_ipadapter_plus comfyui-impact-pack
 
 # ─── BASE MODELS ───
 
-# Flux.1-dev-fp8 (base model)
+# Flux.1-dev-fp8 (for SFW content, best prompt following)
 RUN comfy model download \
   --url https://huggingface.co/Comfy-Org/flux1-dev/resolve/main/flux1-dev-fp8.safetensors \
   --relative-path models/checkpoints \
   --filename flux1-dev-fp8.safetensors
 
-# Pony Diffusion V6 XL (from CivitAI, no auth needed)
+# LUSTIFY! Apex V8 (top NSFW SDXL checkpoint, 289K downloads, April 2026)
 RUN comfy model download \
-  --url https://civitai.com/api/download/models/290640 \
+  --url https://civitai.com/api/download/models/2808677 \
   --relative-path models/checkpoints \
-  --filename ponyDiffusionV6XL.safetensors
-
-# ─── NSFW LORAS ───
-
-# Flux NSFW Uncensored LoRA (Heartsync, file is lora.safetensors)
-RUN comfy model download \
-  --url https://huggingface.co/Heartsync/Flux-NSFW-uncensored/resolve/main/lora.safetensors \
-  --relative-path models/loras \
-  --filename flux-nsfw-uncensored.safetensors
-
-# Lustly.ai NSFW LoRA
-RUN comfy model download \
-  --url https://huggingface.co/lustlyai/Flux_Lustly.ai_Uncensored_nsfw_v1/resolve/main/flux_lustly-ai_v1.safetensors \
-  --relative-path models/loras \
-  --filename flux-lustly-nsfw.safetensors
+  --filename lustifySDXLNSFW_apexV8.safetensors
 
 # ─── CHARACTER CONSISTENCY ───
 
