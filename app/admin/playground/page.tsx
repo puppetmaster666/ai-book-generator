@@ -12,6 +12,7 @@ export default function PlaygroundPage() {
   const [mode, setMode] = useState<'text' | 'image'>('text');
   const [prompt, setPrompt] = useState('');
   const [model, setModel] = useState('');
+  const [nsfw, setNsfw] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [textResult, setTextResult] = useState('');
   const [imageResult, setImageResult] = useState('');
@@ -41,6 +42,7 @@ export default function PlaygroundPage() {
           mode,
           prompt: prompt.trim(),
           ...(model ? { model } : {}),
+          ...(nsfw ? { nsfw: true } : {}),
         }),
       });
 
@@ -119,6 +121,25 @@ export default function PlaygroundPage() {
             </button>
           ))}
         </div>
+
+        {/* NSFW toggle (for RunPod/Flux images) */}
+        {mode === 'image' && provider === 'runpod' && (
+          <div className="mb-4 flex items-center gap-3">
+            <button
+              onClick={() => setNsfw(!nsfw)}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                nsfw ? 'bg-neutral-900' : 'bg-neutral-300'
+              }`}
+            >
+              <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-md transition-transform ${
+                nsfw ? 'translate-x-6' : 'translate-x-1'
+              }`} />
+            </button>
+            <span className="text-sm text-neutral-600">
+              {nsfw ? 'NSFW LoRA enabled (explicit content)' : 'NSFW LoRA disabled (standard Flux)'}
+            </span>
+          </div>
+        )}
 
         {/* Model override (optional) */}
         {mode === 'text' && (

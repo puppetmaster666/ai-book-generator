@@ -28,11 +28,12 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { provider, mode, prompt, model } = body as {
+    const { provider, mode, prompt, model, nsfw } = body as {
       provider: 'gemini' | 'mistral' | 'runpod';
       mode: 'text' | 'image';
       prompt: string;
       model?: string;
+      nsfw?: boolean;
     };
 
     if (!prompt || !prompt.trim()) {
@@ -81,6 +82,7 @@ export async function POST(request: NextRequest) {
           steps: 20,
           cfg: 1,
           model: 'flux',
+          nsfw: nsfw || false,
         });
 
         const results = await runComfyWorkflow(workflow, images, 120000);

@@ -247,6 +247,7 @@ async function attemptIllustrationGeneration(data: {
           steps: 20,
           cfg: 1,
           model: 'flux',
+          nsfw: true, // Apply NSFW LoRA for explicit content
         });
 
         const results = await runComfyWorkflow(workflow, images, ILLUSTRATION_TIMEOUT_MS);

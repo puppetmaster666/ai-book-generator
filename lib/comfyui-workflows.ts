@@ -18,6 +18,7 @@ export interface ComicPanelInput {
   seed?: number;
   checkpoint?: string;
   model?: 'flux' | 'sdxl';
+  nsfw?: boolean; // Apply NSFW LoRA for explicit content
 }
 
 /**
@@ -32,11 +33,15 @@ function buildFluxWorkflow(input: ComicPanelInput): object {
     steps = 20,
     seed = Math.floor(Math.random() * 2147483647),
     checkpoint = 'flux1-dev-fp8.safetensors',
+    nsfw = false,
   } = input;
 
-  return {
+  // If NSFW, add LoRA loader between checkpoint and KSampler
+  const modelSource = nsfw ? '40' : '30'; // LoRA output or direct checkpoint
+
+  const workflow: Record<string, object> = {
     '6': {
-      inputs: { text: prompt, clip: ['30', 1] },
+      inputs: { text: prompt, clip: [nsfw ? '40' : '30', 1] },
       class_type: 'CLIPTextEncode',
       _meta: { title: 'CLIP Text Encode (Positive Prompt)' },
     },
@@ -68,7 +73,7 @@ function buildFluxWorkflow(input: ComicPanelInput): object {
         sampler_name: 'euler',
         scheduler: 'simple',
         denoise: 1,
-        model: ['30', 0],
+        model: [modelSource, 0],
         positive: ['35', 0],
         negative: ['33', 0],
         latent_image: ['27', 0],
@@ -77,7 +82,7 @@ function buildFluxWorkflow(input: ComicPanelInput): object {
       _meta: { title: 'KSampler' },
     },
     '33': {
-      inputs: { text: '', clip: ['30', 1] },
+      inputs: { text: '', clip: [nsfw ? '40' : '30', 1] },
       class_type: 'CLIPTextEncode',
       _meta: { title: 'CLIP Text Encode (Negative Prompt)' },
     },
@@ -87,6 +92,23 @@ function buildFluxWorkflow(input: ComicPanelInput): object {
       _meta: { title: 'FluxGuidance' },
     },
   };
+
+  // Add NSFW LoRA node if needed
+  if (nsfw) {
+    workflow['40'] = {
+      inputs: {
+        lora_name: 'flux-nsfw-uncensored.safetensors',
+        strength_model: 0.85,
+        strength_clip: 0.85,
+        model: ['30', 0],
+        clip: ['30', 1],
+      },
+      class_type: 'LoraLoader',
+      _meta: { title: 'NSFW LoRA' },
+    };
+  }
+
+  return workflow;
 }
 
 /**
