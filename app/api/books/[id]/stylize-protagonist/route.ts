@@ -201,18 +201,18 @@ DO NOT include any text, words, or labels in the image.`;
     const descriptionContent: Array<{ text: string } | { inlineData: { data: string; mimeType: string } }> = [];
     descriptionContent.push({ text: `You are analyzing ${styledImages.length} reference image(s) of the SAME character from different angles. Provide a single, comprehensive visual description that covers everything needed to draw this character consistently in every panel of a comic book.
 
-Include ALL of the following (miss nothing):
+Focus ONLY on physical features that stay the same regardless of outfit:
 1. Face shape and features (eyes, nose, mouth, eyebrows, jaw)
 2. Hair color, style, length, and specific details (bangs, parting, texture)
 3. Skin tone (specific shade)
 4. Glasses: Does the character wear glasses? YES or NO. If yes, describe them. If NO, state "Does NOT wear glasses."
-5. Clothing: Describe EXACTLY what they are wearing (shirt color, style, pants, shoes, etc.). This outfit must remain the SAME in every panel.
-6. Accessories: Any jewelry, hats, watches, piercings, tattoos. If none, state "No accessories."
-7. Distinctive features (freckles, dimples, scars, facial hair, etc.)
-8. Body type, height impression, and build
-9. Approximate age appearance
+5. Distinctive features (freckles, dimples, scars, facial hair, beard, mustache, etc.)
+6. Body type, height impression, and build
+7. Approximate age appearance
 
-Format as a single detailed paragraph. Be extremely specific. This description will be used to ensure the character looks IDENTICAL in every panel.` });
+DO NOT describe their clothing or outfit. The character will wear different clothes depending on the scene (gym clothes, work clothes, pajamas, etc). Only describe their FACE and BODY features that never change.
+
+Format as a single detailed paragraph. Be extremely specific about facial features, hair, and body type. This description will be used to keep the character's FACE consistent across panels where they wear different outfits.` });
 
     for (const styled of styledImages) {
       descriptionContent.push({ inlineData: { data: styled.base64, mimeType: styled.mimeType } });

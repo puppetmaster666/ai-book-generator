@@ -104,16 +104,29 @@ export async function POST(request: NextRequest) {
 
       // Create chapter entries for each panel
       for (const panel of result.panels) {
+        // Filter out any malformed dialogue entries
+        const validDialogue = Array.isArray(panel.dialogue)
+          ? panel.dialogue.filter(d => d && typeof d.text === 'string' && d.text.trim())
+          : [];
+
         const chapter = await prisma.chapter.create({
           data: {
             bookId,
             number: panel.number,
-            title: panel.title,
+            title: panel.title || `Panel ${panel.number}`,
             content: panel.narration || '',
-            summary: panel.sceneDescription,
+            summary: panel.sceneDescription || '',
             wordCount: (panel.narration || '').split(/\s+/).length,
-            dialogue: panel.dialogue || [],
-            sceneDescription: { description: panel.sceneDescription },
+            dialogue: validDialogue,
+            sceneDescription: {
+              location: panel.location || 'unspecified',
+              description: panel.sceneDescription || '',
+              characters: panel.charactersInScene || [],
+              characterActions: panel.characterActions || {},
+              background: panel.background || '',
+              mood: panel.mood || 'neutral',
+              cameraAngle: panel.cameraAngle || 'medium shot',
+            },
           },
         });
 
