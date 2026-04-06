@@ -35,6 +35,7 @@ interface BookData {
   paymentStatus?: string;
   protagonistPhoto?: string | null;
   protagonistStyled?: string | null;
+  protagonistStyledAll?: string[] | null;
   protagonistDescription?: string | null;
   metadata?: BookMetadata;
   outline?: Array<{
@@ -116,6 +117,7 @@ function ReviewContent() {
   // Protagonist image state
   const [protagonistPhoto, setProtagonistPhoto] = useState<string | null>(null);
   const [protagonistStyled, setProtagonistStyled] = useState<string | null>(null);
+  const [protagonistStyledAll, setProtagonistStyledAll] = useState<string[]>([]);
   const [isStylizing, setIsStylizing] = useState(false);
   const [stylizeError, setStylizeError] = useState('');
 
@@ -152,6 +154,9 @@ function ReviewContent() {
           }
           if (data.book.protagonistStyled) {
             setProtagonistStyled(data.book.protagonistStyled);
+          }
+          if (data.book.protagonistStyledAll) {
+            setProtagonistStyledAll(data.book.protagonistStyledAll as string[]);
           }
           // Load marketing metadata if available
           if (data.book.metadata) {
@@ -1085,104 +1090,50 @@ function ReviewContent() {
               </div>
             ) : null}
 
-            {/* Protagonist Image - Only for illustrated books */}
-            {book.artStyle && (
+            {/* Protagonist Image - Read-only display of styled references */}
+            {book.artStyle && (protagonistStyled || protagonistStyledAll.length > 0) && (
               <div className="mb-6 border-t border-neutral-200 pt-6">
                 <h3 className="font-semibold text-lg flex items-center gap-2 mb-3">
                   <Camera className="h-5 w-5 text-neutral-400" />
-                  Main Character Likeness
-                  <span className="text-xs font-normal text-neutral-500 bg-neutral-100 px-2 py-0.5 rounded-full">Optional</span>
+                  Main Character Reference
                 </h3>
                 <p className="text-sm text-neutral-600 mb-4">
-                  Upload a photo to use as reference for the main character. We&apos;ll transform it into your book&apos;s {ART_STYLES[book.artStyle as keyof typeof ART_STYLES]?.label || 'art'} style.
+                  These styled references will be used to keep the main character consistent across all panels.
                 </p>
 
-                {protagonistStyled ? (
-                  // Show both original and stylized images
-                  <div className="flex flex-col sm:flex-row gap-4">
-                    <div className="flex-1">
-                      <p className="text-xs text-neutral-500 mb-2">Original Photo</p>
-                      <div className="relative aspect-square max-w-[160px] rounded-xl overflow-hidden border border-neutral-200 bg-neutral-50">
-                        {protagonistPhoto && (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={protagonistPhoto}
-                            alt="Original photo"
-                            className="w-full h-full object-cover"
-                          />
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-center px-2">
-                      <Sparkles className="h-5 w-5 text-amber-500" />
-                    </div>
-                    <div className="flex-1">
+                <div className="flex flex-wrap gap-4">
+                  {/* Show all styled reference images */}
+                  {(protagonistStyledAll.length > 0 ? protagonistStyledAll : protagonistStyled ? [protagonistStyled] : []).map((img, idx) => (
+                    <div key={idx} className="flex-shrink-0">
                       <p className="text-xs text-neutral-500 mb-2">
-                        {ART_STYLES[book.artStyle as keyof typeof ART_STYLES]?.label || 'Stylized'} Version
+                        {idx === 0 ? 'Front' : idx === 1 ? 'Side' : 'Full Body'}
                       </p>
-                      <div className="relative aspect-square max-w-[160px] rounded-xl overflow-hidden border-2 border-amber-200 bg-amber-50 shadow-sm">
+                      <div className="relative w-28 h-28 rounded-xl overflow-hidden border-2 border-neutral-200 bg-neutral-50 shadow-sm">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
-                          src={protagonistStyled}
-                          alt="Stylized character"
+                          src={img}
+                          alt={`Character reference ${idx + 1}`}
                           className="w-full h-full object-cover"
                         />
                       </div>
                     </div>
-                    <div className="flex items-end pb-2">
-                      <button
-                        onClick={removeProtagonistImage}
-                        className="flex items-center gap-1 px-3 py-1.5 text-neutral-500 hover:text-red-600 hover:bg-red-50 rounded-lg text-sm transition-colors"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                        Remove
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  // Upload area
-                  <div className="relative">
-                    <label
-                      className={`flex flex-col items-center justify-center w-full max-w-xs h-40 border-2 border-dashed rounded-xl cursor-pointer transition-colors ${isStylizing
-                        ? 'border-amber-300 bg-amber-50'
-                        : 'border-neutral-300 hover:border-neutral-400 bg-neutral-50 hover:bg-neutral-100'
-                        }`}
-                    >
-                      {isStylizing ? (
-                        <div className="flex flex-col items-center gap-2">
-                          <div className="relative">
-                            <Loader2 className="h-8 w-8 animate-spin text-amber-500" />
-                            <Sparkles className="h-4 w-4 text-amber-400 absolute -top-1 -right-1" />
-                          </div>
-                          <span className="text-sm text-amber-700 font-medium">Transforming photo...</span>
-                          <span className="text-xs text-amber-600">This may take a moment</span>
-                        </div>
-                      ) : (
-                        <>
-                          <div className="flex items-center justify-center w-12 h-12 bg-neutral-200 rounded-full mb-2">
-                            <ImageIcon className="h-6 w-6 text-neutral-500" />
-                          </div>
-                          <span className="text-sm text-neutral-600 font-medium">Upload a photo</span>
-                          <span className="text-xs text-neutral-500">JPG, PNG up to 10MB</span>
-                        </>
-                      )}
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={handleProtagonistUpload}
-                        className="hidden"
-                        disabled={isStylizing}
-                      />
-                    </label>
-                  </div>
-                )}
+                  ))}
 
-                {stylizeError && (
-                  <div className="mt-3 flex items-center gap-2 text-red-600 text-sm">
-                    <AlertCircle className="h-4 w-4" />
-                    {stylizeError}
-                  </div>
-                )}
+                  {/* Show the original photo for comparison */}
+                  {protagonistPhoto && (
+                    <div className="flex-shrink-0">
+                      <p className="text-xs text-neutral-500 mb-2">Original</p>
+                      <div className="relative w-28 h-28 rounded-xl overflow-hidden border border-neutral-200 bg-neutral-50 opacity-70">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={protagonistPhoto}
+                          alt="Original photo"
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
 
