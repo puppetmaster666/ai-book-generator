@@ -112,6 +112,7 @@ model Book {
   protagonistDescription String?
   protagonistPhoto       String?
   protagonistStyled      String?
+  protagonistStyledAll   Json?           // Array of all styled reference images (multiple angles)
   contentRating          String         @default("general")
   region                 String?        // User's region for culturally-appropriate names (auto-detected from IP, editable)
   originalIdea           String?

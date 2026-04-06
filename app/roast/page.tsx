@@ -57,7 +57,7 @@ const ART_STYLES = [
 
 interface RoastCharacter {
   name: string;
-  photo: string | null;
+  photos: string[];
   personality: string;
 }
 
@@ -67,7 +67,7 @@ export default function RoastPage() {
 
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [characters, setCharacters] = useState<RoastCharacter[]>([
-    { name: '', photo: null, personality: '' },
+    { name: '', photos: [], personality: '' },
   ]);
   const [severity, setSeverity] = useState(2);
   const [scenario, setScenario] = useState('');
@@ -99,7 +99,7 @@ export default function RoastPage() {
 
   const addCharacter = () => {
     if (characters.length < 4) {
-      setCharacters([...characters, { name: '', photo: null, personality: '' }]);
+      setCharacters([...characters, { name: '', photos: [], personality: '' }]);
     }
   };
 
@@ -109,9 +109,23 @@ export default function RoastPage() {
     }
   };
 
-  const updateCharacter = (index: number, field: keyof RoastCharacter, value: string | null) => {
+  const updateCharacter = (index: number, field: keyof RoastCharacter, value: string | string[] | null) => {
     const updated = [...characters];
     (updated[index] as any)[field] = value;
+    setCharacters(updated);
+  };
+
+  const addPhotoToCharacter = (charIndex: number, photoDataUrl: string) => {
+    const updated = [...characters];
+    if (updated[charIndex].photos.length < 3) {
+      updated[charIndex].photos = [...updated[charIndex].photos, photoDataUrl];
+      setCharacters(updated);
+    }
+  };
+
+  const removePhotoFromCharacter = (charIndex: number, photoIndex: number) => {
+    const updated = [...characters];
+    updated[charIndex].photos = updated[charIndex].photos.filter((_, i) => i !== photoIndex);
     setCharacters(updated);
   };
 
@@ -243,19 +257,19 @@ HOW TO WRITE THIS:
       if (!bookRes.ok) throw new Error('Failed to create book');
       const { bookId } = await bookRes.json();
 
-      // Upload first character photo if provided
-      const firstPhoto = namedChars.find(c => c.photo);
-      if (firstPhoto?.photo) {
+      // Upload first character photos if provided (up to 3)
+      const firstWithPhotos = namedChars.find(c => c.photos.length > 0);
+      if (firstWithPhotos && firstWithPhotos.photos.length > 0) {
         try {
-          const base64 = firstPhoto.photo.includes(',') ? firstPhoto.photo.split(',')[1] : firstPhoto.photo;
-          const mimeMatch = firstPhoto.photo.match(/data:([^;]+);/);
+          const images = firstWithPhotos.photos.map(photo => {
+            const base64 = photo.includes(',') ? photo.split(',')[1] : photo;
+            const mimeMatch = photo.match(/data:([^;]+);/);
+            return { imageBase64: base64, mimeType: mimeMatch?.[1] || 'image/jpeg' };
+          });
           await fetch(`/api/books/${bookId}/stylize-protagonist`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              imageBase64: base64,
-              mimeType: mimeMatch?.[1] || 'image/jpeg',
-            }),
+            body: JSON.stringify({ images }),
           });
         } catch {
           // Non-fatal
@@ -322,30 +336,56 @@ HOW TO WRITE THIS:
                     </div>
 
                     <div className="flex gap-4">
-                      {/* Photo upload */}
-                      <label className="flex-shrink-0 w-20 h-20 border-2 border-dashed border-neutral-200 rounded-xl cursor-pointer hover:border-neutral-400 transition-colors overflow-hidden">
-                        {char.photo ? (
-                          <img src={char.photo} alt={char.name} className="w-full h-full object-cover" />
-                        ) : (
-                          <div className="w-full h-full flex flex-col items-center justify-center text-neutral-400">
-                            <Upload className="h-5 w-5" />
-                            <span className="text-[9px] mt-0.5">Photo</span>
+                      {/* Photo uploads (up to 3) */}
+                      <div className="flex-shrink-0 flex gap-1.5">
+                        {[0, 1, 2].map((photoIdx) => (
+                          <div key={photoIdx} className="relative">
+                            <label className="block w-16 h-16 border-2 border-dashed border-neutral-200 rounded-lg cursor-pointer hover:border-neutral-400 transition-colors overflow-hidden">
+                              {char.photos[photoIdx] ? (
+                                <img src={char.photos[photoIdx]} alt={`${char.name} ${photoIdx + 1}`} className="w-full h-full object-cover" />
+                              ) : (
+                                <div className="w-full h-full flex flex-col items-center justify-center text-neutral-400">
+                                  <Upload className="h-3.5 w-3.5" />
+                                  <span className="text-[8px] mt-0.5">{photoIdx === 0 ? 'Front' : photoIdx === 1 ? 'Side' : 'Body'}</span>
+                                </div>
+                              )}
+                              <input
+                                type="file"
+                                accept="image/*"
+                                className="hidden"
+                                onChange={(e) => {
+                                  const file = e.target.files?.[0];
+                                  if (file) {
+                                    const reader = new FileReader();
+                                    reader.onload = () => {
+                                      if (char.photos[photoIdx]) {
+                                        // Replace existing photo at this index
+                                        const updated = [...characters];
+                                        const newPhotos = [...updated[i].photos];
+                                        newPhotos[photoIdx] = reader.result as string;
+                                        updated[i].photos = newPhotos;
+                                        setCharacters(updated);
+                                      } else {
+                                        addPhotoToCharacter(i, reader.result as string);
+                                      }
+                                    };
+                                    reader.readAsDataURL(file);
+                                  }
+                                }}
+                              />
+                            </label>
+                            {char.photos[photoIdx] && (
+                              <button
+                                type="button"
+                                onClick={() => removePhotoFromCharacter(i, photoIdx)}
+                                className="absolute -top-1 -right-1 w-4 h-4 bg-neutral-900 text-white rounded-full flex items-center justify-center text-[10px] hover:bg-red-600"
+                              >
+                                x
+                              </button>
+                            )}
                           </div>
-                        )}
-                        <input
-                          type="file"
-                          accept="image/*"
-                          className="hidden"
-                          onChange={(e) => {
-                            const file = e.target.files?.[0];
-                            if (file) {
-                              const reader = new FileReader();
-                              reader.onload = () => updateCharacter(i, 'photo', reader.result as string);
-                              reader.readAsDataURL(file);
-                            }
-                          }}
-                        />
-                      </label>
+                        ))}
+                      </div>
 
                       <div className="flex-1 space-y-2">
                         <input

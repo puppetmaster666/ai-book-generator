@@ -443,6 +443,7 @@ async function generateIllustrationsInParallel(
     contentRating?: ContentRating;
     characterPortraits?: CharacterPortrait[];
     protagonistStyled?: string | null;
+    protagonistStyledAll?: string[] | null;
     protagonistDescription?: string | null;
   }
 ): Promise<Map<number, { imageUrl: string; altText: string; width: number; height: number }>> {
@@ -535,18 +536,26 @@ async function generateIllustrationsInParallel(
 
       // Build character reference images from portraits for consistency
       const referenceImages: { characterName: string; imageData: string }[] = [];
-      const MAX_REFS = 2;
+      const MAX_REFS = 4; // Allow more refs since we may have multiple protagonist angles
       let refCount = 0;
 
-      // PRIORITY 0: Protagonist photo (uploaded by user)
+      // PRIORITY 0: Protagonist photos (uploaded by user, up to 3 angles)
       const mainCharName = bookData.characters[0]?.name;
       const sceneCharsLower = chapter.scene.characters?.map((c: string) => c.toLowerCase()) || [];
-      if (bookData.protagonistStyled && mainCharName && sceneCharsLower.includes(mainCharName.toLowerCase())) {
-        referenceImages.push({
-          characterName: `${mainCharName} (MUST match this face exactly)`,
-          imageData: bookData.protagonistStyled,
-        });
-        refCount++;
+      const protagonistInScene = mainCharName && sceneCharsLower.includes(mainCharName.toLowerCase());
+      const allStyledImages = bookData.protagonistStyledAll && bookData.protagonistStyledAll.length > 0
+        ? bookData.protagonistStyledAll
+        : bookData.protagonistStyled ? [bookData.protagonistStyled] : [];
+
+      if (allStyledImages.length > 0 && protagonistInScene) {
+        for (let refIdx = 0; refIdx < allStyledImages.length; refIdx++) {
+          const angleLabel = refIdx === 0 ? 'front view' : refIdx === 1 ? 'side view' : 'full body';
+          referenceImages.push({
+            characterName: `${mainCharName} (${angleLabel} - MUST match exactly)`,
+            imageData: allStyledImages[refIdx],
+          });
+          refCount++;
+        }
         if (bookData.protagonistDescription) {
           illustrationPrompt += `\n\nPROTAGONIST REFERENCE (CRITICAL - EXACT MATCH REQUIRED):\n${bookData.protagonistDescription}\n\nCONSISTENCY RULES FOR "${mainCharName}" (DO NOT DEVIATE):\n- Face, hair, and skin tone must EXACTLY match the reference image\n- Clothing must be the SAME outfit as in the reference image in EVERY panel. Do NOT change their clothes.\n- If the reference does NOT show glasses, do NOT add glasses. If it shows glasses, ALWAYS include them.\n- Do NOT add or remove accessories, hats, jewelry, or any items not in the reference.\n- Body type and build must stay consistent.\n- This is based on a real person's photo. Accuracy is non-negotiable.`;
         }
@@ -1440,19 +1449,23 @@ export async function POST(
       // Load character portraits + protagonist photo from DB for reference images
       let portraitsForGen: CharacterPortrait[] | undefined;
       let protagonistStyled: string | null = null;
+      let protagonistStyledAll: string[] | null = null;
       let protagonistDescription: string | null = null;
       try {
         const bookWithRefs = await prisma.book.findUnique({
           where: { id },
-          select: { characterPortraits: true, protagonistStyled: true, protagonistDescription: true },
+          select: { characterPortraits: true, protagonistStyled: true, protagonistStyledAll: true, protagonistDescription: true },
         });
         if (bookWithRefs?.characterPortraits) {
           portraitsForGen = bookWithRefs.characterPortraits as unknown as CharacterPortrait[];
           console.log(`Loaded ${portraitsForGen.length} character portraits for reference`);
         }
         protagonistStyled = bookWithRefs?.protagonistStyled as string | null;
+        protagonistStyledAll = bookWithRefs?.protagonistStyledAll as string[] | null;
         protagonistDescription = bookWithRefs?.protagonistDescription as string | null;
-        if (protagonistStyled) {
+        if (protagonistStyledAll && protagonistStyledAll.length > 0) {
+          console.log(`Loaded ${protagonistStyledAll.length} protagonist photo reference(s) for generation`);
+        } else if (protagonistStyled) {
           console.log(`Loaded protagonist photo reference for generation`);
         }
       } catch (e) {
@@ -1477,6 +1490,7 @@ export async function POST(
           contentRating: (book.contentRating as ContentRating) || 'general',
           characterPortraits: portraitsForGen,
           protagonistStyled,
+          protagonistStyledAll,
           protagonistDescription,
         }
       );

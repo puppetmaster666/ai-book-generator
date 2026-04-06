@@ -81,11 +81,18 @@ export async function POST(
 ) {
   try {
     const { id: bookId } = await params;
-    const { imageBase64, mimeType } = await request.json();
+    const body = await request.json();
 
-    if (!imageBase64) {
+    // Support both old format (single image) and new format (array of images)
+    const images: { imageBase64: string; mimeType: string }[] = body.images
+      ? body.images
+      : body.imageBase64
+        ? [{ imageBase64: body.imageBase64, mimeType: body.mimeType || 'image/jpeg' }]
+        : [];
+
+    if (images.length === 0) {
       return NextResponse.json(
-        { error: 'Image data is required' },
+        { error: 'At least one image is required' },
         { status: 400 }
       );
     }
@@ -121,144 +128,124 @@ export async function POST(
       );
     }
 
-    console.log(`[Stylize Protagonist] Stylizing protagonist photo for book ${bookId} in ${styleConfig.label} style`);
+    console.log(`[Stylize Protagonist] Stylizing ${images.length} protagonist photo(s) for book ${bookId} in ${styleConfig.label} style`);
 
     // Get the main character name if available
     const characters = book.characters as Array<{ name: string; description: string }> | null;
     const mainCharacterName = characters?.[0]?.name || 'the protagonist';
 
-    // Build the prompt to transform the photo into the art style
-    const stylizePrompt = `You are creating a character reference for an illustrated book. Transform this photograph into ${styleConfig.label} illustration style.
-
-ART STYLE TO USE: ${styleConfig.prompt}
-
-TRANSFORMATION REQUIREMENTS:
-1. Transform this person's face and appearance into ${styleConfig.label} style illustration
-2. Maintain the person's key identifying features (face shape, hair style, eye shape, distinctive features)
-3. Use the exact art style colors and rendering technique: ${styleConfig.prompt}
-4. The result should look like a character from a ${styleConfig.category === 'comic' ? 'comic book' : "children's picture book"}
-5. Create a portrait-style image showing the character from shoulders up
-6. The character should have a friendly, approachable expression
-7. Background should be simple/neutral to focus on the character
-
-CRITICAL: The transformed image must be recognizable as the same person, just rendered in ${styleConfig.label} art style. This will be used as the character reference for "${mainCharacterName}" in all illustrations.
-
-DO NOT include any text, words, or labels in the image.`;
-
-    // Use Gemini to transform the image
     const model = getGenAI().getGenerativeModel({
       model: 'gemini-3-pro-image-preview',
       safetySettings: SAFETY_SETTINGS,
     });
 
-    const result = await withRetry(async () => {
-      return await model.generateContent([
-        {
-          inlineData: {
-            mimeType: mimeType || 'image/jpeg',
-            data: imageBase64,
-          },
-        },
-        stylizePrompt,
-      ]);
-    });
+    // Stylize each photo
+    const styledImages: { base64: string; mimeType: string }[] = [];
+    for (let imgIdx = 0; imgIdx < images.length; imgIdx++) {
+      const img = images[imgIdx];
+      const angleHint = imgIdx === 0 ? 'front-facing portrait (shoulders up)' : imgIdx === 1 ? 'side or 3/4 angle view' : 'full body showing complete outfit and build';
 
-    const response = result.response;
-    const candidate = response.candidates?.[0];
+      const stylizePrompt = `You are creating a character reference for an illustrated book. Transform this photograph into ${styleConfig.label} illustration style.
 
-    if (!candidate) {
-      const blockReason = response.promptFeedback?.blockReason;
-      console.error('[Stylize Protagonist] No candidates. Block reason:', blockReason);
-      return NextResponse.json(
-        { error: 'Failed to stylize image - content may be blocked', blocked: true },
-        { status: 400 }
-      );
-    }
+ART STYLE TO USE: ${styleConfig.prompt}
 
-    if (candidate.finishReason === 'SAFETY') {
-      console.error('[Stylize Protagonist] Safety block:', candidate.safetyRatings);
-      return NextResponse.json(
-        { error: 'Image blocked by content policy', blocked: true },
-        { status: 400 }
-      );
-    }
+TRANSFORMATION REQUIREMENTS:
+1. Transform this person into ${styleConfig.label} style illustration
+2. Maintain the person's key identifying features (face shape, hair style, eye shape, distinctive features)
+3. Use the exact art style colors and rendering technique: ${styleConfig.prompt}
+4. Create a ${angleHint} image
+5. The character should have a neutral or friendly expression
+6. Background should be simple/neutral to focus on the character
+7. Keep their EXACT clothing, accessories, and glasses (or lack of glasses) from the photo
 
-    // Extract the stylized image
-    const parts = candidate.content?.parts || [];
-    let stylizedImage: { base64: string; mimeType: string } | null = null;
-    let description = '';
+CRITICAL: The transformed image must be recognizable as the same person, just rendered in ${styleConfig.label} art style. This is reference image ${imgIdx + 1} of ${images.length} for "${mainCharacterName}".
 
-    for (const part of parts) {
-      if (part.inlineData?.mimeType?.startsWith('image/')) {
-        stylizedImage = {
-          base64: part.inlineData.data,
-          mimeType: part.inlineData.mimeType,
-        };
-      } else if (part.text) {
-        description = part.text;
+DO NOT include any text, words, or labels in the image.`;
+
+      try {
+        const result = await withRetry(async () => {
+          return await model.generateContent([
+            { inlineData: { mimeType: img.mimeType || 'image/jpeg', data: img.imageBase64 } },
+            stylizePrompt,
+          ]);
+        });
+
+        const candidate = result.response.candidates?.[0];
+        if (!candidate || candidate.finishReason === 'SAFETY') {
+          console.warn(`[Stylize Protagonist] Image ${imgIdx + 1} blocked, skipping`);
+          continue;
+        }
+
+        const parts = candidate.content?.parts || [];
+        for (const part of parts) {
+          if (part.inlineData?.mimeType?.startsWith('image/')) {
+            styledImages.push({ base64: part.inlineData.data, mimeType: part.inlineData.mimeType });
+            break;
+          }
+        }
+      } catch (err) {
+        console.warn(`[Stylize Protagonist] Failed to stylize image ${imgIdx + 1}:`, err instanceof Error ? err.message : err);
       }
     }
 
-    if (!stylizedImage) {
-      console.error('[Stylize Protagonist] No stylized image in response');
-      return NextResponse.json(
-        { error: 'Failed to generate stylized image' },
-        { status: 500 }
-      );
+    if (styledImages.length === 0) {
+      return NextResponse.json({ error: 'Failed to stylize any images' }, { status: 500 });
     }
 
-    // Now analyze the stylized character to generate a text description
-    // This will be used for consistency in future illustrations
+    // Generate description from ALL styled images for maximum accuracy
     const descriptionModel = getGenAI().getGenerativeModel({
       model: 'gemini-3-flash-preview',
       safetySettings: SAFETY_SETTINGS,
     });
 
-    const descriptionResult = await withRetry(async () => {
-      return await descriptionModel.generateContent([
-        {
-          inlineData: {
-            mimeType: stylizedImage!.mimeType,
-            data: stylizedImage!.base64,
-          },
-        },
-        `Analyze this character illustration and provide a detailed visual description that MUST be used to consistently recreate this character in EVERY panel of a comic/book. Consistency is critical.
+    const descriptionContent: Array<{ text: string } | { inlineData: { data: string; mimeType: string } }> = [];
+    descriptionContent.push({ text: `You are analyzing ${styledImages.length} reference image(s) of the SAME character from different angles. Provide a single, comprehensive visual description that covers everything needed to draw this character consistently in every panel of a comic book.
 
 Include ALL of the following (miss nothing):
 1. Face shape and features (eyes, nose, mouth, eyebrows, jaw)
-2. Hair color, style, length, and any specific details (bangs, parting, texture)
+2. Hair color, style, length, and specific details (bangs, parting, texture)
 3. Skin tone (specific shade)
-4. Glasses: Does the character wear glasses? YES or NO. If yes, describe them. If NO, explicitly state "Does NOT wear glasses."
-5. Clothing: Describe EXACTLY what they are wearing (shirt color, style, pants, etc.). This outfit must remain the SAME in every panel.
+4. Glasses: Does the character wear glasses? YES or NO. If yes, describe them. If NO, state "Does NOT wear glasses."
+5. Clothing: Describe EXACTLY what they are wearing (shirt color, style, pants, shoes, etc.). This outfit must remain the SAME in every panel.
 6. Accessories: Any jewelry, hats, watches, piercings, tattoos. If none, state "No accessories."
 7. Distinctive features (freckles, dimples, scars, facial hair, etc.)
-8. Body type and build
+8. Body type, height impression, and build
 9. Approximate age appearance
 
-Format as a single detailed paragraph. Be extremely specific about colors, clothing, and whether they wear glasses or not. This description will be used to ensure the character looks IDENTICAL in every single panel, so do not leave out clothing or accessory details.`
-      ]);
+Format as a single detailed paragraph. Be extremely specific. This description will be used to ensure the character looks IDENTICAL in every panel.` });
+
+    for (const styled of styledImages) {
+      descriptionContent.push({ inlineData: { data: styled.base64, mimeType: styled.mimeType } });
+    }
+
+    const descriptionResult = await withRetry(async () => {
+      return await descriptionModel.generateContent(descriptionContent);
     });
 
-    const protagonistDescription = descriptionResult.response.text() || description;
+    const protagonistDescription = descriptionResult.response.text() || '';
 
-    // Save to database
-    const imageDataUrl = `data:${stylizedImage.mimeType};base64,${stylizedImage.base64}`;
-    const originalDataUrl = `data:${mimeType || 'image/jpeg'};base64,${imageBase64}`;
+    // Save to database: primary styled image + all styled images array
+    const primaryStyled = styledImages[0];
+    const primaryDataUrl = `data:${primaryStyled.mimeType};base64,${primaryStyled.base64}`;
+    const firstOriginalDataUrl = `data:${images[0].mimeType || 'image/jpeg'};base64,${images[0].imageBase64}`;
+    const allStyledDataUrls = styledImages.map(s => `data:${s.mimeType};base64,${s.base64}`);
 
     await prisma.book.update({
       where: { id: bookId },
       data: {
-        protagonistPhoto: originalDataUrl,
-        protagonistStyled: imageDataUrl,
+        protagonistPhoto: firstOriginalDataUrl,
+        protagonistStyled: primaryDataUrl,
+        protagonistStyledAll: allStyledDataUrls,
         protagonistDescription,
       },
     });
 
-    console.log(`[Stylize Protagonist] Successfully stylized and saved protagonist for book ${bookId}`);
+    console.log(`[Stylize Protagonist] Successfully stylized ${styledImages.length} image(s) for book ${bookId}`);
 
     return NextResponse.json({
       success: true,
-      styledImage: imageDataUrl,
+      styledImage: primaryDataUrl,
+      styledImageCount: styledImages.length,
       description: protagonistDescription,
     });
   } catch (error) {
