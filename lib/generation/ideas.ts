@@ -705,10 +705,8 @@ JSON format:
         ? nonFictionPrompt.replace(idea, sanitizedIdea)
         : fictionPrompt.replace(idea, sanitizedIdea);
 
-      // Use Mistral for roast/mature content, Gemini for everything else
-      const response = isRoastContent
-        ? await generateTextWithProvider(sanitizedPrompt, { contentRating: 'mature', temperature: 0.7 })
-        : await (async () => { const r = await getGeminiFlash().generateContent(sanitizedPrompt); return r.response.text() || ''; })();
+      const result = await getGeminiFlash().generateContent(sanitizedPrompt);
+      const response = result.response.text() || '';
       if (!response.trim()) {
         throw new Error('Empty response from AI model');
       }

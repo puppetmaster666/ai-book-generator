@@ -101,8 +101,8 @@ export function getGeminiFlashForReview(): GenerativeModel {
 
 /**
  * Generate text with the appropriate AI provider.
- * Priority for mature content: Featherless (abliterated) > Mistral > Gemini
- * Featherless uses models with refusal behavior surgically removed.
+ * Currently: Gemini for everything. Uncensored providers (Featherless/Mistral)
+ * available but disabled until we find a good NSFW image model to pair with them.
  */
 export async function generateTextWithProvider(
   prompt: string,
@@ -112,33 +112,27 @@ export async function generateTextWithProvider(
     maxTokens?: number;
   }
 ): Promise<string> {
+  // All content goes through Gemini for now
+  // Uncomment below when uncensored image generation is ready
+  /*
   const isMature = options?.contentRating === 'mature';
 
-  // Priority 1: Featherless (abliterated, truly cannot refuse anything)
   if (isMature && isFeatherlessConfigured()) {
-    console.log('[AI Provider] Using Featherless (abliterated) for mature content');
     return generateWithFeatherless(
       [{ role: 'user', content: prompt }],
-      {
-        temperature: options?.temperature ?? 0.8,
-        maxTokens: options?.maxTokens ?? 16384,
-      }
+      { temperature: options?.temperature ?? 0.8, maxTokens: options?.maxTokens ?? 16384 }
     );
   }
 
-  // Priority 2: Mistral (mostly uncensored, may self-censor on extreme content)
   if (isMature && isMistralConfigured()) {
-    console.log('[AI Provider] Using Mistral for mature content');
     return generateWithMistral(
       [{ role: 'user', content: prompt }],
-      {
-        temperature: options?.temperature ?? 0.8,
-        maxTokens: options?.maxTokens ?? 16384,
-      }
+      { temperature: options?.temperature ?? 0.8, maxTokens: options?.maxTokens ?? 16384 }
     );
   }
+  */
 
-  // Default: Gemini
+  // Gemini for everything
   const model = (options?.temperature ?? 0.3) > 0.5 ? getGeminiPro() : getGeminiFlash();
   const result = await model.generateContent(prompt);
   return result.response.text() || '';

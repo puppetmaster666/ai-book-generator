@@ -45,7 +45,6 @@ const SEVERITY_LABELS: Record<number, { label: string; emoji: string; descriptio
   1: { label: 'Friendly', emoji: '😄', description: 'Light teasing, nothing mean' },
   2: { label: 'Spicy', emoji: '🌶️', description: 'Embarrassing but still funny' },
   3: { label: 'Brutal', emoji: '💀', description: 'No mercy, real roast energy' },
-  4: { label: 'Nuclear', emoji: '☢️', description: '18+ only. Completely unhinged. They will never forgive you.' },
 };
 
 const ART_STYLES = [
@@ -154,10 +153,9 @@ export default function RoastPage() {
   };
 
   const handleSubmit = async () => {
-    // Nuclear severity requires age confirmation
-    if (severity === 4 && !ageConfirmed) {
-      setShowAgeGate(true);
-      return;
+    // Cap severity at 3 (nuclear removed for now)
+    if (severity > 3) {
+      setSeverity(3);
     }
 
     const namedChars = characters.filter(c => c.name.trim());
@@ -291,7 +289,7 @@ HOW TO WRITE THIS:
           targetWords: 600,
           targetChapters: 12,
           userId: (session?.user as any)?.id || null,
-          contentRating: severity === 4 ? 'mature' : 'general',
+          contentRating: 'general',
         }),
       });
 
@@ -510,13 +508,6 @@ HOW TO WRITE THIS:
                 <p className="text-sm text-neutral-500 mt-3 text-center">
                   {SEVERITY_LABELS[severity].description}
                 </p>
-                {severity === 4 && (
-                  <div className="mt-3 bg-neutral-100 rounded-lg px-4 py-2 text-center">
-                    <p className="text-xs text-neutral-500">
-                      18+ only. You will confirm your age before generating.
-                    </p>
-                  </div>
-                )}
               </div>
 
               {/* Scenario */}

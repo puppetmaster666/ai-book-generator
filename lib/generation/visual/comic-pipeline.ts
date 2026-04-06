@@ -184,14 +184,11 @@ Output ONLY valid JSON:
   "script": "The full script text with PAGE markers, locations, actions, dialogue, and SFX"
 }`;
 
-  // Use Mistral for mature/roast content, Gemini for everything else
-  const isMature = bookData.contentRating === 'mature';
-  const response = isMature
-    ? await generateTextWithProvider(prompt, { contentRating: 'mature', temperature: 0.9, maxTokens: 16384 })
-    : await (async () => { const r = await getGeminiFlash().generateContent(prompt); return r.response.text() || ''; })();
+  const result = await getGeminiFlash().generateContent(prompt);
+  const response = result.response.text() || '';
   const parsed = parseJSONFromResponse(response) as ComicScript;
 
-  console.log(`[ComicPipeline] Step 1 WRITER complete (${isMature ? 'Mistral' : 'Gemini'}) - ${parsed.voiceProfiles?.length || 0} voice profiles, script length: ${parsed.script?.length || 0} chars`);
+  console.log(`[ComicPipeline] Step 1 WRITER complete - ${parsed.voiceProfiles?.length || 0} voice profiles, script length: ${parsed.script?.length || 0} chars`);
   return parsed;
 }
 
@@ -328,13 +325,11 @@ Output ONLY valid JSON with EXACTLY ${bookData.targetChapters} chapters:
   ]
 }`;
 
-  const isMature = bookData.contentRating === 'mature';
-  const response = isMature
-    ? await generateTextWithProvider(prompt, { contentRating: 'mature', temperature: 0.7, maxTokens: 16384 })
-    : await (async () => { const r = await getGeminiPro().generateContent(prompt); return r.response.text() || ''; })();
+  const result = await getGeminiPro().generateContent(prompt);
+  const response = result.response.text() || '';
   const parsed = parseJSONFromResponse(response) as ScenePlan;
 
-  console.log(`[ComicPipeline] Step 2 DIRECTOR complete (${isMature ? 'Mistral' : 'Gemini'}) - ${parsed.chapters?.length || 0} scenes planned`);
+  console.log(`[ComicPipeline] Step 2 DIRECTOR complete - ${parsed.chapters?.length || 0} scenes planned`);
   return parsed;
 }
 
@@ -416,14 +411,12 @@ Output ONLY valid JSON:
 }`;
 
   try {
-    const isMature = bookData.contentRating === 'mature';
-    const response = isMature
-      ? await generateTextWithProvider(prompt, { contentRating: 'mature', temperature: 0.4, maxTokens: 16384 })
-      : await (async () => { const r = await getGeminiFlash().generateContent(prompt); return r.response.text() || ''; })();
+    const editorResult = await getGeminiFlash().generateContent(prompt);
+    const response = editorResult.response.text() || '';
     const review = parseJSONFromResponse(response) as QualityReview;
 
     if (review.issues && review.issues.length > 0) {
-      console.log(`[ComicPipeline] Step 3 EDITOR (${isMature ? 'Mistral' : 'Gemini'}) found ${review.issues.length} issues:`);
+      console.log(`[ComicPipeline] Step 3 EDITOR found ${review.issues.length} issues:`);
       for (const issue of review.issues) {
         console.log(`  - Page ${issue.page}: ${issue.issue} → ${issue.fix}`);
       }
