@@ -240,7 +240,7 @@ async function attemptIllustrationGeneration(data: {
       } else {
         console.log('[Illustration] Using RunPod/Pony V6 for uncensored image generation');
         const { buildPonyPrompt } = await import('@/lib/comfyui-workflows');
-        const prompt = buildPonyPrompt(data.scene, '', data.artStyle);
+        const prompt = buildPonyPrompt(data.scene, '', data.artStyle, '', true);
         const { workflow, images } = buildComicPanelWorkflow({
           prompt,
           width: 1024,

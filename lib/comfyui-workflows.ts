@@ -288,26 +288,33 @@ export function buildFluxPrompt(
 
 /**
  * Build a prompt string optimized for Pony V6 / SDXL models.
- * Uses score tags and quality boosters.
+ * Uses Danbooru-style tags and score quality boosters.
+ * Pony V6 responds to tags, not natural language.
  */
 export function buildPonyPrompt(
   sceneDescription: string,
   characterDescription: string,
   artStyle: string = 'comic',
-  extras: string = ''
+  extras: string = '',
+  nsfw: boolean = false
 ): string {
   const styleMap: Record<string, string> = {
     comic: 'comic book style, western comic, bold lines, dynamic composition',
     manga: 'manga style, screentone shading, clean lineart, japanese comic',
     cartoon: 'cartoon style, vibrant colors, animated look, expressive characters',
-    realistic: 'realistic illustration, detailed rendering, cinematic lighting',
+    realistic: 'realistic, photorealistic, detailed skin texture, cinematic lighting',
     anime: 'anime style, large expressive eyes, clean coloring, cel shading',
+    shonen: 'shonen manga style, action-oriented, dynamic poses',
   };
 
   const styleTag = styleMap[artStyle] || styleMap.comic;
 
+  // Pony V6 uses rating tags to unlock explicit content
+  const ratingTag = nsfw ? 'rating_explicit, nsfw' : 'rating_safe';
+
   const parts = [
     'score_9, score_8_up, score_7_up',
+    ratingTag,
     styleTag,
     characterDescription,
     sceneDescription,

@@ -77,7 +77,7 @@ export async function POST(request: NextRequest) {
         // Use Pony V6 for NSFW (fully explicit capable), Flux for SFW
         const useModel = nsfw ? 'sdxl' : 'flux';
         const imgPrompt = nsfw
-          ? buildPonyPrompt(prompt, '', 'realistic')
+          ? buildPonyPrompt(prompt, '', 'realistic', '', true)
           : buildFluxPrompt(prompt, '', 'realistic');
         const { workflow, images } = buildComicPanelWorkflow({
           prompt: imgPrompt,
