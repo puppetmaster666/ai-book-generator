@@ -1328,21 +1328,51 @@ export async function POST(
         characterVisualGuide = charGuideResult;
         visualStyleGuide = styleGuideResult;
 
+        // If protagonist photo exists, override the visual guide for that character
+        // so the guide matches the actual photo rather than an invented appearance
+        const protagonistDesc = book.protagonistDescription as string | null;
+        const protagonistStyled = book.protagonistStyled as string | null;
+        const mainCharName = characters[0]?.name;
+        if (protagonistDesc && mainCharName && characterVisualGuide?.characters) {
+          const charIdx = characterVisualGuide.characters.findIndex(
+            c => c.name.toLowerCase() === mainCharName.toLowerCase()
+          );
+          if (charIdx >= 0) {
+            console.log(`[Generate] Overriding visual guide for "${mainCharName}" with protagonist photo description`);
+            characterVisualGuide.characters[charIdx].physicalDescription = protagonistDesc;
+            characterVisualGuide.characters[charIdx].distinctiveFeatures = `Based on real person's photo. ${characterVisualGuide.characters[charIdx].distinctiveFeatures}`;
+          }
+        }
+
         // Generate character portraits for consistency (AFTER visual guide is created)
-        // For unpaid previews: generate face-only portraits (saves ~1 min vs full portraits)
-        // For paid books: generate full portraits (face + full body)
+        // Skip protagonist character if we have their photo (the styled photo IS their portrait)
         console.log('Generating character portrait references...');
-        let characterPortraits = null;
+        let characterPortraits: CharacterPortrait[] | null = null;
         try {
-          characterPortraits = await generateCharacterPortraits({
-            title: book.title,
-            genre: book.genre,
-            artStyle: book.artStyle,
-            bookFormat: book.bookFormat,
-            characterVisualGuide,
-            faceOnly: !isPaid, // Face-only for previews, full portraits for paid
-          });
-          console.log(`Generated ${characterPortraits.length} character portraits`);
+          // If protagonist photo exists, exclude them from portrait generation
+          const guideForPortraits = protagonistStyled && mainCharName
+            ? {
+                ...characterVisualGuide,
+                characters: characterVisualGuide.characters.filter(
+                  c => c.name.toLowerCase() !== mainCharName.toLowerCase()
+                ),
+              }
+            : characterVisualGuide;
+
+          if (guideForPortraits.characters.length > 0) {
+            characterPortraits = await generateCharacterPortraits({
+              title: book.title,
+              genre: book.genre,
+              artStyle: book.artStyle,
+              bookFormat: book.bookFormat,
+              characterVisualGuide: guideForPortraits,
+              faceOnly: !isPaid,
+            });
+            console.log(`Generated ${characterPortraits.length} character portraits (protagonist skipped: ${!!protagonistStyled})`);
+          } else {
+            console.log(`[Generate] All characters have photo references, skipping portrait generation`);
+            characterPortraits = [];
+          }
         } catch (portraitError) {
           console.error('Failed to generate character portraits:', portraitError);
           // Continue without portraits - will fall back to first appearance references
