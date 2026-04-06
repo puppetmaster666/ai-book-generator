@@ -82,18 +82,8 @@ export async function POST(request: NextRequest) {
       photos: c.photos,
     }));
 
-    // Map art style to ComfyUI checkpoint
-    const artStyleToCheckpoint: Record<string, string> = {
-      shonen: 'ponyDiffusionV6XL.safetensors',
-      anime: 'ponyDiffusionV6XL.safetensors',
-      manga: 'ponyDiffusionV6XL.safetensors',
-      cartoon: 'ponyDiffusionV6XL.safetensors',
-      realistic: 'juggernautXL.safetensors',
-      watercolor: 'dreamShaperXL.safetensors',
-      noir: 'ponyDiffusionV6XL.safetensors',
-    };
-
-    const checkpoint = artStyleToCheckpoint[artStyle] || 'ponyDiffusionV6XL.safetensors';
+    // Default deployment uses Flux. Custom deployments can use SDXL/Pony.
+    const checkpoint = 'flux1-dev-fp8.safetensors';
 
     try {
       // Run the full pipeline

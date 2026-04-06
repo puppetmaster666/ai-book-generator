@@ -11,7 +11,7 @@
 
 import { generateJsonWithMistral, isMistralConfigured } from '@/lib/mistral';
 import { runComfyWorkflow, isRunPodConfigured } from '@/lib/runpod';
-import { buildComicPanelWorkflow, buildPonyPrompt } from '@/lib/comfyui-workflows';
+import { buildComicPanelWorkflow, buildFluxPrompt, buildPonyPrompt } from '@/lib/comfyui-workflows';
 import { overlayTextOnImage, mapDialoguePosition } from '@/lib/text-overlay';
 
 export interface RoastCharacterInput {
@@ -139,21 +139,21 @@ export async function generatePanelImage(
   referenceImages?: Array<{ name: string; base64: string }>,
   checkpoint?: string
 ): Promise<string> {
-  const prompt = buildPonyPrompt(
-    panel.sceneDescription,
-    panel.characterDescription,
-    artStyle,
-    'no text, no speech bubbles, no words, no letters'
-  );
+  // Detect model type from checkpoint name
+  const isFlux = !checkpoint || checkpoint.includes('flux');
+  const prompt = isFlux
+    ? buildFluxPrompt(panel.sceneDescription, panel.characterDescription, artStyle)
+    : buildPonyPrompt(panel.sceneDescription, panel.characterDescription, artStyle, 'no text, no speech bubbles, no words, no letters');
 
   const { workflow, images } = buildComicPanelWorkflow({
     prompt,
     referenceImages,
     width: 832,
     height: 1216,
-    steps: 25,
-    cfg: 7,
-    checkpoint,
+    steps: isFlux ? 20 : 25,
+    cfg: isFlux ? 1 : 7,
+    checkpoint: checkpoint || 'flux1-dev-fp8.safetensors',
+    model: isFlux ? 'flux' : 'sdxl',
   });
 
   const results = await runComfyWorkflow(workflow, images, 120000);
