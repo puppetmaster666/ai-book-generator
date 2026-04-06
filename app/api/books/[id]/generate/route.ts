@@ -386,20 +386,20 @@ async function generateIllustrationImage(data: {
       return result.data;
     }
 
-    // If blocked, try with sanitized version
+    // If blocked, use AI rephraser to rewrite the scene while preserving humor
     if (result.blocked && attempt < MAX_ILLUSTRATION_RETRIES) {
-      if (attempt < 2) {
-        // Retries 1-2: Progressively sanitize the original prompt
-        currentScene = sanitizeSceneForRetry(data.scene, attempt + 1);
-        console.log(`Sanitizing prompt (level ${attempt + 1}) and retrying...`);
-      } else {
-        // Final retry: Use a completely safe fallback scene
-        currentScene = generateFallbackScene(
-          data.chapterTitle || 'Chapter',
-          data.bookTitle,
-          data.setting
+      try {
+        const { rephraseBlockedScene } = await import('@/lib/generation/scene-rephraser');
+        currentScene = await rephraseBlockedScene(
+          data.scene,
+          { title: data.bookTitle, character: data.characters?.[0]?.name },
+          attempt + 1
         );
-        console.log(`Using fallback atmospheric scene for final retry...`);
+        console.log(`[Illustration] AI rephrased blocked scene (attempt ${attempt + 1})`);
+      } catch {
+        // Fallback to basic sanitization if rephraser fails
+        currentScene = sanitizeSceneForRetry(data.scene, attempt + 1);
+        console.log(`[Illustration] Rephraser failed, using basic sanitization (level ${attempt + 1})`);
       }
       continue;
     }
