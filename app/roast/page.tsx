@@ -153,76 +153,6 @@ export default function RoastPage() {
     setCharacters(updated);
   };
 
-  // Try the uncensored pipeline (Mistral + RunPod/ComfyUI)
-  // Returns bookId if successful, null if not configured (falls back to Gemini)
-  const tryUncensoredPipeline = async (namedChars: RoastCharacter[]): Promise<{ bookId: string } | null> => {
-    try {
-      // First create the book entry via the normal books API
-      const bookRes = await fetch('/api/books', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title: `Roast of ${namedChars[0].name}`,
-          genre: 'comedy',
-          bookType: 'fiction',
-          premise: `An embarrassing comic about ${namedChars[0].name}`,
-          characters: namedChars.map(c => ({ name: c.name, description: c.personality || '' })),
-          beginning: 'The roast begins',
-          middle: 'The roast escalates',
-          ending: 'The devastating finale',
-          writingStyle: 'comedy',
-          bookPreset: 'comic_story',
-          bookFormat: 'picture_book',
-          artStyle,
-          dialogueStyle: 'bubbles',
-          targetWords: 600,
-          targetChapters: 12,
-          userId: (session?.user as any)?.id || null,
-          contentRating: severity === 4 ? 'mature' : 'general',
-        }),
-      });
-
-      if (!bookRes.ok) return null;
-      const { bookId } = await bookRes.json();
-
-      // Try the uncensored generation endpoint
-      const res = await fetch('/api/roast/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          bookId,
-          characters: namedChars.map(c => ({
-            name: c.name,
-            personality: c.personality || '',
-            photos: c.photos,
-          })),
-          severity,
-          scenario,
-          artStyle,
-          targetPanels: 12,
-        }),
-      });
-
-      // If the uncensored pipeline is not configured, fall back
-      if (res.status === 503) {
-        console.log('[Roast] Uncensored pipeline not configured, using Gemini fallback');
-        // Clean up the book we just created since we will create a new one via the old pipeline
-        try { await fetch(`/api/books/${bookId}`, { method: 'DELETE' }); } catch {}
-        return null;
-      }
-
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || 'Uncensored generation failed');
-      }
-
-      return { bookId };
-    } catch (error) {
-      console.warn('[Roast] Uncensored pipeline failed, falling back to Gemini:', error);
-      return null;
-    }
-  };
-
   const handleSubmit = async () => {
     // Nuclear severity requires age confirmation
     if (severity === 4 && !ageConfirmed) {
@@ -240,14 +170,6 @@ export default function RoastPage() {
     setError('');
 
     try {
-      // Try the uncensored pipeline first (Mistral + RunPod)
-      const uncensoredResult = await tryUncensoredPipeline(namedChars);
-      if (uncensoredResult) {
-        router.push(`/book/${uncensoredResult.bookId}`);
-        return;
-      }
-
-      // Fallback: existing Gemini pipeline
       const severityInfo = SEVERITY_LABELS[severity];
       const charDescriptions = namedChars.map((c, i) => {
         const parts = [c.name.trim()];
