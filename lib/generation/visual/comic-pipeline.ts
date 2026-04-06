@@ -546,10 +546,11 @@ export async function generateComicOutline(bookData: {
   // ── Validate scene data ──
   // Ensure every chapter has a proper scene object (prevents frontend crashes)
   finalPlan.chapters = finalPlan.chapters.map((ch, idx) => {
-    if (!ch.scene) {
+    if (!ch.scene || typeof ch.scene === 'string') {
+      const sceneStr = typeof ch.scene === 'string' ? ch.scene : '';
       ch.scene = {
         location: 'unspecified',
-        description: ch.summary || ch.text || `Page ${idx + 1}`,
+        description: sceneStr || ch.summary || ch.text || `Page ${idx + 1}`,
         characters: bookData.characters.map(c => c.name),
         characterActions: {},
         background: 'default setting',

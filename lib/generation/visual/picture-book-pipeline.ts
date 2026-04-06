@@ -542,10 +542,11 @@ export async function generatePictureBookOutline(bookData: {
 
   // ── Validate and fix scene data ──
   finalPlan.chapters = finalPlan.chapters.map((ch, idx) => {
-    if (!ch.scene) {
+    if (!ch.scene || typeof ch.scene === 'string') {
+      const sceneStr = typeof ch.scene === 'string' ? ch.scene : '';
       ch.scene = {
         location: 'unspecified',
-        description: ch.summary || ch.text || `Page ${idx + 1}`,
+        description: sceneStr || ch.summary || ch.text || `Page ${idx + 1}`,
         characters: bookData.characters.map(c => c.name),
         characterActions: {},
         background: 'default setting',
