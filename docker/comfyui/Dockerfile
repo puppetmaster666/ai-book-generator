@@ -11,13 +11,11 @@ RUN comfy model download \
   --relative-path models/checkpoints \
   --filename flux1-dev-fp8.safetensors
 
-# LUSTIFY! Apex V8 (top NSFW SDXL checkpoint, 289K downloads, April 2026)
-ARG CIVITAI_API_KEY
+# LUSTIFY! SDXL NSFW Endgame (from HuggingFace mirror, no auth needed)
 RUN comfy model download \
-  --url https://civitai.com/api/download/models/2808677 \
+  --url https://huggingface.co/xxxpo13/LUSTIFY_SDXL/resolve/main/lustifySDXLNSFW_endgame.safetensors \
   --relative-path models/checkpoints \
-  --filename lustifySDXLNSFW_apexV8.safetensors \
-  --set-civitai-api-token "$CIVITAI_API_KEY"
+  --filename lustifySDXLNSFW_apexV8.safetensors
 
 # ─── CHARACTER CONSISTENCY ───
 
