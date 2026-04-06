@@ -352,7 +352,7 @@ if (genDropdownRef.current && !genDropdownRef.current.contains(event.target as N
                     }`}
                   >
                     <Coins className="h-4 w-4" />
-                    <span className="text-sm font-medium">{creditBalance || (freeCredits + paidCredits)}</span>
+                    <span className="text-sm font-medium">{isAdmin ? '∞' : (creditBalance || (freeCredits + paidCredits))}</span>
                   </button>
 
                   {creditDropdownOpen && (
@@ -362,9 +362,12 @@ if (genDropdownRef.current && !genDropdownRef.current.contains(event.target as N
                         <div className="mt-2 space-y-1">
                           <div className="flex items-center justify-between text-sm">
                             <span className="text-neutral-500">Balance</span>
-                            <span className="font-medium">{creditBalance || (freeCredits + paidCredits)}</span>
+                            <span className="font-medium">{isAdmin ? '∞' : (creditBalance || (freeCredits + paidCredits))}</span>
                           </div>
-                          {creditBalance === 0 && freeCredits === 0 && paidCredits === 0 && (
+                          {isAdmin && (
+                            <p className="text-sm text-neutral-400">Admin: unlimited credits</p>
+                          )}
+                          {!isAdmin && creditBalance === 0 && freeCredits === 0 && paidCredits === 0 && (
                             <p className="text-sm text-neutral-400">No credits available</p>
                           )}
                         </div>

@@ -19,7 +19,7 @@ export async function POST(
 
     const user = await prisma.user.findUnique({
       where: { id: session.user.id },
-      select: { id: true, freeBookUsed: true, freeCredits: true, credits: true, creditBalance: true },
+      select: { id: true, freeBookUsed: true, freeCredits: true, credits: true, creditBalance: true, isAdmin: true },
     });
 
     if (!user) {
@@ -56,6 +56,20 @@ export async function POST(
     const creditCost = getCreditCost(book.bookPreset);
 
     console.log(`[claim-free] User ${session.user.id}: creditBalance=${user.creditBalance}, freeCredits=${user.freeCredits}, credits=${user.credits}, freeBookUsed=${user.freeBookUsed}, useCredits=${useCredits}, creditCost=${creditCost}`);
+
+    // Admin bypass: unlimited credits, just mark as paid
+    if (user.isAdmin) {
+      console.log(`[claim-free] Admin user ${session.user.id}, skipping credit deduction`);
+      await prisma.book.update({
+        where: { id: bookId },
+        data: {
+          userId: session.user.id,
+          paymentStatus: 'completed',
+          paymentMethod: 'admin',
+        },
+      });
+      return NextResponse.json({ success: true, method: 'admin' });
+    }
 
     if (useCredits) {
       // CREDIT CONSUMPTION: User explicitly chose to use credits

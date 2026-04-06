@@ -34,18 +34,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Character name is required' }, { status: 400 });
     }
 
-    // Check credits
+    // Check credits (admins have unlimited)
     const user = await prisma.user.findUnique({
       where: { id: session.user.id },
-      select: { creditBalance: true, freeCredits: true, credits: true },
+      select: { creditBalance: true, freeCredits: true, credits: true, isAdmin: true },
     });
 
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
+    const isAdmin = user.isAdmin || false;
     const totalCredits = (user.creditBalance || 0) + (user.freeCredits || 0) + (user.credits || 0);
-    if (totalCredits < IDEA_CREDIT_COST) {
+    if (!isAdmin && totalCredits < IDEA_CREDIT_COST) {
       return NextResponse.json({
         error: `Not enough credits. Need ${IDEA_CREDIT_COST} credits, you have ${totalCredits}.`,
         creditsNeeded: IDEA_CREDIT_COST,
@@ -115,8 +116,10 @@ Output ONLY a JSON array of ${IDEAS_PER_CALL} strings, each being one scenario i
     }
     ideas = ideas.filter(i => typeof i === 'string' && i.trim().length > 10).slice(0, IDEAS_PER_CALL);
 
-    // Deduct credits
-    if (user.creditBalance >= IDEA_CREDIT_COST) {
+    // Deduct credits (skip for admins)
+    if (isAdmin) {
+      console.log(`[RoastIdeas] Admin user, skipping credit deduction`);
+    } else if (user.creditBalance >= IDEA_CREDIT_COST) {
       await prisma.user.update({
         where: { id: session.user.id },
         data: { creditBalance: { decrement: IDEA_CREDIT_COST } },
