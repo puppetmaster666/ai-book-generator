@@ -53,6 +53,15 @@ export async function generateWithMistral(
     topP = 0.95,
   } = options || {};
 
+  // Prepend formatting rules as system message
+  const formattedMessages: MistralMessage[] = [
+    {
+      role: 'system',
+      content: 'FORMATTING RULE (STRICT): NEVER use em dashes or en dashes (the characters \u2014 and \u2013) anywhere in your output. Use commas, periods, semicolons, colons, or rewrite the sentence instead. Hyphens in compound words (like "well-known") are fine.',
+    },
+    ...messages,
+  ];
+
   const res = await fetch(`${MISTRAL_BASE_URL}/chat/completions`, {
     method: 'POST',
     headers: {
@@ -61,7 +70,7 @@ export async function generateWithMistral(
     },
     body: JSON.stringify({
       model,
-      messages,
+      messages: formattedMessages,
       temperature,
       max_tokens: maxTokens,
       top_p: topP,
@@ -79,7 +88,11 @@ export async function generateWithMistral(
     throw new Error('Mistral returned no choices');
   }
 
-  const content = data.choices[0].message.content;
+  // Clean em/en dashes from output (in case model ignores the instruction)
+  const content = data.choices[0].message.content
+    .replace(/\u2014/g, ', ')  // em dash
+    .replace(/\u2013/g, ', ')  // en dash
+    .replace(/\s*[–—]\s*/g, ', ');
   console.log(`[Mistral] Generated ${data.usage.completion_tokens} tokens (model: ${model})`);
 
   return content;
