@@ -8,7 +8,7 @@ import Header from '@/components/Header';
 export default function PlaygroundPage() {
   const { data: session } = useSession();
 
-  const [provider, setProvider] = useState<'gemini' | 'mistral' | 'runpod'>('gemini');
+  const [provider, setProvider] = useState<'gemini' | 'mistral' | 'featherless' | 'runpod'>('gemini');
   const [mode, setMode] = useState<'text' | 'image'>('text');
   const [prompt, setPrompt] = useState('');
   const [model, setModel] = useState('');
@@ -72,6 +72,7 @@ export default function PlaygroundPage() {
     ? [
         { key: 'gemini' as const, label: 'Gemini Flash' },
         { key: 'mistral' as const, label: 'Mistral' },
+        { key: 'featherless' as const, label: 'Featherless (Uncensored)' },
       ]
     : [
         { key: 'gemini' as const, label: 'Gemini Imagen' },

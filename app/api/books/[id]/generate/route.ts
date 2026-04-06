@@ -239,8 +239,10 @@ async function attemptIllustrationGeneration(data: {
         // Fall through to Gemini below
       } else {
         console.log('[Illustration] Using RunPod/Pony V6 for uncensored image generation');
+        const { sceneToDanbooruTags } = await import('@/lib/danbooru-tagger');
+        const tags = await sceneToDanbooruTags(data.scene, { nsfw: true, artStyle: data.artStyle, contentRating: 'mature' });
         const { buildPonyPrompt } = await import('@/lib/comfyui-workflows');
-        const prompt = buildPonyPrompt(data.scene, '', data.artStyle, '', true);
+        const prompt = buildPonyPrompt(tags, '', data.artStyle, '', true);
         const { workflow, images } = buildComicPanelWorkflow({
           prompt,
           width: 1024,

@@ -1,6 +1,7 @@
 import { GoogleGenerativeAI, GenerativeModel } from '@google/generative-ai';
 import { SAFETY_SETTINGS } from './safety';
 import { generateWithMistral, isMistralConfigured } from '@/lib/mistral';
+import { generateWithFeatherless, isFeatherlessConfigured } from '@/lib/featherless';
 
 // Timeout: 700s - Vercel Fluid Compute allows up to 800s
 const SAFETY_TIMEOUT_MS = 700000;
@@ -100,7 +101,8 @@ export function getGeminiFlashForReview(): GenerativeModel {
 
 /**
  * Generate text with the appropriate AI provider.
- * Uses Mistral for mature/roast content (uncensored), Gemini for everything else.
+ * Priority for mature content: Featherless (abliterated) > Mistral > Gemini
+ * Featherless uses models with refusal behavior surgically removed.
  */
 export async function generateTextWithProvider(
   prompt: string,
@@ -112,8 +114,21 @@ export async function generateTextWithProvider(
 ): Promise<string> {
   const isMature = options?.contentRating === 'mature';
 
+  // Priority 1: Featherless (abliterated, truly cannot refuse anything)
+  if (isMature && isFeatherlessConfigured()) {
+    console.log('[AI Provider] Using Featherless (abliterated) for mature content');
+    return generateWithFeatherless(
+      [{ role: 'user', content: prompt }],
+      {
+        temperature: options?.temperature ?? 0.8,
+        maxTokens: options?.maxTokens ?? 16384,
+      }
+    );
+  }
+
+  // Priority 2: Mistral (mostly uncensored, may self-censor on extreme content)
   if (isMature && isMistralConfigured()) {
-    console.log('[AI Provider] Using Mistral (uncensored) for mature content');
+    console.log('[AI Provider] Using Mistral for mature content');
     return generateWithMistral(
       [{ role: 'user', content: prompt }],
       {

@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     const { provider, mode, prompt, model, nsfw } = body as {
-      provider: 'gemini' | 'mistral' | 'runpod';
+      provider: 'gemini' | 'mistral' | 'featherless' | 'runpod';
       mode: 'text' | 'image';
       prompt: string;
       model?: string;
@@ -52,6 +52,17 @@ export async function POST(request: NextRequest) {
           { model: model || 'mistral-large-latest', temperature: 0.8, maxTokens: 4096 }
         );
         return NextResponse.json({ result, provider: 'mistral', model: model || 'mistral-large-latest' });
+
+      } else if (provider === 'featherless') {
+        const { generateWithFeatherless, isFeatherlessConfigured } = await import('@/lib/featherless');
+        if (!isFeatherlessConfigured()) {
+          return NextResponse.json({ error: 'FEATHERLESS_API_KEY not configured' }, { status: 503 });
+        }
+        const result = await generateWithFeatherless(
+          [{ role: 'user', content: prompt }],
+          { model: model || 'failspy/Meta-Llama-3-70B-Instruct-abliterated-v3.5', temperature: 0.8, maxTokens: 4096 }
+        );
+        return NextResponse.json({ result, provider: 'featherless', model: model || 'failspy/Meta-Llama-3-70B-Instruct-abliterated-v3.5' });
 
       } else if (provider === 'gemini') {
         const { getGeminiFlash } = await import('@/lib/generation/shared/api-client');
@@ -76,9 +87,14 @@ export async function POST(request: NextRequest) {
 
         // Use Pony V6 for NSFW (fully explicit capable), Flux for SFW
         const useModel = nsfw ? 'sdxl' : 'flux';
-        const imgPrompt = nsfw
-          ? buildPonyPrompt(prompt, '', 'realistic', '', true)
-          : buildFluxPrompt(prompt, '', 'realistic');
+        let imgPrompt: string;
+        if (nsfw) {
+          const { sceneToDanbooruTags } = await import('@/lib/danbooru-tagger');
+          const tags = await sceneToDanbooruTags(prompt, { nsfw: true, contentRating: 'mature' });
+          imgPrompt = buildPonyPrompt(tags, '', 'realistic', '', true);
+        } else {
+          imgPrompt = buildFluxPrompt(prompt, '', 'realistic');
+        }
         const { workflow, images } = buildComicPanelWorkflow({
           prompt: imgPrompt,
           width: nsfw ? 1024 : 832,
