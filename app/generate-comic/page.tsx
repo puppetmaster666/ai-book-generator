@@ -826,14 +826,22 @@ function GenerateComicContent() {
             );
           })()}
 
-          {error && (() => {
+          {error && !isGenerating && (() => {
             const failedPanelsList = panels.filter(p => p.status === 'error');
             const missingPanels = activePanels.filter(p => p.status === 'pending' && doneCount > 0);
 
+            // Determine user-friendly error message
+            const isContentBlocked = error.includes('content_blocked') || error.includes('safety') || error.includes('blocked');
+            const displayMessage = isContentBlocked
+              ? 'Your content was blocked by AI safety filters. Try adjusting the story or character descriptions.'
+              : error.includes('trim') || error.includes('undefined')
+                ? 'Something went wrong during generation. Please retry.'
+                : error;
+
             return (
             <div className="mb-8 p-5 bg-red-50 border border-red-200 rounded-xl">
-              <p className="text-neutral-900 font-medium mb-2 text-center">Generation Issue</p>
-              <p className="text-sm text-neutral-600 mb-3 text-center">{error}</p>
+              <p className="text-neutral-900 font-medium mb-2 text-center">Generation Failed</p>
+              <p className="text-sm text-neutral-600 mb-3 text-center">{displayMessage}</p>
 
               {/* Show which panels failed */}
               {(failedPanelsList.length > 0 || missingPanels.length > 0) && (

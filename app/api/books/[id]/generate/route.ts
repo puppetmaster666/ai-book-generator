@@ -1115,8 +1115,14 @@ export async function POST(
           number: idx + 1,
         }));
 
-        // Validate scene data on every chapter to prevent frontend crashes
+        // Validate ALL chapter fields to prevent runtime crashes
         outline.chapters = outline.chapters.map((ch) => {
+          // Ensure text field is always a string (fixes "Cannot read properties of undefined (reading 'trim')")
+          if (ch.text === undefined || ch.text === null) {
+            ch.text = ch.summary || '';
+          }
+          if (!ch.title) ch.title = `Page ${ch.number}`;
+          if (!ch.summary) ch.summary = ch.text || `Page ${ch.number}`;
           if (!ch.scene) {
             ch.scene = {
               location: 'unspecified',
@@ -1131,6 +1137,10 @@ export async function POST(
           if (!ch.scene.description) ch.scene.description = ch.summary || `Page ${ch.number}`;
           if (!ch.scene.characters) ch.scene.characters = [];
           if (!ch.scene.characterActions) ch.scene.characterActions = {};
+          if (!ch.scene.location) ch.scene.location = 'unspecified';
+          if (!ch.scene.background) ch.scene.background = 'default setting';
+          if (!ch.scene.mood) ch.scene.mood = 'neutral';
+          if (!ch.scene.cameraAngle) ch.scene.cameraAngle = 'medium shot';
           return ch;
         });
       } else if (book.bookType === 'non-fiction') {
