@@ -65,19 +65,39 @@ export default function RoastPage() {
   const router = useRouter();
   const { data: session } = useSession();
 
-  const [step, setStep] = useState<1 | 2 | 3>(1);
-  const [characters, setCharacters] = useState<RoastCharacter[]>([
-    { name: '', photos: [], personality: '' },
-  ]);
-  const [severity, setSeverity] = useState(2);
-  const [scenario, setScenario] = useState('');
-  const [artStyle, setArtStyle] = useState('shonen');
+  // Restore form state from sessionStorage on mount
+  const STORAGE_KEY = 'roast_form_state';
+
+  function loadSavedState<T>(key: string, fallback: T): T {
+    if (typeof window === 'undefined') return fallback;
+    try {
+      const saved = sessionStorage.getItem(STORAGE_KEY);
+      if (!saved) return fallback;
+      const parsed = JSON.parse(saved);
+      return parsed[key] !== undefined ? parsed[key] : fallback;
+    } catch { return fallback; }
+  }
+
+  const [step, setStep] = useState<1 | 2 | 3>(() => loadSavedState('step', 1 as 1 | 2 | 3));
+  const [characters, setCharacters] = useState<RoastCharacter[]>(() => loadSavedState('characters', [{ name: '', photos: [], personality: '' }]));
+  const [severity, setSeverity] = useState(() => loadSavedState('severity', 2));
+  const [scenario, setScenario] = useState(() => loadSavedState('scenario', ''));
+  const [artStyle, setArtStyle] = useState(() => loadSavedState('artStyle', 'shonen'));
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [generatedIdeas, setGeneratedIdeas] = useState<string[]>([]);
   const [isGeneratingIdeas, setIsGeneratingIdeas] = useState(false);
   const [showAgeGate, setShowAgeGate] = useState(false);
-  const [ageConfirmed, setAgeConfirmed] = useState(false);
+  const [ageConfirmed, setAgeConfirmed] = useState(() => loadSavedState('ageConfirmed', false));
+
+  // Save form state to sessionStorage whenever it changes
+  useEffect(() => {
+    try {
+      sessionStorage.setItem(STORAGE_KEY, JSON.stringify({
+        step, characters, severity, scenario, artStyle, ageConfirmed,
+      }));
+    } catch { /* quota exceeded or SSR, ignore */ }
+  }, [step, characters, severity, scenario, artStyle, ageConfirmed]);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [loadingMsgIndex, setLoadingMsgIndex] = useState(0);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
