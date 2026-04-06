@@ -628,7 +628,7 @@ HOW TO WRITE THIS:
                   ) : (
                     <>
                       <Sparkles className="h-3.5 w-3.5" />
-                      Generate ideas (5 credits)
+                      Generate ideas (10 credits)
                     </>
                   )}
                 </button>

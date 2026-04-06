@@ -13,7 +13,7 @@ import { prisma } from '@/lib/db';
 import { auth } from '@/lib/auth';
 import { generateWithMistral, isMistralConfigured } from '@/lib/mistral';
 
-const IDEA_CREDIT_COST = 5;
+const IDEA_CREDIT_COST = 10;
 const IDEAS_PER_CALL = 3;
 
 export async function POST(request: NextRequest) {
