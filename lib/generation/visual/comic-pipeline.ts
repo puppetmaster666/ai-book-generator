@@ -288,10 +288,11 @@ COPYRIGHT PROTECTION:
 If ANY character names match famous characters from existing media, rename them to original names.
 Create 100% original visual descriptions - no copyrighted costumes, logos, or signature elements.
 
-CONCISE OUTPUT:
-- Scene descriptions: MAX 25 words
-- Character actions: MAX 12 words per character
-- Background: MAX 15 words
+OUTPUT LENGTH:
+- Scene descriptions: 30-50 words. Be specific about what is physically happening in the scene, what objects are visible, and what the characters are doing. Vague descriptions produce bad images.
+- Character actions: 15-25 words per character. Describe their POSE, EXPRESSION, and what they are physically doing.
+- Background: 20-30 words. Include time of day, lighting, key objects in the environment, and atmosphere.
+- Location: Be SPECIFIC. Not "a room" but "a cramped studio apartment with takeout containers on the counter and clothes piled on a chair."
 - Complete the ENTIRE JSON - do not stop mid-response
 
 Output ONLY valid JSON with EXACTLY ${bookData.targetChapters} chapters:
@@ -308,15 +309,15 @@ Output ONLY valid JSON with EXACTLY ${bookData.targetChapters} chapters:
         {"speaker": "Character", "text": "Their exact line from the script", "position": "top-left", "type": "speech"}
       ],
       "scene": {
-        "location": "Specific place",
-        "transitionNote": "How we got here (required for pages 2+)",
-        "description": "What's happening - action focused",
+        "location": "Cramped studio apartment with takeout containers on the counter and laundry piled on a chair",
+        "transitionNote": "How we got here from the previous page (required for pages 2+)",
+        "description": "Character sits on the edge of a worn couch, hunched over a laptop, surrounded by empty coffee cups. A phone screen on the armrest shows 12 unread messages. The room is dimly lit by the laptop glow.",
         "characters": ["Characters in this scene"],
         "characterActions": {
-          "Character1": "PHYSICAL action: clenched fists, leaning forward",
-          "Character2": "PHYSICAL action: backing away, hands raised"
+          "Character1": "slouching forward, bags under eyes, one hand rubbing forehead, mouth slightly open in disbelief",
+          "Character2": "leaning in doorframe with arms crossed, eyebrows raised, smirking"
         },
-        "background": "Time of day, weather, key objects",
+        "background": "Late night, blue-white laptop glow illuminating the room, empty pizza box on floor, curtains drawn",
         "mood": "emotional tone",
         "cameraAngle": "specific angle: extreme close-up, wide shot, etc."
       }

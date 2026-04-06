@@ -477,6 +477,18 @@ async function generateIllustrationsInParallel(
         { skipNoTextInstruction: needsTextBaking, contentRating: bookData.contentRating }
       );
 
+      // Add story context so the image generator understands what is happening
+      if (chapter.summary) {
+        illustrationPrompt += `\nSTORY CONTEXT: ${chapter.summary} `;
+      }
+      const isFirstPage = chapter.number === 1;
+      const isLastPage = chapter.number === chapters.length;
+      if (isFirstPage) {
+        illustrationPrompt += `\nThis is the OPENING PAGE. The image should clearly introduce the main character and setting. `;
+      } else if (isLastPage) {
+        illustrationPrompt += `\nThis is the FINAL PAGE. The image should feel conclusive, like a clear ending to the story. `;
+      }
+
       // Append text instructions based on book type
       if (hasDialogue && chapter.dialogue) {
         // Comic with speech bubbles - bake bubbles into the AI image
