@@ -1447,6 +1447,13 @@ function AdminDashboardContent() {
               </button>
             </div>
 
+            <a
+              href="/admin/playground"
+              className="flex items-center gap-2 text-sm text-neutral-600 hover:text-neutral-900 px-3 py-1.5 bg-neutral-100 rounded-lg hover:bg-neutral-200 transition-colors"
+            >
+              AI Playground
+            </a>
+
             <button
               onClick={() => fetchStats(true)}
               disabled={isRefreshing}
