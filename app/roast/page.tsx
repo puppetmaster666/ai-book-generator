@@ -511,9 +511,9 @@ HOW TO WRITE THIS:
                   {SEVERITY_LABELS[severity].description}
                 </p>
                 {severity === 4 && (
-                  <div className="mt-3 bg-red-50 border border-red-200 rounded-lg px-4 py-2 text-center">
-                    <p className="text-xs text-red-700 font-medium">
-                      This mode generates adult content. You will need to confirm you are 18+ before generating.
+                  <div className="mt-3 bg-neutral-100 rounded-lg px-4 py-2 text-center">
+                    <p className="text-xs text-neutral-500">
+                      18+ only. You will confirm your age before generating.
                     </p>
                   </div>
                 )}
@@ -673,12 +673,12 @@ HOW TO WRITE THIS:
       {showAgeGate && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
           <div className="bg-white rounded-2xl max-w-md w-full p-8 text-center shadow-xl">
-            <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4">
+            <div className="w-16 h-16 bg-neutral-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <span className="text-3xl">☢️</span>
             </div>
-            <h3 className="text-xl font-bold text-neutral-900 mb-2">Age Verification Required</h3>
+            <h3 className="text-xl font-bold text-neutral-900 mb-2">Confirm your age</h3>
             <p className="text-sm text-neutral-600 mb-6">
-              Nuclear mode generates uncensored adult content including crude humor, strong language, and mature themes. You must be at least 18 years old to continue.
+              Nuclear mode is for adults only (18+). It includes uncensored humor, strong language, and mature themes.
             </p>
             <div className="flex flex-col gap-3">
               <button
