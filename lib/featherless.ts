@@ -11,7 +11,8 @@ const FEATHERLESS_API_KEY = process.env.FEATHERLESS_API_KEY;
 const FEATHERLESS_BASE_URL = 'https://api.featherless.ai/v1';
 
 // Best uncensored models on Featherless (abliterated = cannot refuse)
-const DEFAULT_MODEL = 'failspy/Meta-Llama-3-70B-Instruct-abliterated-v3.5';
+// Llama 3.3 70B abliterated: newest, best quality, 32K context, cannot refuse
+const DEFAULT_MODEL = 'huihui-ai/Llama-3.3-70B-Instruct-abliterated';
 
 interface FeatherlessMessage {
   role: 'system' | 'user' | 'assistant';
