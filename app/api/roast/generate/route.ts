@@ -2,8 +2,9 @@
  * Uncensored Roast Generation API
  * POST /api/roast/generate
  *
- * Uses Mistral (text) + RunPod/ComfyUI (images) + Sharp (text overlay).
- * Falls back to the existing Gemini pipeline if uncensored services are not configured.
+ * Uses Mistral (text) + RunPod/ComfyUI/Flux (images) + Sharp (text overlay).
+ * Same 4-step architecture as the regular comic pipeline.
+ * Progressive saves: each panel saved to DB as it completes.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -14,8 +15,9 @@ import {
   isUncensoredPipelineAvailable,
   type RoastCharacterInput,
 } from '@/lib/generation/uncensored-roast-pipeline';
+import type { VisualChapter } from '@/lib/generation/visual/types';
 
-export const maxDuration = 800; // Vercel Fluid Compute
+export const maxDuration = 800;
 
 export async function POST(request: NextRequest) {
   try {
@@ -41,128 +43,115 @@ export async function POST(request: NextRequest) {
     if (!bookId) {
       return NextResponse.json({ error: 'bookId is required' }, { status: 400 });
     }
-
     if (!characters || characters.length === 0) {
       return NextResponse.json({ error: 'At least one character is required' }, { status: 400 });
     }
-
-    // Check if uncensored pipeline is available
     if (!isUncensoredPipelineAvailable()) {
       return NextResponse.json(
-        { error: 'Uncensored pipeline not configured. Set MISTRAL_API_KEY and RUNPOD_API_KEY + RUNPOD_COMFYUI_ENDPOINT_ID.' },
+        { error: 'Uncensored pipeline not configured. Set MISTRAL_API_KEY, RUNPOD_API_KEY, RUNPOD_COMFYUI_ENDPOINT_ID.' },
         { status: 503 }
       );
     }
 
-    // Verify book exists
     const book = await prisma.book.findUnique({
       where: { id: bookId },
       select: { id: true, status: true, userId: true },
     });
-
     if (!book) {
       return NextResponse.json({ error: 'Book not found' }, { status: 404 });
     }
 
-    // Update status to generating
     await prisma.book.update({
       where: { id: bookId },
-      data: {
-        status: 'generating',
-        generationStartedAt: new Date(),
-      },
+      data: { status: 'generating', generationStartedAt: new Date() },
     });
 
-    console.log(`[RoastAPI] Starting uncensored roast generation for book ${bookId}`);
+    console.log(`[RoastAPI] Starting uncensored generation for book ${bookId}`);
 
-    // Map characters to pipeline input
     const roastCharacters: RoastCharacterInput[] = characters.map(c => ({
       name: c.name,
       personality: c.personality || '',
       photos: c.photos,
     }));
 
-    // Default deployment uses Flux. Custom deployments can use SDXL/Pony.
-    const checkpoint = 'flux1-dev-fp8.safetensors';
-
     try {
-      // Run the full pipeline
       const result = await runUncensoredRoastPipeline({
         characters: roastCharacters,
         severity,
         scenario: scenario || '',
         artStyle: artStyle || 'comic',
         targetPanels,
-        checkpoint,
-      });
+        checkpoint: 'flux1-dev-fp8.safetensors',
 
-      // Save panels to database
-      const successfulPanels = result.panels.filter(p => p.imageBase64 && !p.error);
-      const failedPanels = result.panels.filter(p => p.error);
+        // Progressive save: each panel saved to DB as it completes
+        onPanelComplete: async (panel: VisualChapter & { imageBase64?: string; error?: string }) => {
+          const validDialogue = (panel.dialogue || []).filter(
+            d => d && typeof d.text === 'string' && d.text.trim()
+          );
 
-      console.log(`[RoastAPI] Generation complete: ${successfulPanels.length} successful, ${failedPanels.length} failed`);
-
-      // Create chapter entries for each panel
-      for (const panel of result.panels) {
-        // Filter out any malformed dialogue entries
-        const validDialogue = Array.isArray(panel.dialogue)
-          ? panel.dialogue.filter(d => d && typeof d.text === 'string' && d.text.trim())
-          : [];
-
-        const chapter = await prisma.chapter.create({
-          data: {
-            bookId,
-            number: panel.number,
-            title: panel.title || `Panel ${panel.number}`,
-            content: panel.narration || '',
-            summary: panel.sceneDescription || '',
-            wordCount: (panel.narration || '').split(/\s+/).length,
-            dialogue: validDialogue,
-            sceneDescription: {
-              location: panel.location || 'unspecified',
-              description: panel.sceneDescription || '',
-              characters: panel.charactersInScene || [],
-              characterActions: panel.characterActions || {},
-              background: panel.background || '',
-              mood: panel.mood || 'neutral',
-              cameraAngle: panel.cameraAngle || 'medium shot',
-            },
-          },
-        });
-
-        // Save illustration if we have one
-        if (panel.imageBase64) {
-          await prisma.illustration.create({
+          const chapter = await prisma.chapter.create({
             data: {
-              chapterId: chapter.id,
               bookId,
-              imageUrl: panel.imageBase64,
-              prompt: panel.sceneDescription,
-              altText: panel.sceneDescription.substring(0, 200),
-              position: panel.number,
-              status: 'completed',
+              number: panel.number,
+              title: panel.title || `Panel ${panel.number}`,
+              content: panel.text || '',
+              summary: panel.summary || panel.scene?.description || '',
+              wordCount: (panel.text || '').split(/\s+/).filter(Boolean).length,
+              dialogue: validDialogue as unknown as any,
+              sceneDescription: (panel.scene || {}) as unknown as any,
             },
           });
-        }
-      }
+
+          if (panel.imageBase64 && !panel.error) {
+            await prisma.illustration.create({
+              data: {
+                chapterId: chapter.id,
+                bookId,
+                imageUrl: panel.imageBase64,
+                prompt: panel.scene?.description || '',
+                altText: (panel.scene?.description || '').substring(0, 200),
+                position: panel.number,
+                status: 'completed',
+              },
+            });
+          } else if (panel.error) {
+            await prisma.illustration.create({
+              data: {
+                chapterId: chapter.id,
+                bookId,
+                prompt: panel.scene?.description || '',
+                altText: (panel.scene?.description || '').substring(0, 200),
+                position: panel.number,
+                status: 'failed',
+                errorMessage: panel.error,
+              },
+            });
+          }
+
+          console.log(`[RoastAPI] Panel ${panel.number} saved to DB${panel.error ? ' (FAILED)' : ''}`);
+        },
+      });
+
+      // Count results
+      const successCount = [...result.completedImages.values()].filter(v => !v.error).length;
+      const failCount = [...result.completedImages.values()].filter(v => v.error).length;
 
       // Update book status
-      const allSucceeded = failedPanels.length === 0;
       await prisma.book.update({
         where: { id: bookId },
         data: {
           title: result.title,
-          status: allSucceeded ? 'complete' : 'preview_complete',
-          errorMessage: allSucceeded ? null : `${failedPanels.length} panel(s) failed to generate`,
+          status: failCount === 0 ? 'complete' : 'preview_complete',
+          errorMessage: failCount > 0 ? `${failCount} panel(s) failed` : null,
         },
       });
 
       return NextResponse.json({
         success: true,
         title: result.title,
-        totalPanels: result.panels.length,
-        successfulPanels: successfulPanels.length,
-        failedPanels: failedPanels.length,
+        totalPanels: result.chapters.length,
+        successfulPanels: successCount,
+        failedPanels: failCount,
       });
 
     } catch (pipelineError) {
@@ -171,16 +160,10 @@ export async function POST(request: NextRequest) {
 
       await prisma.book.update({
         where: { id: bookId },
-        data: {
-          status: 'failed',
-          errorMessage: errorMsg,
-        },
+        data: { status: 'failed', errorMessage: errorMsg },
       });
 
-      return NextResponse.json(
-        { error: errorMsg },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: errorMsg }, { status: 500 });
     }
 
   } catch (error) {
