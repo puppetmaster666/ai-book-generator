@@ -45,7 +45,7 @@ const SEVERITY_LABELS: Record<number, { label: string; emoji: string; descriptio
   1: { label: 'Friendly', emoji: '😄', description: 'Light teasing, nothing mean' },
   2: { label: 'Spicy', emoji: '🌶️', description: 'Embarrassing but still funny' },
   3: { label: 'Brutal', emoji: '💀', description: 'No mercy, real roast energy' },
-  4: { label: 'Nuclear', emoji: '☢️', description: 'Comedy Central Roast level. They will never forgive you.' },
+  4: { label: 'Nuclear', emoji: '☢️', description: '18+ only. Completely unhinged. They will never forgive you.' },
 };
 
 const ART_STYLES = [
@@ -74,6 +74,8 @@ export default function RoastPage() {
   const [artStyle, setArtStyle] = useState('shonen');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [showAgeGate, setShowAgeGate] = useState(false);
+  const [ageConfirmed, setAgeConfirmed] = useState(false);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [loadingMsgIndex, setLoadingMsgIndex] = useState(0);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
@@ -154,7 +156,7 @@ export default function RoastPage() {
           targetWords: 600,
           targetChapters: 12,
           userId: (session?.user as any)?.id || null,
-          contentRating: severity >= 3 ? 'mature' : 'general',
+          contentRating: severity === 4 ? 'mature' : 'general',
         }),
       });
 
@@ -200,6 +202,12 @@ export default function RoastPage() {
   };
 
   const handleSubmit = async () => {
+    // Nuclear severity requires age confirmation
+    if (severity === 4 && !ageConfirmed) {
+      setShowAgeGate(true);
+      return;
+    }
+
     const namedChars = characters.filter(c => c.name.trim());
     if (namedChars.length === 0) {
       setError('Add at least one character name');
@@ -225,6 +233,17 @@ export default function RoastPage() {
         return `${i + 1}. ${parts.join(', ')}`;
       }).join('\n');
 
+      const safetyRules = severity < 4
+        ? `\n\nCONTENT SAFETY (STRICT, DO NOT VIOLATE):
+- NO nudity, no sexual content, no sexual innuendo in images
+- NO gore, blood, graphic violence, or injury
+- NO death scenes, murder, suicide, or killing
+- NO drugs or drug use depicted
+- NO weapons pointed at people
+- Keep all VISUALS safe for ages 13+. The humor comes from embarrassment and social cruelty, not graphic content.
+- Dialogue can be mean and vulgar (especially at higher severity) but images must stay clean.`
+        : '';
+
       const coreRules = `CRITICAL RULES FOR ALL ROAST COMICS:
 - This is NOT a story about a roast event, ceremony, gala, or show. Do NOT write a story where characters "get roasted on stage" or "attend a roast."
 - The comic itself IS the roast. Put the target in embarrassing, humiliating, funny situations that expose their flaws through the STORY.
@@ -232,7 +251,7 @@ export default function RoastPage() {
 - Do NOT invent locations (cities, countries, neighborhoods) unless the user specifically mentioned one. Just put them in normal everyday settings: their apartment, a bar, a date, work, the gym, a party.
 - Do NOT use flowery, intellectual, or literary language. Write like a funny friend who talks shit, not like a novelist. Simple words. Short sentences. Punchy.
 - Every single page must have at least one joke, insult, or embarrassing moment. No filler pages. No setup-only pages.
-- Use the target's NAME and PERSONALITY TRAITS in the jokes. Make it personal, not generic.`;
+- Use the target's NAME and PERSONALITY TRAITS in the jokes. Make it personal, not generic.${safetyRules}`;
 
       const nuclearPrompt = `NUCLEAR MODE. Absolutely unhinged. Nothing is sacred. The goal is to make the target question every life choice they have ever made.
 
@@ -328,7 +347,7 @@ HOW TO WRITE THIS:
           targetWords: 600,
           targetChapters: 12,
           userId: (session?.user as any)?.id || null,
-          contentRating: severity >= 3 ? 'mature' : 'general',
+          contentRating: severity === 4 ? 'mature' : 'general',
         }),
       });
 
@@ -538,6 +557,13 @@ HOW TO WRITE THIS:
                 <p className="text-sm text-neutral-500 mt-3 text-center">
                   {SEVERITY_LABELS[severity].description}
                 </p>
+                {severity === 4 && (
+                  <div className="mt-3 bg-red-50 border border-red-200 rounded-lg px-4 py-2 text-center">
+                    <p className="text-xs text-red-700 font-medium">
+                      This mode generates adult content. You will need to confirm you are 18+ before generating.
+                    </p>
+                  </div>
+                )}
               </div>
 
               {/* Scenario */}
@@ -607,6 +633,7 @@ HOW TO WRITE THIS:
               ) : (
                 <div className="flex justify-end">
                   <button
+                    data-roast-submit
                     onClick={handleSubmit}
                     className="flex items-center gap-2 px-8 py-4 bg-yellow-400 text-neutral-900 rounded-full font-bold hover:bg-yellow-300 transition-all hover:scale-105"
                   >
@@ -621,6 +648,49 @@ HOW TO WRITE THIS:
       </main>
 
       <Footer />
+
+      {/* 18+ Age Verification Modal */}
+      {showAgeGate && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
+          <div className="bg-white rounded-2xl max-w-md w-full p-8 text-center shadow-xl">
+            <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4">
+              <span className="text-3xl">☢️</span>
+            </div>
+            <h3 className="text-xl font-bold text-neutral-900 mb-2">Age Verification Required</h3>
+            <p className="text-sm text-neutral-600 mb-6">
+              Nuclear mode generates uncensored adult content including crude humor, strong language, and mature themes. You must be at least 18 years old to continue.
+            </p>
+            <div className="flex flex-col gap-3">
+              <button
+                onClick={() => {
+                  setAgeConfirmed(true);
+                  setShowAgeGate(false);
+                  // Auto-submit after confirming
+                  setTimeout(() => {
+                    const btn = document.querySelector('[data-roast-submit]') as HTMLButtonElement;
+                    btn?.click();
+                  }, 100);
+                }}
+                className="w-full px-6 py-3 bg-neutral-900 text-white rounded-xl font-medium hover:bg-neutral-800 transition-colors"
+              >
+                I am 18 or older
+              </button>
+              <button
+                onClick={() => {
+                  setShowAgeGate(false);
+                  setSeverity(3);
+                }}
+                className="w-full px-6 py-3 bg-neutral-100 text-neutral-700 rounded-xl font-medium hover:bg-neutral-200 transition-colors"
+              >
+                Go back to Brutal mode instead
+              </button>
+            </div>
+            <p className="text-xs text-neutral-400 mt-4">
+              By confirming, you agree that you are of legal age in your jurisdiction to view adult content.
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

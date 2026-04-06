@@ -162,7 +162,7 @@ export async function generatePanelImage(
     throw new Error(`No image generated for panel ${panel.number}`);
   }
 
-  return results[0].base64;
+  return results[0];
 }
 
 // ─── STEP 3: Overlay text onto images ───
