@@ -1,10 +1,52 @@
 /**
- * Text Overlay System
- * Composites speech bubbles and narration boxes onto comic panel images.
- * Uses Sharp for image manipulation (already a project dependency).
+ * Text Overlay System (v2)
+ * Professional comic book lettering: speech bubbles + narration boxes.
+ * Uses Sharp + SVG with embedded comic fonts for consistent rendering.
+ *
+ * Design standards based on professional comic lettering:
+ * - ALL CAPS dialogue (industry standard since the 1930s)
+ * - Center-aligned text in elliptical bubbles
+ * - Comic Neue Bold for dialogue, Georgia italic for narration
+ * - Fully opaque white bubbles with 2.5px black stroke
+ * - Classic yellow narration boxes
  */
 
 import sharp from 'sharp';
+import { readFileSync } from 'fs';
+import { join } from 'path';
+
+// ─── Font Embedding ───
+// Load comic fonts as base64 for reliable SVG rendering on any server
+
+let bangersBase64: string | null = null;
+let comicNeueBase64: string | null = null;
+
+function loadFonts() {
+  if (!bangersBase64) {
+    try {
+      bangersBase64 = readFileSync(join(process.cwd(), 'public/fonts/Bangers-Regular.ttf')).toString('base64');
+    } catch { bangersBase64 = ''; }
+  }
+  if (!comicNeueBase64) {
+    try {
+      comicNeueBase64 = readFileSync(join(process.cwd(), 'public/fonts/ComicNeue-Bold.ttf')).toString('base64');
+    } catch { comicNeueBase64 = ''; }
+  }
+}
+
+function getFontStyles(): string {
+  loadFonts();
+  const parts: string[] = [];
+  if (comicNeueBase64) {
+    parts.push(`@font-face { font-family: 'ComicNeue'; src: url(data:font/ttf;base64,${comicNeueBase64}) format('truetype'); font-weight: bold; }`);
+  }
+  if (bangersBase64) {
+    parts.push(`@font-face { font-family: 'Bangers'; src: url(data:font/ttf;base64,${bangersBase64}) format('truetype'); }`);
+  }
+  return parts.length > 0 ? `<defs><style>${parts.join('\n')}</style></defs>` : '';
+}
+
+// ─── Types ───
 
 interface SpeechBubble {
   speaker: string;
@@ -26,148 +68,32 @@ interface TextOverlayInput {
   height?: number;
 }
 
-/**
- * Render an SVG speech bubble with text.
- */
-function renderSpeechBubble(
-  bubble: SpeechBubble,
-  imgWidth: number,
-  imgHeight: number,
-  index: number,
-  totalBubbles: number
-): string {
-  const maxBubbleWidth = Math.min(280, Math.floor(imgWidth * 0.4));
-  const fontSize = 14;
-  const lineHeight = 18;
-  const padding = 12;
-  const tailSize = 10;
+// ─── Constants ───
 
-  // Word wrap the text
-  const words = bubble.text.split(' ');
-  const lines: string[] = [];
-  let currentLine = '';
-  const charsPerLine = Math.floor((maxBubbleWidth - padding * 2) / (fontSize * 0.6));
+const DIALOGUE_FONT = "'ComicNeue', 'Comic Neue', 'Comic Sans MS', sans-serif";
+const NARRATION_FONT = "'Georgia', 'Times New Roman', serif";
+const SFX_FONT = "'Bangers', 'Impact', sans-serif";
 
-  for (const word of words) {
-    if ((currentLine + ' ' + word).trim().length > charsPerLine) {
-      if (currentLine) lines.push(currentLine.trim());
-      currentLine = word;
-    } else {
-      currentLine = (currentLine + ' ' + word).trim();
-    }
-  }
-  if (currentLine) lines.push(currentLine.trim());
+const DIALOGUE_SIZE = 16;
+const DIALOGUE_LINE_HEIGHT = 19;
+const SPEAKER_SIZE = 11;
+const NARRATION_SIZE = 14;
+const NARRATION_LINE_HEIGHT = 18;
 
-  const textHeight = lines.length * lineHeight;
-  const bubbleWidth = maxBubbleWidth;
-  const bubbleHeight = textHeight + padding * 2;
+const BUBBLE_PADDING_X = 18;
+const BUBBLE_PADDING_Y = 14;
+const BUBBLE_STROKE = 2.5;
+const BUBBLE_STROKE_COLOR = '#000000';
+const BUBBLE_FILL = '#FFFFFF';
+const BUBBLE_SHADOW_OFFSET = 2;
+const BUBBLE_SHADOW_BLUR = 4;
 
-  // Position based on bubble.position
-  let x = 0;
-  let y = 0;
-  const margin = 15;
+const NARRATION_BG = '#FFF8DC'; // Classic comic yellow
+const NARRATION_TEXT_COLOR = '#1A1A1A';
+const NARRATION_STROKE = 1.5;
+const NARRATION_STROKE_COLOR = '#C8B560';
 
-  switch (bubble.position) {
-    case 'top-left':
-      x = margin;
-      y = margin + index * (bubbleHeight + tailSize + 10);
-      break;
-    case 'top-right':
-      x = imgWidth - bubbleWidth - margin;
-      y = margin + index * (bubbleHeight + tailSize + 10);
-      break;
-    case 'top-center':
-      x = (imgWidth - bubbleWidth) / 2;
-      y = margin + index * (bubbleHeight + tailSize + 10);
-      break;
-    case 'bottom-left':
-      x = margin;
-      y = imgHeight - bubbleHeight - tailSize - margin - (totalBubbles - 1 - index) * (bubbleHeight + tailSize + 10);
-      break;
-    case 'bottom-right':
-      x = imgWidth - bubbleWidth - margin;
-      y = imgHeight - bubbleHeight - tailSize - margin - (totalBubbles - 1 - index) * (bubbleHeight + tailSize + 10);
-      break;
-    case 'bottom-center':
-      x = (imgWidth - bubbleWidth) / 2;
-      y = imgHeight - bubbleHeight - tailSize - margin - (totalBubbles - 1 - index) * (bubbleHeight + tailSize + 10);
-      break;
-  }
-
-  // Clamp position
-  x = Math.max(5, Math.min(x, imgWidth - bubbleWidth - 5));
-  y = Math.max(5, Math.min(y, imgHeight - bubbleHeight - tailSize - 5));
-
-  const borderRadius = bubble.type === 'thought' ? bubbleHeight / 2 : 12;
-  const borderStyle = bubble.type === 'shout' ? 'stroke-width="3"' : 'stroke-width="1.5"';
-
-  // Speaker name
-  const speakerLine = bubble.speaker
-    ? `<text x="${x + padding}" y="${y + padding + fontSize - 2}" font-family="Arial, Helvetica, sans-serif" font-size="${fontSize - 1}" font-weight="bold" fill="#333">${escapeXml(bubble.speaker.toUpperCase())}</text>`
-    : '';
-  const speakerOffset = bubble.speaker ? lineHeight : 0;
-
-  // Text lines
-  const textLines = lines.map((line, i) =>
-    `<text x="${x + padding}" y="${y + padding + speakerOffset + fontSize + i * lineHeight}" font-family="Arial, Helvetica, sans-serif" font-size="${fontSize}" fill="#111">${escapeXml(line)}</text>`
-  ).join('\n');
-
-  // Tail (pointer)
-  const tailX = bubble.position.includes('left') ? x + 40 : bubble.position.includes('right') ? x + bubbleWidth - 40 : x + bubbleWidth / 2;
-  const tailY = y + bubbleHeight;
-  const tail = `<polygon points="${tailX - 8},${tailY} ${tailX + 8},${tailY} ${tailX + (bubble.position.includes('left') ? -5 : 5)},${tailY + tailSize}" fill="white" stroke="#333" stroke-width="1.5"/>`;
-
-  return `
-    <rect x="${x}" y="${y}" width="${bubbleWidth}" height="${bubbleHeight + speakerOffset}" rx="${borderRadius}" ry="${borderRadius}" fill="white" fill-opacity="0.95" stroke="#333" ${borderStyle}/>
-    ${speakerLine}
-    ${textLines}
-    ${tail}
-  `;
-}
-
-/**
- * Render an SVG narration box.
- */
-function renderNarrationBox(
-  narration: NarrationBox,
-  imgWidth: number,
-  imgHeight: number
-): string {
-  const fontSize = 13;
-  const lineHeight = 17;
-  const padding = 10;
-  const boxWidth = imgWidth - 20;
-
-  // Word wrap
-  const words = narration.text.split(' ');
-  const lines: string[] = [];
-  let currentLine = '';
-  const charsPerLine = Math.floor((boxWidth - padding * 2) / (fontSize * 0.58));
-
-  for (const word of words) {
-    if ((currentLine + ' ' + word).trim().length > charsPerLine) {
-      if (currentLine) lines.push(currentLine.trim());
-      currentLine = word;
-    } else {
-      currentLine = (currentLine + ' ' + word).trim();
-    }
-  }
-  if (currentLine) lines.push(currentLine.trim());
-
-  const textHeight = lines.length * lineHeight;
-  const boxHeight = textHeight + padding * 2;
-  const x = 10;
-  const y = narration.position === 'top' ? 8 : imgHeight - boxHeight - 8;
-
-  const textLines = lines.map((line, i) =>
-    `<text x="${x + padding}" y="${y + padding + fontSize + i * lineHeight}" font-family="Georgia, 'Times New Roman', serif" font-size="${fontSize}" font-style="italic" fill="#f5f5f0">${escapeXml(line)}</text>`
-  ).join('\n');
-
-  return `
-    <rect x="${x}" y="${y}" width="${boxWidth}" height="${boxHeight}" rx="4" ry="4" fill="#1a1a1a" fill-opacity="0.85"/>
-    ${textLines}
-  `;
-}
+// ─── Text Utilities ───
 
 function escapeXml(text: string): string {
   return text
@@ -179,11 +105,223 @@ function escapeXml(text: string): string {
 }
 
 /**
- * Composite text overlays (speech bubbles + narration) onto a comic panel image.
+ * Word wrap text into lines, trying to form a diamond shape
+ * (shorter lines at top/bottom, longest in the middle).
+ */
+function wrapTextDiamond(text: string, maxCharsPerLine: number): string[] {
+  const words = text.split(' ');
+  if (words.length <= 3) return [text];
+
+  // First pass: simple word wrap
+  const rawLines: string[] = [];
+  let currentLine = '';
+  for (const word of words) {
+    if ((currentLine + ' ' + word).trim().length > maxCharsPerLine && currentLine) {
+      rawLines.push(currentLine.trim());
+      currentLine = word;
+    } else {
+      currentLine = (currentLine + ' ' + word).trim();
+    }
+  }
+  if (currentLine) rawLines.push(currentLine.trim());
+
+  // If 3+ lines, try to make a diamond shape by redistributing
+  if (rawLines.length >= 3) {
+    const allText = rawLines.join(' ');
+    const totalChars = allText.length;
+    const lineCount = rawLines.length;
+    const redistLines: string[] = [];
+    const redistWords = allText.split(' ');
+    let wi = 0;
+
+    for (let li = 0; li < lineCount; li++) {
+      // Diamond: first and last lines shorter, middle lines longer
+      const distFromCenter = Math.abs(li - (lineCount - 1) / 2) / ((lineCount - 1) / 2 || 1);
+      const targetLen = Math.floor(maxCharsPerLine * (1 - distFromCenter * 0.25));
+      let line = '';
+      while (wi < redistWords.length) {
+        if ((line + ' ' + redistWords[wi]).trim().length > targetLen && line) break;
+        line = (line + ' ' + redistWords[wi]).trim();
+        wi++;
+      }
+      if (line) redistLines.push(line);
+    }
+    // Remaining words go on the last line
+    while (wi < redistWords.length) {
+      const lastIdx = redistLines.length - 1;
+      redistLines[lastIdx] = (redistLines[lastIdx] + ' ' + redistWords[wi]).trim();
+      wi++;
+    }
+    return redistLines;
+  }
+
+  return rawLines;
+}
+
+// ─── Bubble Rendering ───
+
+function renderSpeechBubble(
+  bubble: SpeechBubble,
+  imgWidth: number,
+  imgHeight: number,
+  index: number,
+  totalBubbles: number
+): string {
+  const text = bubble.text.toUpperCase(); // ALL CAPS is comic standard
+  const maxBubbleWidth = Math.min(320, Math.floor(imgWidth * 0.42));
+  const charsPerLine = Math.floor((maxBubbleWidth - BUBBLE_PADDING_X * 2) / (DIALOGUE_SIZE * 0.65));
+
+  const lines = wrapTextDiamond(text, charsPerLine);
+  const textHeight = lines.length * DIALOGUE_LINE_HEIGHT;
+  const speakerHeight = bubble.speaker ? SPEAKER_SIZE + 6 : 0;
+  const bubbleContentHeight = textHeight + speakerHeight;
+  const bubbleWidth = maxBubbleWidth;
+  const bubbleHeight = bubbleContentHeight + BUBBLE_PADDING_Y * 2;
+  const tailSize = 14;
+
+  // Position
+  let x = 0;
+  let y = 0;
+  const margin = 12;
+  const verticalSpacing = bubbleHeight + tailSize + 8;
+
+  switch (bubble.position) {
+    case 'top-left':
+      x = margin;
+      y = margin + index * verticalSpacing;
+      break;
+    case 'top-right':
+      x = imgWidth - bubbleWidth - margin;
+      y = margin + index * verticalSpacing;
+      break;
+    case 'top-center':
+      x = (imgWidth - bubbleWidth) / 2;
+      y = margin + index * verticalSpacing;
+      break;
+    case 'bottom-left':
+      x = margin;
+      y = imgHeight - bubbleHeight - tailSize - margin - (totalBubbles - 1 - index) * verticalSpacing;
+      break;
+    case 'bottom-right':
+      x = imgWidth - bubbleWidth - margin;
+      y = imgHeight - bubbleHeight - tailSize - margin - (totalBubbles - 1 - index) * verticalSpacing;
+      break;
+    case 'bottom-center':
+      x = (imgWidth - bubbleWidth) / 2;
+      y = imgHeight - bubbleHeight - tailSize - margin - (totalBubbles - 1 - index) * verticalSpacing;
+      break;
+  }
+
+  // Clamp
+  x = Math.max(5, Math.min(x, imgWidth - bubbleWidth - 5));
+  y = Math.max(5, Math.min(y, imgHeight - bubbleHeight - tailSize - 5));
+
+  const cx = x + bubbleWidth / 2;
+  const cy = y + bubbleHeight / 2;
+  const rx = bubbleWidth / 2;
+  const ry = bubbleHeight / 2;
+
+  // Bubble shape
+  let bubbleShape: string;
+  if (bubble.type === 'thought') {
+    // Cloud shape using scalloped ellipse
+    bubbleShape = `<ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" fill="${BUBBLE_FILL}" stroke="${BUBBLE_STROKE_COLOR}" stroke-width="${BUBBLE_STROKE}" stroke-dasharray="8,4"/>`;
+  } else if (bubble.type === 'shout') {
+    // Jagged starburst
+    bubbleShape = `<ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" fill="${BUBBLE_FILL}" stroke="${BUBBLE_STROKE_COLOR}" stroke-width="3.5"/>`;
+  } else {
+    // Standard speech: smooth ellipse with drop shadow
+    bubbleShape = `
+      <ellipse cx="${cx + BUBBLE_SHADOW_OFFSET}" cy="${cy + BUBBLE_SHADOW_OFFSET}" rx="${rx}" ry="${ry}" fill="rgba(0,0,0,0.12)" filter="url(#shadow)"/>
+      <ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" fill="${BUBBLE_FILL}" stroke="${BUBBLE_STROKE_COLOR}" stroke-width="${BUBBLE_STROKE}"/>
+    `;
+  }
+
+  // Tail: curved bezier path pointing down
+  const tailBaseX = bubble.position.includes('left') ? x + bubbleWidth * 0.3 : bubble.position.includes('right') ? x + bubbleWidth * 0.7 : cx;
+  const tailBaseY = y + bubbleHeight - 2;
+  const tailTipX = tailBaseX + (bubble.position.includes('left') ? -12 : 12);
+  const tailTipY = tailBaseY + tailSize;
+
+  let tailSvg: string;
+  if (bubble.type === 'thought') {
+    // Thought bubble tail: small circles
+    tailSvg = `
+      <circle cx="${tailTipX - 4}" cy="${tailBaseY + 6}" r="4" fill="${BUBBLE_FILL}" stroke="${BUBBLE_STROKE_COLOR}" stroke-width="1.5"/>
+      <circle cx="${tailTipX}" cy="${tailTipY}" r="2.5" fill="${BUBBLE_FILL}" stroke="${BUBBLE_STROKE_COLOR}" stroke-width="1.5"/>
+    `;
+  } else {
+    // Curved tail
+    tailSvg = `<path d="M ${tailBaseX - 8} ${tailBaseY} Q ${tailBaseX} ${tailBaseY + tailSize * 0.6} ${tailTipX} ${tailTipY} Q ${tailBaseX + 4} ${tailBaseY + tailSize * 0.4} ${tailBaseX + 8} ${tailBaseY}" fill="${BUBBLE_FILL}" stroke="${BUBBLE_STROKE_COLOR}" stroke-width="${BUBBLE_STROKE}"/>`;
+  }
+
+  // Speaker name (small, bold, above dialogue)
+  const speakerSvg = bubble.speaker
+    ? `<text x="${cx}" y="${y + BUBBLE_PADDING_Y + SPEAKER_SIZE}" font-family="${DIALOGUE_FONT}" font-size="${SPEAKER_SIZE}" font-weight="bold" fill="#666" text-anchor="middle" letter-spacing="1.5">${escapeXml(bubble.speaker.toUpperCase())}</text>`
+    : '';
+
+  // Dialogue text (center-aligned, ALL CAPS)
+  const textStartY = y + BUBBLE_PADDING_Y + speakerHeight + DIALOGUE_SIZE;
+  const textSvg = lines.map((line, i) =>
+    `<text x="${cx}" y="${textStartY + i * DIALOGUE_LINE_HEIGHT}" font-family="${DIALOGUE_FONT}" font-size="${DIALOGUE_SIZE}" font-weight="bold" fill="#000" text-anchor="middle" letter-spacing="0.5">${escapeXml(line)}</text>`
+  ).join('\n');
+
+  return `
+    ${bubbleShape}
+    ${tailSvg}
+    ${speakerSvg}
+    ${textSvg}
+  `;
+}
+
+// ─── Narration Rendering ───
+
+function renderNarrationBox(
+  narration: NarrationBox,
+  imgWidth: number,
+  imgHeight: number
+): string {
+  const text = narration.text;
+  const boxWidth = imgWidth - 24;
+  const charsPerLine = Math.floor((boxWidth - 20) / (NARRATION_SIZE * 0.55));
+
+  // Word wrap
+  const words = text.split(' ');
+  const lines: string[] = [];
+  let currentLine = '';
+  for (const word of words) {
+    if ((currentLine + ' ' + word).trim().length > charsPerLine && currentLine) {
+      lines.push(currentLine.trim());
+      currentLine = word;
+    } else {
+      currentLine = (currentLine + ' ' + word).trim();
+    }
+  }
+  if (currentLine) lines.push(currentLine.trim());
+
+  const textHeight = lines.length * NARRATION_LINE_HEIGHT;
+  const boxHeight = textHeight + 20;
+  const x = 12;
+  const y = narration.position === 'top' ? 8 : imgHeight - boxHeight - 8;
+
+  // Classic yellow narration box with slight border
+  const boxSvg = `<rect x="${x}" y="${y}" width="${boxWidth}" height="${boxHeight}" rx="3" ry="3" fill="${NARRATION_BG}" stroke="${NARRATION_STROKE_COLOR}" stroke-width="${NARRATION_STROKE}"/>`;
+
+  // Left-aligned italic text (narration uses different alignment than dialogue)
+  const textSvg = lines.map((line, i) =>
+    `<text x="${x + 12}" y="${y + 10 + NARRATION_SIZE + i * NARRATION_LINE_HEIGHT}" font-family="${NARRATION_FONT}" font-size="${NARRATION_SIZE}" font-style="italic" fill="${NARRATION_TEXT_COLOR}">${escapeXml(line)}</text>`
+  ).join('\n');
+
+  return `${boxSvg}\n${textSvg}`;
+}
+
+// ─── Main Composite Function ───
+
+/**
+ * Composite professional comic lettering onto a panel image.
  * Returns the final image as a base64 data URL.
  */
 export async function overlayTextOnImage(input: TextOverlayInput): Promise<string> {
-  // Decode the input image
   const imgBuffer = Buffer.from(
     input.imageBase64.includes(',') ? input.imageBase64.split(',')[1] : input.imageBase64,
     'base64'
@@ -193,33 +331,38 @@ export async function overlayTextOnImage(input: TextOverlayInput): Promise<strin
   const imgWidth = input.width || metadata.width || 832;
   const imgHeight = input.height || metadata.height || 1216;
 
-  // Build SVG overlay
   const svgParts: string[] = [];
 
-  // Add narration box
+  // Narration box (rendered first, behind bubbles)
   if (input.narration && input.narration.text.trim()) {
     svgParts.push(renderNarrationBox(input.narration, imgWidth, imgHeight));
   }
 
-  // Add speech bubbles
+  // Speech bubbles
   if (input.dialogue && input.dialogue.length > 0) {
     input.dialogue.forEach((bubble, idx) => {
       svgParts.push(renderSpeechBubble(bubble, imgWidth, imgHeight, idx, input.dialogue!.length));
     });
   }
 
-  // If no text to overlay, return the original image
   if (svgParts.length === 0) {
     return `data:image/png;base64,${imgBuffer.toString('base64')}`;
   }
 
-  const svgOverlay = `
-    <svg xmlns="http://www.w3.org/2000/svg" width="${imgWidth}" height="${imgHeight}">
-      ${svgParts.join('\n')}
-    </svg>
-  `;
+  // Build the SVG with embedded fonts and a shadow filter
+  const svgOverlay = `<svg xmlns="http://www.w3.org/2000/svg" width="${imgWidth}" height="${imgHeight}">
+  ${getFontStyles()}
+  <defs>
+    <filter id="shadow" x="-10%" y="-10%" width="130%" height="130%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="${BUBBLE_SHADOW_BLUR}"/>
+      <feOffset dx="${BUBBLE_SHADOW_OFFSET}" dy="${BUBBLE_SHADOW_OFFSET}"/>
+      <feComponentTransfer><feFuncA type="linear" slope="0.15"/></feComponentTransfer>
+      <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  ${svgParts.join('\n')}
+</svg>`;
 
-  // Composite the SVG overlay onto the image
   const result = await sharp(imgBuffer)
     .resize(imgWidth, imgHeight, { fit: 'cover' })
     .composite([{
@@ -249,7 +392,7 @@ export function mapDialoguePosition(
   if (pos.includes('bottom') && pos.includes('right')) return 'bottom-right';
   if (pos.includes('bottom')) return 'bottom-center';
 
-  // Default: alternate top-left and top-right based on index
+  // Default: alternate top-left and top-right
   if (total <= 2) {
     return index === 0 ? 'top-left' : 'top-right';
   }
