@@ -281,7 +281,7 @@ function GenerateComicContent() {
             }
           }, 3000);
 
-          // Cleanup interval after 5 minutes (timeout)
+          // Cleanup interval after 10 minutes (timeout)
           outlineTimeoutRef.current = setTimeout(() => {
             if (outlinePollRef.current) clearInterval(outlinePollRef.current);
             // Use functional update to check current state
@@ -291,7 +291,7 @@ function GenerateComicContent() {
               }
               return false;
             });
-          }, 5 * 60 * 1000);
+          }, 10 * 60 * 1000);
         }
       } catch (err) {
         console.error('Error loading book:', err);
