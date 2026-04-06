@@ -42,15 +42,20 @@ export async function submitComfyJob(
   workflow: object,
   images?: Array<{ name: string; image: string }>
 ): Promise<string> {
+  const payload = {
+    input: {
+      workflow,
+      ...(images && images.length > 0 ? { images } : {}),
+    },
+  };
+
+  console.log('[RunPod] Submitting job. Payload keys:', Object.keys(payload.input));
+  console.log('[RunPod] Workflow keys:', Object.keys(workflow as Record<string, unknown>));
+
   const res = await fetch(`${getBaseUrl()}/run`, {
     method: 'POST',
     headers: getHeaders(),
-    body: JSON.stringify({
-      input: {
-        workflow,
-        ...(images && images.length > 0 ? { images } : {}),
-      },
-    }),
+    body: JSON.stringify(payload),
   });
 
   if (!res.ok) {
