@@ -635,7 +635,7 @@ HOW TO WRITE THIS:
                   {/* Patience notice */}
                   <div className="bg-neutral-100 rounded-xl px-6 py-3 text-center max-w-sm">
                     <p className="text-sm text-neutral-600">
-                      This usually takes 2-4 minutes. We are writing the story, drawing every panel, and making sure your friend looks ridiculous. Hang tight.
+                      This can take up to 10 minutes. We are writing the story, drawing every panel, and making sure your friend looks ridiculous. Hang tight.
                     </p>
                   </div>
                 </div>
