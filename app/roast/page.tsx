@@ -74,6 +74,8 @@ export default function RoastPage() {
   const [artStyle, setArtStyle] = useState('shonen');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [generatedIdeas, setGeneratedIdeas] = useState<string[]>([]);
+  const [isGeneratingIdeas, setIsGeneratingIdeas] = useState(false);
   const [showAgeGate, setShowAgeGate] = useState(false);
   const [ageConfirmed, setAgeConfirmed] = useState(false);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
@@ -578,7 +580,7 @@ HOW TO WRITE THIS:
               {/* Scenario */}
               <div className="bg-white rounded-2xl border border-neutral-200 p-6 mb-5">
                 <h3 className="font-semibold text-neutral-900 mb-1">Scenario</h3>
-                <p className="text-sm text-neutral-500 mb-3">Describe a situation or leave empty for a random roast</p>
+                <p className="text-sm text-neutral-500 mb-3">Describe a situation or pick a generated idea</p>
                 <textarea
                   value={scenario}
                   onChange={(e) => setScenario(e.target.value)}
@@ -586,6 +588,73 @@ HOW TO WRITE THIS:
                   rows={4}
                   className="w-full px-4 py-3 border border-neutral-200 rounded-xl text-sm focus:border-neutral-900 focus:outline-none resize-none"
                 />
+
+                {/* Generate ideas button */}
+                <button
+                  type="button"
+                  disabled={isGeneratingIdeas || !characters[0]?.name.trim()}
+                  onClick={async () => {
+                    setIsGeneratingIdeas(true);
+                    setGeneratedIdeas([]);
+                    try {
+                      const res = await fetch('/api/roast/generate-idea', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                          characterName: characters[0].name,
+                          personality: characters[0].personality,
+                          severity,
+                        }),
+                      });
+                      const data = await res.json();
+                      if (res.ok && data.ideas) {
+                        setGeneratedIdeas(data.ideas);
+                      } else {
+                        setError(data.error || 'Failed to generate ideas');
+                      }
+                    } catch {
+                      setError('Failed to generate ideas');
+                    } finally {
+                      setIsGeneratingIdeas(false);
+                    }
+                  }}
+                  className="mt-3 inline-flex items-center gap-2 px-4 py-2 bg-neutral-100 text-neutral-700 rounded-lg text-sm font-medium hover:bg-neutral-200 transition-colors disabled:opacity-50"
+                >
+                  {isGeneratingIdeas ? (
+                    <>
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      Generating ideas...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="h-3.5 w-3.5" />
+                      Generate ideas (5 credits)
+                    </>
+                  )}
+                </button>
+
+                {/* Generated ideas */}
+                {generatedIdeas.length > 0 && (
+                  <div className="mt-3 space-y-2">
+                    {generatedIdeas.map((idea, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => {
+                          setScenario(idea);
+                          setGeneratedIdeas([]);
+                        }}
+                        className={`w-full text-left p-3 rounded-lg border text-sm transition-colors ${
+                          scenario === idea
+                            ? 'border-neutral-900 bg-neutral-50'
+                            : 'border-neutral-200 hover:border-neutral-400 hover:bg-neutral-50'
+                        }`}
+                      >
+                        {idea}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Art style */}
