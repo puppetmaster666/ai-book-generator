@@ -433,55 +433,64 @@ HOW TO WRITE THIS:
                     </div>
 
                     <div className="flex gap-4">
-                      {/* Photo uploads (up to 3) */}
-                      <div className="flex-shrink-0 flex gap-1.5">
-                        {[0, 1, 2].map((photoIdx) => (
-                          <div key={photoIdx} className="relative">
-                            <label className="block w-16 h-16 border-2 border-dashed border-neutral-200 rounded-lg cursor-pointer hover:border-neutral-400 transition-colors overflow-hidden">
-                              {char.photos[photoIdx] ? (
-                                <img src={char.photos[photoIdx]} alt={`${char.name} ${photoIdx + 1}`} className="w-full h-full object-cover" />
-                              ) : (
-                                <div className="w-full h-full flex flex-col items-center justify-center text-neutral-400">
-                                  <Upload className="h-3.5 w-3.5" />
-                                  <span className="text-[8px] mt-0.5">{photoIdx === 0 ? 'Front' : photoIdx === 1 ? 'Side' : 'Body'}</span>
-                                </div>
-                              )}
-                              <input
-                                type="file"
-                                accept="image/*"
-                                className="hidden"
-                                onChange={(e) => {
-                                  const file = e.target.files?.[0];
-                                  if (file) {
-                                    const reader = new FileReader();
-                                    reader.onload = () => {
-                                      if (char.photos[photoIdx]) {
-                                        // Replace existing photo at this index
-                                        const updated = [...characters];
-                                        const newPhotos = [...updated[i].photos];
-                                        newPhotos[photoIdx] = reader.result as string;
-                                        updated[i].photos = newPhotos;
-                                        setCharacters(updated);
-                                      } else {
-                                        addPhotoToCharacter(i, reader.result as string);
-                                      }
-                                    };
-                                    reader.readAsDataURL(file);
-                                  }
-                                }}
-                              />
-                            </label>
-                            {char.photos[photoIdx] && (
-                              <button
-                                type="button"
-                                onClick={() => removePhotoFromCharacter(i, photoIdx)}
-                                className="absolute -top-1 -right-1 w-4 h-4 bg-neutral-900 text-white rounded-full flex items-center justify-center text-[10px] hover:bg-red-600"
-                              >
-                                x
-                              </button>
-                            )}
+                      {/* Photo uploads: drag & drop zone + thumbnails */}
+                      <div className="flex-shrink-0">
+                        {/* Thumbnails of uploaded photos */}
+                        {char.photos.length > 0 && (
+                          <div className="flex gap-1.5 mb-2">
+                            {char.photos.map((photo, photoIdx) => (
+                              <div key={photoIdx} className="relative w-14 h-14">
+                                <img src={photo} alt={`${char.name} ${photoIdx + 1}`} className="w-full h-full object-cover rounded-lg border border-neutral-200" />
+                                <button
+                                  type="button"
+                                  onClick={() => removePhotoFromCharacter(i, photoIdx)}
+                                  className="absolute -top-1 -right-1 w-4 h-4 bg-neutral-900 text-white rounded-full flex items-center justify-center text-[10px] hover:bg-red-600"
+                                >
+                                  x
+                                </button>
+                              </div>
+                            ))}
                           </div>
-                        ))}
+                        )}
+                        {/* Drop zone / upload button */}
+                        {char.photos.length < 3 && (
+                          <label
+                            className="block w-[calc(14px*3+0.375rem*2+4.5rem)] h-16 border-2 border-dashed border-neutral-200 rounded-lg cursor-pointer hover:border-neutral-400 hover:bg-neutral-50 transition-colors"
+                            onDragOver={(e) => { e.preventDefault(); e.currentTarget.classList.add('border-neutral-900', 'bg-neutral-50'); }}
+                            onDragLeave={(e) => { e.currentTarget.classList.remove('border-neutral-900', 'bg-neutral-50'); }}
+                            onDrop={(e) => {
+                              e.preventDefault();
+                              e.currentTarget.classList.remove('border-neutral-900', 'bg-neutral-50');
+                              const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/')).slice(0, 3 - char.photos.length);
+                              files.forEach(file => {
+                                const reader = new FileReader();
+                                reader.onload = () => addPhotoToCharacter(i, reader.result as string);
+                                reader.readAsDataURL(file);
+                              });
+                            }}
+                          >
+                            <div className="w-full h-full flex flex-col items-center justify-center text-neutral-400">
+                              <Upload className="h-4 w-4" />
+                              <span className="text-[9px] mt-1">{char.photos.length === 0 ? 'Drop photos or click' : `Add ${3 - char.photos.length} more`}</span>
+                              <span className="text-[8px] text-neutral-300">{char.photos.length}/3</span>
+                            </div>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              multiple
+                              className="hidden"
+                              onChange={(e) => {
+                                const files = Array.from(e.target.files || []).slice(0, 3 - char.photos.length);
+                                files.forEach(file => {
+                                  const reader = new FileReader();
+                                  reader.onload = () => addPhotoToCharacter(i, reader.result as string);
+                                  reader.readAsDataURL(file);
+                                });
+                                e.target.value = '';
+                              }}
+                            />
+                          </label>
+                        )}
                       </div>
 
                       <div className="flex-1 space-y-2">
