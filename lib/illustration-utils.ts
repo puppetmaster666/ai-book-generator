@@ -2,8 +2,8 @@ import { ILLUSTRATION_DIMENSIONS } from '@/lib/constants';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { SAFETY_SETTINGS } from '@/lib/generation/shared/safety';
 
-// Timeout for illustration generation (60 seconds) - allows time for reference image processing
-export const ILLUSTRATION_TIMEOUT_MS = 60000;
+// Timeout for illustration generation (120 seconds) - image gen can take 1-2 min with multiple references
+export const ILLUSTRATION_TIMEOUT_MS = 120000;
 
 // Maximum retries: 1 retry only (on timeout). Safety blocks don't retry.
 export const MAX_ILLUSTRATION_RETRIES = 1;

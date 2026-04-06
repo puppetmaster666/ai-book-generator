@@ -66,8 +66,8 @@ async function withTimeout<T>(promise: Promise<T>, timeoutMs: number, operation:
 // Admin emails - admins can bypass all generation limits
 const ADMIN_EMAILS = ['lhllparis@gmail.com'];
 
-// Timeout for illustration generation (30 seconds) - prevents 504 Gateway Timeout
-const ILLUSTRATION_TIMEOUT_MS = 30000;
+// Timeout for illustration generation (120 seconds) - image gen can take 1-2 min especially with references
+const ILLUSTRATION_TIMEOUT_MS = 120000;
 
 // Maximum retries for content-blocked illustrations
 const MAX_ILLUSTRATION_RETRIES = 3;
