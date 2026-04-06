@@ -111,6 +111,8 @@ MR. BADGER: "Hard? Nonsense. You just need the right tool."
 
 === STORY STRUCTURE RULES (CRITICAL) ===
 - Write EXACTLY ${bookData.targetChapters} pages with PAGE markers
+- PAGE 1 must CLEARLY introduce the main character and set up the story. The reader should immediately understand who this is about and what is happening. Do not start mid-action or with confusing context.
+- THE LAST PAGE (page ${bookData.targetChapters}) must be a CLEAR, SATISFYING ENDING. The story must feel FINISHED. Include a final line that wraps everything up. Do not end mid-scene or on a cliffhanger.
 - Each page: 2-4 sentences of story text PLUS at least 1 line of dialogue
 - EVERY page starts with [Location: specific place, time of day, key visual detail]
 - EVERY page must be a CONSEQUENCE of the previous one (Therefore/But logic)
@@ -232,6 +234,10 @@ CHARACTER VISUAL REFERENCES:
 ${characterRef}
 
 YOUR TASK: Create EXACTLY ${bookData.targetChapters} pages. For each page:
+
+FIRST AND LAST PAGE (CRITICAL):
+- PAGE 1 must clearly introduce the main character and set the scene. The reader should immediately understand who this story is about. Use narration that establishes context.
+- PAGE ${bookData.targetChapters} (LAST PAGE) must wrap up the story with a clear ending. Include a final line that feels conclusive. The story must feel COMPLETE and FINISHED, not cut off.
 
 1. **text**: The story text for this page (2-4 sentences from the story above). This text appears ON or NEAR the illustration.
 2. **textPosition**: WHERE the text goes on the page — this is critical for visual design:
@@ -391,8 +397,10 @@ REVIEW CHECKLIST (fix ALL issues found):
    - Is the climax page a "full-bleed" or "spread"?
    - Does the ending feel gentle and satisfying?
 
-4. STORY CLARITY:
-   - Can you follow the story from illustrations alone?
+4. STORY CLARITY (CRITICAL):
+   - Does PAGE 1 clearly introduce the main character and situation? If not, REWRITE the text and scene to make the opening clear.
+   - Does PAGE ${bookData.targetChapters} (the LAST page) feel like a real ending? If the story feels cut off or unfinished, REWRITE the last page's text to include a proper conclusion.
+   - Can you follow the story from page 1 to ${bookData.targetChapters}?
    - Does each page logically follow from the previous?
    - Are transitions clear? If not, ADD transitionNote to the scene.
 

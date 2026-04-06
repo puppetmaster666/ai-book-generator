@@ -131,8 +131,10 @@ PAGE 2:
 
 SCRIPT RULES:
 
-STORY STRUCTURE:
-- Write for exactly ${bookData.targetChapters} pages (roughly - the director will finalize page breaks)
+STORY STRUCTURE (CRITICAL - the reader must understand the story from page 1 to page ${bookData.targetChapters}):
+- PAGE 1 must be a CLEAR OPENING that establishes who the main character is, where they are, and what is happening. The reader should immediately understand the setup. Do not start mid-action or with confusing context.
+- THE LAST PAGE (page ${bookData.targetChapters}) must be a CLEAR ENDING with a punchline, conclusion, or final moment. The story must feel FINISHED, not cut off mid-scene. The reader should think "that was a complete story."
+- Write for exactly ${bookData.targetChapters} pages (roughly, the director will finalize page breaks)
 - Every scene must be a CONSEQUENCE of the previous one (Therefore/But logic, never "And then")
 - Build real tension with stakes the reader cares about
 - Characters must have goals that drive their actions - no "just because the plot needs it"
@@ -239,8 +241,15 @@ ${characterRef}
 
 YOUR TASK: Break the script into EXACTLY ${bookData.targetChapters} pages. For each page, provide:
 
+FIRST AND LAST PAGE RULES (CRITICAL):
+- PAGE 1 MUST set up the story clearly. The narration and scene should establish WHO the main character is and WHAT is about to happen. The reader should not be confused. Use a "splash" layout for impact.
+- PAGE ${bookData.targetChapters} (THE LAST PAGE) MUST feel like a clear ending. It needs a final punchline, conclusion, or closing moment. The narration should feel like a final statement. Use a "splash" layout. The story must feel COMPLETE, not abruptly cut off.
+- If the script does not have a clear ending, WRITE ONE. Add a final narration line that closes the story.
+
 1. **text**: NARRATION BOX text — the narrator's voice that guides the reader. This is CRITICAL for readability.
-   - Use narration on at least 60% of pages (15+ pages out of ${bookData.targetChapters})
+   - PAGE 1 MUST have narration that introduces the character/situation
+   - PAGE ${bookData.targetChapters} MUST have narration that wraps up/concludes the story
+   - Use narration on at least 60% of pages (${Math.ceil(bookData.targetChapters * 0.6)}+ pages out of ${bookData.targetChapters})
    - Narration sets context: "Three hours earlier...", "The city had changed since the war.", "She ran. She didn't look back."
    - Narration bridges scenes: "Meanwhile, across town...", "By the time they arrived, it was too late."
    - Narration adds emotional depth: "He wanted to say something. Anything. But the words wouldn't come."
@@ -359,11 +368,16 @@ ${planSummary}
 
 REVIEW CHECKLIST - Find and fix these problems:
 
-1. STORY COHERENCE:
+1. CLEAR OPENING AND ENDING (MOST IMPORTANT):
+   - Does PAGE 1 clearly introduce the main character and situation? Would a reader immediately understand who this is about and what is happening? If not, rewrite page 1's narration and scene to establish context.
+   - Does PAGE ${bookData.targetChapters} (the LAST page) feel like a real ending? Is there a final punchline, conclusion, or closing moment? If the story feels cut off or unfinished, add a proper ending with closing narration.
+   - Page 1 and page ${bookData.targetChapters} MUST both have narration text.
+
+2. STORY COHERENCE:
    - Does page 1→2→3→...→${bookData.targetChapters} tell a coherent story?
    - Does each page follow from the previous one (cause→effect)?
    - Are there any "teleportation" jumps where characters appear somewhere without explanation?
-   - Is there a clear beginning, rising action, climax, and resolution?
+   - Can a reader follow the story without being confused?
 
 2. DIALOGUE QUALITY:
    - Do all characters sound DIFFERENT from each other? (compare their lines)
