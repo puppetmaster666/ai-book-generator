@@ -499,7 +499,7 @@ HOW TO WRITE THIS:
                   max={3}
                   value={severity}
                   onChange={(e) => setSeverity(parseInt(e.target.value))}
-                  className="w-full h-2 bg-neutral-200 rounded-full appearance-none cursor-pointer accent-neutral-900"
+                  className="w-full h-3 bg-neutral-200 rounded-full appearance-none cursor-pointer accent-neutral-900 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-7 [&::-webkit-slider-thumb]:h-7 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-neutral-900 [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:shadow-md [&::-moz-range-thumb]:w-7 [&::-moz-range-thumb]:h-7 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-neutral-900 [&::-moz-range-thumb]:cursor-pointer [&::-moz-range-thumb]:border-none [&::-moz-range-thumb]:shadow-md"
                 />
                 <div className="flex justify-between mt-2">
                   {Object.entries(SEVERITY_LABELS).map(([key, val]) => (
