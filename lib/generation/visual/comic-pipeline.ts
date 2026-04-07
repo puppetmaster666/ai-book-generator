@@ -139,7 +139,14 @@ STORY STRUCTURE (CRITICAL - the reader must understand the story from page 1 to 
 - Build real tension with stakes the reader cares about
 - Characters must have goals that drive their actions - no "just because the plot needs it"
 - Include a clear climax and satisfying resolution
-- The story should make sense if you read just the dialogue aloud
+- The story should make sense if you read just the dialogue aloud${bookData.targetChapters <= 12 ? `
+
+CONDENSED FORMAT (${bookData.targetChapters} PAGES ONLY - CRITICAL PACING):
+- Pages 1-2: SETUP. Introduce the character and establish who they are. The reader must care (or love to hate them) by page 2.
+- Pages 3-${Math.floor(bookData.targetChapters * 0.75)}: ESCALATION. Each page must show a DIFFERENT situation that builds on the last. Never repeat the same type of scene twice. Vary locations, characters involved, and the nature of the conflict/humor.
+- Pages ${Math.floor(bookData.targetChapters * 0.75) + 1}-${bookData.targetChapters}: CLIMAX + ENDING. The biggest moment, then a satisfying conclusion or final twist.
+- With limited pages, EVERY page must advance the story. No filler, no repeated jokes, no scenes that could be cut without losing anything.
+- Each page should feel like a mini-chapter: setup within the page, a beat, then a hook to the next page.` : ''}
 
 DIALOGUE & NARRATION (CRITICAL - readers need text to follow the story):
 - EVERY page must have EITHER dialogue OR narration OR both. NO silent pages with only SFX.
@@ -167,7 +174,7 @@ ACTION & VISUAL DIRECTION:
 - SFX are welcome where they add energy (CRASH!, WHOOSH!, BANG!) - use them naturally
 - Each page should end with a hook that makes you want to turn the page
 
-TARGET: ~1500-2000 words for the full script. Quality over quantity - a tight, well-paced story beats a padded one.
+TARGET: ${bookData.targetChapters <= 12 ? '~800-1200 words for the full script. With only ' + bookData.targetChapters + ' pages, every page must count. Keep dialogue punchy (1-2 bubbles per page), use narration to move the story fast, and never repeat a joke or scene.' : '~1500-2000 words for the full script. Quality over quantity - a tight, well-paced story beats a padded one.'}
 ${PUNCTUATION_RULES}
 
 Output ONLY valid JSON:

@@ -570,14 +570,18 @@ export async function expandIdea(idea: string, hintBookType?: string, region?: s
   // Safety instructions to prevent output blocking
   const isRoastIdea = idea.includes('EMBARRASSING COMIC ABOUT A REAL PERSON:') || idea.includes('NUCLEAR MODE');
   const safetyGuidelines = isRoastIdea ? `
-THIS IS A MEAN COMEDY COMIC. THE USER OPTED IN TO THIS:
+THIS IS A MEAN COMEDY COMIC (12 pages). THE USER OPTED IN TO THIS:
 - The comic makes fun of a real person through embarrassing situations and cruel narration. The story IS the insult.
 - Do NOT write a story about a "roast event" or "roast ceremony." The comic itself roasts them through the plot.
 - Do NOT invent specific cities, countries, or fancy locations. Use generic everyday settings unless the user specified a location.
 - Do NOT use intellectual or literary language. Write like a funny, mean friend. Simple words, short sentences, punchy jokes.
-- The premise must describe embarrassing SCENES and SITUATIONS, not describe what a roast would be like.
-- Every scene must contain at least one joke or embarrassing moment aimed at the target.
 - Use the target's personality traits as ammunition. Make it personal.
+
+STORY STRUCTURE (CRITICAL for 12-page comic):
+- "beginning" must describe a SPECIFIC opening scene that introduces the target in a funny, relatable way. Example: "We find Dave at a sports bar, bragging about his fantasy football team to a bartender who clearly doesn't care."
+- "middle" must describe 3-4 DIFFERENT escalating situations, each in a different setting and each more embarrassing than the last. List them as: "First... Then... Next... Finally..."
+- "ending" must describe a specific concluding scene with a final punchline or ironic twist that wraps up the roast. Not just "the roast concludes" but a specific, funny final moment.
+- Each situation in the middle must be DIFFERENT in type (not all "gets embarrassed at a party"). Mix settings, characters involved, and types of humor.
 ` : `
 CONTENT SAFETY - CRITICAL:
 - Keep all content suitable for general audiences
