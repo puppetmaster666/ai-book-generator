@@ -292,7 +292,7 @@ HOW TO WRITE THIS:
           targetWords: 600,
           targetChapters: 12,
           userId: (session?.user as any)?.id || null,
-          contentRating: 'general',
+          contentRating: 'mature',
         }),
       });
 
@@ -317,6 +317,9 @@ HOW TO WRITE THIS:
           // Non-fatal
         }
       }
+
+      // Clear saved form state so next visit starts fresh
+      try { sessionStorage.removeItem(STORAGE_KEY); } catch { /* ignore */ }
 
       router.push(`/review?bookId=${bookId}`);
     } catch (err) {

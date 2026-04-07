@@ -350,7 +350,7 @@ export const BOOK_PRESETS = {
     chapters: 12,
     priceDisplay: '$1.99',
     downloadFormat: 'pdf',
-    contentRating: 'general',
+    contentRating: 'mature',
     estimatedTime: '~10 min',
     skipFreePreview: true,
   },
