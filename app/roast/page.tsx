@@ -320,7 +320,14 @@ HOW TO WRITE THIS:
 
       router.push(`/review?bookId=${bookId}`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Something went wrong');
+      const msg = err instanceof Error ? err.message : 'Something went wrong';
+      if (msg.includes('503') || msg.includes('high demand') || msg.includes('Service Unavailable')) {
+        setError('Our AI servers are temporarily busy. This usually resolves in a few seconds. Hit retry below.');
+      } else if (msg.includes('500') || msg.includes('Failed to create')) {
+        setError('Something went wrong on our end. Please try again.');
+      } else {
+        setError(msg);
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -613,7 +620,18 @@ HOW TO WRITE THIS:
                 </div>
               </div>
 
-              {error && <p className="text-red-600 text-sm text-center mb-4">{error}</p>}
+              {error && (
+                <div className="bg-neutral-50 border border-neutral-200 rounded-xl p-4 mb-4 text-center">
+                  <p className="text-sm text-neutral-700 mb-3">{error}</p>
+                  <button
+                    onClick={() => { setError(''); handleSubmit(); }}
+                    disabled={isSubmitting}
+                    className="inline-flex items-center gap-2 px-5 py-2 bg-neutral-900 text-white rounded-lg text-sm font-medium hover:bg-neutral-800 transition-colors disabled:opacity-50"
+                  >
+                    Retry
+                  </button>
+                </div>
+              )}
 
               {isSubmitting ? (
                 <div className="flex flex-col items-center gap-6 py-8">
