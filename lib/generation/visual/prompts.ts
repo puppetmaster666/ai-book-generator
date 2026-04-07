@@ -361,7 +361,7 @@ export function buildSpeechBubblePrompt(dialogue: Array<{
   text: string;
   position: string;
   type?: string;
-}>): string {
+}>, artStyle?: string): string {
   if (!dialogue || dialogue.length === 0) return '';
 
   let prompt = `\n\nSPEECH BUBBLES INSTRUCTION (CRITICAL):\nThis is a comic panel. You MUST include ${dialogue.length} speech bubbles in the image containing EXACTLY the following text:\n`;
@@ -370,7 +370,13 @@ export function buildSpeechBubblePrompt(dialogue: Array<{
     prompt += `${i + 1}. Speaker: "${d.speaker}" (Location: ${d.position})\n   Text inside bubble: "${d.text}"\n`;
   });
 
-  prompt += `\nRULES FOR TEXT:\n- The text must be LEGIBLE, CLEAR, and correctly spelled.\n- Place bubbles near the speaking characters but DO NOT cover their faces.\n- Use standard comic book lettering style.\n- Ensure high contrast between text and bubble background.\n`;
+  // Style-specific bubble instructions
+  const isRealisticStyle = artStyle === 'puppet' || artStyle === 'realistic';
+  if (isRealisticStyle) {
+    prompt += `\nRULES FOR TEXT:\n- The text must be LEGIBLE, CLEAR, and correctly spelled.\n- Place bubbles near the speaking characters but DO NOT cover their faces.\n- Speech bubbles should look like physical caption cards or printed labels placed on the scene, matching the photographic style.\n- Use a slightly aged or textured paper look for bubble backgrounds, not perfectly clean white.\n- Bubble outlines should be subtle and muted (dark gray, not pure black), with slightly rounded rectangular shapes rather than perfect ellipses.\n- The bubbles should feel like they belong in the photographic scene, not pasted on top as cartoon elements.\n- Ensure high contrast between text and bubble background.\n`;
+  } else {
+    prompt += `\nRULES FOR TEXT:\n- The text must be LEGIBLE, CLEAR, and correctly spelled.\n- Place bubbles near the speaking characters but DO NOT cover their faces.\n- Use standard comic book lettering style.\n- Ensure high contrast between text and bubble background.\n`;
+  }
 
   return prompt;
 }

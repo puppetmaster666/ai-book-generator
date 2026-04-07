@@ -283,6 +283,7 @@ SCENE DIRECTION:
 - Every page after page 1 MUST have a "transitionNote" explaining how we got here
 - Use 4-6 different locations minimum across the book
 - The protagonist should NOT appear on every single page
+- EVERY page must show a UNIQUE moment. NEVER repeat the same scene, dialogue, or narration across pages. If page 1 introduces the character, page 8 must show something completely different.
 
 COPYRIGHT PROTECTION:
 If ANY character names match famous characters from existing media, rename them to original names.
@@ -396,6 +397,12 @@ REVIEW CHECKLIST - Find and fix these problems:
    - Are camera angles varied? (not all "medium shot")
    - Are there enough different locations? (minimum 4)
    - Do characterActions use PHYSICAL descriptions, not emotional labels?
+
+5. DUPLICATE DETECTION (CRITICAL):
+   - Compare every page against every other page. Do ANY two pages have similar dialogue, narration, or scene descriptions?
+   - Each page MUST show a DIFFERENT moment in the story. No filler or repeated content.
+   - If two pages have the same or very similar text/dialogue, REWRITE one of them to advance the story differently.
+   - Check specifically: page 1 vs later pages, and adjacent pages vs each other.
 
 If there are issues, fix them by outputting a revised "chapters" array.
 If the plan is good, output it unchanged.

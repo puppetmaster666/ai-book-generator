@@ -13,7 +13,7 @@ import {
     type ContentRating,
 } from '@/lib/gemini';
 import { getBookReadyEmail, sendEmail } from '@/lib/email';
-import { BOOK_PRESETS, FREE_TIER_LIMITS, type BookPresetKey } from '@/lib/constants';
+import { ART_STYLES, BOOK_PRESETS, FREE_TIER_LIMITS, type ArtStyleKey, type BookPresetKey } from '@/lib/constants';
 import { generateAndValidateIllustration, generateIllustrationWithRetry, type IllustrationAttemptResult } from '@/lib/illustration-utils';
 
 // Set max duration for this background task (Vercel Fluid Compute allows 800s on Pro)
@@ -278,9 +278,13 @@ export async function POST(
                 const hasStoryText = isPictureBook && hasNarration;
                 const needsTextBaking = !!(hasDialogue || hasStoryText || (isComicStyle && hasNarration));
 
+                // Resolve art style key to full prompt text
+                const artStyleKey = book.artStyle as ArtStyleKey | undefined;
+                const artStylePrompt = (artStyleKey && ART_STYLES[artStyleKey]?.prompt) || book.artStyle || 'professional book illustration';
+
                 let illustrationPrompt = buildIllustrationPromptFromScene(
                     chapter.scene,
-                    book.artStyle || 'illustration',
+                    artStylePrompt,
                     characterVisualGuide || undefined,
                     visualStyleGuide || undefined,
                     chapter.panelLayout,
@@ -294,7 +298,7 @@ export async function POST(
                         position: d.position as any,
                         type: d.type as any,
                     }));
-                    illustrationPrompt += buildSpeechBubblePrompt(bubbles);
+                    illustrationPrompt += buildSpeechBubblePrompt(bubbles, book.artStyle || undefined);
 
                     // Also add narration box if page has narration text
                     if (isComicStyle && hasNarration) {
