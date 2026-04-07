@@ -64,9 +64,6 @@ export default function RoastPage() {
   const router = useRouter();
   const { data: session } = useSession();
 
-  // Restore form state from sessionStorage on mount
-  const STORAGE_KEY = 'roast_form_state';
-
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [characters, setCharacters] = useState<RoastCharacter[]>([{ name: '', photos: [], personality: '' }]);
   const [severity, setSeverity] = useState(2);
@@ -76,30 +73,6 @@ export default function RoastPage() {
   const [error, setError] = useState('');
   const [generatedIdeas, setGeneratedIdeas] = useState<string[]>([]);
   const [isGeneratingIdeas, setIsGeneratingIdeas] = useState(false);
-
-  // Restore form state from sessionStorage after mount (avoids hydration mismatch)
-  useEffect(() => {
-    try {
-      const saved = sessionStorage.getItem(STORAGE_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (parsed.step) setStep(parsed.step);
-        if (parsed.characters) setCharacters(parsed.characters);
-        if (parsed.severity) setSeverity(Math.min(parsed.severity, 3)); // Cap at 3 (nuclear removed)
-        if (parsed.scenario) setScenario(parsed.scenario);
-        if (parsed.artStyle) setArtStyle(parsed.artStyle);
-      }
-    } catch { /* ignore */ }
-  }, []);
-
-  // Save form state to sessionStorage whenever it changes
-  useEffect(() => {
-    try {
-      sessionStorage.setItem(STORAGE_KEY, JSON.stringify({
-        step, characters, severity, scenario, artStyle,
-      }));
-    } catch { /* quota exceeded or SSR, ignore */ }
-  }, [step, characters, severity, scenario, artStyle]);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [loadingMsgIndex, setLoadingMsgIndex] = useState(0);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
@@ -317,9 +290,6 @@ HOW TO WRITE THIS:
           // Non-fatal
         }
       }
-
-      // Clear saved form state so next visit starts fresh
-      try { sessionStorage.removeItem(STORAGE_KEY); } catch { /* ignore */ }
 
       router.push(`/review?bookId=${bookId}`);
     } catch (err) {
