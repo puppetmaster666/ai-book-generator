@@ -57,9 +57,12 @@ export async function POST(request: NextRequest) {
         }
         const book = await prisma.book.findUnique({
           where: { id: bookId },
-          select: { bookFormat: true },
+          select: { bookFormat: true, bookPreset: true },
         });
-        if (book?.bookFormat === 'picture_book') {
+        if (book?.bookPreset === 'roast_comic') {
+          amount = PRICING.ROAST.price;
+          description = 'DraftMyBook - Roast Book';
+        } else if (book?.bookFormat === 'picture_book') {
           amount = PRICING.VISUAL.price;
           description = 'DraftMyBook - Visual Book';
         } else {

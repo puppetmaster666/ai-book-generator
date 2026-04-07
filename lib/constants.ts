@@ -16,6 +16,11 @@ export const PRICING = {
     price: 399, // cents
     priceDisplay: '$3.99',
   },
+  // Roast book (12 panels)
+  ROAST: {
+    price: 199, // cents
+    priceDisplay: '$1.99',
+  },
   // Subscriptions - credit-based with rollover
   STARTER_MONTHLY: {
     price: 1999, // cents
@@ -96,6 +101,7 @@ export const CREDIT_COSTS: Record<string, number> = {
   childrens_picture: 200,
   comic_story: 250,
   adult_comic: 250,
+  roast_comic: 100, // $1.99 roast book (12 panels)
 };
 
 // Credit packs - one-time credit purchases (no subscription)
@@ -331,6 +337,22 @@ export const BOOK_PRESETS = {
     downloadFormat: 'pdf',
     contentRating: 'childrens',
     estimatedTime: '~10 min',
+  },
+  roast_comic: {
+    label: 'Roast Book',
+    description: '12 panels roasting your friend, PDF download',
+    icon: 'Flame',
+    format: 'picture_book',
+    artStyle: 'shonen',
+    dialogueStyle: 'bubbles',
+    defaultGenre: 'comedy',
+    targetWords: 600,
+    chapters: 12,
+    priceDisplay: '$1.99',
+    downloadFormat: 'pdf',
+    contentRating: 'general',
+    estimatedTime: '~10 min',
+    skipFreePreview: true,
   },
   comic_story: {
     label: 'Comic Book',

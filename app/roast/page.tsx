@@ -285,7 +285,7 @@ HOW TO WRITE THIS:
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...bookPlan,
-          bookPreset: 'comic_story',
+          bookPreset: 'roast_comic',
           bookFormat: 'picture_book',
           artStyle,
           dialogueStyle: 'bubbles',

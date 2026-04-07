@@ -722,12 +722,12 @@ export async function POST(
     }
 
     // Check payment status - allow preview generation for unpaid books
-    // Free tier limits are enforced in generate-next and generate-visual routes
-    // Only paid books (or books with promo codes) can generate the full content
-    const isPaid = book.paymentStatus === 'completed';
+    // Roast books (skipFreePreview) always generate full content
+    const preset = book.bookPreset ? BOOK_PRESETS[book.bookPreset as BookPresetKey] : null;
+    const skipPreview = preset && 'skipFreePreview' in preset && (preset as any).skipFreePreview;
+    const isPaid = book.paymentStatus === 'completed' || !!skipPreview;
 
     if (!isPaid) {
-      // Log that this is a preview generation
       console.log(`Starting preview generation for unpaid book ${id}`);
     }
 
