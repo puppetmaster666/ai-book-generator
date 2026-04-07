@@ -67,36 +67,39 @@ export default function RoastPage() {
   // Restore form state from sessionStorage on mount
   const STORAGE_KEY = 'roast_form_state';
 
-  function loadSavedState<T>(key: string, fallback: T): T {
-    if (typeof window === 'undefined') return fallback;
-    try {
-      const saved = sessionStorage.getItem(STORAGE_KEY);
-      if (!saved) return fallback;
-      const parsed = JSON.parse(saved);
-      return parsed[key] !== undefined ? parsed[key] : fallback;
-    } catch { return fallback; }
-  }
-
-  const [step, setStep] = useState<1 | 2 | 3>(() => loadSavedState('step', 1 as 1 | 2 | 3));
-  const [characters, setCharacters] = useState<RoastCharacter[]>(() => loadSavedState('characters', [{ name: '', photos: [], personality: '' }]));
-  const [severity, setSeverity] = useState(() => loadSavedState('severity', 2));
-  const [scenario, setScenario] = useState(() => loadSavedState('scenario', ''));
-  const [artStyle, setArtStyle] = useState(() => loadSavedState('artStyle', 'shonen'));
+  const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [characters, setCharacters] = useState<RoastCharacter[]>([{ name: '', photos: [], personality: '' }]);
+  const [severity, setSeverity] = useState(2);
+  const [scenario, setScenario] = useState('');
+  const [artStyle, setArtStyle] = useState('shonen');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [generatedIdeas, setGeneratedIdeas] = useState<string[]>([]);
   const [isGeneratingIdeas, setIsGeneratingIdeas] = useState(false);
-  const [showAgeGate, setShowAgeGate] = useState(false);
-  const [ageConfirmed, setAgeConfirmed] = useState(() => loadSavedState('ageConfirmed', false));
+
+  // Restore form state from sessionStorage after mount (avoids hydration mismatch)
+  useEffect(() => {
+    try {
+      const saved = sessionStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.step) setStep(parsed.step);
+        if (parsed.characters) setCharacters(parsed.characters);
+        if (parsed.severity) setSeverity(Math.min(parsed.severity, 3)); // Cap at 3 (nuclear removed)
+        if (parsed.scenario) setScenario(parsed.scenario);
+        if (parsed.artStyle) setArtStyle(parsed.artStyle);
+      }
+    } catch { /* ignore */ }
+  }, []);
 
   // Save form state to sessionStorage whenever it changes
   useEffect(() => {
     try {
       sessionStorage.setItem(STORAGE_KEY, JSON.stringify({
-        step, characters, severity, scenario, artStyle, ageConfirmed,
+        step, characters, severity, scenario, artStyle,
       }));
     } catch { /* quota exceeded or SSR, ignore */ }
-  }, [step, characters, severity, scenario, artStyle, ageConfirmed]);
+  }, [step, characters, severity, scenario, artStyle]);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [loadingMsgIndex, setLoadingMsgIndex] = useState(0);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
@@ -660,48 +663,6 @@ HOW TO WRITE THIS:
 
       <Footer />
 
-      {/* 18+ Age Verification Modal */}
-      {showAgeGate && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-8 text-center shadow-xl">
-            <div className="w-16 h-16 bg-neutral-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <span className="text-3xl">☢️</span>
-            </div>
-            <h3 className="text-xl font-bold text-neutral-900 mb-2">Confirm your age</h3>
-            <p className="text-sm text-neutral-600 mb-6">
-              Nuclear mode is for adults only (18+). It includes uncensored humor, strong language, and mature themes.
-            </p>
-            <div className="flex flex-col gap-3">
-              <button
-                onClick={() => {
-                  setAgeConfirmed(true);
-                  setShowAgeGate(false);
-                  // Auto-submit after confirming
-                  setTimeout(() => {
-                    const btn = document.querySelector('[data-roast-submit]') as HTMLButtonElement;
-                    btn?.click();
-                  }, 100);
-                }}
-                className="w-full px-6 py-3 bg-neutral-900 text-white rounded-xl font-medium hover:bg-neutral-800 transition-colors"
-              >
-                I am 18 or older
-              </button>
-              <button
-                onClick={() => {
-                  setShowAgeGate(false);
-                  setSeverity(3);
-                }}
-                className="w-full px-6 py-3 bg-neutral-100 text-neutral-700 rounded-xl font-medium hover:bg-neutral-200 transition-colors"
-              >
-                Go back to Brutal mode instead
-              </button>
-            </div>
-            <p className="text-xs text-neutral-400 mt-4">
-              By confirming, you agree that you are of legal age in your jurisdiction to view adult content.
-            </p>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
