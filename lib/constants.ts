@@ -251,8 +251,8 @@ export const ART_STYLES = {
   puppet: {
     label: 'Puppet / Doll',
     description: 'Marionette puppet style like Team America',
-    prompt: 'Team America World Police marionette puppet style illustration, characters as realistic wooden and plastic marionette dolls with visible ball joints at shoulders elbows and knees, slightly oversized heads with painted-on facial features and glassy fixed eyes, stiff awkward puppet poses with dangling limbs and unnatural body angles suggesting string control from above, waxy plastic skin texture with visible seam lines along jaw and forehead, miniature set environments built from painted foam and balsa wood, slightly uncanny valley aesthetic mixing realistic detail with obvious artificiality, soft studio lighting on miniature diorama sets, characters wearing meticulously detailed tiny fabric costumes, comedic deadpan expressions on molded plastic faces, stop-motion animation frame quality with shallow depth of field on miniature scale',
-    coverStyle: 'Team America style marionette puppet characters with visible joints on miniature sets',
+    prompt: 'photograph of real physical marionette puppets on a miniature film set, stop-motion puppet photography like Team America World Police, actual tangible puppet figures made of molded plastic and resin with visible ball-joint articulation, real fabric clothing stitched to scale, physical miniature diorama environments built from wood and foam and paint, shot on a real camera with shallow depth of field and soft studio film lighting, puppets have shiny molded plastic skin with visible seam lines and painted-on eyebrows, glassy doll eyes, slightly oversized heads, stiff unnatural marionette poses, NOT a cartoon, NOT drawn, NOT illustrated, this is a real photograph of physical puppet figures on a practical miniature set',
+    coverStyle: 'photograph of Team America style marionette puppet characters with visible joints on a practical miniature film set',
     category: 'comic',
   },
 } as const;

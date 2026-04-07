@@ -78,21 +78,26 @@ export async function POST(
             });
         }
 
-        // GENERATION LOCK: Atomic check-and-set to prevent concurrent generation
-        // Uses updateMany with a condition so only ONE request can claim the lock
+        // GENERATION LOCK: Prevent concurrent visual generation
+        // If status is 'generating' but no illustrations exist yet, this is from the outline
+        // phase and we should proceed with visual generation (not skip it)
         if (book.status === 'generating') {
-            console.log(`[Visual Gen] Book ${id} already in generating status, skipping duplicate`);
-            return NextResponse.json({ message: 'Generation already in progress', status: book.status });
-        }
-
-        // Atomically set status to generating — only succeeds if status hasn't changed
-        const lockResult = await prisma.book.updateMany({
-            where: { id, status: { not: 'generating' } },
-            data: { status: 'generating' },
-        });
-        if (lockResult.count === 0) {
-            console.log(`[Visual Gen] Failed to acquire generation lock for ${id}, another process got it`);
-            return NextResponse.json({ message: 'Generation already in progress', status: 'generating' });
+            const hasActiveVisualGen = book.illustrations && book.illustrations.length > 0;
+            if (hasActiveVisualGen) {
+                console.log(`[Visual Gen] Book ${id} already generating with ${book.illustrations.length} illustrations, skipping duplicate`);
+                return NextResponse.json({ message: 'Generation already in progress', status: book.status });
+            }
+            console.log(`[Visual Gen] Book ${id} status is generating but no illustrations yet (from outline phase), proceeding with visual gen`);
+        } else {
+            // Atomically set status to generating - only succeeds if status hasn't changed
+            const lockResult = await prisma.book.updateMany({
+                where: { id, status: { not: 'generating' } },
+                data: { status: 'generating' },
+            });
+            if (lockResult.count === 0) {
+                console.log(`[Visual Gen] Failed to acquire generation lock for ${id}, another process got it`);
+                return NextResponse.json({ message: 'Generation already in progress', status: 'generating' });
+            }
         }
 
         // Check payment status and free tier limits
