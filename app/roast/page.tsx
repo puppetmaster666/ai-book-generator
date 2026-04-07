@@ -496,7 +496,7 @@ HOW TO WRITE THIS:
                 <input
                   type="range"
                   min={1}
-                  max={4}
+                  max={3}
                   value={severity}
                   onChange={(e) => setSeverity(parseInt(e.target.value))}
                   className="w-full h-2 bg-neutral-200 rounded-full appearance-none cursor-pointer accent-neutral-900"
