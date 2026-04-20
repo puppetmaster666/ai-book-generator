@@ -276,6 +276,7 @@ FIRST AND LAST PAGE RULES (CRITICAL):
 DIALOGUE RULES:
 - Pull dialogue DIRECTLY from the script - do NOT rewrite or invent new lines
 - Max ${isRoast ? '3' : '4'} speech bubbles per page${isRoast ? ' (keep panels readable; roast panels cram narration and bubbles together)' : ''}
+- EACH bubble on a page must have UNIQUE text. NEVER put the same line twice on the same page. If the script repeats a line, either keep only one bubble with it, rewrite the second into a natural reaction, or move it to a different page.
 - If a page has more dialogue in the script, split across pages or cut the weakest lines
 - Position bubbles logically: speakers on the left get left positions, right get right
 - Reading order: top-to-bottom, left-to-right

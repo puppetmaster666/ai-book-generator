@@ -293,13 +293,25 @@ export async function POST(
 
                 if (hasDialogue && chapter.dialogue) {
                     // Filter out malformed dialogue entries so we never render
-                    // literal "undefined" inside a speech bubble
+                    // literal "undefined" inside a speech bubble, and dedupe by
+                    // normalized text so the Director returning the same line
+                    // twice doesn't produce two identical bubbles on one panel
+                    const seenText = new Set<string>();
                     const bubbles: DialogueEntry[] = chapter.dialogue
                         .filter(d =>
                             d &&
                             typeof d.text === 'string' && d.text.trim().length > 0 &&
                             typeof d.speaker === 'string' && d.speaker.trim().length > 0
                         )
+                        .filter(d => {
+                            const key = d.text.trim().toLowerCase();
+                            if (seenText.has(key)) {
+                                console.warn(`[Visual Gen] Dropping duplicate bubble on panel ${chapter.number}: "${d.text.slice(0, 40)}"`);
+                                return false;
+                            }
+                            seenText.add(key);
+                            return true;
+                        })
                         .map(d => ({
                             speaker: d.speaker,
                             text: d.text,
