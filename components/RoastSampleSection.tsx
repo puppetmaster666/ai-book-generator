@@ -111,7 +111,15 @@ export default function RoastSampleSection({ variant = 'homepage' }: { variant?:
                 >
                   <div className="roast-rays" />
                   <div className="roast-vignette" />
-                  <span className="roast-text relative z-20 text-black uppercase tracking-[0.2em] text-sm font-black">
+                  <span
+                    className="roast-text relative z-20 text-black uppercase tracking-[0.2em]"
+                    style={{
+                      fontFamily: "'Oswald', sans-serif",
+                      fontWeight: 900,
+                      fontSize: '14px',
+                      WebkitTextStroke: '0.3px black',
+                    }}
+                  >
                     Roast Someone
                   </span>
                 </Link>
