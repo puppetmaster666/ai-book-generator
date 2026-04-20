@@ -209,6 +209,60 @@ const CULTURAL_SETTINGS: Record<string, CulturalSetting> = {
       female: ['Gwyneth', 'Isolde', 'Rowena', 'Elspeth', 'Bronwyn', 'Elowen', 'Seraphina', 'Morgana'],
     },
   },
+  thailand: {
+    region: 'Thailand',
+    nameGuidance: 'Use Thai names. Nicknames are common in casual use (Nong, Pim, Toon, Oat). Full names: Somchai, Niran, Siriporn, Suda, Ploy, Kanya, Apichai, Chaiyo.',
+    demographicNote: 'Characters are Thai. Background characters are Thai. Do NOT substitute Singaporean, Vietnamese, Chinese, or generic Asian identities - Thailand is distinct. Settings should be Thai (Bangkok, Chiang Mai, Phuket, street food stalls, tuk-tuks, temples, Chatuchak market, Silom, Sukhumvit). Thai food, Thai language phrases, Thai Buddhism.',
+    exampleNames: {
+      male: ['Somchai', 'Niran', 'Chaiyo', 'Apichai', 'Prasit', 'Kittisak', 'Anan', 'Sarawut'],
+      female: ['Siriporn', 'Ploy', 'Kanya', 'Suda', 'Malee', 'Nantida', 'Jintana', 'Ratree'],
+    },
+  },
+  vietnam: {
+    region: 'Vietnam',
+    nameGuidance: 'Use Vietnamese names. Family name first (Nguyen, Tran, Le, Pham, Hoang), given names like Minh, Anh, Linh, Huy.',
+    demographicNote: 'Characters are Vietnamese. Settings should be Vietnamese (Hanoi, Ho Chi Minh City, pho stalls, motorbikes, ao dai, Vietnamese coffee). Do not substitute other Southeast Asian identities.',
+    exampleNames: {
+      male: ['Minh', 'Huy', 'Quan', 'Tuan', 'Hung', 'Dung', 'Khoa', 'Phuc'],
+      female: ['Linh', 'Anh', 'Huong', 'Mai', 'Thao', 'Ngoc', 'Yen', 'Trang'],
+    },
+  },
+  philippines: {
+    region: 'Philippines',
+    nameGuidance: 'Use Filipino names: Juan, Jose, Maria, Rosa, Miguel, Angelo, Marites, Kim. Spanish-influenced full names common (Dela Cruz, Reyes, Santos).',
+    demographicNote: 'Characters are Filipino. Settings are Filipino (Manila, Cebu, jeepneys, sari-sari stores, adobo, karaoke). Mix of Tagalog and English (Taglish) is common.',
+    exampleNames: {
+      male: ['Juan', 'Jose', 'Miguel', 'Angelo', 'Rodel', 'Mark', 'Jun', 'Carlo'],
+      female: ['Maria', 'Rosa', 'Marites', 'Kim', 'Angel', 'Grace', 'Cristina', 'Liza'],
+    },
+  },
+  indonesia: {
+    region: 'Indonesia',
+    nameGuidance: 'Use Indonesian names: Agus, Bambang, Siti, Dewi, Budi, Rini, Sari, Joko. Often single names or short compounds.',
+    demographicNote: 'Characters are Indonesian. Settings are Indonesian (Jakarta, Bali, Surabaya, nasi goreng, warungs, batik). Muslim-majority culture with Hindu pockets in Bali.',
+    exampleNames: {
+      male: ['Agus', 'Bambang', 'Budi', 'Joko', 'Rudi', 'Eko', 'Dedi', 'Wayan'],
+      female: ['Siti', 'Dewi', 'Rini', 'Sari', 'Indah', 'Ayu', 'Putri', 'Lestari'],
+    },
+  },
+  malaysia: {
+    region: 'Malaysia',
+    nameGuidance: 'Malaysia is multi-ethnic: Malay (Ahmad, Aisyah), Chinese (Wong, Mei Ling), Indian (Raj, Priya). Use names appropriate to the character.',
+    demographicNote: 'Malaysia has three major groups: Malay (60%), Chinese (25%), Indian (7%). Settings are Malaysian (KL, Penang, mamak stalls, teh tarik, nasi lemak).',
+    exampleNames: {
+      male: ['Ahmad', 'Farid', 'Hafiz', 'Wong', 'Chong', 'Raj', 'Kumar', 'Zakaria'],
+      female: ['Aisyah', 'Nurul', 'Siti', 'Mei Ling', 'Li Wen', 'Priya', 'Kavita', 'Zahra'],
+    },
+  },
+  singapore: {
+    region: 'Singapore',
+    nameGuidance: 'Singapore is multi-ethnic like Malaysia: Chinese majority (Tan, Lim, Wei), Malay (Hafiz, Siti), Indian (Raj, Priya). Singlish is common.',
+    demographicNote: 'Singapore is 75% Chinese, 14% Malay, 9% Indian. Settings are Singaporean (Orchard Road, hawker centres, HDB flats, MRT, chicken rice, laksa).',
+    exampleNames: {
+      male: ['Wei Ming', 'Jun Hao', 'Hafiz', 'Raj', 'Aaron', 'Daniel', 'Ahmad', 'Kumar'],
+      female: ['Hui Ling', 'Xin Yi', 'Siti', 'Priya', 'Rachel', 'Michelle', 'Nurul', 'Kavitha'],
+    },
+  },
 };
 
 // Keywords to detect cultural settings from premise/genre
@@ -339,9 +393,14 @@ const COUNTRY_TO_REGION: Record<string, string> = {
   BR: 'brazil',
   // Oceania
   AU: 'uk', NZ: 'uk',
-  // Southeast Asia (default to general since no specific pool)
-  PH: 'usa_general', TH: 'usa_general', VN: 'usa_general',
-  ID: 'usa_general', MY: 'usa_general', SG: 'usa_general',
+  // Southeast Asia
+  TH: 'thailand',
+  VN: 'vietnam',
+  PH: 'philippines',
+  ID: 'indonesia',
+  MY: 'malaysia',
+  SG: 'singapore',
+  KH: 'thailand', LA: 'thailand', MM: 'thailand', BN: 'malaysia',
 };
 
 /**
@@ -364,6 +423,12 @@ export const REGION_OPTIONS: { value: string; label: string }[] = [
   { value: 'nigeria', label: 'Africa' },
   { value: 'mexico', label: 'Mexico / Latin America' },
   { value: 'brazil', label: 'Brazil' },
+  { value: 'thailand', label: 'Thailand' },
+  { value: 'vietnam', label: 'Vietnam' },
+  { value: 'philippines', label: 'Philippines' },
+  { value: 'indonesia', label: 'Indonesia' },
+  { value: 'malaysia', label: 'Malaysia' },
+  { value: 'singapore', label: 'Singapore' },
   { value: 'fantasy_medieval', label: 'Fantasy / Medieval' },
 ];
 

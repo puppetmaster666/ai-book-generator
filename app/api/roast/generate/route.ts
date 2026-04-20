@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
 
     const book = await prisma.book.findUnique({
       where: { id: bookId },
-      select: { id: true, status: true, userId: true },
+      select: { id: true, status: true, userId: true, region: true },
     });
     if (!book) {
       return NextResponse.json({ error: 'Book not found' }, { status: 404 });
@@ -80,6 +80,7 @@ export async function POST(request: NextRequest) {
         severity,
         scenario: scenario || '',
         artStyle: artStyle || 'comic',
+        region: book.region,
         targetPanels,
         checkpoint: 'flux1-dev-fp8.safetensors',
 

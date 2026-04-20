@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { GENRES, GenreKey, BOOK_PRESETS, BookPresetKey } from '@/lib/constants';
+import { getRegionFromCountryCode } from '@/lib/generation/shared/name-variety';
 import { v4 as uuidv4 } from 'uuid';
 
 // Get IP address from request
@@ -209,8 +210,13 @@ export async function POST(request: NextRequest) {
         dialogueStyle: dialogueStyle || null,
         // Content maturity settings
         contentRating,
-        // Region for name demographics
-        region: providedRegion || null,
+        // Region for name demographics + location / ethnicity of background
+        // characters. Use the user-provided value first, else auto-detect
+        // from the Vercel IP country header so a roast made in Thailand is
+        // set in Thailand, not a random "generic Asia" the model invents.
+        region: providedRegion
+          || getRegionFromCountryCode(request.headers.get('x-vercel-ip-country'))
+          || null,
       },
     });
 

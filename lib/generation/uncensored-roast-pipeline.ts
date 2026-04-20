@@ -12,6 +12,31 @@
  */
 
 import { generateJsonWithMistral, generateRoastScript, isMistralConfigured } from '@/lib/mistral';
+import { buildNameGuidanceForRegion } from './shared/name-variety';
+
+// ─── REGION PROMPT HELPER ───
+// The writer/director tend to invent random countries ("Singapore" when the
+// user is in Thailand) unless you nail the setting down hard. This builds a
+// block of instructions we paste into each prompt so the generated comic
+// stays anchored to the book's region. Protagonist identity is still driven
+// by their uploaded photo; this block only controls setting and the
+// background characters' ethnicity / naming.
+function buildRegionDirective(region: string | null | undefined): string {
+  if (!region) return '';
+  const guidance = buildNameGuidanceForRegion(region, '', '', '');
+  return `
+
+=== SETTING AND BACKGROUND CAST (HARD CONSTRAINT) ===
+${guidance}
+
+RULES YOU MUST FOLLOW:
+- All scene locations are in the detected region. Use real place names and cultural details from that region only.
+- Do NOT substitute a different country the model finds more familiar. If region is Thailand, do not write Singapore, Vietnam, Bali, or a generic "Asian city".
+- Background characters (friends, strangers, waitresses, Uber drivers, bystanders) should be of the region's dominant ethnicity unless the scenario specifically calls for something else.
+- The main target's ethnicity is handled separately via their uploaded reference photo. Do not override it based on their name.
+=== END SETTING CONSTRAINT ===
+`;
+}
 import { runComfyWorkflow, isRunPodConfigured } from '@/lib/runpod';
 import { buildComicPanelWorkflow, buildFluxPrompt, buildPonyPrompt } from '@/lib/comfyui-workflows';
 import { overlayTextOnImage, mapDialoguePosition } from '@/lib/text-overlay';
@@ -42,6 +67,7 @@ export interface UncensoredRoastOptions {
   severity: number;
   scenario: string;
   artStyle: string;
+  region?: string | null;
   targetPanels?: number;
   checkpoint?: string;
   onPanelComplete?: (panel: VisualChapter & { imageBase64?: string; error?: string }) => Promise<void>;
@@ -54,8 +80,10 @@ async function writerStep(
   characters: RoastCharacterInput[],
   severity: number,
   scenario: string,
-  targetPanels: number
+  targetPanels: number,
+  region: string | null | undefined
 ): Promise<ComicScript> {
+  const regionDirective = buildRegionDirective(region);
   const mainTarget = characters[0];
   const characterList = characters.map((c, i) =>
     `- ${c.name}: ${i === 0 ? 'The main target. ' : ''}${c.personality || 'No personality specified'}`
@@ -102,7 +130,7 @@ CONTENT RULES (FRIENDLY):
 
   const prompt = `You are a comic book writer. Your job is to write a complete comic script that ROASTS and HUMILIATES the main target through embarrassing situations, cruel narration, and mean dialogue. The comic itself IS the roast.
 ${nuclearContent}
-${scenarioSection}
+${scenarioSection}${regionDirective}
 STORY DETAILS:
 Title: Create a funny, mean title
 Genre: Mean Comedy
@@ -208,17 +236,19 @@ async function directorStep(
   script: ComicScript,
   characters: RoastCharacterInput[],
   targetPanels: number,
-  severity: number
+  severity: number,
+  region: string | null | undefined
 ): Promise<{ chapters: VisualChapter[] }> {
   const mainTarget = characters[0];
   const characterRef = characters.map(c => `${c.name}: ${c.personality || 'no description'}`).join('\n');
+  const regionDirective = buildRegionDirective(region);
 
   const contentNote = severity === 4
     ? '\nCONTENT: This is 18+ content. Scene descriptions should be explicit and match the script exactly. Do NOT censor or soften anything. If the script has nudity, the scene description says nudity. If it has drugs, the description says drugs.'
     : '';
 
   const prompt = `You are a comic book director/layout artist. You have a finished script and your job is to break it into exactly ${targetPanels} pages with precise visual direction.
-${contentNote}
+${contentNote}${regionDirective}
 
 THE SCRIPT:
 ---
@@ -481,6 +511,7 @@ export async function runUncensoredRoastPipeline(options: UncensoredRoastOptions
     severity,
     scenario,
     artStyle,
+    region,
     targetPanels = 12,
     checkpoint,
     onPanelComplete,
@@ -489,15 +520,15 @@ export async function runUncensoredRoastPipeline(options: UncensoredRoastOptions
   const pipelineStart = Date.now();
 
   // ── Step 1: WRITER ──
-  console.log('[UncensoredRoast] Step 1: WRITER - Generating comic script with Mistral...');
+  console.log(`[UncensoredRoast] Step 1: WRITER - Generating comic script with Mistral... (region: ${region || 'unset'})`);
   const step1Start = Date.now();
-  const script = await writerStep(characters, severity, scenario, targetPanels);
+  const script = await writerStep(characters, severity, scenario, targetPanels, region);
   console.log(`[UncensoredRoast] Step 1 took ${Date.now() - step1Start}ms`);
 
   // ── Step 2: DIRECTOR ──
   console.log('[UncensoredRoast] Step 2: DIRECTOR - Planning scenes with Mistral...');
   const step2Start = Date.now();
-  const scenePlan = await directorStep(script, characters, targetPanels, severity);
+  const scenePlan = await directorStep(script, characters, targetPanels, severity, region);
   console.log(`[UncensoredRoast] Step 2 took ${Date.now() - step2Start}ms`);
 
   // ── Step 3: EDITOR ──
