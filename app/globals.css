@@ -380,6 +380,27 @@ a, button {
   animation: lightboxSlideInLeft 0.35s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
+/* Themed scrollbar for the panel carousel strips — yellow thumb on a black
+   track, thin, so the strip reads as part of the roast visual language */
+.roast-scroll::-webkit-scrollbar {
+  height: 6px;
+}
+.roast-scroll::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 3px;
+}
+.roast-scroll::-webkit-scrollbar-thumb {
+  background: #facc15;
+  border-radius: 3px;
+}
+.roast-scroll::-webkit-scrollbar-thumb:hover {
+  background: #a3e635;
+}
+.roast-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: #facc15 rgba(0, 0, 0, 0.1);
+}
+
 /* Inner vignette for depth */
 .roast-vignette {
   position: absolute;

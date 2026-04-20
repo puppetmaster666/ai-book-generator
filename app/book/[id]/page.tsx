@@ -12,6 +12,7 @@ import { useGeneratingBook } from '@/contexts/GeneratingBookContext';
 import Link from 'next/link';
 import FirstBookDiscountPopup from '@/components/FirstBookDiscountPopup';
 import LivePreview from '@/components/LivePreview';
+import ImageLightbox, { type LightboxImage } from '@/components/ImageLightbox';
 import { trackRedditPurchase } from '@/lib/reddit-pixel';
 import { trackPurchase as trackGAPurchase } from '@/lib/gtag';
 import { PRICING } from '@/lib/constants';
@@ -259,6 +260,7 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
   const currentUserEmail = session?.user?.email;
   const ADMIN_EMAILS = ['lhllparis@gmail.com'];
   const [isDbAdmin, setIsDbAdmin] = useState(false);
+  const [lightbox, setLightbox] = useState<{ images: LightboxImage[]; startIndex: number } | null>(null);
   const isAdminUser = !!(isDbAdmin || (currentUserEmail && ADMIN_EMAILS.includes(currentUserEmail)));
 
   // Fetch admin status from DB (the hardcoded list is a legacy fallback)
@@ -1424,11 +1426,22 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
           <div className="bg-white rounded-2xl border border-neutral-200 p-6 sm:p-8 mb-6">
             <div className="flex flex-col sm:flex-row items-start gap-6">
               {book.coverImageUrl ? (
-                <img
-                  src={book.coverImageUrl}
-                  alt={book.title}
-                  className="w-32 h-48 object-cover rounded-xl shadow-lg"
-                />
+                <button
+                  type="button"
+                  onClick={() => setLightbox({
+                    images: [{ url: book.coverImageUrl as string, alt: book.title, caption: book.title }],
+                    startIndex: 0,
+                  })}
+                  className="relative group w-32 h-48 rounded-xl overflow-hidden shadow-lg hover:shadow-2xl transition-all hover:scale-105"
+                  aria-label="View cover image full size"
+                >
+                  <img
+                    src={book.coverImageUrl}
+                    alt={book.title}
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors" />
+                </button>
               ) : (
                 <div className="w-32 h-48 bg-neutral-100 rounded-xl flex items-center justify-center relative overflow-hidden border border-neutral-200">
                   {isGenerating ? (
@@ -2284,26 +2297,41 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
                 </p>
               </div>
               <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
-                {book.illustrations?.filter(ill => ill.status === 'completed').map(ill => (
-                  <div key={ill.id} className="relative aspect-square rounded-lg overflow-hidden border-2 border-yellow-300 bg-white">
-                    <img src={`/api/books/${id}/illustrations/${ill.id}`} alt={`Panel ${ill.position}`} className="w-full h-full object-cover" />
+                {(() => {
+                  const adminCompleted = book.illustrations?.filter(ill => ill.status === 'completed') || [];
+                  const adminCarousel: LightboxImage[] = adminCompleted.map(i => ({
+                    url: `/api/books/${id}/illustrations/${i.id}`,
+                    alt: `Panel ${i.position}`,
+                    caption: `Panel ${i.position}`,
+                  }));
+                  return adminCompleted.map((ill, idx) => (
+                    <div key={ill.id} className="relative aspect-square rounded-lg overflow-hidden border-2 border-yellow-300 bg-white group">
+                      <button
+                        type="button"
+                        onClick={() => setLightbox({ images: adminCarousel, startIndex: idx })}
+                        className="block w-full h-full"
+                        aria-label={`View panel ${ill.position} full size`}
+                      >
+                        <img src={`/api/books/${id}/illustrations/${ill.id}`} alt={`Panel ${ill.position}`} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                      </button>
 
-                    <button
-                      onClick={() => toggleFeaturedPanel(ill.id, !ill.isFeaturedRoastPanel)}
-                      className={`absolute top-1 right-1 p-1.5 rounded-full shadow-lg transition-colors ${
-                        ill.isFeaturedRoastPanel
-                          ? 'bg-yellow-400 text-yellow-900'
-                          : 'bg-white/95 text-neutral-500 hover:text-yellow-500'
-                      }`}
-                      title={ill.isFeaturedRoastPanel ? 'Remove from homepage' : 'Feature on homepage'}
-                    >
-                      <Star className={`h-4 w-4 ${ill.isFeaturedRoastPanel ? 'fill-current' : ''}`} />
-                    </button>
-                    <div className="absolute bottom-1 left-1 bg-black/60 text-white text-[10px] px-1.5 py-0.5 rounded-full">
-                      #{ill.position}
+                      <button
+                        onClick={(e) => { e.stopPropagation(); toggleFeaturedPanel(ill.id, !ill.isFeaturedRoastPanel); }}
+                        className={`absolute top-1 right-1 p-1.5 rounded-full shadow-lg transition-colors ${
+                          ill.isFeaturedRoastPanel
+                            ? 'bg-yellow-400 text-yellow-900'
+                            : 'bg-white/95 text-neutral-500 hover:text-yellow-500'
+                        }`}
+                        title={ill.isFeaturedRoastPanel ? 'Remove from homepage' : 'Feature on homepage'}
+                      >
+                        <Star className={`h-4 w-4 ${ill.isFeaturedRoastPanel ? 'fill-current' : ''}`} />
+                      </button>
+                      <div className="absolute bottom-1 left-1 bg-black/60 text-white text-[10px] px-1.5 py-0.5 rounded-full pointer-events-none">
+                        #{ill.position}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ));
+                })()}
               </div>
             </div>
           )}
@@ -2318,6 +2346,43 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
                 <h2 className="text-2xl font-bold text-neutral-900 mb-2">Your Book is Ready!</h2>
                 <p className="text-neutral-600">Download your masterpiece below</p>
               </div>
+
+              {/* Horizontal panel carousel — for illustrated books. Click any
+                  thumbnail to open the full lightbox carousel. */}
+              {isIllustrated && book.illustrations && book.illustrations.filter(i => i.status === 'completed').length > 0 && (() => {
+                const completed = book.illustrations.filter(i => i.status === 'completed');
+                const carouselImages: LightboxImage[] = completed.map(i => ({
+                  url: `/api/books/${id}/illustrations/${i.id}`,
+                  alt: `Panel ${i.position}`,
+                  caption: `Panel ${i.position} of ${completed.length}`,
+                }));
+                return (
+                  <div className="mb-6">
+                    <p className="text-xs uppercase tracking-wider text-neutral-400 mb-2 font-semibold">Browse your panels</p>
+                    <div className="relative -mx-6 sm:-mx-8 px-6 sm:px-8">
+                      <div className="flex gap-3 overflow-x-auto pb-3 scroll-smooth snap-x snap-mandatory roast-scroll">
+                        {completed.map((ill, idx) => (
+                          <button
+                            key={ill.id}
+                            onClick={() => setLightbox({ images: carouselImages, startIndex: idx })}
+                            className="relative flex-shrink-0 w-28 h-40 rounded-xl overflow-hidden border-[3px] border-yellow-400 shadow-lg hover:shadow-2xl hover:scale-105 transition-all snap-start"
+                            aria-label={`View panel ${ill.position} full size`}
+                          >
+                            <img
+                              src={`/api/books/${id}/illustrations/${ill.id}`}
+                              alt={`Panel ${ill.position}`}
+                              className="w-full h-full object-cover"
+                            />
+                            <div className="absolute bottom-0 left-0 right-0 bg-black/70 text-yellow-400 text-[10px] font-black uppercase tracking-widest text-center py-0.5">
+                              #{ill.position}
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
 
               {/* Stats - different for text vs illustrated books */}
               {isIllustrated ? (
@@ -2575,6 +2640,15 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
             onClick={(e) => e.stopPropagation()}
           />
         </div>
+      )}
+
+      {/* Styled carousel lightbox for cover + panel views */}
+      {lightbox !== null && (
+        <ImageLightbox
+          images={lightbox.images}
+          startIndex={lightbox.startIndex}
+          onClose={() => setLightbox(null)}
+        />
       )}
     </div>
   );
