@@ -19,13 +19,18 @@ export default function robots(): MetadataRoute.Robots {
         ],
       },
       {
-        // Allow Googlebot more access for better indexing
         userAgent: 'Googlebot',
         allow: '/',
         disallow: [
           '/api/',
           '/admin/',
           '/dashboard/',
+          '/book/',
+          '/checkout/',
+          '/my-books/',
+          '/account/',
+          '/claim-credit/',
+          '/review/',
         ],
       },
     ],
