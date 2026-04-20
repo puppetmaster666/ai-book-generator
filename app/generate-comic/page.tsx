@@ -394,6 +394,14 @@ function GenerateComicContent() {
             // Intentionally NOT clearing pollInterval - keep watching for recovery
           }
 
+          // Detect recovery: server flipped back to 'generating' after a prior
+          // failure (retry kicked in, reconcile ran, etc.). Transition UI back
+          // to the generating animation instead of staying on the failed banner.
+          if (book.status === 'generating') {
+            setError(prev => (prev ? '' : prev));
+            setIsGenerating(prev => (prev ? prev : true));
+          }
+
           // Detect preview_complete
           if (book.status === 'preview_complete') {
             setAllComplete(true);
