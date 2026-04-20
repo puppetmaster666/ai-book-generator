@@ -1626,9 +1626,17 @@ function AdminDashboardContent() {
                 ({stats.featuredBooks?.length || 0}/8 slots filled)
               </span>
             </div>
-            <p className="text-sm text-neutral-500">
-              Toggle &quot;Featured&quot; on books below to add them to the homepage showcase
-            </p>
+            <div className="flex items-center gap-3">
+              <a
+                href="/admin/roast-panels"
+                className="text-sm text-neutral-700 hover:text-neutral-900 underline"
+              >
+                Reorder roast panels
+              </a>
+              <p className="text-sm text-neutral-500">
+                Toggle &quot;Featured&quot; on books below to add them to the homepage showcase
+              </p>
+            </div>
           </div>
 
           {/* Featured Items Grid */}

@@ -20,7 +20,10 @@ export async function GET() {
           },
         },
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: [
+        { featuredRoastOrder: { sort: 'asc', nulls: 'last' } },
+        { createdAt: 'desc' },
+      ],
       take: 8,
     });
 

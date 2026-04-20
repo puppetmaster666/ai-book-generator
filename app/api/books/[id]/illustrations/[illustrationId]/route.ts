@@ -98,10 +98,26 @@ export async function PATCH(
 
   const { id, illustrationId } = await params;
   const body = await request.json();
-  const { isFeaturedRoastPanel } = body;
+  const { isFeaturedRoastPanel, featuredRoastOrder } = body;
 
-  if (typeof isFeaturedRoastPanel !== 'boolean') {
-    return NextResponse.json({ error: 'isFeaturedRoastPanel must be a boolean' }, { status: 400 });
+  const data: { isFeaturedRoastPanel?: boolean; featuredRoastOrder?: number | null } = {};
+
+  if (isFeaturedRoastPanel !== undefined) {
+    if (typeof isFeaturedRoastPanel !== 'boolean') {
+      return NextResponse.json({ error: 'isFeaturedRoastPanel must be a boolean' }, { status: 400 });
+    }
+    data.isFeaturedRoastPanel = isFeaturedRoastPanel;
+  }
+
+  if (featuredRoastOrder !== undefined) {
+    if (featuredRoastOrder !== null && typeof featuredRoastOrder !== 'number') {
+      return NextResponse.json({ error: 'featuredRoastOrder must be a number or null' }, { status: 400 });
+    }
+    data.featuredRoastOrder = featuredRoastOrder;
+  }
+
+  if (Object.keys(data).length === 0) {
+    return NextResponse.json({ error: 'No fields to update' }, { status: 400 });
   }
 
   const illustration = await prisma.illustration.findFirst({
@@ -117,8 +133,8 @@ export async function PATCH(
 
   const updated = await prisma.illustration.update({
     where: { id: illustration.id },
-    data: { isFeaturedRoastPanel },
-    select: { id: true, isFeaturedRoastPanel: true },
+    data,
+    select: { id: true, isFeaturedRoastPanel: true, featuredRoastOrder: true },
   });
 
   return NextResponse.json(updated);

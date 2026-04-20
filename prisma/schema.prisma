@@ -175,6 +175,7 @@ model Illustration {
   status       String   @default("completed")
   updatedAt    DateTime @default(now()) @updatedAt
   isFeaturedRoastPanel Boolean @default(false)
+  featuredRoastOrder   Int?
   book         Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
   chapter      Chapter? @relation(fields: [chapterId], references: [id], onDelete: Cascade)
 
@@ -182,6 +183,7 @@ model Illustration {
   @@index([chapterId])
   @@index([bookId, status])
   @@index([isFeaturedRoastPanel])
+  @@index([isFeaturedRoastPanel, featuredRoastOrder])
 }
 
 model Payment {
