@@ -603,13 +603,14 @@ export async function POST(
             }
         };
 
-        // Process panels ONE AT A TIME, sequentially
-        // Stop on first failure so user can review, edit prompt, and retry
-        // No wasted API calls, no duplicates, no mystery failures
+        // Process panels ONE AT A TIME, sequentially.
+        // Transient failures are expected (safety filter false positives, rate
+        // limits, text-only responses). We continue past them and auto-retry
+        // failed panels below before giving up, so the user never sees a fake
+        // "failed" state for what was really a transient error.
         let totalFailures = 0;
         let totalSuccesses = 0;
         let stoppedDueToTimeout = false;
-        let stoppedDueToFailure = false;
 
         for (let i = 0; i < pendingChapters.length; i++) {
             // Check timeout
@@ -634,14 +635,60 @@ export async function POST(
                 totalSuccesses++;
             } else {
                 totalFailures++;
-                // Stop on first failure — let user see the error and retry/edit
-                console.log(`[Visual Gen] Panel ${chapter.number} failed, stopping generation. User can retry.`);
-                stoppedDueToFailure = true;
-                break;
+                // Do NOT break. Keep going; the retry phase below will take
+                // another crack at this panel. Halting on one failure leaves
+                // the book in a fake-failed state for what's usually transient.
+                console.log(`[Visual Gen] Panel ${chapter.number} failed this pass, will retry after main loop`);
             }
 
             // Log progress
             console.log(`[Visual Gen] Panel ${chapter.number} done. ${totalSuccesses} success, ${totalFailures} failed of ${targetChapters.length} total`);
+        }
+
+        // Auto-retry phase: for any panel that failed in the main loop, try again
+        // up to MAX_RETRY_ROUNDS times. Only after these retries give up do we
+        // surface a real "failed" book status to the user.
+        const MAX_RETRY_ROUNDS = 2;
+        if (!stoppedDueToTimeout) {
+            for (let round = 1; round <= MAX_RETRY_ROUNDS; round++) {
+                if (isApproachingTimeout()) {
+                    stoppedDueToTimeout = true;
+                    break;
+                }
+
+                const failedIlls = await prisma.illustration.findMany({
+                    where: { bookId: id, status: 'failed' },
+                    select: { id: true, position: true },
+                });
+                if (failedIlls.length === 0) break;
+
+                console.log(`[Visual Gen] Auto-retry round ${round}/${MAX_RETRY_ROUNDS}: ${failedIlls.length} failed panel(s)`);
+
+                for (const failedIll of failedIlls) {
+                    if (isApproachingTimeout()) {
+                        stoppedDueToTimeout = true;
+                        break;
+                    }
+                    const chapter = targetChapters.find((c: any) => c.number === failedIll.position);
+                    if (!chapter) continue;
+
+                    // Remove the failed record so generateOne creates a fresh one
+                    await prisma.illustration.delete({ where: { id: failedIll.id } });
+
+                    // Heartbeat - keep status as 'generating' during retry
+                    await prisma.book.update({
+                        where: { id },
+                        data: { status: 'generating' },
+                    });
+
+                    console.log(`[Visual Gen] Retry ${round}/${MAX_RETRY_ROUNDS}: regenerating panel ${chapter.number}`);
+                    const retryResult = await generateOne(chapter);
+                    if (retryResult.success) {
+                        totalSuccesses++;
+                        totalFailures = Math.max(0, totalFailures - 1);
+                    }
+                }
+            }
         }
 
         // Check completion status
@@ -655,11 +702,9 @@ export async function POST(
 
         console.log(`[Visual Gen] Generation finished: ${successfulPanels} success, ${failedPanels} failed of ${targetChapters.length} total`);
 
-        // Stopped due to timeout or failure — mark as failed so user can retry
-        if (stoppedDueToTimeout || stoppedDueToFailure) {
-            const reason = stoppedDueToFailure
-                ? `Panel generation failed. ${successfulPanels} of ${targetChapters.length} panels completed. Retry to continue.`
-                : `Generation paused due to timeout. ${successfulPanels} panels completed. Retry to continue.`;
+        // Stopped due to timeout — mark as failed so user can retry
+        if (stoppedDueToTimeout) {
+            const reason = `Generation paused due to timeout. ${successfulPanels} panels completed. Retry to continue.`;
 
             await prisma.book.update({
                 where: { id },
@@ -668,7 +713,7 @@ export async function POST(
 
             return NextResponse.json({
                 success: false,
-                status: stoppedDueToFailure ? 'stopped_on_failure' : 'timeout',
+                status: 'timeout',
                 panelsCompleted: successfulPanels,
                 panelsFailed: failedPanels,
                 panelsRemaining: targetChapters.length - totalPanels,
