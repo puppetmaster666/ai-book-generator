@@ -1979,6 +1979,22 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
                         illMap.set(ill.position || 0, ill);
                       });
 
+                      // Build carousel data (only completed panels) + a lookup
+                      // from panel number -> index into the carousel, so a
+                      // click on any panel opens the lightbox at the right spot.
+                      const completedForLightbox = (book.illustrations || [])
+                        .filter((i: Illustration) => i.status === 'completed' && i.imageUrl)
+                        .sort((a: Illustration, b: Illustration) => (a.position || 0) - (b.position || 0));
+                      const panelGridCarousel: LightboxImage[] = completedForLightbox.map((i: Illustration) => ({
+                        url: `/api/books/${id}/illustrations/${i.id}`,
+                        alt: `Panel ${i.position}`,
+                        caption: `Panel ${i.position} of ${completedForLightbox.length}`,
+                      }));
+                      const carouselIndexByPanel = new Map<number, number>();
+                      completedForLightbox.forEach((i: Illustration, idx: number) => {
+                        carouselIndexByPanel.set(i.position || 0, idx);
+                      });
+
                       return panels.map(num => {
                         const ill = illMap.get(num);
                         const isFailed = ill?.status === 'failed';
@@ -2016,7 +2032,17 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
                                 <span className="text-[10px] font-medium text-neutral-600">Unlock</span>
                               </div>
                             ) : isCompleted && ill?.imageUrl ? (
-                              <img src={ill.imageUrl} alt={`Panel ${num}`} className="w-full h-full object-cover" />
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const startIndex = carouselIndexByPanel.get(num) ?? 0;
+                                  setLightbox({ images: panelGridCarousel, startIndex });
+                                }}
+                                className="w-full h-full block cursor-pointer focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                                aria-label={`View panel ${num} full size`}
+                              >
+                                <img src={ill.imageUrl} alt={`Panel ${num}`} className="w-full h-full object-cover" />
+                              </button>
                             ) : isFailed ? (
                               <div className="w-full h-full flex flex-col items-center justify-center p-2 text-center">
                                 {isRetryingThis ? (
