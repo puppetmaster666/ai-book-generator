@@ -218,7 +218,7 @@ export async function POST(request: NextRequest) {
             },
           });
           content.push({
-            text: `REFERENCE IMAGE for "${ref.characterName}". This character MUST look IDENTICAL in this new panel: same face, same hair, same clothing, same accessories. If the reference shows no glasses, do NOT add glasses. Do NOT change their outfit. Match everything exactly.`,
+            text: `REFERENCE IMAGE for "${ref.characterName}". This character's IDENTITY must match exactly: same face, same hair, same skin tone, same glasses/no glasses as the reference. However, outfit, pose, expression, and background MUST change to match this panel's scene description. The reference is ONLY for who this person is, not for what they are wearing or doing.`,
           });
         });
       } else {
@@ -541,22 +541,25 @@ function buildIllustrationPrompt({
   // Add reference image instructions if provided
   const hasReferenceImages = !!(referenceImages && referenceImages.length > 0);
   if (hasReferenceImages) {
-    prompt += `CHARACTER REFERENCE IMAGES (HIGHEST PRIORITY):\n`;
-    prompt += `Reference images are provided below. These characters MUST look IDENTICAL in this new panel.\n`;
-    prompt += `MATCH EXACTLY:\n`;
-    prompt += `- Face, hair style, hair color, skin tone\n`;
-    prompt += `- SAME clothing/outfit as reference (do NOT change their clothes between panels)\n`;
-    prompt += `- SAME accessories: if reference shows glasses, ALWAYS include glasses. If NO glasses in reference, NEVER add glasses.\n`;
-    prompt += `- Body proportions and build\n`;
+    prompt += `CHARACTER REFERENCE IMAGES (HIGHEST PRIORITY for identity, NOT for scene):\n`;
+    prompt += `Reference images are provided below. Use them to lock character IDENTITY only.\n`;
+    prompt += `MATCH EXACTLY (identity):\n`;
+    prompt += `- Face, facial features, hair style, hair color, skin tone\n`;
+    prompt += `- Glasses/no glasses: if reference shows glasses, ALWAYS include them. If NO glasses in reference, NEVER add them.\n`;
+    prompt += `- Body proportions and build, age\n`;
     prompt += `- Art style and color palette\n`;
-    prompt += `\nDO NOT INVENT new clothing, accessories, or features not shown in the reference. The reference image is the single source of truth.\n\n`;
+    prompt += `VARY FREELY (scene-specific):\n`;
+    prompt += `- Outfit and clothing change between panels to fit the current scene unless the scene description repeats the reference outfit\n`;
+    prompt += `- Pose, gesture, facial expression change to fit the action\n`;
+    prompt += `- Camera angle, framing, and background change between panels\n`;
+    prompt += `The reference is who this person IS, not what they are wearing or doing right now.\n\n`;
   }
 
   prompt += `CRITICAL REQUIREMENTS:
 - Create a single cohesive illustration that captures the emotional essence of the scene
 - Use expressive, dynamic composition
 - MAINTAIN ABSOLUTE CONSISTENCY in character appearances across all illustrations
-${hasReferenceImages ? '- Characters with reference images must look EXACTLY like they do in the reference images (same face, hair, clothing, proportions, colors)' : '- Characters must look EXACTLY as described in the character guide'}
+${hasReferenceImages ? '- Characters with reference images must have the same identity (face, hair, proportions, colors) but outfit and pose follow the scene description' : '- Characters must look EXACTLY as described in the character guide'}
 - Use the SAME color palette and style throughout
 - The illustration should be suitable for a ${bookTitle ? `book titled "${bookTitle}"` : 'published book'}
 - Focus on visual storytelling without any text elements

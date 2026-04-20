@@ -292,13 +292,23 @@ export async function POST(
                 );
 
                 if (hasDialogue && chapter.dialogue) {
-                    const bubbles: DialogueEntry[] = chapter.dialogue.map(d => ({
-                        speaker: d.speaker,
-                        text: d.text,
-                        position: d.position as any,
-                        type: d.type as any,
-                    }));
-                    illustrationPrompt += buildSpeechBubblePrompt(bubbles, book.artStyle || undefined);
+                    // Filter out malformed dialogue entries so we never render
+                    // literal "undefined" inside a speech bubble
+                    const bubbles: DialogueEntry[] = chapter.dialogue
+                        .filter(d =>
+                            d &&
+                            typeof d.text === 'string' && d.text.trim().length > 0 &&
+                            typeof d.speaker === 'string' && d.speaker.trim().length > 0
+                        )
+                        .map(d => ({
+                            speaker: d.speaker,
+                            text: d.text,
+                            position: (d.position || 'top-left') as any,
+                            type: (d.type || 'speech') as any,
+                        }));
+                    if (bubbles.length > 0) {
+                        illustrationPrompt += buildSpeechBubblePrompt(bubbles, book.artStyle || undefined);
+                    }
 
                     // Also add narration box if page has narration text
                     if (isComicStyle && hasNarration) {
@@ -351,12 +361,29 @@ export async function POST(
                         imageData: protagonistStyled,
                     });
                     portraitCount++;
-                    // Also add the protagonist description to the prompt for extra emphasis
+                    // Identity must stay locked across panels, but outfit, pose, and
+                    // environment must vary with the scene or every panel looks identical.
+                    // Realistic art style gets extra-strict face wording to avoid
+                    // uncanny valley face drift.
                     const protagonistDesc = book.protagonistDescription as string | null;
-                    if (protagonistDesc) {
-                        illustrationPrompt += `\n\nPROTAGONIST REFERENCE (CRITICAL - EXACT MATCH REQUIRED):\n${protagonistDesc}\n\nCONSISTENCY RULES FOR "${mainCharName}" (DO NOT DEVIATE):\n- Face, hair, and skin tone must EXACTLY match the reference image\n- Clothing must be the SAME outfit as in the reference image in EVERY panel. Do NOT change their clothes.\n- If the reference does NOT show glasses, do NOT add glasses. If it shows glasses, ALWAYS include them.\n- Do NOT add or remove accessories, hats, jewelry, or any items not in the reference.\n- Body type and build must stay consistent.\n- This is based on a real person's photo. Accuracy is non-negotiable.`;
-                    }
-                    console.log(`[Visual Gen] Panel ${chapter.number}: Using protagonist photo reference for "${mainCharName}"`);
+                    const isRealisticStyle = book.artStyle === 'realistic';
+                    const identityRules = isRealisticStyle
+                        ? `IDENTITY LOCK (this is a photo of a real person, face accuracy is non-negotiable):
+- Face shape, facial features, eyes, nose, mouth, jawline MUST match the reference image pixel-perfect
+- Skin tone, hair color, hair style, hair length MUST match the reference exactly
+- Body type and build MUST stay consistent
+- If the reference shows glasses, always include them. If not, never add them.
+- Age must match the reference (do not make them younger or older)
+- This is a photorealistic style, so any face drift is immediately obvious - do not improvise features`
+                        : `IDENTITY LOCK:
+- Face, hair, skin tone must match the reference image
+- Body type and build must stay consistent
+- If the reference shows glasses, always include them. If not, never add them.`;
+                    illustrationPrompt += `\n\nPROTAGONIST REFERENCE for "${mainCharName}":\n${protagonistDesc || ''}\n\n${identityRules}\n\nSCENE VARIATION (equally important):\n- The outfit, pose, expression, camera angle, and background MUST change to match THIS panel's scene description\n- Do NOT copy the exact outfit from the reference unless the scene calls for it. Clothing changes between panels as the story moves
+- Do NOT copy the exact pose from the reference. Each panel shows a different moment
+- Render the specific environment and action described in this panel, not the reference photo's setting
+- The reference is ONLY for identity (who this person is), not for what they are wearing or doing`;
+                    console.log(`[Visual Gen] Panel ${chapter.number}: Using protagonist photo reference for "${mainCharName}"${isRealisticStyle ? ' (realistic - strict face lock)' : ''}`);
                 }
 
                 if (chapter.scene.characters && Array.isArray(chapter.scene.characters)) {
