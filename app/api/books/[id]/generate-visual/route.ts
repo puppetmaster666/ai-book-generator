@@ -405,12 +405,14 @@ export async function POST(
 - Age must match the reference (do not make them younger or older)
 - This is a photorealistic style, so any face drift is immediately obvious - do not improvise features`
                         : `IDENTITY LOCK (character must look like the same person as all other panels):
-- Face shape, facial features, eyes, nose, mouth, jawline MUST match the reference image
+- Face shape, facial features, eyes, nose, mouth, LIPS, jawline MUST match the reference image. The face must remain RECOGNIZABLE as the real person.
 - Skin tone MUST match the reference exactly. Do NOT lighten, darken, or change ethnicity between panels.
 - Hair color, hair style, hair length, facial hair MUST match the reference
 - Body type and build MUST stay consistent (do not make them fatter, thinner, taller, or shorter between panels)
 - Age must match the reference
-- If the reference shows glasses, always include them. If not, never add them.`;
+- If the reference shows glasses, always include them. If not, never add them.
+- NO face distortion, NO plastic-surgery look, NO inflated lips, NO altered nose shape, NO stretched or squashed features unless the scene description EXPLICITLY says the character's face is being transformed (e.g. "his lips swell after the botched filler injection"). If the scene is a normal moment, the face must look normal.
+- Expressive emotions (anger, fear, smugness) are allowed through eyebrows, mouth corners, and eyes — NOT through warping the face geometry.`;
                     illustrationPrompt += `\n\nPROTAGONIST REFERENCE for "${mainCharName}":\n${protagonistDesc || ''}\n\n${identityRules}\n\nSCENE VARIATION (equally important):\n- The outfit, pose, expression, camera angle, and background MUST change to match THIS panel's scene description\n- Do NOT copy the exact outfit from the reference unless the scene calls for it. Clothing changes between panels as the story moves
 - Do NOT copy the exact pose from the reference. Each panel shows a different moment
 - Render the specific environment and action described in this panel, not the reference photo's setting

@@ -336,11 +336,12 @@ Every page must look like it belongs in the SAME book. Same line weight, same co
 === MATURE VISUAL STYLE ===
 This is an ADULT comic. Make the visuals match the mature tone:
 - ATMOSPHERE: Dark, gritty, moody lighting. Shadows and noir aesthetics.
-- EXPRESSIONS: Characters should show intense emotions - anger, desire, fear, lust, cynicism
+- EXPRESSIONS: Characters should show intense emotions - anger, desire, fear, lust, cynicism. Convey intensity through eyebrows, mouth corners, and eye narrowing — NOT by warping face geometry, inflating lips, or distorting features.
 - BODY LANGUAGE: Sensual poses where appropriate, aggressive stances, intimate proximity between characters
 - ROMANCE SCENES: Show physical attraction openly - characters close together, touching, kissing, suggestive poses
 - VIOLENCE SCENES: Show the aftermath - blood splatters, injuries, weapons, menacing poses
 - OVERALL: This should look like an adult graphic novel, NOT a children's book. Make it feel mature and edgy.
+- FACE INTEGRITY: Faces must remain anatomically normal and recognizable as the reference person. Only distort a face if the scene description EXPLICITLY narrates a physical transformation (plastic surgery, accident, spell, etc.). Otherwise keep face features at normal human proportions.
 === END MATURE STYLE ===
 
 `;
