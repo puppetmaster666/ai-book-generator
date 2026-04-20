@@ -2415,7 +2415,10 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
 
               {/* Horizontal panel carousel — for illustrated books. Click any
                   thumbnail to open the full lightbox carousel. */}
-              {isIllustrated && book.illustrations && dedupeIllustrationsByPosition(book.illustrations).filter(i => i.status === 'completed').length > 0 && (() => {
+              {/* Don't render the carousel strip if the admin panel picker
+                  (shown only to admins on completed roasts) is already
+                  showing the same panels above this section */}
+              {isIllustrated && book.illustrations && dedupeIllustrationsByPosition(book.illustrations).filter(i => i.status === 'completed').length > 0 && !(isAdminUser && book.bookPreset === 'roast_comic') && (() => {
                 const completed = dedupeIllustrationsByPosition(book.illustrations).filter(i => i.status === 'completed');
                 const carouselImages: LightboxImage[] = completed.map(i => ({
                   url: `/api/books/${id}/illustrations/${i.id}`,
