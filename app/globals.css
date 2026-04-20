@@ -327,6 +327,14 @@ a, button {
   animation: roastSpin 20s linear infinite;
 }
 
+/* Full-section variant — slower, for the homepage roast showcase backdrop */
+.roast-section-rays {
+  position: absolute;
+  inset: -50%;
+  background: repeating-conic-gradient(from 0deg, #facc15 0deg 15deg, #a3e635 15deg 30deg);
+  animation: roastSpin 60s linear infinite;
+}
+
 @keyframes roastSpin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
