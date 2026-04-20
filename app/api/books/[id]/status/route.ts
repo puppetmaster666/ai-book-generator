@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
+import { auth } from '@/lib/auth';
 
 /**
  * Lightweight status endpoint for polling during book generation.
@@ -26,12 +27,17 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
     const { id } = await params;
 
     const book = await prisma.book.findUnique({
       where: { id },
       select: {
         id: true,
+        userId: true,
         status: true,
         paymentStatus: true,
         currentChapter: true,
@@ -67,6 +73,11 @@ export async function GET(
         { error: 'Book not found' },
         { status: 404 }
       );
+    }
+
+    // Block access if book belongs to a different user
+    if (book.userId && book.userId !== session.user.id) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     // Check for stale generation

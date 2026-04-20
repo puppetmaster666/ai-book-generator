@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
+import { auth } from '@/lib/auth';
 
 /**
  * GET - List all failed illustrations for a book
@@ -10,16 +11,24 @@ export async function GET(
     request: NextRequest,
     { params }: { params: Promise<{ id: string }> }
 ) {
+    const session = await auth();
+    if (!session?.user?.id) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
     const { id: bookId } = await params;
 
     try {
         const book = await prisma.book.findUnique({
             where: { id: bookId },
-            select: { id: true, title: true },
+            select: { id: true, title: true, userId: true },
         });
 
         if (!book) {
             return NextResponse.json({ error: 'Book not found' }, { status: 404 });
+        }
+
+        if (book.userId && book.userId !== session.user.id) {
+            return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
         }
 
         const failedIllustrations = await prisma.illustration.findMany({

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
+import { auth } from '@/lib/auth';
 
 /**
  * GET /api/books/[id]/live-preview
@@ -10,12 +11,17 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
   const { id } = await params;
 
   try {
     const book = await prisma.book.findUnique({
       where: { id },
       select: {
+        userId: true,
         livePreview: true,
         status: true,
         currentChapter: true,
@@ -25,6 +31,10 @@ export async function GET(
 
     if (!book) {
       return NextResponse.json({ error: 'Book not found' }, { status: 404 });
+    }
+
+    if (book.userId && book.userId !== session.user.id) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     return NextResponse.json({

@@ -6,6 +6,10 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
     const { id } = await params;
     const book = await prisma.book.findUnique({
       where: { id },
@@ -50,6 +54,10 @@ export async function GET(
         { status: 404 }
       );
     }
+    // Block access if book belongs to a different user
+    if (book.userId && book.userId !== session.user.id) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
     // Check if user is eligible for free book or has credits
     // IMPORTANT: Check the SESSION user's credits, not just book.userId
     // This handles the case where a logged-in user is viewing an unclaimed book
@@ -60,9 +68,7 @@ export async function GET(
     let userCredits = 0;
     let userPlan = 'free';
     let isFirstCompletedBook = false;
-    // Get the session user (the person viewing the page)
-    const session = await auth();
-    const sessionUserId = session?.user?.id;
+    const sessionUserId = session.user.id;
     // Determine which user to check for credits:
     // - If book has an owner and viewer is the owner, use owner's credits
     // - If book has no owner but viewer is logged in, use viewer's credits (they can claim it)

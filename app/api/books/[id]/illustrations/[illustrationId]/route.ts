@@ -1,21 +1,30 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
+import { auth } from '@/lib/auth';
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string; illustrationId: string }> }
 ) {
   try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
     const { id, illustrationId } = await params;
 
-    // Verify the book exists
+    // Verify the book exists and check ownership
     const book = await prisma.book.findUnique({
       where: { id },
-      select: { id: true },
+      select: { id: true, userId: true },
     });
 
     if (!book) {
       return NextResponse.json({ error: 'Book not found' }, { status: 404 });
+    }
+
+    if (book.userId && book.userId !== session.user.id) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     // Get the illustration (check both direct bookId and chapter.bookId)

@@ -1,5 +1,6 @@
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
+import { auth } from '@/lib/auth';
 import { streamContent, getGeminiPro, markKeyAsWorking, switchToLastWorkingKey } from '@/lib/generation/shared/api-client';
 import {
   ContentRating,
@@ -33,6 +34,10 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
   const { id } = await params;
 
   // Create a readable stream for SSE
