@@ -462,6 +462,7 @@ export async function POST(
                     setting: chapter.scene.background,
                     bookFormat: bookFormat,
                     bookPreset: book.bookPreset || undefined,
+                    bookId: book.id,
                     characterVisualGuide: characterVisualGuide,
                     visualStyleGuide: visualStyleGuide,
                     referenceImages: referenceImages.length > 0 ? referenceImages : undefined,

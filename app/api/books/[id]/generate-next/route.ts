@@ -1259,7 +1259,7 @@ async function finalizeBook(id: string, book: {
         authorName: book.authorName,
       });
 
-      const coverImageUrl = await generateCoverImage(coverPrompt);
+      const coverImageUrl = await generateCoverImage(coverPrompt, id);
 
       if (coverImageUrl) {
         await prisma.book.update({

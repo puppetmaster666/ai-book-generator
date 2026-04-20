@@ -125,6 +125,7 @@ export async function POST(request: NextRequest) {
       visualStyleGuide,
       bookFormat,
       bookPreset,
+      bookId,
       referenceImages, // Array of { characterName: string, imageData: string (base64) }
     } = await request.json();
 
@@ -225,6 +226,12 @@ export async function POST(request: NextRequest) {
         content.push({ text: currentPrompt });
       }
 
+      // Count this as a billable image call regardless of outcome (Google
+      // charges even for safety-blocked or empty responses)
+      if (bookId) {
+        const { bumpImageApiCount } = await import('@/lib/system-status');
+        bumpImageApiCount(bookId).catch(() => {});
+      }
       const result = await model.generateContent(content);
       const response = result.response;
 

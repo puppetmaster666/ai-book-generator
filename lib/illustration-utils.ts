@@ -135,6 +135,7 @@ export async function attemptIllustrationGeneration(data: {
     visualStyleGuide?: VisualStyleGuide;
     bookFormat?: string;
     bookPreset?: string;
+    bookId?: string;
     referenceImages?: CharacterReferenceImage[];
 }): Promise<IllustrationAttemptResult> {
     try {
@@ -162,6 +163,7 @@ export async function attemptIllustrationGeneration(data: {
                     visualStyleGuide: data.visualStyleGuide,
                     bookFormat: data.bookFormat,
                     bookPreset: data.bookPreset,
+                    bookId: data.bookId,
                     referenceImages: data.referenceImages, // Pass reference images for character consistency
                 }),
                 signal: controller.signal,
@@ -256,6 +258,7 @@ export async function generateIllustrationWithRetry(data: {
     visualStyleGuide?: VisualStyleGuide;
     bookFormat?: string;
     bookPreset?: string;
+    bookId?: string;
     referenceImages?: CharacterReferenceImage[];
 }): Promise<{ imageUrl: string; altText: string; width: number; height: number } | null> {
     let currentScene = data.scene;
@@ -373,6 +376,7 @@ export async function generateAndValidateIllustration(data: {
     visualStyleGuide?: VisualStyleGuide;
     bookFormat?: string;
     bookPreset?: string;
+    bookId?: string;
     referenceImages?: CharacterReferenceImage[];
     expectedText?: string | null;
 }): Promise<{ imageUrl: string; altText: string; width: number; height: number } | null> {
@@ -381,7 +385,12 @@ export async function generateAndValidateIllustration(data: {
         scene += `\n\nMANDATORY: This image MUST contain clearly readable text. An image without visible text will be rejected. The text is as important as the illustration.`;
     }
 
-    const MAX_TEXT_RETRIES = 2;
+    // Roasts skip text-validation retries entirely. Each retry is another
+    // image API call ($$$) and the regenerated panel often drifts in style
+    // compared to its neighbours, which is worse than a slightly empty
+    // bubble. For other visual books, keep at most one retry.
+    const isRoast = data.bookPreset === 'roast_comic';
+    const MAX_TEXT_RETRIES = isRoast ? 0 : 1;
 
     for (let textAttempt = 0; textAttempt <= MAX_TEXT_RETRIES; textAttempt++) {
         const currentScene = textAttempt === 0

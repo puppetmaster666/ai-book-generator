@@ -1867,7 +1867,7 @@ export async function POST(
 
     let coverImageUrl: string | null = null;
     try {
-      coverImageUrl = await generateCoverImage(coverPrompt);
+      coverImageUrl = await generateCoverImage(coverPrompt, id);
     } catch (error) {
       console.error('Failed to generate cover:', error);
       // Continue without cover

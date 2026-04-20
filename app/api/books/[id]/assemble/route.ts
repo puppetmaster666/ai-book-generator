@@ -128,7 +128,7 @@ export async function POST(
         characterVisualGuide: characterVisualGuide || undefined,
         visualStyleGuide: visualStyleGuide || undefined,
       });
-      coverImageUrl = await generateCoverImage(coverPrompt);
+      coverImageUrl = await generateCoverImage(coverPrompt, id);
     } catch (error) {
       console.error('Failed to generate cover (continuing without):', error instanceof Error ? error.message : error);
       // Continue without cover — the book is still complete

@@ -225,7 +225,7 @@ Output ONLY the image generation prompt, nothing else.`;
   return result.response.text();
 }
 
-export async function generateCoverImage(coverPrompt: string): Promise<string> {
+export async function generateCoverImage(coverPrompt: string, bookId?: string): Promise<string> {
   const maxRetries = 3;
 
   for (let attempt = 0; attempt < maxRetries; attempt++) {
@@ -250,6 +250,10 @@ export async function generateCoverImage(coverPrompt: string): Promise<string> {
       const fullPrompt = `Professional book cover, high quality, 1600x2560 aspect ratio, suitable for Amazon KDP, family-friendly. ${sanitizedPrompt}`;
 
       const result = await withRetry(async () => {
+        if (bookId) {
+          const { bumpImageApiCount } = await import('@/lib/system-status');
+          bumpImageApiCount(bookId).catch(() => {});
+        }
         return await getGeminiImage().generateContent(fullPrompt);
       });
 

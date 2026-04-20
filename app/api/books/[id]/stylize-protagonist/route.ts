@@ -167,6 +167,9 @@ DO NOT include any text, words, or labels in the image.`;
 
       try {
         const result = await withRetry(async () => {
+          // Track each API call for cost visibility
+          const { bumpImageApiCount } = await import('@/lib/system-status');
+          bumpImageApiCount(book.id).catch(() => {});
           return await model.generateContent([
             { inlineData: { mimeType: img.mimeType || 'image/jpeg', data: img.imageBase64 } },
             stylizePrompt,

@@ -59,6 +59,7 @@ interface Book {
   dialogueStyle: string | null;
   bookPreset: string | null;
   userId: string | null;
+  imageApiCallCount?: number;
   errorMessage?: string | null;
   premise?: string | null;
   region?: string | null;
@@ -2246,7 +2247,7 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
                 <h2 className="text-2xl font-bold text-neutral-900 mb-2">Your Preview is Ready!</h2>
                 <p className="text-neutral-600">
                   {isIllustrated
-                    ? `${book.illustrations?.length || 0} of ${book.totalChapters || 20} panels generated`
+                    ? `${Math.min(book.illustrations?.filter((i: Illustration) => i.status === 'completed' || (!i.status && i.imageUrl)).length || 0, book.totalChapters || 20)} of ${book.totalChapters || 20} panels generated`
                     : isScreenplay
                       ? `${book.chapters.length} of ${book.totalChapters} sequences generated`
                       : `${book.chapters.length} of ${book.totalChapters} chapters generated`
@@ -2258,14 +2259,16 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
               <div className="grid grid-cols-2 gap-4 mb-6">
                 <div className="bg-neutral-900 rounded-xl p-4 text-center">
                   <p className="text-2xl font-bold text-white">
-                    {isIllustrated ? (book.illustrations?.length || 0) : book.chapters.length}
+                    {isIllustrated
+                      ? Math.min(book.illustrations?.filter((i: Illustration) => i.status === 'completed' || (!i.status && i.imageUrl)).length || 0, book.totalChapters || 20)
+                      : book.chapters.length}
                   </p>
                   <p className="text-sm text-neutral-300">Free Preview</p>
                 </div>
                 <div className="bg-neutral-50 rounded-xl p-4 text-center border border-neutral-100">
                   <p className="text-2xl font-bold text-neutral-400">
                     {isIllustrated
-                      ? (book.totalChapters || 20) - (book.illustrations?.length || 0)
+                      ? Math.max(0, (book.totalChapters || 20) - (book.illustrations?.filter((i: Illustration) => i.status === 'completed' || (!i.status && i.imageUrl)).length || 0))
                       : book.totalChapters - book.chapters.length
                     }
                   </p>
@@ -2287,14 +2290,22 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
               star individual panels to feature on the homepage sample section */}
           {isAdminUser && book.status === 'completed' && isIllustrated && book.bookPreset === 'roast_comic' && (book.illustrations?.length || 0) > 0 && (
             <div className="bg-yellow-50 border border-yellow-200 rounded-2xl p-6 mb-6">
-              <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center justify-between mb-3 gap-3 flex-wrap">
                 <div>
                   <p className="text-xs uppercase tracking-wide text-yellow-700 font-semibold">Admin</p>
                   <p className="text-sm font-medium text-yellow-900">Feature roast panels on homepage</p>
                 </div>
-                <p className="text-xs text-yellow-700">
-                  {book.illustrations?.filter(i => i.isFeaturedRoastPanel).length || 0} featured
-                </p>
+                <div className="text-xs text-yellow-800 text-right space-y-0.5">
+                  <p>{book.illustrations?.filter(i => i.isFeaturedRoastPanel).length || 0} featured</p>
+                  {typeof book.imageApiCallCount === 'number' && (
+                    <p className="font-mono">
+                      {book.imageApiCallCount} image API calls
+                      <span className="text-yellow-600 ml-1">
+                        (~${(book.imageApiCallCount * 0.067).toFixed(2)} est.)
+                      </span>
+                    </p>
+                  )}
+                </div>
               </div>
               <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
                 {(() => {

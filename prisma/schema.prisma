@@ -125,6 +125,7 @@ model Book {
   samplePdfUrl           String?
   livePreview            String?
   generationMode         String         @default("client") // "client" | "server"
+  imageApiCallCount      Int            @default(0)  // total image API calls made for this book (panels + cover + stylize + retries) for cost tracking
   user                   User?          @relation(fields: [userId], references: [id])
   chapters               Chapter[]
   illustrations          Illustration[]

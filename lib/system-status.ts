@@ -55,6 +55,22 @@ export async function getImageRateLimitStatus(): Promise<{
   };
 }
 
+// Atomically increment the image API call counter on a book. Called from
+// every code path that hits a Gemini image endpoint (panels, cover,
+// stylize, retries included) so admins can see true COGS per book.
+export async function bumpImageApiCount(bookId: string | undefined | null, delta = 1) {
+  if (!bookId) return;
+  try {
+    await prisma.book.update({
+      where: { id: bookId },
+      data: { imageApiCallCount: { increment: delta } },
+    });
+  } catch (err) {
+    // Non-fatal — we never want cost tracking to break generation
+    console.warn('[bumpImageApiCount] failed:', err instanceof Error ? err.message : err);
+  }
+}
+
 // Heuristic for classifying an error as a rate-limit / quota exhaustion
 export function isRateLimitError(err: unknown): boolean {
   const msg = (err instanceof Error ? err.message : String(err || '')).toLowerCase();
