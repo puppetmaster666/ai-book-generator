@@ -211,6 +211,7 @@ async function planScenes(
     targetChapters: number;
     characters: ComicCharacter[];
     contentRating?: ContentRating;
+    bookPreset?: string;
     characterVisualGuide?: {
       characters: Array<{
         name: string;
@@ -223,6 +224,7 @@ async function planScenes(
 ): Promise<ScenePlan> {
   const contentGuidelines = getContentRatingInstructions(bookData.contentRating || 'general');
   const languageInstruction = detectLanguageInstruction(bookData.title);
+  const isRoast = bookData.bookPreset === 'roast_comic';
 
   // Build character visual reference
   const characterRef = bookData.characterVisualGuide
@@ -261,14 +263,19 @@ FIRST AND LAST PAGE RULES (CRITICAL):
    - Narration bridges scenes: "Meanwhile, across town...", "By the time they arrived, it was too late."
    - Narration adds emotional depth: "He wanted to say something. Anything. But the words wouldn't come."
    - Keep narration to 1-2 sentences per page (concise but meaningful)
-   - Pages with NO dialogue MUST have narration — never leave a page with only SFX
+   - Pages with NO dialogue MUST have narration — never leave a page with only SFX${isRoast ? `
+   - THIS IS A ROAST COMIC. The narrator must be MEAN and SARCASTIC — like a friend who knows all the target's embarrassing secrets and is telling them to a crowd
+   - Example roast narration: "Meanwhile, John continued the delusion that anyone had actually invited him to this party."
+   - Example roast narration: "It was at this exact moment that every single one of his friends realized they didn't like him."
+   - Every narration line should twist the knife. No neutral "And then..." narration allowed
+   - The roast lives in the narration AS MUCH AS in the dialogue. Make every sentence count` : ''}
 2. **dialogue**: Extract the dialogue from the script for this page. Assign bubble positions.
 3. **scene**: Full visual direction for the artist
 4. **panelLayout**: How to divide the page
 
 DIALOGUE RULES:
 - Pull dialogue DIRECTLY from the script - do NOT rewrite or invent new lines
-- Max 4 speech bubbles per page
+- Max ${isRoast ? '3' : '4'} speech bubbles per page${isRoast ? ' (keep panels readable; roast panels cram narration and bubbles together)' : ''}
 - If a page has more dialogue in the script, split across pages or cut the weakest lines
 - Position bubbles logically: speakers on the left get left positions, right get right
 - Reading order: top-to-bottom, left-to-right
@@ -472,6 +479,7 @@ export async function generateComicOutline(bookData: {
   targetChapters: number;
   dialogueStyle: 'prose' | 'bubbles';
   contentRating?: ContentRating;
+  bookPreset?: string;
   previewOnly?: boolean; // Phase 1: quick 5-panel outline for free preview
   characterVisualGuide?: {
     characters: Array<{
@@ -518,12 +526,15 @@ export async function generateComicOutline(bookData: {
   console.log('[ComicPipeline] Step 2: DIRECTOR - Planning scenes and visual direction...');
   const step2Start = Date.now();
 
+  const isRoast = bookData.bookPreset === 'roast_comic';
+
   const scenePlan = await planScenes(script, {
     title: bookData.title,
     genre: bookData.genre,
     targetChapters: targetPanels,
     characters: bookData.characters,
     contentRating: bookData.contentRating,
+    bookPreset: bookData.bookPreset,
     characterVisualGuide: bookData.characterVisualGuide,
   });
 
@@ -534,10 +545,14 @@ export async function generateComicOutline(bookData: {
     throw new Error('Scene planning produced no pages');
   }
 
-  // ── Step 3: EDITOR (skip for preview - speed matters) ──
+  // ── Step 3: EDITOR (skip for preview, skip for roasts to save ~$0.20 and ~20s) ──
   let finalPlan = scenePlan;
 
-  if (!bookData.previewOnly) {
+  if (bookData.previewOnly) {
+    console.log('[ComicPipeline] Step 3: EDITOR skipped (preview mode)');
+  } else if (isRoast) {
+    console.log('[ComicPipeline] Step 3: EDITOR skipped (roast — tight margin, director output trusted)');
+  } else {
     const elapsedSoFar = Date.now() - pipelineStart;
     if (elapsedSoFar < 120000) {
       console.log('[ComicPipeline] Step 3: EDITOR - Quality review pass...');
@@ -555,8 +570,6 @@ export async function generateComicOutline(bookData: {
     } else {
       console.log(`[ComicPipeline] Step 3: EDITOR skipped (${(elapsedSoFar / 1000).toFixed(0)}s elapsed)`);
     }
-  } else {
-    console.log('[ComicPipeline] Step 3: EDITOR skipped (preview mode)');
   }
 
   // ── Validate scene data ──
@@ -589,4 +602,93 @@ export async function generateComicOutline(bookData: {
   console.log(`[ComicPipeline] Pipeline complete in ${totalTime}ms (${(totalTime / 1000).toFixed(1)}s) - ${finalPlan.chapters.length} pages`);
 
   return finalPlan;
+}
+
+// ============================================================================
+// Extend a short outline with proper escalation + finale panels.
+// Called when the Director returns fewer panels than requested. Beats cloning
+// the last panel, which was causing identical-looking ending panels.
+// ============================================================================
+
+export async function extendComicOutline(
+  existing: VisualChapter[],
+  missingCount: number,
+  bookData: {
+    title: string;
+    characters: { name: string; description: string }[];
+    targetChapters: number;
+    bookPreset?: string;
+    contentRating?: ContentRating;
+  }
+): Promise<VisualChapter[]> {
+  if (missingCount <= 0) return [];
+
+  const isRoast = bookData.bookPreset === 'roast_comic';
+  const startNumber = existing.length + 1;
+  const endNumber = existing.length + missingCount;
+
+  const storySoFar = existing.map(ch =>
+    `PAGE ${ch.number} [${ch.panelLayout || 'splash'}]: ${ch.scene?.description || ch.summary || ''}${ch.text ? ` | Narration: "${ch.text}"` : ''}`
+  ).join('\n');
+
+  const contentGuidelines = getContentRatingInstructions(bookData.contentRating || 'general');
+
+  const prompt = `You are a comic book director. A story was planned but came up ${missingCount} page(s) short of the required ${bookData.targetChapters} pages. You need to write the missing page(s) so the story ends properly.
+
+${contentGuidelines}
+
+STORY SO FAR (${existing.length} pages):
+${storySoFar}
+
+CHARACTERS: ${bookData.characters.map(c => `${c.name}: ${c.description}`).join(' | ')}
+
+YOUR TASK: Write pages ${startNumber} through ${endNumber} (${missingCount} new page${missingCount > 1 ? 's' : ''}).${missingCount >= 2 ? `
+- Page ${startNumber}: ESCALATION — raise the stakes, introduce a new embarrassing moment or twist
+- Page ${endNumber}: FINAL PUNCHLINE — the devastating last word, the most brutal moment, the perfect ending` : `
+- Page ${startNumber}: FINAL PUNCHLINE — the devastating last word, the perfect ending`}
+
+CRITICAL: Each new page must be visually and narratively DIFFERENT from all pages above. Different location, different moment, different action. Do NOT repeat existing scene descriptions.${isRoast ? `
+
+ROAST TONE: The narration must be MEAN and SARCASTIC. The finale should be the most humiliating moment in the whole book.` : ''}
+
+Output ONLY valid JSON:
+{
+  "chapters": [
+    {
+      "number": ${startNumber},
+      "title": "Page title",
+      "text": "Narration text (1-2 sentences)",
+      "summary": "What happens on this page",
+      "panelLayout": "splash",
+      "dialogue": [{"speaker": "Name", "text": "Line", "position": "top-left", "type": "speech"}],
+      "scene": {
+        "location": "specific place",
+        "description": "30-50 word visual description",
+        "characters": ["Name"],
+        "characterActions": {"Name": "physical pose/expression"},
+        "background": "environment details",
+        "mood": "emotional tone",
+        "cameraAngle": "shot type"
+      }
+    }
+  ]
+}`;
+
+  try {
+    const result = await getGeminiFlash().generateContent(prompt);
+    const responseText = result.response.text();
+    const parsed = parseJSONFromResponse(responseText) as { chapters?: VisualChapter[] };
+
+    if (parsed?.chapters && Array.isArray(parsed.chapters) && parsed.chapters.length > 0) {
+      // Renumber to be safe
+      return parsed.chapters.slice(0, missingCount).map((ch, i) => ({
+        ...ch,
+        number: startNumber + i,
+      }));
+    }
+  } catch (err) {
+    console.warn('[ComicPipeline] Outline extension failed, caller will fall back:', err);
+  }
+
+  return [];
 }

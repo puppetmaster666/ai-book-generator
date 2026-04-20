@@ -6,6 +6,7 @@ import {
   generateNonFictionOutline,
   generateIllustratedOutline,
   generateComicOutline,
+  extendComicOutline,
   generatePictureBookOutline,
   buildIllustrationPromptFromScene,
   buildPictureBookTextPrompt,
@@ -1001,6 +1002,7 @@ export async function POST(
                   targetChapters: targetPanelCount,
                   dialogueStyle: dialogueStyle,
                   contentRating: (book.contentRating || 'general') as ContentRating,
+                  bookPreset: book.bookPreset || undefined,
                   previewOnly: !isPaid,
                   characterVisualGuide: book.characterVisualGuide as {
                     characters: Array<{
@@ -1074,35 +1076,38 @@ export async function POST(
             console.log(`Trimming ${generatedCount - targetPanelCount} excess panels`);
             outline.chapters = outline.chapters.slice(0, targetPanelCount);
           } else if (generatedCount < targetPanelCount) {
-            // AI generated too few panels - extend the story
-            console.log(`Adding ${targetPanelCount - generatedCount} missing panels to reach target`);
-            const lastChapter = outline.chapters[outline.chapters.length - 1];
-            const lastScene = lastChapter.scene || {
-              location: 'continuation',
-              description: 'The story continues',
-              characters: [],
-              characterActions: {},
-              background: 'same setting',
-              mood: 'continuation',
-              cameraAngle: 'medium shot',
-            };
-            for (let i = generatedCount + 1; i <= targetPanelCount; i++) {
-              // Clone last chapter structure with incremented number
-              outline.chapters.push({
-                ...lastChapter,
-                number: i,
-                title: `Page ${i}`,
-                text: lastChapter.text || 'The story continues...',
-                scene: {
-                  location: lastScene.location || 'same location',
-                  description: `Continuation of the story - Panel ${i}`,
-                  characters: lastScene.characters || [],
-                  characterActions: lastScene.characterActions || {},
-                  background: lastScene.background || 'continuation',
-                  mood: lastScene.mood || 'same',
-                  cameraAngle: lastScene.cameraAngle || 'medium shot',
-                },
-              });
+            // AI generated too few panels — ask the Director for proper continuation
+            // panels instead of cloning the last one (which caused identical endings)
+            const missingCount = targetPanelCount - generatedCount;
+            console.log(`Adding ${missingCount} missing panels via extension call`);
+
+            const extensions = await extendComicOutline(
+              outline.chapters as unknown as VisualChapter[],
+              missingCount,
+              {
+                title: book.title,
+                characters: book.characters as { name: string; description: string }[],
+                targetChapters: targetPanelCount,
+                bookPreset: book.bookPreset || undefined,
+                contentRating: (book.contentRating || 'general') as ContentRating,
+              }
+            );
+
+            if (extensions.length === missingCount) {
+              outline.chapters.push(...(extensions as typeof outline.chapters));
+            } else {
+              // Extension failed; fall back to clone-and-flag (old behavior) so we
+              // don't block the whole generation, but warn loudly so this is visible
+              console.warn(`Extension returned ${extensions.length}/${missingCount} panels — falling back to panel clone for remainder`);
+              outline.chapters.push(...(extensions as typeof outline.chapters));
+              const lastChapter = outline.chapters[outline.chapters.length - 1];
+              for (let i = outline.chapters.length + 1; i <= targetPanelCount; i++) {
+                outline.chapters.push({
+                  ...lastChapter,
+                  number: i,
+                  title: `Page ${i}`,
+                });
+              }
             }
           }
         }
