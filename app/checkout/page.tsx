@@ -7,8 +7,30 @@ import Header from '@/components/Header';
 import ToastModal from '@/components/ToastModal';
 import Link from 'next/link';
 import { Check, CreditCard, Loader2, Tag, X, Gift, ArrowRight, User } from 'lucide-react';
-import { PRICING } from '@/lib/constants';
+import { PRICING, CREDIT_PACKS } from '@/lib/constants';
 import { trackBeginCheckout } from '@/lib/gtag';
+
+type PlanInfo = {
+  price: number;
+  label: string;
+  description: string;
+  isSubscription: boolean;
+  interval?: 'month' | 'year';
+};
+
+const PLAN_TO_INFO: Record<string, PlanInfo> = {
+  starter_monthly: { price: PRICING.STARTER_MONTHLY.price, label: 'Starter Plan', description: '600 credits per month, rollover included', isSubscription: true, interval: 'month' },
+  starter_yearly: { price: PRICING.STARTER_YEARLY.price, label: 'Starter Plan (Yearly)', description: '7,200 credits per year, rollover included', isSubscription: true, interval: 'year' },
+  author_monthly: { price: PRICING.AUTHOR_MONTHLY.price, label: 'Author Plan', description: '1,500 credits per month, rollover included', isSubscription: true, interval: 'month' },
+  author_yearly: { price: PRICING.AUTHOR_YEARLY.price, label: 'Author Plan (Yearly)', description: '18,000 credits per year, rollover included', isSubscription: true, interval: 'year' },
+  pro_monthly: { price: PRICING.PRO_MONTHLY.price, label: 'Pro Plan', description: '4,000 credits per month, rollover included', isSubscription: true, interval: 'month' },
+  pro_yearly: { price: PRICING.PRO_YEARLY.price, label: 'Pro Plan (Yearly)', description: '48,000 credits per year, rollover included', isSubscription: true, interval: 'year' },
+  monthly: { price: PRICING.MONTHLY.price, label: 'Author Plan', description: '5 novels per month with priority generation', isSubscription: true, interval: 'month' },
+  yearly: { price: PRICING.YEARLY.price, label: 'Author Plan (Yearly)', description: '50 novel credits to use anytime', isSubscription: true, interval: 'year' },
+  credit_single: { price: CREDIT_PACKS.single.price, label: CREDIT_PACKS.single.label, description: `${CREDIT_PACKS.single.credits.toLocaleString()} credits, no expiry`, isSubscription: false },
+  credit_five: { price: CREDIT_PACKS.five_pack.price, label: CREDIT_PACKS.five_pack.label, description: `${CREDIT_PACKS.five_pack.credits.toLocaleString()} credits, no expiry`, isSubscription: false },
+  credit_ten: { price: CREDIT_PACKS.ten_pack.price, label: CREDIT_PACKS.ten_pack.label, description: `${CREDIT_PACKS.ten_pack.credits.toLocaleString()} credits, no expiry`, isSubscription: false },
+};
 
 interface BookDetails {
   title: string;
@@ -24,7 +46,9 @@ function CheckoutContent() {
   const { data: session, status: sessionStatus } = useSession();
   const bookId = searchParams.get('bookId');
   const urlPromoCode = searchParams.get('promo');
-  const planType = searchParams.get('plan'); // 'monthly' or 'yearly'
+  const planType = searchParams.get('plan');
+  const planInfo: PlanInfo | null = planType ? PLAN_TO_INFO[planType] ?? null : null;
+  const isPlanCheckout = !!planInfo;
 
   // Check if user is anonymous (not logged in)
   const isAnonymous = sessionStatus !== 'loading' && !session;
@@ -38,7 +62,7 @@ function CheckoutContent() {
   const [isLoadingBook, setIsLoadingBook] = useState(true);
 
   // Determine if this is a subscription checkout
-  const isSubscription = planType === 'monthly' || planType === 'yearly';
+  const isSubscription = !!planInfo?.isSubscription;
 
   // Promo code state
   const [promoCode, setPromoCode] = useState(urlPromoCode || '');
@@ -47,9 +71,9 @@ function CheckoutContent() {
   const [isValidatingPromo, setIsValidatingPromo] = useState(false);
   const [toast, setToast] = useState<{ title: string; message: string; type: 'error' | 'success' | 'info' | 'warning' } | null>(null);
 
-  // Fetch book details (only for book purchases, not subscriptions)
+  // Fetch book details (only for single-book purchases, not plan/credit-pack checkouts)
   useEffect(() => {
-    if (isSubscription) {
+    if (isPlanCheckout) {
       setIsLoadingBook(false);
       return;
     }
@@ -68,7 +92,7 @@ function CheckoutContent() {
     } else {
       setIsLoadingBook(false);
     }
-  }, [bookId, isSubscription]);
+  }, [bookId, isPlanCheckout]);
 
   // Auto-fill email from session if user is logged in
   useEffect(() => {
@@ -169,9 +193,9 @@ function CheckoutContent() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          bookId: isSubscription ? undefined : bookId,
+          bookId: isPlanCheckout ? undefined : bookId,
           email,
-          productType: isSubscription ? planType : 'one-time',
+          productType: isPlanCheckout ? planType : 'one-time',
           applyDiscount: !promoDiscount && applyDiscount,
           promoCode: promoDiscount ? promoCode : undefined,
         }),
@@ -191,25 +215,23 @@ function CheckoutContent() {
 
   // Get price based on product type
   const getBasePrice = () => {
-    if (isSubscription) {
-      return PRICING.MONTHLY.price; // Only monthly subscription available now
-    }
+    if (planInfo) return planInfo.price;
     if (!bookDetails) return PRICING.ONE_TIME.price;
     if (bookDetails.bookFormat === 'picture_book') return PRICING.VISUAL.price;
     return PRICING.ONE_TIME.price;
   };
 
   const getProductLabel = () => {
-    if (isSubscription) {
-      return 'Author Plan';
-    }
-    if (!bookDetails) return 'AI Book Generation';
+    if (planInfo) return planInfo.label;
+    if (!bookDetails) return 'Book Generation';
     if (bookDetails.bookFormat === 'picture_book') return 'Visual Book';
     return 'Novel';
   };
 
   const getPriceLabel = () => {
-    if (planType === 'monthly') return '/month';
+    if (planInfo?.isSubscription) {
+      return planInfo.interval === 'year' ? '/year' : '/month';
+    }
     return '';
   };
 
@@ -258,26 +280,24 @@ function CheckoutContent() {
           </div>
 
           <div className="bg-white rounded-2xl border border-neutral-200 p-8">
-            {/* Subscription Header */}
-            {isSubscription && (
+            {/* Plan / Credit Pack Header */}
+            {isPlanCheckout && planInfo && (
               <div className="mb-6 pb-6 border-b border-neutral-200">
                 <h3 className="font-semibold text-lg mb-2" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>
-                  {planType === 'monthly' ? 'Monthly Plan' : 'Yearly Plan'}
+                  {planInfo.label}
                 </h3>
                 <p className="text-sm text-neutral-600">
-                  {planType === 'monthly'
-                    ? '5 novels per month with priority generation'
-                    : '50 novel credits to use anytime'}
+                  {planInfo.description}
                 </p>
               </div>
             )}
 
-            {/* Book Preview (only for book purchases) */}
-            {!isSubscription && isLoadingBook ? (
+            {/* Book Preview (only for single-book purchases) */}
+            {!isPlanCheckout && isLoadingBook ? (
               <div className="flex items-center justify-center py-8">
                 <Loader2 className="h-6 w-6 animate-spin text-neutral-400" />
               </div>
-            ) : !isSubscription && bookDetails && (
+            ) : !isPlanCheckout && bookDetails && (
               <div className="mb-6 pb-6 border-b border-neutral-200">
                 <h3 className="font-semibold text-lg mb-2" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>
                   {bookDetails.title}
@@ -305,16 +325,18 @@ function CheckoutContent() {
                   <span className="font-medium">${originalPrice.toFixed(2)}{getPriceLabel()}</span>
                 )}
               </div>
-              {isSubscription ? (
+              {isPlanCheckout && planInfo ? (
                 <>
                   <div className="flex justify-between text-sm mt-2">
-                    <span className="text-neutral-600">{planType === 'monthly' ? '5 novels/month' : '50 novel credits'}</span>
+                    <span className="text-neutral-600">{planInfo.description}</span>
                     <span className="font-medium text-green-600">Included</span>
                   </div>
-                  <div className="flex justify-between text-sm mt-2">
-                    <span className="text-neutral-600">Priority generation</span>
-                    <span className="font-medium text-green-600">Included</span>
-                  </div>
+                  {planInfo.isSubscription && (
+                    <div className="flex justify-between text-sm mt-2">
+                      <span className="text-neutral-600">Priority generation</span>
+                      <span className="font-medium text-green-600">Included</span>
+                    </div>
+                  )}
                 </>
               ) : (
                 <>
@@ -397,7 +419,7 @@ function CheckoutContent() {
             </div>
 
             {/* FREE Book CTA for Anonymous Users */}
-            {isAnonymous && !isSubscription && bookId && (
+            {isAnonymous && !isPlanCheckout && bookId && (
               <>
                 <div className="relative mb-6">
                   <div className="absolute inset-0 flex items-center">
@@ -444,7 +466,7 @@ function CheckoutContent() {
                 className="w-full px-4 py-3 border border-neutral-200 rounded-xl focus:border-neutral-900 focus:outline-none transition-colors"
               />
               <p className="text-xs text-neutral-500 mt-1">
-                {isSubscription ? 'Your account will be linked to this email' : 'We\'ll send your book download link to this email'}
+                {isPlanCheckout ? 'Your account will be linked to this email' : 'We\'ll send your book download link to this email'}
               </p>
             </div>
 
@@ -452,27 +474,29 @@ function CheckoutContent() {
             <div className="mb-6">
               <h3 className="font-medium mb-3" style={{ fontFamily: 'FoundersGrotesk, system-ui' }}>What You Get</h3>
               <ul className="space-y-2">
-                {isSubscription ? (
+                {isPlanCheckout && planInfo ? (
                   <>
                     <li className="flex items-center gap-2 text-sm text-neutral-600">
                       <Check className="h-4 w-4 text-green-600" />
-                      {planType === 'monthly' ? '5 novels per month' : '50 novel credits (use anytime)'}
+                      {planInfo.description}
                     </li>
                     <li className="flex items-center gap-2 text-sm text-neutral-600">
                       <Check className="h-4 w-4 text-green-600" />
-                      AI-generated covers for all books
+                      Professional covers for all books
                     </li>
-                    <li className="flex items-center gap-2 text-sm text-neutral-600">
-                      <Check className="h-4 w-4 text-green-600" />
-                      Priority generation queue
-                    </li>
+                    {planInfo.isSubscription && (
+                      <li className="flex items-center gap-2 text-sm text-neutral-600">
+                        <Check className="h-4 w-4 text-green-600" />
+                        Priority generation queue
+                      </li>
+                    )}
                     <li className="flex items-center gap-2 text-sm text-neutral-600">
                       <Check className="h-4 w-4 text-green-600" />
                       Full commercial rights
                     </li>
                     <li className="flex items-center gap-2 text-sm text-neutral-600">
                       <Check className="h-4 w-4 text-green-600" />
-                      {planType === 'monthly' ? 'Cancel anytime' : 'Credits never expire'}
+                      {planInfo.isSubscription ? 'Cancel anytime, unused credits roll over' : 'Credits never expire'}
                     </li>
                   </>
                 ) : (

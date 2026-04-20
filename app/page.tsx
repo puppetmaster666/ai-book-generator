@@ -69,6 +69,8 @@ export default function Home() {
   const [error, setError] = useState('');
   const [isGeneratingIdea, setIsGeneratingIdea] = useState(false);
   const [ideasRemaining, setIdeasRemaining] = useState<number | null>(null);
+  const [canUseIdeaCredits, setCanUseIdeaCredits] = useState(false);
+  const [ideaCreditCost, setIdeaCreditCost] = useState(5);
   const [lightboxImage, setLightboxImage] = useState<{ src: string; label: string } | null>(null);
   const [ideaCategory, setIdeaCategory] = useState<IdeaCategory>('random');
   const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
@@ -91,7 +93,11 @@ export default function Home() {
   useEffect(() => {
     fetch('/api/generate-idea')
       .then(res => res.json())
-      .then(data => setIdeasRemaining(data.remaining ?? null))
+      .then(data => {
+        setIdeasRemaining(data.remaining ?? null);
+        setCanUseIdeaCredits(!!data.canUseCredits);
+        if (data.creditCost) setIdeaCreditCost(data.creditCost);
+      })
       .catch(() => {});
   }, []);
 
@@ -107,10 +113,6 @@ export default function Home() {
   }, [stickyBannerDismissed]);
 
   const handleFindIdea = async () => {
-    if (ideasRemaining !== null && ideasRemaining <= 0) {
-      setError('You\'ve used all 5 free idea generations this month. Type your own idea instead!');
-      return;
-    }
     setIsGeneratingIdea(true);
     setError('');
 
@@ -456,16 +458,22 @@ export default function Home() {
                     <button
                       type="button"
                       onClick={handleFindIdea}
-                      disabled={isLoading || isGeneratingIdea || isParsingFile || (ideasRemaining !== null && ideasRemaining <= 0)}
+                      disabled={isLoading || isGeneratingIdea || isParsingFile || (ideasRemaining !== null && ideasRemaining <= 0 && !canUseIdeaCredits)}
                       className="text-sm text-neutral-500 hover:text-neutral-900 disabled:opacity-50 flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-neutral-100 transition-colors"
-                      title={ideasRemaining !== null ? `${ideasRemaining} free idea${ideasRemaining !== 1 ? 's' : ''} remaining this month` : undefined}
+                      title={ideasRemaining !== null ? `${ideasRemaining} free idea${ideasRemaining !== 1 ? 's' : ''} remaining` : undefined}
                     >
                       {isGeneratingIdea ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
                       ) : (
                         <Sparkles className="h-4 w-4" />
                       )}
-                      {isGeneratingIdea ? 'Generating...' : ideasRemaining !== null && ideasRemaining <= 0 ? 'No ideas left' : `Surprise me${ideasRemaining !== null ? ` (${ideasRemaining}/5)` : ''}`}
+                      {isGeneratingIdea
+                        ? 'Generating...'
+                        : ideasRemaining !== null && ideasRemaining > 0
+                          ? `Surprise me (${ideasRemaining}/3 free)`
+                          : canUseIdeaCredits
+                            ? `Surprise me (${ideaCreditCost} credits)`
+                            : 'No ideas left'}
                     </button>
                     {isGeneratingIdea && (
                       <GeneratingMessage type="idea" size="sm" showTimer />

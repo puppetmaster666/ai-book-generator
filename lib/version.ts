@@ -3,7 +3,7 @@
  * Update this file with each release.
  */
 
-export const APP_VERSION = '2.5.1';
+export const APP_VERSION = '2.5.2';
 
 export interface ChangelogEntry {
   version: string;
@@ -13,6 +13,17 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  {
+    version: '2.5.2',
+    date: '2026-04-20',
+    title: 'Checkout & Surprise Me Fixes',
+    highlights: [
+      'Checkout now shows the correct price for every plan and credit pack',
+      'Starter, Author, and Pro subscriptions now work end to end from the pricing page',
+      'Credit packs can now be purchased directly from the pricing page',
+      'Surprise Me gives you 3 free idea generations, then costs 5 credits per idea',
+    ],
+  },
   {
     version: '2.5.1',
     date: '2026-04-02',
