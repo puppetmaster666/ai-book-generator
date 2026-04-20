@@ -112,8 +112,14 @@ export async function POST(
     const characterVisualGuide = book.characterVisualGuide as CharacterVisualGuide | null;
     const visualStyleGuide = book.visualStyleGuide as VisualStyleGuide | null;
 
-    // Generate cover (non-fatal — book completes even if cover fails)
+    // Generate cover (non-fatal — book completes even if cover fails).
+    // Roasts: show the protagonist's face and pass the styled photo as a
+    // reference so the cover features the actual target of the roast.
     console.log('Generating cover...');
+    const isRoastBook = book.bookPreset === 'roast_comic';
+    const bookChars = book.characters as Array<{ name: string; description: string }> | null;
+    const protagonistName = bookChars?.[0]?.name;
+    const protagonistStyledUrl = book.protagonistStyled as string | null;
     let coverImageUrl: string | null = null;
     let coverPrompt: string | null = null;
     try {
@@ -125,10 +131,19 @@ export async function POST(
         authorName: book.authorName,
         artStyle: book.artStyle || undefined,
         artStylePrompt: artStyleConfig?.coverStyle,
+        showCharacterFace: isRoastBook && !!protagonistStyledUrl,
+        protagonistName,
         characterVisualGuide: characterVisualGuide || undefined,
         visualStyleGuide: visualStyleGuide || undefined,
       });
-      coverImageUrl = await generateCoverImage(coverPrompt, id);
+      let coverReference: { imageBase64: string; mimeType: string; characterName?: string } | undefined;
+      if (isRoastBook && protagonistStyledUrl) {
+        const match = protagonistStyledUrl.match(/^data:([^;]+);base64,(.+)$/);
+        if (match) {
+          coverReference = { mimeType: match[1], imageBase64: match[2], characterName: protagonistName };
+        }
+      }
+      coverImageUrl = await generateCoverImage(coverPrompt, id, coverReference);
     } catch (error) {
       console.error('Failed to generate cover (continuing without):', error instanceof Error ? error.message : error);
       // Continue without cover — the book is still complete

@@ -1852,7 +1852,13 @@ export async function POST(
       }
     } // End of else block for standard flow
 
-    // Step 3: Generate cover (using visual guides for consistency with interior)
+    // Step 3: Generate cover (using visual guides for consistency with interior).
+    // For roast books, show the protagonist's face clearly and pass the
+    // styled photo as a reference so the face on the cover matches the target.
+    const isRoastBook = book.bookPreset === 'roast_comic';
+    const bookChars = book.characters as Array<{ name: string; description: string }> | null;
+    const protagonistName = bookChars?.[0]?.name;
+    const protagonistStyledUrl = book.protagonistStyled as string | null;
     const coverPrompt = await generateCoverPrompt({
       title: book.title,
       genre: book.genre,
@@ -1861,13 +1867,27 @@ export async function POST(
       authorName: book.authorName,
       artStyle: book.artStyle || undefined,
       artStylePrompt: artStyleConfig?.coverStyle,
+      showCharacterFace: isRoastBook && !!protagonistStyledUrl,
+      protagonistName: protagonistName,
       characterVisualGuide: characterVisualGuide || undefined,
       visualStyleGuide: visualStyleGuide || undefined,
     });
 
+    let coverReference: { imageBase64: string; mimeType: string; characterName?: string } | undefined;
+    if (isRoastBook && protagonistStyledUrl) {
+      const match = protagonistStyledUrl.match(/^data:([^;]+);base64,(.+)$/);
+      if (match) {
+        coverReference = {
+          mimeType: match[1],
+          imageBase64: match[2],
+          characterName: protagonistName,
+        };
+      }
+    }
+
     let coverImageUrl: string | null = null;
     try {
-      coverImageUrl = await generateCoverImage(coverPrompt, id);
+      coverImageUrl = await generateCoverImage(coverPrompt, id, coverReference);
     } catch (error) {
       console.error('Failed to generate cover:', error);
       // Continue without cover

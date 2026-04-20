@@ -122,6 +122,9 @@ export async function generateCoverPrompt(bookData: {
   authorName: string;
   artStyle?: string;
   artStylePrompt?: string;
+  // When true, cover must show the protagonist's face clearly (roasts)
+  showCharacterFace?: boolean;
+  protagonistName?: string;
   characterVisualGuide?: {
     characters: Array<{
       name: string;
@@ -201,18 +204,18 @@ COVER STYLE VARIETY - Choose ONE of these approaches based on what fits the book
 - TYPOGRAPHY-FOCUSED: Elegant title design with minimal or no imagery, decorative elements only
 - SYMBOLIC: Single meaningful object or symbol representing the story's themes
 - SCENIC: Atmospheric landscape or setting that evokes the mood
-- CHARACTER-BASED: Silhouette or artistic representation of protagonist (no detailed faces)
+- CHARACTER-BASED: ${bookData.showCharacterFace ? `The protagonist${bookData.protagonistName ? ` (${bookData.protagonistName})` : ''} PROMINENTLY FEATURED FACE-FORWARD, face clearly visible and recognizable, centered composition. This is a roast — the target's face being visible is the whole point of the cover.` : 'Silhouette or artistic representation of protagonist (no detailed faces)'}
 - ABSTRACT: Artistic patterns, textures, or color compositions suggesting the mood
 - CLASSIC: Traditional book design with ornate borders and vintage aesthetic
 
 The cover MUST include:
 - The title "${bookData.title}" prominently displayed with excellent readability
 ${bookData.authorName ? `- "by ${bookData.authorName}" at the bottom (include the word "by" before the author name)` : '- DO NOT include any author name (no author specified)'}
+${bookData.showCharacterFace ? `- The face of ${bookData.protagonistName || 'the protagonist'} must be CLEARLY VISIBLE and identifiable (not hidden, not in shadow, not from behind, not covered). Use a CHARACTER-BASED composition with the protagonist as the main focal point.` : ''}
 
 The cover must NOT include:
 - Any other text besides title${bookData.authorName ? ' and author name' : ''}
-- Detailed faces (use silhouettes or artistic representations instead)
-- Copyright-infringing elements
+${bookData.showCharacterFace ? '' : '- Detailed faces (use silhouettes or artistic representations instead)\n'}- Copyright-infringing elements
 - Cluttered or busy designs that compete with the title
 
 ${bookData.bookType === 'non-fiction' ? 'For this non-fiction book, favor clean, professional designs. Typography-focused or minimalist approaches work well. A subtitle may be appropriate if it helps convey the value proposition.' : 'This is fiction - focus on mood, atmosphere, and genre conventions. Create intrigue and emotional connection.'}
@@ -225,7 +228,11 @@ Output ONLY the image generation prompt, nothing else.`;
   return result.response.text();
 }
 
-export async function generateCoverImage(coverPrompt: string, bookId?: string): Promise<string> {
+export async function generateCoverImage(
+  coverPrompt: string,
+  bookId?: string,
+  protagonistReference?: { imageBase64: string; mimeType: string; characterName?: string }
+): Promise<string> {
   const maxRetries = 3;
 
   for (let attempt = 0; attempt < maxRetries; attempt++) {
@@ -253,6 +260,14 @@ export async function generateCoverImage(coverPrompt: string, bookId?: string): 
         if (bookId) {
           const { bumpImageApiCount } = await import('@/lib/system-status');
           bumpImageApiCount(bookId).catch(() => {});
+        }
+        // If a protagonist reference image is supplied, send it alongside the
+        // text prompt so the cover character looks like the actual target
+        if (protagonistReference) {
+          return await getGeminiImage().generateContent([
+            { inlineData: { mimeType: protagonistReference.mimeType, data: protagonistReference.imageBase64 } },
+            `${fullPrompt}\n\nREFERENCE IMAGE: The character shown above is ${protagonistReference.characterName || 'the protagonist'}. Render them on the cover with the SAME face, hair, skin tone, and identity as this reference. Face must be clearly visible on the cover.`,
+          ]);
         }
         return await getGeminiImage().generateContent(fullPrompt);
       });
