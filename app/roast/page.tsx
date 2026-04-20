@@ -6,6 +6,7 @@ import { useSession } from 'next-auth/react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { ArrowRight, ArrowLeft, Upload, X, Loader2, Sparkles, Clock } from 'lucide-react';
+import RoastSampleSection from '@/components/RoastSampleSection';
 
 const ROAST_LOADING_MESSAGES = [
   'Writing insults...',
@@ -309,6 +310,9 @@ HOW TO WRITE THIS:
   return (
     <div className="min-h-screen bg-white">
       <Header />
+
+      {/* Real samples from generated roasts - admin-curated */}
+      <RoastSampleSection variant="roast" />
 
       <main className="py-12 px-6">
         <div className="max-w-2xl mx-auto">

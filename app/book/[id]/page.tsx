@@ -5,7 +5,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import Header from '@/components/Header';
 import ToastModal from '@/components/ToastModal';
-import { Download, BookOpen, Loader2, Check, AlertCircle, ImageIcon, Mail, Palette, PenTool, Clock, Zap, AlertTriangle, Save, Trash2, RefreshCw, X, FileText, Film, Megaphone, Lock } from 'lucide-react';
+import { Download, BookOpen, Loader2, Check, AlertCircle, ImageIcon, Mail, Palette, PenTool, Clock, Zap, AlertTriangle, Save, Trash2, RefreshCw, X, FileText, Film, Megaphone, Lock, Star } from 'lucide-react';
 import ScreenplayPreview from '@/components/ScreenplayPreview';
 import GenerationProgress, { NOVEL_STEPS, COMIC_STEPS, PICTURE_BOOK_STEPS, SCREENPLAY_STEPS } from '@/components/GenerationProgress';
 import { useGeneratingBook } from '@/contexts/GeneratingBookContext';
@@ -35,6 +35,7 @@ interface Illustration {
   status?: 'pending' | 'generating' | 'completed' | 'failed';
   errorMessage?: string;
   retryCount?: number;
+  isFeaturedRoastPanel?: boolean;
 }
 
 interface Book {
@@ -978,6 +979,28 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
       setError(err instanceof Error ? err.message : 'Failed to retry panels');
     } finally {
       setRetrying(false);
+    }
+  };
+
+  // Admin-only: toggle whether a panel is featured on the homepage
+  const toggleFeaturedPanel = async (illustrationId: string, next: boolean) => {
+    if (!book) return;
+    try {
+      const res = await fetch(`/api/books/${id}/illustrations/${illustrationId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isFeaturedRoastPanel: next }),
+      });
+      if (!res.ok) return;
+      setBook(prev => {
+        if (!prev) return prev;
+        const updatedIllustrations = prev.illustrations?.map(ill =>
+          ill.id === illustrationId ? { ...ill, isFeaturedRoastPanel: next } : ill
+        );
+        return { ...prev, illustrations: updatedIllustrations };
+      });
+    } catch (err) {
+      console.error('Failed to toggle featured panel:', err);
     }
   };
 
@@ -2017,6 +2040,23 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
                               <div className="absolute bottom-1 right-1 bg-black/60 text-white text-[10px] px-1.5 py-0.5 rounded-full backdrop-blur-sm">
                                 #{num}
                               </div>
+                            )}
+                            {isAdminUser && isCompleted && ill?.id && (
+                              <button
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  toggleFeaturedPanel(ill.id, !ill.isFeaturedRoastPanel);
+                                }}
+                                className={`absolute top-1 right-1 p-1 rounded-full transition-colors ${
+                                  ill.isFeaturedRoastPanel
+                                    ? 'bg-yellow-400 text-yellow-900 hover:bg-yellow-500'
+                                    : 'bg-white/80 text-neutral-400 hover:bg-white hover:text-yellow-500'
+                                }`}
+                                title={ill.isFeaturedRoastPanel ? 'Remove from homepage' : 'Feature on homepage'}
+                              >
+                                <Star className={`h-3 w-3 ${ill.isFeaturedRoastPanel ? 'fill-current' : ''}`} />
+                              </button>
                             )}
                             {isFailed && !isRetryingThis && !maxRetriesReached && (
                               <div className="absolute top-1 right-1 bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full">

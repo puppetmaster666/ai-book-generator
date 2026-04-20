@@ -27,6 +27,7 @@ export async function GET(
                 status: true,
                 errorMessage: true,
                 retryCount: true,
+                isFeaturedRoastPanel: true,
                 // Don't include imageUrl (base64) - use API endpoint instead
               },
             },
@@ -43,6 +44,7 @@ export async function GET(
             status: true,
             errorMessage: true,
             retryCount: true,
+            isFeaturedRoastPanel: true,
             // Don't include imageUrl (base64) - use API endpoint instead
           },
         },

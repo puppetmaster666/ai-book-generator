@@ -14,6 +14,7 @@ import Testimonials from '@/components/Testimonials';
 import FAQ from '@/components/FAQ';
 import ScreenplayAnimation from '@/components/ScreenplayAnimation';
 import FeaturedShowcase from '@/components/FeaturedShowcase';
+import RoastSampleSection from '@/components/RoastSampleSection';
 import GeneratingMessage from '@/components/GeneratingMessage';
 import { APP_VERSION, getLatestChangelog } from '@/lib/version';
 
@@ -618,6 +619,9 @@ export default function Home() {
         </div>
       </section>
 
+
+      {/* Roast Someone Showcase - featured panels admin has chosen */}
+      <RoastSampleSection variant="homepage" />
 
       {/* Comic Book Showcase - The Weaver's Mark */}
       <section className="py-20 px-6 bg-neutral-50 overflow-hidden">

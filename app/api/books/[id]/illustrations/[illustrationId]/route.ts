@@ -7,27 +7,9 @@ export async function GET(
   { params }: { params: Promise<{ id: string; illustrationId: string }> }
 ) {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
     const { id, illustrationId } = await params;
 
-    // Verify the book exists and check ownership
-    const book = await prisma.book.findUnique({
-      where: { id },
-      select: { id: true, userId: true },
-    });
-
-    if (!book) {
-      return NextResponse.json({ error: 'Book not found' }, { status: 404 });
-    }
-
-    if (book.userId && book.userId !== session.user.id) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    }
-
-    // Get the illustration (check both direct bookId and chapter.bookId)
+    // Fetch illustration first to check if it's a featured roast panel (public)
     const illustration = await prisma.illustration.findFirst({
       where: {
         id: illustrationId,
@@ -39,8 +21,30 @@ export async function GET(
       select: {
         imageUrl: true,
         altText: true,
+        isFeaturedRoastPanel: true,
       },
     });
+
+    // Featured roast panels are public; everything else requires auth + ownership
+    if (!illustration?.isFeaturedRoastPanel) {
+      const session = await auth();
+      if (!session?.user?.id) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+
+      const book = await prisma.book.findUnique({
+        where: { id },
+        select: { id: true, userId: true },
+      });
+
+      if (!book) {
+        return NextResponse.json({ error: 'Book not found' }, { status: 404 });
+      }
+
+      if (book.userId && book.userId !== session.user.id) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      }
+    }
 
     if (!illustration) {
       return NextResponse.json({ error: 'Illustration not found' }, { status: 404 });
@@ -72,4 +76,50 @@ export async function GET(
     console.error('Error serving illustration:', error);
     return NextResponse.json({ error: 'Failed to serve illustration' }, { status: 500 });
   }
+}
+
+// Admin-only: toggle isFeaturedRoastPanel
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string; illustrationId: string }> }
+) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const adminUser = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { isAdmin: true },
+  });
+  if (!adminUser?.isAdmin) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
+
+  const { id, illustrationId } = await params;
+  const body = await request.json();
+  const { isFeaturedRoastPanel } = body;
+
+  if (typeof isFeaturedRoastPanel !== 'boolean') {
+    return NextResponse.json({ error: 'isFeaturedRoastPanel must be a boolean' }, { status: 400 });
+  }
+
+  const illustration = await prisma.illustration.findFirst({
+    where: {
+      id: illustrationId,
+      OR: [{ bookId: id }, { chapter: { bookId: id } }],
+    },
+    select: { id: true },
+  });
+  if (!illustration) {
+    return NextResponse.json({ error: 'Illustration not found' }, { status: 404 });
+  }
+
+  const updated = await prisma.illustration.update({
+    where: { id: illustration.id },
+    data: { isFeaturedRoastPanel },
+    select: { id: true, isFeaturedRoastPanel: true },
+  });
+
+  return NextResponse.json(updated);
 }

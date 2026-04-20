@@ -167,12 +167,14 @@ model Illustration {
   retryCount   Int      @default(0)
   status       String   @default("completed")
   updatedAt    DateTime @default(now()) @updatedAt
+  isFeaturedRoastPanel Boolean @default(false)
   book         Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
   chapter      Chapter? @relation(fields: [chapterId], references: [id], onDelete: Cascade)
 
   @@index([bookId])
   @@index([chapterId])
   @@index([bookId, status])
+  @@index([isFeaturedRoastPanel])
 }
 
 model Payment {
