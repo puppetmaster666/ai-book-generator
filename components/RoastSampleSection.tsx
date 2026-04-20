@@ -14,14 +14,16 @@ interface RoastSample {
   imageUrl: string;
 }
 
-// Poker-hand stack matching the Weaver's Mark showcase: tight horizontal
-// overlap with gentle rotations so the group reads as a fanned card hand.
+// Poker-hand stack: larger cards than the Weaver's Mark tight stack so the
+// real panel content is actually readable at the homepage glance distance.
+// Cards are 240px wide (w-60) and offset by 50px so each neighbour shows
+// ~190px of its image.
 const STACK_LAYOUT = [
   { rotate: -12, left: 0 },
-  { rotate: -6,  left: 30 },
-  { rotate: 0,   left: 60 },
-  { rotate: 6,   left: 90 },
-  { rotate: 12,  left: 120 },
+  { rotate: -6,  left: 50 },
+  { rotate: 0,   left: 100 },
+  { rotate: 6,   left: 150 },
+  { rotate: 12,  left: 200 },
 ];
 
 export default function RoastSampleSection({ variant = 'homepage' }: { variant?: 'homepage' | 'roast' }) {
@@ -36,7 +38,11 @@ export default function RoastSampleSection({ variant = 'homepage' }: { variant?:
     fetch('/api/roast-samples')
       .then(res => res.json())
       .then(data => {
-        setSamples((data.samples || []).slice(0, 5));
+        // Include every featured panel the API returns (up to 8). The
+        // homepage only renders the top 5 as visible cards, but the
+        // lightbox carousel below cycles through all of them so users
+        // can swipe past the 5-in-hand and see the rest.
+        setSamples(data.samples || []);
         setLoaded(true);
       })
       .catch(() => setLoaded(true));
@@ -165,10 +171,11 @@ export default function RoastSampleSection({ variant = 'homepage' }: { variant?:
 
             {/* Right: poker-hand card stack of real roast panels. Card
                 aspect ratio matches the first sample's actual image so
-                nothing gets cropped. */}
+                nothing gets cropped. Only the top 5 featured panels
+                render as cards; the lightbox below cycles through all. */}
             <div className="order-1 md:order-2 flex justify-center">
-              <div className="relative w-80 h-96">
-                {samples.map((sample, i) => {
+              <div className="relative w-[460px] max-w-full h-[420px]">
+                {samples.slice(0, 5).map((sample, i) => {
                   const card = layout[i] || layout[layout.length - 1];
                   const isHovered = hoveredIndex === i;
                   // Use the first sample's aspect for all cards so the stack
@@ -180,7 +187,7 @@ export default function RoastSampleSection({ variant = 'homepage' }: { variant?:
                   return (
                     <div
                       key={sample.id}
-                      className="absolute top-0 w-48"
+                      className="absolute top-0 w-60"
                       style={{
                         left: `${card.left}px`,
                         zIndex: isHovered ? 50 : i + 1,
