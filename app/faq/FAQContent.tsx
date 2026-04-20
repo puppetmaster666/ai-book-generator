@@ -71,7 +71,7 @@ const faqs = [
     questions: [
       {
         q: 'What does each plan include?',
-        a: 'Single Generation ($4.99): 1 generation + cover. Author Plan ($29/month): 5 generations/month with rollover. All plans include full commercial rights and downloads.'
+        a: 'Single Generation ($5.99): 1 generation + cover. Author Plan ($29/month): 5 generations/month with rollover. All plans include full commercial rights and downloads.'
       },
       {
         q: 'Do unused credits roll over?',

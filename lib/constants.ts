@@ -1,15 +1,15 @@
-// Pricing - Two tiers: text ($4.99) and visual ($6.99)
+// Pricing - Single generation: $5.99 (text + visual books), roast: $3.99
 export const PRICING = {
   // Single text book purchase (novels, non-fiction, screenplays)
   ONE_TIME: {
-    price: 499, // cents
-    priceDisplay: '$4.99',
+    price: 599, // cents
+    priceDisplay: '$5.99',
     credits: 1,
   },
   // Single visual book purchase (comics, picture books)
   VISUAL: {
-    price: 699, // cents
-    priceDisplay: '$6.99',
+    price: 599, // cents
+    priceDisplay: '$5.99',
   },
   // Upgrade from free preview (discounted)
   UPGRADE: {
@@ -18,8 +18,8 @@ export const PRICING = {
   },
   // Roast book (12 panels)
   ROAST: {
-    price: 199, // cents
-    priceDisplay: '$1.99',
+    price: 399, // cents
+    priceDisplay: '$3.99',
   },
   // Subscriptions - credit-based with rollover
   STARTER_MONTHLY: {
@@ -101,12 +101,12 @@ export const CREDIT_COSTS: Record<string, number> = {
   childrens_picture: 200,
   comic_story: 250,
   adult_comic: 250,
-  roast_comic: 100, // $1.99 roast book (12 panels)
+  roast_comic: 100, // $3.99 roast book (12 panels)
 };
 
 // Credit packs - one-time credit purchases (no subscription)
 export const CREDIT_PACKS = {
-  single: { credits: 250, price: 499, priceDisplay: '$4.99', label: 'Single Book' },
+  single: { credits: 250, price: 599, priceDisplay: '$5.99', label: 'Single Book' },
   five_pack: { credits: 1100, price: 1999, priceDisplay: '$19.99', label: '5-Pack' },
   ten_pack: { credits: 2200, price: 3499, priceDisplay: '$34.99', label: '10-Pack' },
 } as const;
@@ -286,7 +286,7 @@ export const BOOK_PRESETS = {
     defaultGenre: 'literary',
     targetWords: 25000,
     chapters: 12,
-    priceDisplay: '$4.99',
+    priceDisplay: '$5.99',
     downloadFormat: 'epub',
     contentRating: 'general',
     estimatedTime: '~15 min',
@@ -301,7 +301,7 @@ export const BOOK_PRESETS = {
     defaultGenre: 'literary',
     targetWords: 60000,
     chapters: 20,
-    priceDisplay: '$4.99',
+    priceDisplay: '$5.99',
     downloadFormat: 'epub',
     contentRating: 'general',
     estimatedTime: '~30 min',
@@ -316,7 +316,7 @@ export const BOOK_PRESETS = {
     defaultGenre: 'literary',
     targetWords: 100000,
     chapters: 32,
-    priceDisplay: '$4.99',
+    priceDisplay: '$5.99',
     downloadFormat: 'epub',
     contentRating: 'general',
     estimatedTime: '~60 min',
@@ -333,7 +333,7 @@ export const BOOK_PRESETS = {
     defaultGenre: 'childrens',
     targetWords: 500,
     chapters: 20,
-    priceDisplay: '$6.99',
+    priceDisplay: '$5.99',
     downloadFormat: 'pdf',
     contentRating: 'childrens',
     estimatedTime: '~10 min',
@@ -348,7 +348,7 @@ export const BOOK_PRESETS = {
     defaultGenre: 'comedy',
     targetWords: 600,
     chapters: 12,
-    priceDisplay: '$1.99',
+    priceDisplay: '$3.99',
     downloadFormat: 'pdf',
     contentRating: 'mature',
     estimatedTime: '~10 min',
@@ -364,7 +364,7 @@ export const BOOK_PRESETS = {
     defaultGenre: 'ya',
     targetWords: 1000,
     chapters: 24,
-    priceDisplay: '$6.99',
+    priceDisplay: '$5.99',
     downloadFormat: 'pdf',
     contentRating: 'general',
     estimatedTime: '~12 min',
@@ -379,7 +379,7 @@ export const BOOK_PRESETS = {
     defaultGenre: 'horror',
     targetWords: 1200,
     chapters: 24,
-    priceDisplay: '$6.99',
+    priceDisplay: '$5.99',
     downloadFormat: 'pdf',
     contentRating: 'mature',
     estimatedTime: '~12 min',
@@ -396,7 +396,7 @@ export const BOOK_PRESETS = {
     defaultGenre: 'howto',
     targetWords: 7500,
     chapters: 5,
-    priceDisplay: '$4.99',
+    priceDisplay: '$5.99',
     downloadFormat: 'epub',
     contentRating: 'general',
     estimatedTime: '~5 min',
@@ -411,7 +411,7 @@ export const BOOK_PRESETS = {
     defaultGenre: 'selfhelp',
     targetWords: 50000,
     chapters: 15,
-    priceDisplay: '$4.99',
+    priceDisplay: '$5.99',
     downloadFormat: 'epub',
     contentRating: 'general',
     estimatedTime: '~25 min',
@@ -428,7 +428,7 @@ export const BOOK_PRESETS = {
     defaultGenre: 'thriller_film',
     targetPages: 40,
     sequences: 4,
-    priceDisplay: '$4.99',
+    priceDisplay: '$5.99',
     downloadFormat: 'pdf',
     contentRating: 'mature',
     estimatedTime: '~15 min',
@@ -443,7 +443,7 @@ export const BOOK_PRESETS = {
     defaultGenre: 'thriller_film',
     targetPages: 100,
     sequences: 8,
-    priceDisplay: '$4.99',
+    priceDisplay: '$5.99',
     downloadFormat: 'pdf',
     contentRating: 'mature',
     estimatedTime: '~35 min',
@@ -458,7 +458,7 @@ export const BOOK_PRESETS = {
     defaultGenre: 'thriller_film',
     targetPages: 135,
     sequences: 10,
-    priceDisplay: '$4.99',
+    priceDisplay: '$5.99',
     downloadFormat: 'pdf',
     contentRating: 'mature',
     estimatedTime: '~50 min',
@@ -475,7 +475,7 @@ export const BOOK_PRESETS = {
     defaultGenre: 'comedy_film',
     targetPages: 30,
     sequences: 3, // 3-act structure for half-hour
-    priceDisplay: '$4.99',
+    priceDisplay: '$5.99',
     downloadFormat: 'pdf',
     contentRating: 'general',
     estimatedTime: '~12 min',
@@ -490,7 +490,7 @@ export const BOOK_PRESETS = {
     defaultGenre: 'drama_film',
     targetPages: 60,
     sequences: 5, // 5-act structure for hour-long drama
-    priceDisplay: '$4.99',
+    priceDisplay: '$5.99',
     downloadFormat: 'pdf',
     contentRating: 'mature',
     estimatedTime: '~25 min',
@@ -505,7 +505,7 @@ export const BOOK_PRESETS = {
     defaultGenre: 'drama_film',
     targetPages: 50,
     sequences: 5,
-    priceDisplay: '$4.99',
+    priceDisplay: '$5.99',
     downloadFormat: 'pdf',
     contentRating: 'mature',
     estimatedTime: '~20 min',

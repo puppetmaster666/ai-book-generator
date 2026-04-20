@@ -1029,7 +1029,7 @@ export default function Home() {
           {/* Pay-as-you-go note */}
           <div className="mt-8 text-center">
             <p className="text-neutral-600">
-              Or <a href="/pricing" className="underline hover:text-neutral-900 font-medium">pay as you go</a> starting at $4.99 per book. Try a free sample first, no credit card needed.
+              Or <a href="/pricing" className="underline hover:text-neutral-900 font-medium">pay as you go</a> starting at $5.99 per book. Try a free sample first, no credit card needed.
             </p>
           </div>
         </div>

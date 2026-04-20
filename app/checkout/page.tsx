@@ -35,6 +35,7 @@ const PLAN_TO_INFO: Record<string, PlanInfo> = {
 interface BookDetails {
   title: string;
   bookFormat: string;
+  bookPreset?: string;
   premise: string;
   artStyle?: string;
   email?: string;
@@ -217,6 +218,7 @@ function CheckoutContent() {
   const getBasePrice = () => {
     if (planInfo) return planInfo.price;
     if (!bookDetails) return PRICING.ONE_TIME.price;
+    if (bookDetails.bookPreset === 'roast_comic') return PRICING.ROAST.price;
     if (bookDetails.bookFormat === 'picture_book') return PRICING.VISUAL.price;
     return PRICING.ONE_TIME.price;
   };
@@ -224,6 +226,7 @@ function CheckoutContent() {
   const getProductLabel = () => {
     if (planInfo) return planInfo.label;
     if (!bookDetails) return 'Book Generation';
+    if (bookDetails.bookPreset === 'roast_comic') return 'Roast Book';
     if (bookDetails.bookFormat === 'picture_book') return 'Visual Book';
     return 'Novel';
   };
