@@ -58,6 +58,12 @@ The app uses a neutral-first design system. Do not introduce new colors outside 
 - **"Image books"** means ALL book types that generate images: children's picture books, comics, graphic novels, adult comics, illustrated novels. Any book format that produces illustrations/panels.
 - When the user says "image books", apply changes to ALL visual generation pipelines (picture-book-pipeline, comic-pipeline, generate-visual, generate-illustration, etc.)
 
+## Research & Web Lookups
+- ALWAYS check the current date before doing any web research or giving advice on pricing, APIs, tools, or industry practices
+- Include the current year in search queries to get the latest results
+- Do not rely on training data alone for things that change frequently (API pricing, model capabilities, industry trends, competitor features)
+- When citing numbers or practices, note the date they were verified
+
 ## Image Quality Requirements (ALL image books)
 - Every page/panel MUST have text (narration, dialogue, or story text). No exceptions.
 - Generated images must be validated after creation: check for text presence, relevance to the scene, and character consistency.
