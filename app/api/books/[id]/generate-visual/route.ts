@@ -360,19 +360,36 @@ export async function POST(
 
                 // PRIORITY 0: If user uploaded a protagonist photo, use the styled version as reference
                 const protagonistStyled = book.protagonistStyled as string | null;
+                const protagonistStyledAll = (book.protagonistStyledAll as string[] | null) || [];
                 const characters = book.characters as Array<{ name: string; description: string }> | null;
                 const mainCharName = characters?.[0]?.name;
 
                 // Case-insensitive check for protagonist in scene
                 const sceneCharsLower = chapter.scene.characters?.map((c: string) => c.toLowerCase()) || [];
-                const protagonistInScene = mainCharName && sceneCharsLower.includes(mainCharName.toLowerCase());
+                const protagonistInSceneByName = mainCharName && sceneCharsLower.includes(mainCharName.toLowerCase());
+
+                // Roasts always star the protagonist, even when the Director
+                // forgot to list their name in scene.characters. Forcing the
+                // reference on every panel is the only way to keep identity
+                // (skin tone, hair, body build) locked across all 12 panels.
+                const isRoast = book.bookPreset === 'roast_comic';
+                const protagonistInScene = protagonistInSceneByName || (isRoast && !!protagonistStyled);
 
                 if (protagonistStyled && mainCharName && protagonistInScene) {
+                    // Send the primary styled reference + up to 1 alternate angle
+                    // so the model has multiple views to anchor identity, not
+                    // just one angle it has to interpolate from
                     referenceImages.push({
                         characterName: `${mainCharName} (MUST match this face exactly)`,
                         imageData: protagonistStyled,
                     });
                     portraitCount++;
+                    if (protagonistStyledAll.length > 1 && protagonistStyledAll[1] && protagonistStyledAll[1] !== protagonistStyled) {
+                        referenceImages.push({
+                            characterName: `${mainCharName} (alternate angle)`,
+                            imageData: protagonistStyledAll[1],
+                        });
+                    }
                     // Identity must stay locked across panels, but outfit, pose, and
                     // environment must vary with the scene or every panel looks identical.
                     // Realistic art style gets extra-strict face wording to avoid
@@ -387,9 +404,12 @@ export async function POST(
 - If the reference shows glasses, always include them. If not, never add them.
 - Age must match the reference (do not make them younger or older)
 - This is a photorealistic style, so any face drift is immediately obvious - do not improvise features`
-                        : `IDENTITY LOCK:
-- Face, hair, skin tone must match the reference image
-- Body type and build must stay consistent
+                        : `IDENTITY LOCK (character must look like the same person as all other panels):
+- Face shape, facial features, eyes, nose, mouth, jawline MUST match the reference image
+- Skin tone MUST match the reference exactly. Do NOT lighten, darken, or change ethnicity between panels.
+- Hair color, hair style, hair length, facial hair MUST match the reference
+- Body type and build MUST stay consistent (do not make them fatter, thinner, taller, or shorter between panels)
+- Age must match the reference
 - If the reference shows glasses, always include them. If not, never add them.`;
                     illustrationPrompt += `\n\nPROTAGONIST REFERENCE for "${mainCharName}":\n${protagonistDesc || ''}\n\n${identityRules}\n\nSCENE VARIATION (equally important):\n- The outfit, pose, expression, camera angle, and background MUST change to match THIS panel's scene description\n- Do NOT copy the exact outfit from the reference unless the scene calls for it. Clothing changes between panels as the story moves
 - Do NOT copy the exact pose from the reference. Each panel shows a different moment
