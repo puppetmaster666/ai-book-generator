@@ -152,16 +152,23 @@ export async function POST(
 
 ART STYLE TO USE: ${styleConfig.prompt}
 
-TRANSFORMATION REQUIREMENTS:
-1. Transform this person into ${styleConfig.label} style illustration
-2. Maintain the person's key identifying features (face shape, hair style, eye shape, distinctive features)
-3. Use the exact art style colors and rendering technique: ${styleConfig.prompt}
-4. PRESERVE THE EXACT FRAMING of the input photo (if the photo is front-facing, output is front-facing; if it's a side angle, output is a side angle; if it's full-body, output is full-body). Do NOT change the camera angle or crop.
-5. The character should have a neutral or friendly expression
-6. Background should be simple/neutral to focus on the character
-7. Keep their EXACT clothing, accessories, and glasses (or lack of glasses) from the photo
+WHAT TO KEEP (identity — must match the photo):
+- Face shape, facial features, eyes, eyebrows, nose, mouth, jawline
+- Hair color, hair style, hair length, facial hair
+- Skin tone, age appearance, body type and build
+- Glasses: if the photo shows glasses, include them. If no glasses, do NOT add them.
+- Distinguishing permanent marks (birthmarks, scars, tattoos)
 
-CRITICAL: The transformed image must be recognizable as the same person, just rendered in ${styleConfig.label} art style. This is reference image ${imgIdx + 1} of ${images.length} for "${mainCharacterName}".
+WHAT TO NORMALIZE (do NOT copy from the photo):
+- Clothing: render a generic, CLEAN outfit appropriate for a character reference. Do NOT reproduce stains, dirt, food spills, wrinkles, creases, sweat marks, or random decorations from the photo's shirt. A simple clean solid-color t-shirt or sweater is ideal unless the photo shows something distinctly stylish.
+- Do NOT make the character look unkempt, homeless, or disheveled unless the photo clearly shows that as a deliberate style choice (e.g. a formal portrait of a homeless person).
+- Background: clean, simple, neutral
+- Expression: neutral or friendly
+
+FRAMING:
+PRESERVE the exact framing of the input photo (if the photo is front-facing, output is front-facing; if side angle, side angle; if full-body, full-body). Do NOT change the camera angle or crop.
+
+CRITICAL: The transformed image must be recognizable as the same person, rendered in ${styleConfig.label} art style, wearing a clean reference outfit. This is reference image ${imgIdx + 1} of ${images.length} for "${mainCharacterName}". The outfit in this reference is not canonical — panels in the comic will show the character in different story-appropriate outfits.
 
 DO NOT include any text, words, or labels in the image.`;
 
