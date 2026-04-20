@@ -12,23 +12,24 @@ interface RoastSample {
   imageUrl: string;
 }
 
-// Scattered-photo layout: wider horizontal spacing + varied vertical
-// position so each card is clearly visible (not just a tight stack) and
-// the group reads as photos thrown down on a table.
+// Poker-hand stack matching the Weaver's Mark showcase: tight horizontal
+// overlap with gentle rotations so the group reads as a fanned card hand.
 const STACK_LAYOUT = [
-  { rotate: -15, left: 0,   top: 30 },
-  { rotate: -7,  left: 60,  top: 10 },
-  { rotate: 0,   left: 120, top: 0 },
-  { rotate: 7,   left: 180, top: 10 },
-  { rotate: 15,  left: 240, top: 30 },
+  { rotate: -12, left: 0 },
+  { rotate: -6,  left: 30 },
+  { rotate: 0,   left: 60 },
+  { rotate: 6,   left: 90 },
+  { rotate: 12,  left: 120 },
 ];
 
 export default function RoastSampleSection({ variant = 'homepage' }: { variant?: 'homepage' | 'roast' }) {
   const [samples, setSamples] = useState<RoastSample[]>([]);
-  const [hoveredIndex, setHoveredIndex] = useState<number | null>(0);
+  const [hoveredIndex, setHoveredIndex] = useState<number | null>(2);
   const [loaded, setLoaded] = useState(false);
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const [slideDirection, setSlideDirection] = useState<'left' | 'right'>('right');
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
 
   useEffect(() => {
     fetch('/api/roast-samples')
@@ -38,7 +39,42 @@ export default function RoastSampleSection({ variant = 'homepage' }: { variant?:
         setLoaded(true);
       })
       .catch(() => setLoaded(true));
+    // Check admin status so only admins see the drag handles + can reorder
+    fetch('/api/user')
+      .then(res => res.ok ? res.json() : null)
+      .then(data => {
+        if (data?.user?.isAdmin) setIsAdmin(true);
+      })
+      .catch(() => {});
   }, []);
+
+  // Persist the new order to the server after a drag drop
+  const persistOrder = useCallback(async (orderedIds: string[]) => {
+    try {
+      await fetch('/api/admin/roast-panels', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderedIds }),
+      });
+    } catch (err) {
+      console.error('Failed to save roast panel order:', err);
+    }
+  }, []);
+
+  const handleDrop = useCallback((targetIndex: number) => {
+    if (dragIndex === null || dragIndex === targetIndex) {
+      setDragIndex(null);
+      return;
+    }
+    setSamples(prev => {
+      const next = [...prev];
+      const [moved] = next.splice(dragIndex, 1);
+      next.splice(targetIndex, 0, moved);
+      persistOrder(next.map(s => s.id));
+      return next;
+    });
+    setDragIndex(null);
+  }, [dragIndex, persistOrder]);
 
   const close = useCallback(() => setActiveIndex(null), []);
   const next = useCallback(() => {
@@ -129,35 +165,49 @@ export default function RoastSampleSection({ variant = 'homepage' }: { variant?:
               </div>
             </div>
 
-            {/* Right: scattered-photo cards of real roast panels */}
-            <div className="flex justify-center">
-              <div className="relative w-[460px] h-[400px] max-w-full">
+            {/* Right: poker-hand card stack of real roast panels */}
+            <div className="order-1 md:order-2 flex justify-center">
+              <div className="relative w-80 h-96">
                 {samples.map((sample, i) => {
                   const card = layout[i] || layout[layout.length - 1];
                   const isHovered = hoveredIndex === i;
+                  const isDragging = dragIndex === i;
                   return (
                     <button
                       key={sample.id}
                       onMouseEnter={() => setHoveredIndex(i)}
-                      onMouseLeave={() => setHoveredIndex(0)}
+                      onMouseLeave={() => setHoveredIndex(2)}
                       onClick={() => {
+                        if (dragIndex !== null) return; // ignore click when a drag just ended
                         setSlideDirection('right');
                         setActiveIndex(i);
                       }}
-                      className="absolute w-52 aspect-[2/3] rounded-lg overflow-hidden border-[3px] border-yellow-400 shadow-2xl transition-all duration-300 cursor-pointer"
+                      draggable={isAdmin}
+                      onDragStart={isAdmin ? () => setDragIndex(i) : undefined}
+                      onDragOver={isAdmin ? (e) => { e.preventDefault(); } : undefined}
+                      onDrop={isAdmin ? () => handleDrop(i) : undefined}
+                      onDragEnd={isAdmin ? () => setDragIndex(null) : undefined}
+                      className={`absolute top-0 w-48 aspect-[2/3] rounded-lg overflow-hidden shadow-xl border-2 border-yellow-400 bg-white transition-all duration-300 ${
+                        isDragging ? 'opacity-50 scale-95' :
+                        isHovered ? 'scale-110 shadow-2xl' : 'hover:scale-105'
+                      } ${isAdmin ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'}`}
                       style={{
+                        transform: `rotate(${isHovered && !isDragging ? 0 : card.rotate}deg) scale(${isHovered && !isDragging ? 1.1 : 1})`,
                         left: `${card.left}px`,
-                        top: `${card.top}px`,
-                        transform: `rotate(${isHovered ? 0 : card.rotate}deg) scale(${isHovered ? 1.1 : 1})`,
-                        zIndex: isHovered ? 50 : i + 1,
+                        zIndex: isDragging ? 100 : isHovered ? 50 : i + 1,
                       }}
-                      aria-label={`View ${sample.altText || sample.title} full size`}
+                      aria-label={isAdmin ? `Panel ${i + 1} — drag to reorder or click to view` : `View ${sample.altText || sample.title} full size`}
                     >
                       <img
                         src={sample.imageUrl}
                         alt={sample.altText || `${sample.title} panel`}
-                        className="w-full h-full object-cover"
+                        className="w-full h-full object-cover pointer-events-none"
                       />
+                      {isAdmin && (
+                        <span className="absolute top-1 left-1 bg-black/70 text-yellow-400 text-[9px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded pointer-events-none">
+                          drag
+                        </span>
+                      )}
                     </button>
                   );
                 })}
