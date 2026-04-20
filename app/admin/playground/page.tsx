@@ -75,7 +75,7 @@ export default function PlaygroundPage() {
         { key: 'featherless' as const, label: 'Featherless (Uncensored)' },
       ]
     : [
-        { key: 'gemini' as const, label: 'Gemini Imagen' },
+        { key: 'gemini' as const, label: 'Gemini 3 Pro Image' },
         { key: 'runpod' as const, label: 'RunPod / Flux' },
       ];
 

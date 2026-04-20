@@ -26,8 +26,8 @@ export async function GET(request: NextRequest) {
     // Still generate the regular article too
   }
 
-  // Then: generate the regular daily SEO article
-  console.log('[Blog Cron] Generating daily article...');
+  // Then: generate the regular weekly SEO article
+  console.log('[Blog Cron] Generating weekly article...');
   const result = await generateAndPublishArticle();
 
   return NextResponse.json({
