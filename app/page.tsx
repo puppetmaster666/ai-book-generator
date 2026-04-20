@@ -566,6 +566,9 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Roast Someone Showcase - playful section above Blood & Silver */}
+      <RoastSampleSection variant="homepage" />
+
       {/* Success Story - Blood & Silver */}
       <section className="py-20 px-6 bg-white">
         <div className="max-w-6xl mx-auto">
@@ -619,9 +622,6 @@ export default function Home() {
         </div>
       </section>
 
-
-      {/* Roast Someone Showcase - featured panels admin has chosen */}
-      <RoastSampleSection variant="homepage" />
 
       {/* Comic Book Showcase - The Weaver's Mark */}
       <section className="py-20 px-6 bg-neutral-50 overflow-hidden">
