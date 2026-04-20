@@ -510,8 +510,13 @@ export async function POST(
                 }
 
                 if (genData?.image) {
-                    // Save successful illustration to DB
+                    // Save successful illustration to DB. Delete any prior rows at
+                    // the same position first so retries replace instead of stacking
+                    // (prevents the "13 panels for a 12-panel book" bug)
                     const imageUrl = `data:${genData.image.mimeType};base64,${genData.image.base64}`;
+                    await prisma.illustration.deleteMany({
+                        where: { bookId: id, position: chapter.number },
+                    });
                     await prisma.illustration.create({
                         data: {
                             bookId: id,

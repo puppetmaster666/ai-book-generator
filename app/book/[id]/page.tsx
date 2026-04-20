@@ -39,6 +39,30 @@ interface Illustration {
   isFeaturedRoastPanel?: boolean;
 }
 
+// Deduplicate illustrations that ended up with more than one row per panel
+// position (can happen when retries insert a new row without reusing the
+// failed one). Preference: completed > failed > pending, then newest.
+function dedupeIllustrationsByPosition(list: Illustration[] | undefined): Illustration[] {
+  if (!list || list.length === 0) return [];
+  const byPos = new Map<number, Illustration>();
+  const rank = (s?: string) => s === 'completed' ? 3 : s === 'failed' ? 2 : 1;
+  for (const ill of list) {
+    const current = byPos.get(ill.position);
+    if (!current) {
+      byPos.set(ill.position, ill);
+      continue;
+    }
+    const currentRank = rank(current.status);
+    const newRank = rank(ill.status);
+    if (newRank > currentRank) {
+      byPos.set(ill.position, ill);
+    } else if (newRank === currentRank && new Date(ill.createdAt) > new Date(current.createdAt)) {
+      byPos.set(ill.position, ill);
+    }
+  }
+  return Array.from(byPos.values()).sort((a, b) => a.position - b.position);
+}
+
 interface Book {
   id: string;
   title: string;
@@ -2273,7 +2297,7 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
                 <h2 className="text-2xl font-bold text-neutral-900 mb-2">Your Preview is Ready!</h2>
                 <p className="text-neutral-600">
                   {isIllustrated
-                    ? `${Math.min(book.illustrations?.filter((i: Illustration) => i.status === 'completed' || (!i.status && i.imageUrl)).length || 0, book.totalChapters || 20)} of ${book.totalChapters || 20} panels generated`
+                    ? `${Math.min(dedupeIllustrationsByPosition(book.illustrations).filter((i: Illustration) => i.status === 'completed' || (!i.status && i.imageUrl)).length, book.totalChapters || 20)} of ${book.totalChapters || 20} panels generated`
                     : isScreenplay
                       ? `${book.chapters.length} of ${book.totalChapters} sequences generated`
                       : `${book.chapters.length} of ${book.totalChapters} chapters generated`
@@ -2286,7 +2310,7 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
                 <div className="bg-neutral-900 rounded-xl p-4 text-center">
                   <p className="text-2xl font-bold text-white">
                     {isIllustrated
-                      ? Math.min(book.illustrations?.filter((i: Illustration) => i.status === 'completed' || (!i.status && i.imageUrl)).length || 0, book.totalChapters || 20)
+                      ? Math.min(dedupeIllustrationsByPosition(book.illustrations).filter((i: Illustration) => i.status === 'completed' || (!i.status && i.imageUrl)).length, book.totalChapters || 20)
                       : book.chapters.length}
                   </p>
                   <p className="text-sm text-neutral-300">Free Preview</p>
@@ -2294,7 +2318,7 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
                 <div className="bg-neutral-50 rounded-xl p-4 text-center border border-neutral-100">
                   <p className="text-2xl font-bold text-neutral-400">
                     {isIllustrated
-                      ? Math.max(0, (book.totalChapters || 20) - (book.illustrations?.filter((i: Illustration) => i.status === 'completed' || (!i.status && i.imageUrl)).length || 0))
+                      ? Math.max(0, (book.totalChapters || 20) - dedupeIllustrationsByPosition(book.illustrations).filter((i: Illustration) => i.status === 'completed' || (!i.status && i.imageUrl)).length)
                       : book.totalChapters - book.chapters.length
                     }
                   </p>
@@ -2335,7 +2359,7 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
               </div>
               <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
                 {(() => {
-                  const adminCompleted = book.illustrations?.filter(ill => ill.status === 'completed') || [];
+                  const adminCompleted = dedupeIllustrationsByPosition(book.illustrations).filter(ill => ill.status === 'completed');
                   const adminCarousel: LightboxImage[] = adminCompleted.map(i => ({
                     url: `/api/books/${id}/illustrations/${i.id}`,
                     alt: `Panel ${i.position}`,
@@ -2366,6 +2390,11 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
                       <div className="absolute bottom-1 left-1 bg-black/60 text-white text-[10px] px-1.5 py-0.5 rounded-full pointer-events-none">
                         #{ill.position}
                       </div>
+                      {ill.retryCount !== undefined && ill.retryCount > 0 && (
+                        <div className="absolute bottom-1 right-1 bg-red-500 text-white text-[9px] px-1.5 py-0.5 rounded-full pointer-events-none" title={`Regenerated ${ill.retryCount} time(s)`}>
+                          ↻{ill.retryCount}
+                        </div>
+                      )}
                     </div>
                   ));
                 })()}
@@ -2386,8 +2415,8 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
 
               {/* Horizontal panel carousel — for illustrated books. Click any
                   thumbnail to open the full lightbox carousel. */}
-              {isIllustrated && book.illustrations && book.illustrations.filter(i => i.status === 'completed').length > 0 && (() => {
-                const completed = book.illustrations.filter(i => i.status === 'completed');
+              {isIllustrated && book.illustrations && dedupeIllustrationsByPosition(book.illustrations).filter(i => i.status === 'completed').length > 0 && (() => {
+                const completed = dedupeIllustrationsByPosition(book.illustrations).filter(i => i.status === 'completed');
                 const carouselImages: LightboxImage[] = completed.map(i => ({
                   url: `/api/books/${id}/illustrations/${i.id}`,
                   alt: `Panel ${i.position}`,
