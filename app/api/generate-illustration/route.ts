@@ -163,6 +163,10 @@ export async function POST(request: NextRequest) {
     // use Gemini Flash to creatively rewrite blocked scenes while preserving humor
     let rephrasedScene: string | null = null;
 
+    const PRIMARY_IMAGE_MODEL = 'gemini-3-pro-image-preview';
+    const FALLBACK_IMAGE_MODEL = 'gemini-3.1-flash-image-preview';
+    let currentModelName: string = PRIMARY_IMAGE_MODEL;
+
     const generateWithSafeMode = async () => {
       // If in safe mode, use AI-rephrased scene instead of dumb word replacement
       let currentPrompt = prompt;
@@ -180,7 +184,7 @@ export async function POST(request: NextRequest) {
       }
 
       const model = getGenAI().getGenerativeModel({
-        model: 'gemini-3-pro-image-preview',
+        model: currentModelName,
         safetySettings: SAFETY_SETTINGS,
       });
 
@@ -367,7 +371,24 @@ export async function POST(request: NextRequest) {
       throw lastError || new Error('Failed to generate after retries');
     };
 
-    const result = await attemptGeneration();
+    let result;
+    try {
+      result = await attemptGeneration();
+    } catch (err) {
+      const errMsg = (err as Error).message?.toLowerCase() || '';
+      const isRateLimitError =
+        errMsg.includes('rate limit') ||
+        errMsg.includes('quota') ||
+        errMsg.includes('429') ||
+        errMsg.includes('resource exhausted') ||
+        errMsg.includes('too many requests');
+
+      if (!isRateLimitError || currentModelName === FALLBACK_IMAGE_MODEL) throw err;
+
+      console.warn(`[Illustration] Primary model exhausted, falling back to ${FALLBACK_IMAGE_MODEL}`);
+      currentModelName = FALLBACK_IMAGE_MODEL;
+      result = await attemptGeneration();
+    }
 
     // Check if blocked by safety
     if ('blocked' in result && result.blocked) {

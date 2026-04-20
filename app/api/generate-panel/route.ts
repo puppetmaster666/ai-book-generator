@@ -282,7 +282,10 @@ export async function POST(request: NextRequest) {
     // Execute with retry logic that handles safety blocks
     let useSafeMode = false;
 
-    const generateWithSafeMode = async () => {
+    const PRIMARY_IMAGE_MODEL = 'gemini-3-pro-image-preview';
+    const FALLBACK_IMAGE_MODEL = 'gemini-3.1-flash-image-preview';
+
+    const generateWithSafeMode = async (modelName: string = PRIMARY_IMAGE_MODEL) => {
       // If in safe mode, sanitize the prompt
       let currentPrompt = prompt;
       if (useSafeMode) {
@@ -295,7 +298,7 @@ export async function POST(request: NextRequest) {
       }
 
       const model = getGenAI().getGenerativeModel({
-        model: 'gemini-3-pro-image-preview',
+        model: modelName,
         safetySettings: SAFETY_SETTINGS,
       });
 
@@ -344,7 +347,7 @@ export async function POST(request: NextRequest) {
     // Retry utility modified to handle safety blocks with FAST key switching
     // Key rotation happens IMMEDIATELY on rate limit - no delay for first switch
     // Only adds delay after cycling through all 4 keys
-    const attemptGeneration = async () => {
+    const attemptGeneration = async (modelName: string = PRIMARY_IMAGE_MODEL) => {
       let lastError: Error | null = null;
       let keysTriedThisCycle = 0;
       const totalKeys = 4;
@@ -357,7 +360,7 @@ export async function POST(request: NextRequest) {
 
       for (let attempt = 0; attempt < (totalKeys * maxCycles) + 1; attempt++) {
         try {
-          const result = await generateWithSafeMode();
+          const result = await generateWithSafeMode(modelName);
 
           // Check if blocked by safety
           if ('blocked' in result && result.blocked) {
@@ -423,7 +426,23 @@ export async function POST(request: NextRequest) {
       throw lastError || new Error('Failed to generate after retries');
     };
 
-    const result = await attemptGeneration();
+    let result;
+    try {
+      result = await attemptGeneration(PRIMARY_IMAGE_MODEL);
+    } catch (err) {
+      const errMsg = (err as Error).message?.toLowerCase() || '';
+      const isRateLimitError =
+        errMsg.includes('rate limit') ||
+        errMsg.includes('quota') ||
+        errMsg.includes('429') ||
+        errMsg.includes('resource exhausted') ||
+        errMsg.includes('too many requests');
+
+      if (!isRateLimitError) throw err;
+
+      console.warn(`[Panel ${panelNumber}] Primary model exhausted, falling back to ${FALLBACK_IMAGE_MODEL}`);
+      result = await attemptGeneration(FALLBACK_IMAGE_MODEL);
+    }
 
     // Check for content policy blocks
     if ('blocked' in result && result.blocked) {
