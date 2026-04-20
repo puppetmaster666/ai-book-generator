@@ -14,6 +14,8 @@ export async function GET() {
         id: true,
         bookId: true,
         altText: true,
+        width: true,
+        height: true,
         book: {
           select: {
             title: true,
@@ -32,6 +34,8 @@ export async function GET() {
       bookId: p.bookId,
       title: p.book?.title || 'Roast',
       altText: p.altText,
+      width: p.width,
+      height: p.height,
       imageUrl: `/api/books/${p.bookId}/illustrations/${p.id}`,
     }));
 

@@ -9,6 +9,8 @@ interface RoastSample {
   bookId: string;
   title: string;
   altText: string | null;
+  width?: number;
+  height?: number;
   imageUrl: string;
 }
 
@@ -29,7 +31,6 @@ export default function RoastSampleSection({ variant = 'homepage' }: { variant?:
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const [slideDirection, setSlideDirection] = useState<'left' | 'right'>('right');
   const [isAdmin, setIsAdmin] = useState(false);
-  const [dragIndex, setDragIndex] = useState<number | null>(null);
 
   useEffect(() => {
     fetch('/api/roast-samples')
@@ -61,20 +62,17 @@ export default function RoastSampleSection({ variant = 'homepage' }: { variant?:
     }
   }, []);
 
-  const handleDrop = useCallback((targetIndex: number) => {
-    if (dragIndex === null || dragIndex === targetIndex) {
-      setDragIndex(null);
-      return;
-    }
+  // Shift a card one position in the given direction. Clamps at the ends.
+  const shiftCard = useCallback((index: number, direction: -1 | 1) => {
     setSamples(prev => {
+      const target = index + direction;
+      if (target < 0 || target >= prev.length) return prev;
       const next = [...prev];
-      const [moved] = next.splice(dragIndex, 1);
-      next.splice(targetIndex, 0, moved);
+      [next[index], next[target]] = [next[target], next[index]];
       persistOrder(next.map(s => s.id));
       return next;
     });
-    setDragIndex(null);
-  }, [dragIndex, persistOrder]);
+  }, [persistOrder]);
 
   const close = useCallback(() => setActiveIndex(null), []);
   const next = useCallback(() => {
@@ -165,50 +163,76 @@ export default function RoastSampleSection({ variant = 'homepage' }: { variant?:
               </div>
             </div>
 
-            {/* Right: poker-hand card stack of real roast panels */}
+            {/* Right: poker-hand card stack of real roast panels. Card
+                aspect ratio matches the first sample's actual image so
+                nothing gets cropped. */}
             <div className="order-1 md:order-2 flex justify-center">
               <div className="relative w-80 h-96">
                 {samples.map((sample, i) => {
                   const card = layout[i] || layout[layout.length - 1];
                   const isHovered = hoveredIndex === i;
-                  const isDragging = dragIndex === i;
+                  // Use the first sample's aspect for all cards so the stack
+                  // has consistent dimensions. Defaults to square if unknown.
+                  const first = samples[0];
+                  const cardAspect = first?.width && first?.height
+                    ? `${first.width} / ${first.height}`
+                    : '1 / 1';
                   return (
-                    <button
+                    <div
                       key={sample.id}
+                      className="absolute top-0 w-48"
+                      style={{
+                        left: `${card.left}px`,
+                        zIndex: isHovered ? 50 : i + 1,
+                      }}
                       onMouseEnter={() => setHoveredIndex(i)}
                       onMouseLeave={() => setHoveredIndex(2)}
-                      onClick={() => {
-                        if (dragIndex !== null) return; // ignore click when a drag just ended
-                        setSlideDirection('right');
-                        setActiveIndex(i);
-                      }}
-                      draggable={isAdmin}
-                      onDragStart={isAdmin ? () => setDragIndex(i) : undefined}
-                      onDragOver={isAdmin ? (e) => { e.preventDefault(); } : undefined}
-                      onDrop={isAdmin ? () => handleDrop(i) : undefined}
-                      onDragEnd={isAdmin ? () => setDragIndex(null) : undefined}
-                      className={`absolute top-0 w-48 aspect-[2/3] rounded-lg overflow-hidden shadow-xl border-2 border-yellow-400 bg-white transition-all duration-300 ${
-                        isDragging ? 'opacity-50 scale-95' :
-                        isHovered ? 'scale-110 shadow-2xl' : 'hover:scale-105'
-                      } ${isAdmin ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'}`}
-                      style={{
-                        transform: `rotate(${isHovered && !isDragging ? 0 : card.rotate}deg) scale(${isHovered && !isDragging ? 1.1 : 1})`,
-                        left: `${card.left}px`,
-                        zIndex: isDragging ? 100 : isHovered ? 50 : i + 1,
-                      }}
-                      aria-label={isAdmin ? `Panel ${i + 1} — drag to reorder or click to view` : `View ${sample.altText || sample.title} full size`}
                     >
-                      <img
-                        src={sample.imageUrl}
-                        alt={sample.altText || `${sample.title} panel`}
-                        className="w-full h-full object-cover pointer-events-none"
-                      />
-                      {isAdmin && (
-                        <span className="absolute top-1 left-1 bg-black/70 text-yellow-400 text-[9px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded pointer-events-none">
-                          drag
-                        </span>
+                      <button
+                        onClick={() => {
+                          setSlideDirection('right');
+                          setActiveIndex(i);
+                        }}
+                        className={`block w-full rounded-lg overflow-hidden shadow-xl border-2 border-yellow-400 bg-black transition-all duration-300 cursor-pointer ${
+                          isHovered ? 'scale-110 shadow-2xl' : 'hover:scale-105'
+                        }`}
+                        style={{
+                          aspectRatio: cardAspect,
+                          transform: `rotate(${isHovered ? 0 : card.rotate}deg)`,
+                        }}
+                        aria-label={`View ${sample.altText || sample.title} full size`}
+                      >
+                        <img
+                          src={sample.imageUrl}
+                          alt={sample.altText || `${sample.title} panel`}
+                          className="w-full h-full object-contain pointer-events-none"
+                        />
+                      </button>
+                      {/* Admin-only reorder arrows. Show only on the currently
+                          hovered card so the UI stays clean otherwise. */}
+                      {isAdmin && isHovered && (
+                        <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 flex gap-1 z-[60]">
+                          <button
+                            type="button"
+                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); shiftCard(i, -1); }}
+                            disabled={i === 0}
+                            className="w-8 h-8 rounded-full bg-yellow-400 text-black flex items-center justify-center shadow-lg hover:bg-lime-400 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                            title="Move left"
+                          >
+                            <ChevronLeft className="h-4 w-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); shiftCard(i, 1); }}
+                            disabled={i === samples.length - 1}
+                            className="w-8 h-8 rounded-full bg-yellow-400 text-black flex items-center justify-center shadow-lg hover:bg-lime-400 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                            title="Move right"
+                          >
+                            <ChevronRight className="h-4 w-4" />
+                          </button>
+                        </div>
                       )}
-                    </button>
+                    </div>
                   );
                 })}
               </div>
