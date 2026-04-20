@@ -232,28 +232,28 @@ export const ART_STYLES = {
     description: 'Sharp dramatic anime with bold action poses',
     prompt: 'professional shonen anime illustration in the style of Buso Renkin and Bleach, sharp clean ink outlines with dynamic line weight, vibrant saturated cel-shaded coloring with hard shadow edges, dramatic lighting with rim-light highlights and lens flare accents, spiky detailed hair with individual strand rendering, large expressive eyes with intense reflections, exaggerated dynamic action poses with foreshortening, speed lines and energy effects radiating from characters, detailed costume and weapon designs with metallic sheen, bold dramatic compositions with diagonal framing, high-contrast color palette with deep blacks and vivid highlights, professional Japanese animation production quality',
     coverStyle: 'dynamic shonen anime art with sharp lines, dramatic poses, and vibrant cel-shading',
-    category: 'comic',
+    category: 'roast',
   },
   animated: {
     label: 'Western Animation',
     description: 'Clean animated style like classic cartoons',
     prompt: 'premium Western animation illustration in the style of Batman: The Animated Series and modern Disney animation, clean geometric character designs with strong angular silhouettes, art deco influenced backgrounds with simplified architectural forms, dramatic noir-inspired lighting with bold colored shadows (no black shadows, use deep blues and purples), flat cel-shaded coloring with limited but striking palette, thick confident outlines with consistent weight, exaggerated but grounded character proportions, cinematic widescreen compositions with dramatic camera angles, moody atmospheric backgrounds with gradient skies, stylized but expressive facial features with strong jawlines and distinctive profiles, professional broadcast animation quality',
     coverStyle: 'stylized Western animation art with clean shapes, dramatic lighting, and bold color palette',
-    category: 'comic',
+    category: 'roast',
   },
   realistic: {
     label: 'Realistic',
     description: 'Photorealistic cinematic style',
     prompt: 'photorealistic cinematic illustration with professional photography quality, natural skin textures with subsurface scattering and visible pores, accurate facial anatomy with realistic proportions and bone structure, cinematic shallow depth-of-field with bokeh background blur, professional studio or natural lighting with soft diffused key light and subtle fill, detailed fabric textures and realistic clothing wrinkles, environmental storytelling with real-world settings, color graded with film-like tonal curve (slight teal shadows, warm highlights), hyperrealistic hair rendering with individual strands catching light, photographically accurate eye detail with realistic iris patterns, 35mm or 85mm lens perspective, editorial photography meets graphic novel realism',
     coverStyle: 'photorealistic cinematic portrait with professional lighting and film-quality color grading',
-    category: 'comic',
+    category: 'roast',
   },
   puppet: {
     label: 'Puppet / Doll',
     description: 'Marionette puppet style like Team America',
     prompt: 'photograph of real physical marionette puppets on a miniature film set, stop-motion puppet photography like Team America World Police, actual tangible puppet figures made of molded plastic and resin with visible ball-joint articulation, real fabric clothing stitched to scale, physical miniature diorama environments built from wood and foam and paint, shot on a real camera with shallow depth of field and soft studio film lighting, puppets have shiny molded plastic skin with visible seam lines and painted-on eyebrows, glassy doll eyes, slightly oversized heads, stiff unnatural marionette poses, NOT a cartoon, NOT drawn, NOT illustrated, this is a real photograph of physical puppet figures on a practical miniature set',
     coverStyle: 'photograph of Team America style marionette puppet characters with visible joints on a practical miniature film set',
-    category: 'comic',
+    category: 'roast',
   },
 } as const;
 
