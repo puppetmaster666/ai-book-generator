@@ -134,6 +134,7 @@ export async function attemptIllustrationGeneration(data: {
     characterVisualGuide?: CharacterVisualGuide;
     visualStyleGuide?: VisualStyleGuide;
     bookFormat?: string;
+    bookPreset?: string;
     referenceImages?: CharacterReferenceImage[];
 }): Promise<IllustrationAttemptResult> {
     try {
@@ -160,6 +161,7 @@ export async function attemptIllustrationGeneration(data: {
                     characterVisualGuide: data.characterVisualGuide,
                     visualStyleGuide: data.visualStyleGuide,
                     bookFormat: data.bookFormat,
+                    bookPreset: data.bookPreset,
                     referenceImages: data.referenceImages, // Pass reference images for character consistency
                 }),
                 signal: controller.signal,
@@ -253,6 +255,7 @@ export async function generateIllustrationWithRetry(data: {
     characterVisualGuide?: CharacterVisualGuide;
     visualStyleGuide?: VisualStyleGuide;
     bookFormat?: string;
+    bookPreset?: string;
     referenceImages?: CharacterReferenceImage[];
 }): Promise<{ imageUrl: string; altText: string; width: number; height: number } | null> {
     let currentScene = data.scene;
@@ -369,6 +372,7 @@ export async function generateAndValidateIllustration(data: {
     characterVisualGuide?: CharacterVisualGuide;
     visualStyleGuide?: VisualStyleGuide;
     bookFormat?: string;
+    bookPreset?: string;
     referenceImages?: CharacterReferenceImage[];
     expectedText?: string | null;
 }): Promise<{ imageUrl: string; altText: string; width: number; height: number } | null> {

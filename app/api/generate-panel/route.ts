@@ -300,6 +300,9 @@ export async function POST(request: NextRequest) {
       const model = getGenAI().getGenerativeModel({
         model: modelName,
         safetySettings: SAFETY_SETTINGS,
+        generationConfig: {
+          imageConfig: { imageSize: '1K' },
+        } as unknown as Record<string, unknown>,
       });
 
       const result = await model.generateContent(currentPrompt);

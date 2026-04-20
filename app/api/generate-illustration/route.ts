@@ -124,6 +124,7 @@ export async function POST(request: NextRequest) {
       characterVisualGuide,
       visualStyleGuide,
       bookFormat,
+      bookPreset,
       referenceImages, // Array of { characterName: string, imageData: string (base64) }
     } = await request.json();
 
@@ -163,8 +164,11 @@ export async function POST(request: NextRequest) {
     // use Gemini Flash to creatively rewrite blocked scenes while preserving humor
     let rephrasedScene: string | null = null;
 
-    const PRIMARY_IMAGE_MODEL = 'gemini-3-pro-image-preview';
-    const FALLBACK_IMAGE_MODEL = 'gemini-3.1-flash-image-preview';
+    // Roast books use Nano Banana 2 (cheaper, quality tradeoff acceptable for comedic panels)
+    // with Nano Banana Pro as fallback. Other books do the opposite.
+    const isRoast = bookPreset === 'roast_comic';
+    const PRIMARY_IMAGE_MODEL = isRoast ? 'gemini-3.1-flash-image-preview' : 'gemini-3-pro-image-preview';
+    const FALLBACK_IMAGE_MODEL = isRoast ? 'gemini-3-pro-image-preview' : 'gemini-3.1-flash-image-preview';
     let currentModelName: string = PRIMARY_IMAGE_MODEL;
 
     const generateWithSafeMode = async () => {
@@ -186,6 +190,10 @@ export async function POST(request: NextRequest) {
       const model = getGenAI().getGenerativeModel({
         model: currentModelName,
         safetySettings: SAFETY_SETTINGS,
+        generationConfig: {
+          // Generate at 1K resolution — Google charges $0.039 for 1K vs $0.134 for 2K
+          imageConfig: { imageSize: '1K' },
+        } as unknown as Record<string, unknown>,
       });
 
       // Build content array with reference images if provided

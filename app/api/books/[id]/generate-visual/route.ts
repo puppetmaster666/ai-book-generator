@@ -422,6 +422,7 @@ export async function POST(
                     chapterTitle: chapter.title || `Panel ${chapter.number}`,
                     setting: chapter.scene.background,
                     bookFormat: bookFormat,
+                    bookPreset: book.bookPreset || undefined,
                     characterVisualGuide: characterVisualGuide,
                     visualStyleGuide: visualStyleGuide,
                     referenceImages: referenceImages.length > 0 ? referenceImages : undefined,

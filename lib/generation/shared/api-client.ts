@@ -83,12 +83,15 @@ export function getGeminiFlashLight(): GenerativeModel {
   return _geminiFlashLight;
 }
 
-// Gemini 3 Pro Image for cover generation
+// Gemini 3 Pro Image for cover generation (1K resolution to save cost)
 export function getGeminiImage(): GenerativeModel {
   if (!_geminiImage) {
     _geminiImage = getGenAI().getGenerativeModel({
       model: 'gemini-3-pro-image-preview',
       safetySettings: SAFETY_SETTINGS,
+      generationConfig: {
+        imageConfig: { imageSize: '1K' },
+      } as unknown as Record<string, unknown>,
     });
   }
   return _geminiImage;

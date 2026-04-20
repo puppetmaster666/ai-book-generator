@@ -137,6 +137,9 @@ export async function POST(
     const model = getGenAI().getGenerativeModel({
       model: 'gemini-3-pro-image-preview',
       safetySettings: SAFETY_SETTINGS,
+      generationConfig: {
+        imageConfig: { imageSize: '1K' },
+      } as unknown as Record<string, unknown>,
     });
 
     // Stylize each photo
