@@ -2268,6 +2268,44 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
             </div>
           )}
 
+          {/* Admin-only panel picker for completed roast books — lets admin
+              star individual panels to feature on the homepage sample section */}
+          {isAdminUser && book.status === 'completed' && isIllustrated && book.bookPreset === 'roast_comic' && (book.illustrations?.length || 0) > 0 && (
+            <div className="bg-yellow-50 border border-yellow-200 rounded-2xl p-6 mb-6">
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <p className="text-xs uppercase tracking-wide text-yellow-700 font-semibold">Admin</p>
+                  <p className="text-sm font-medium text-yellow-900">Feature roast panels on homepage</p>
+                </div>
+                <p className="text-xs text-yellow-700">
+                  {book.illustrations?.filter(i => i.isFeaturedRoastPanel).length || 0} featured
+                </p>
+              </div>
+              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
+                {book.illustrations?.filter(ill => ill.status === 'completed').map(ill => (
+                  <div key={ill.id} className="relative aspect-square rounded-lg overflow-hidden border-2 border-yellow-300 bg-white">
+                    <img src={`/api/books/${id}/illustrations/${ill.id}`} alt={`Panel ${ill.position}`} className="w-full h-full object-cover" />
+
+                    <button
+                      onClick={() => toggleFeaturedPanel(ill.id, !ill.isFeaturedRoastPanel)}
+                      className={`absolute top-1 right-1 p-1.5 rounded-full shadow-lg transition-colors ${
+                        ill.isFeaturedRoastPanel
+                          ? 'bg-yellow-400 text-yellow-900'
+                          : 'bg-white/95 text-neutral-500 hover:text-yellow-500'
+                      }`}
+                      title={ill.isFeaturedRoastPanel ? 'Remove from homepage' : 'Feature on homepage'}
+                    >
+                      <Star className={`h-4 w-4 ${ill.isFeaturedRoastPanel ? 'fill-current' : ''}`} />
+                    </button>
+                    <div className="absolute bottom-1 left-1 bg-black/60 text-white text-[10px] px-1.5 py-0.5 rounded-full">
+                      #{ill.position}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Completed Section */}
           {book.status === 'completed' && (
             <div className="bg-white rounded-2xl border border-neutral-200 p-6 sm:p-8 mb-6">
