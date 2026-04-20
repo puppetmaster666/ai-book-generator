@@ -352,6 +352,34 @@ a, button {
   100% { transform: translate(-50%, -50%) rotate(360deg); }
 }
 
+/* Lightbox carousel animations */
+@keyframes lightboxFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes lightboxSlideInRight {
+  from { opacity: 0; transform: translateX(40px) scale(0.96); }
+  to { opacity: 1; transform: translateX(0) scale(1); }
+}
+
+@keyframes lightboxSlideInLeft {
+  from { opacity: 0; transform: translateX(-40px) scale(0.96); }
+  to { opacity: 1; transform: translateX(0) scale(1); }
+}
+
+.animate-fade-in {
+  animation: lightboxFadeIn 0.25s ease-out;
+}
+
+.animate-slide-in-right {
+  animation: lightboxSlideInRight 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.animate-slide-in-left {
+  animation: lightboxSlideInLeft 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
 /* Inner vignette for depth */
 .roast-vignette {
   position: absolute;
