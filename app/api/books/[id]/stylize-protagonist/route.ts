@@ -142,11 +142,11 @@ export async function POST(
       } as unknown as Record<string, unknown>,
     });
 
-    // Stylize each photo
+    // Stylize each photo. We preserve the original framing (front/side/full-body/whatever)
+    // rather than forcing an angle by upload order — users rarely upload in a specific order.
     const styledImages: { base64: string; mimeType: string }[] = [];
     for (let imgIdx = 0; imgIdx < images.length; imgIdx++) {
       const img = images[imgIdx];
-      const angleHint = imgIdx === 0 ? 'front-facing portrait (shoulders up)' : imgIdx === 1 ? 'side or 3/4 angle view' : 'full body showing complete outfit and build';
 
       const stylizePrompt = `You are creating a character reference for an illustrated book. Transform this photograph into ${styleConfig.label} illustration style.
 
@@ -156,7 +156,7 @@ TRANSFORMATION REQUIREMENTS:
 1. Transform this person into ${styleConfig.label} style illustration
 2. Maintain the person's key identifying features (face shape, hair style, eye shape, distinctive features)
 3. Use the exact art style colors and rendering technique: ${styleConfig.prompt}
-4. Create a ${angleHint} image
+4. PRESERVE THE EXACT FRAMING of the input photo (if the photo is front-facing, output is front-facing; if it's a side angle, output is a side angle; if it's full-body, output is full-body). Do NOT change the camera angle or crop.
 5. The character should have a neutral or friendly expression
 6. Background should be simple/neutral to focus on the character
 7. Keep their EXACT clothing, accessories, and glasses (or lack of glasses) from the photo

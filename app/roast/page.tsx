@@ -347,6 +347,17 @@ HOW TO WRITE THIS:
           {/* Step 1: Characters */}
           {step === 1 && (
             <>
+              {/* Photo upload guideline — shown once above the character list */}
+              <div className="mb-5 bg-yellow-50 border border-yellow-200 rounded-2xl p-4">
+                <p className="text-xs font-bold text-yellow-900 uppercase tracking-wider mb-2">Photo tips</p>
+                <ul className="text-sm text-neutral-700 space-y-1 list-disc pl-5">
+                  <li>Upload <span className="font-semibold">1 to 3 photos</span> of the target. Clear lighting, face visible.</li>
+                  <li>For best character consistency, include a <span className="font-semibold">front shot</span>, a <span className="font-semibold">side or 3/4 angle</span>, and a <span className="font-semibold">full-body</span> shot if you have them. Order doesn&apos;t matter, we figure it out.</li>
+                  <li>Avoid group photos, sunglasses, and heavy filters. The AI locks identity from what it can see.</li>
+                  <li>Photos aren&apos;t shared or stored beyond this roast. Only the stylized reference image is kept.</li>
+                </ul>
+              </div>
+
               <div className="space-y-5">
                 {characters.map((char, i) => (
                   <div key={i} className="bg-white rounded-2xl border border-neutral-200 p-5">
