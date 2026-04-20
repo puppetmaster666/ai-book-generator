@@ -222,7 +222,6 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
   const [showFirstBookDiscount, setShowFirstBookDiscount] = useState(false);
   const [isFirstCompletedBook, setIsFirstCompletedBook] = useState(false);
   const [premiseExpanded, setPremiseExpanded] = useState(false);
-  const [lightboxImage, setLightboxImage] = useState<string | null>(null);
   const [chapterStatuses, setChapterStatuses] = useState<ChapterCardStatus[]>([]);
   const [serverStartTime, setServerStartTime] = useState<Date | null>(null);
   const [toast, setToast] = useState<{ title: string; message: string; type: 'error' | 'success' | 'info' | 'warning' } | null>(null);
@@ -2596,11 +2595,18 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
           {!isGenerating && isIllustrated && book.illustrations && book.illustrations.length > 0 && (
             <div className="bg-white rounded-2xl border border-neutral-200 p-6 sm:p-8 mb-6">
               {(() => {
-                // Filter to only show completed illustrations with valid imageUrls
-                const completedIllustrations = book.illustrations.filter(
-                  (ill: Illustration) => (ill.status === 'completed' || !ill.status) && ill.imageUrl
+                // Filter to only show completed illustrations and dedupe by panel position
+                const completedIllustrations = dedupeIllustrationsByPosition(book.illustrations).filter(
+                  (ill) => (ill.status === 'completed' || !ill.status) && ill.imageUrl
                 );
                 if (completedIllustrations.length === 0) return null;
+                // Pre-build the carousel images once so every tile opens the
+                // same list and the lightbox can flip through them directly
+                const galleryImages: LightboxImage[] = completedIllustrations.map((ill, i) => ({
+                  url: `/api/books/${id}/illustrations/${ill.id}`,
+                  alt: ill.altText || `Illustration ${i + 1}`,
+                  caption: `Panel ${ill.position} of ${completedIllustrations.length}`,
+                }));
                 return (
                   <>
                     <div className="flex items-center justify-between mb-4">
@@ -2612,23 +2618,25 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
                     </div>
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                       {completedIllustrations.map((illustration, index) => (
-                        <div
+                        <button
+                          type="button"
                           key={illustration.id}
-                          className="aspect-square rounded-xl overflow-hidden bg-neutral-100 border border-neutral-200 hover:border-neutral-400 transition-colors cursor-pointer group"
-                          onClick={() => setLightboxImage(illustration.imageUrl!)}
+                          className="aspect-square rounded-xl overflow-hidden bg-neutral-100 border border-neutral-200 hover:border-yellow-400 transition-colors cursor-pointer group"
+                          onClick={() => setLightbox({ images: galleryImages, startIndex: index })}
+                          aria-label={`View illustration ${index + 1} full size`}
                         >
                           <img
-                            src={illustration.imageUrl!}
+                            src={`/api/books/${id}/illustrations/${illustration.id}`}
                             alt={illustration.altText || `Illustration ${index + 1}`}
                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                           />
-                        </div>
+                        </button>
                       ))}
                     </div>
                   </>
                 );
               })()}
-              <p className="text-xs text-neutral-400 mt-3 text-center">Click any image to view full size</p>
+              <p className="text-xs text-neutral-400 mt-3 text-center">Click any image to browse the gallery — use arrow keys or the on-screen arrows to flip through</p>
             </div>
           )}
 
@@ -2688,27 +2696,6 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
           currentChapter={book.currentChapter}
           bookFormat={book.bookFormat}
         />
-      )}
-
-      {/* Image Lightbox */}
-      {lightboxImage && (
-        <div
-          className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4 cursor-pointer"
-          onClick={() => setLightboxImage(null)}
-        >
-          <button
-            onClick={() => setLightboxImage(null)}
-            className="absolute top-4 right-4 p-2 bg-white/10 hover:bg-white/20 rounded-full transition-colors"
-          >
-            <X className="h-6 w-6 text-white" />
-          </button>
-          <img
-            src={lightboxImage}
-            alt="Full size illustration"
-            className="max-w-full max-h-[90vh] object-contain rounded-lg"
-            onClick={(e) => e.stopPropagation()}
-          />
-        </div>
       )}
 
       {/* Styled carousel lightbox for cover + panel views */}
