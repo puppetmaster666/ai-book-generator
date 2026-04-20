@@ -12,15 +12,15 @@ interface RoastSample {
   imageUrl: string;
 }
 
-// Tight stack layout matching The Weaver's Mark section - cards stack with
-// small horizontal offset so the full hand reads as a single overlapping
-// group rather than a wide fan.
+// Scattered-photo layout: wider horizontal spacing + varied vertical
+// position so each card is clearly visible (not just a tight stack) and
+// the group reads as photos thrown down on a table.
 const STACK_LAYOUT = [
-  { rotate: -12, left: 0 },
-  { rotate: -6, left: 30 },
-  { rotate: 0, left: 60 },
-  { rotate: 6, left: 90 },
-  { rotate: 12, left: 120 },
+  { rotate: -15, left: 0,   top: 30 },
+  { rotate: -7,  left: 60,  top: 10 },
+  { rotate: 0,   left: 120, top: 0 },
+  { rotate: 7,   left: 180, top: 10 },
+  { rotate: 15,  left: 240, top: 30 },
 ];
 
 export default function RoastSampleSection({ variant = 'homepage' }: { variant?: 'homepage' | 'roast' }) {
@@ -129,9 +129,9 @@ export default function RoastSampleSection({ variant = 'homepage' }: { variant?:
               </div>
             </div>
 
-            {/* Right: tight stacked cards of real roast panels */}
+            {/* Right: scattered-photo cards of real roast panels */}
             <div className="flex justify-center">
-              <div className="relative w-80 h-96">
+              <div className="relative w-[460px] h-[400px] max-w-full">
                 {samples.map((sample, i) => {
                   const card = layout[i] || layout[layout.length - 1];
                   const isHovered = hoveredIndex === i;
@@ -144,9 +144,10 @@ export default function RoastSampleSection({ variant = 'homepage' }: { variant?:
                         setSlideDirection('right');
                         setActiveIndex(i);
                       }}
-                      className="absolute top-0 w-48 aspect-[2/3] rounded-lg overflow-hidden border-[3px] border-yellow-400 shadow-2xl transition-all duration-300 cursor-pointer"
+                      className="absolute w-52 aspect-[2/3] rounded-lg overflow-hidden border-[3px] border-yellow-400 shadow-2xl transition-all duration-300 cursor-pointer"
                       style={{
                         left: `${card.left}px`,
+                        top: `${card.top}px`,
                         transform: `rotate(${isHovered ? 0 : card.rotate}deg) scale(${isHovered ? 1.1 : 1})`,
                         zIndex: isHovered ? 50 : i + 1,
                       }}
