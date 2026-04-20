@@ -29,6 +29,7 @@ interface BookData {
   ending: string;
   writingStyle: string;
   bookFormat: string;
+  bookPreset?: string | null;
   artStyle: string | null;
   targetWords: number;
   targetChapters: number;
@@ -459,6 +460,7 @@ function ReviewContent() {
 
   const getBasePrice = () => {
     if (!book) return PRICING.ONE_TIME.price;
+    if (book.bookPreset === 'roast_comic') return PRICING.ROAST.price;
     if (book.bookFormat === 'picture_book') return PRICING.VISUAL.price;
     return PRICING.ONE_TIME.price;
   };

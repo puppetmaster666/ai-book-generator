@@ -239,10 +239,12 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
   useEffect(() => {
     if (success === 'true' && sessionId && book && !purchaseTrackedRef.current) {
       purchaseTrackedRef.current = true;
-      // Determine price based on book format
-      const price = book.bookFormat === 'picture_book'
-        ? PRICING.VISUAL.price / 100
-        : PRICING.ONE_TIME.price / 100;
+      // Determine price based on book preset/format
+      const price = book.bookPreset === 'roast_comic'
+        ? PRICING.ROAST.price / 100
+        : book.bookFormat === 'picture_book'
+          ? PRICING.VISUAL.price / 100
+          : PRICING.ONE_TIME.price / 100;
       trackRedditPurchase(price, 'USD', 1, sessionId);
       // GA4 purchase conversion
       trackGAPurchase(price, sessionId);
