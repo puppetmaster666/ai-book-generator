@@ -12,18 +12,20 @@ interface RoastSample {
   imageUrl: string;
 }
 
-// Neat fan layout — five cards arranged like a poker hand, evenly spaced
-const FAN_LAYOUT = [
-  { rotate: -12, translateX: -180, translateY: 14 },
-  { rotate: -6, translateX: -90, translateY: 4 },
-  { rotate: 0, translateX: 0, translateY: 0 },
-  { rotate: 6, translateX: 90, translateY: 4 },
-  { rotate: 12, translateX: 180, translateY: 14 },
+// Tight stack layout matching The Weaver's Mark section - cards stack with
+// small horizontal offset so the full hand reads as a single overlapping
+// group rather than a wide fan.
+const STACK_LAYOUT = [
+  { rotate: -12, left: 0 },
+  { rotate: -6, left: 30 },
+  { rotate: 0, left: 60 },
+  { rotate: 6, left: 90 },
+  { rotate: 12, left: 120 },
 ];
 
 export default function RoastSampleSection({ variant = 'homepage' }: { variant?: 'homepage' | 'roast' }) {
   const [samples, setSamples] = useState<RoastSample[]>([]);
-  const [hoveredIndex, setHoveredIndex] = useState<number | null>(2);
+  const [hoveredIndex, setHoveredIndex] = useState<number | null>(0);
   const [loaded, setLoaded] = useState(false);
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const [slideDirection, setSlideDirection] = useState<'left' | 'right'>('right');
@@ -67,7 +69,7 @@ export default function RoastSampleSection({ variant = 'homepage' }: { variant?:
 
   if (!loaded || samples.length === 0) return null;
 
-  const layout = FAN_LAYOUT.slice(0, samples.length);
+  const layout = STACK_LAYOUT.slice(0, samples.length);
   const activeSample = activeIndex !== null ? samples[activeIndex] : null;
 
   return (
@@ -127,9 +129,9 @@ export default function RoastSampleSection({ variant = 'homepage' }: { variant?:
               </div>
             </div>
 
-            {/* Right: clean fan of real roast panels */}
-            <div className="relative h-80 flex items-center justify-center">
-              <div className="relative">
+            {/* Right: tight stacked cards of real roast panels */}
+            <div className="flex justify-center">
+              <div className="relative w-80 h-96">
                 {samples.map((sample, i) => {
                   const card = layout[i] || layout[layout.length - 1];
                   const isHovered = hoveredIndex === i;
@@ -137,14 +139,15 @@ export default function RoastSampleSection({ variant = 'homepage' }: { variant?:
                     <button
                       key={sample.id}
                       onMouseEnter={() => setHoveredIndex(i)}
-                      onMouseLeave={() => setHoveredIndex(2)}
+                      onMouseLeave={() => setHoveredIndex(0)}
                       onClick={() => {
                         setSlideDirection('right');
                         setActiveIndex(i);
                       }}
-                      className="absolute top-1/2 left-1/2 w-36 h-52 -translate-x-1/2 -translate-y-1/2 rounded-xl overflow-hidden border-[3px] border-yellow-400 shadow-2xl transition-all duration-500 cursor-pointer"
+                      className="absolute top-0 w-48 aspect-[2/3] rounded-lg overflow-hidden border-[3px] border-yellow-400 shadow-2xl transition-all duration-300 cursor-pointer"
                       style={{
-                        transform: `translate(-50%, -50%) translate(${card.translateX}px, ${card.translateY}px) rotate(${isHovered ? 0 : card.rotate}deg) scale(${isHovered ? 1.15 : 1})`,
+                        left: `${card.left}px`,
+                        transform: `rotate(${isHovered ? 0 : card.rotate}deg) scale(${isHovered ? 1.1 : 1})`,
                         zIndex: isHovered ? 50 : i + 1,
                       }}
                       aria-label={`View ${sample.altText || sample.title} full size`}
