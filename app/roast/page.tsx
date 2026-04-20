@@ -72,6 +72,17 @@ export default function RoastPage() {
   const [artStyle, setArtStyle] = useState('shonen');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [rateLimit, setRateLimit] = useState<{ active: boolean; resetAt: string | null }>({ active: false, resetAt: null });
+
+  // Check whether the site has hit its daily image generation quota
+  useEffect(() => {
+    fetch('/api/system-status')
+      .then(r => r.json())
+      .then(data => {
+        if (data?.rateLimited) setRateLimit({ active: true, resetAt: data.resetAt });
+      })
+      .catch(() => {});
+  }, []);
   const [generatedIdeas, setGeneratedIdeas] = useState<string[]>([]);
   const [isGeneratingIdeas, setIsGeneratingIdeas] = useState(false);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
@@ -343,6 +354,35 @@ HOW TO WRITE THIS:
               </div>
             ))}
           </div>
+
+          {/* Rate-limit banner — shown at the top of every step when we've
+              exhausted the daily image generation quota */}
+          {rateLimit.active && (
+            <div className="mb-6 bg-yellow-50 border-2 border-yellow-400 rounded-2xl p-5">
+              <div className="flex items-start gap-3">
+                <Clock className="h-5 w-5 text-yellow-700 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-bold text-yellow-900 mb-1">Roast machine needs a breather</p>
+                  <p className="text-sm text-yellow-800">
+                    We&apos;ve hit our daily image generation limit.{' '}
+                    {rateLimit.resetAt ? (
+                      <>Please check back at{' '}
+                        <span className="font-semibold">
+                          {new Date(rateLimit.resetAt).toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' })}
+                        </span>{' '}
+                        (in ~{Math.max(1, Math.ceil((new Date(rateLimit.resetAt).getTime() - Date.now()) / (60 * 60 * 1000)))} hours).
+                      </>
+                    ) : (
+                      <>Please check back in 24 hours.</>
+                    )}
+                  </p>
+                  <p className="text-xs text-yellow-700 mt-2">
+                    Your payment will not be taken until generation can run. No charges have been made.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Step 1: Characters */}
           {step === 1 && (
@@ -655,10 +695,12 @@ HOW TO WRITE THIS:
                   <button
                     data-roast-submit
                     onClick={handleSubmit}
-                    className="flex items-center gap-2 px-8 py-4 bg-yellow-400 text-neutral-900 rounded-full font-bold hover:bg-yellow-300 transition-all hover:scale-105"
+                    disabled={rateLimit.active}
+                    className="flex items-center gap-2 px-8 py-4 bg-yellow-400 text-neutral-900 rounded-full font-bold hover:bg-yellow-300 transition-all hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:bg-neutral-200 disabled:text-neutral-400"
+                    title={rateLimit.active ? 'Daily limit reached, try again in 24 hours' : ''}
                   >
                     <Sparkles className="h-5 w-5" />
-                    Generate Roast
+                    {rateLimit.active ? 'Temporarily unavailable' : 'Generate Roast'}
                   </button>
                 </div>
               )}

@@ -391,11 +391,45 @@ export async function POST(request: NextRequest) {
         errMsg.includes('resource exhausted') ||
         errMsg.includes('too many requests');
 
-      if (!isRateLimitError || currentModelName === FALLBACK_IMAGE_MODEL) throw err;
+      if (!isRateLimitError || currentModelName === FALLBACK_IMAGE_MODEL) {
+        // Primary or fallback exhausted; if this was the fallback, both
+        // models are now out and the daily quota is truly spent — flag
+        // the site so new roasts are blocked until reset
+        if (isRateLimitError && currentModelName === FALLBACK_IMAGE_MODEL) {
+          try {
+            const { flagImageRateLimited } = await import('@/lib/system-status');
+            await flagImageRateLimited(24, 'Daily image generation quota reached');
+            console.warn('[Illustration] Both models rate-limited — system flagged for 24h');
+          } catch (flagErr) {
+            console.error('[Illustration] Failed to flag rate limit:', flagErr);
+          }
+        }
+        throw err;
+      }
 
       console.warn(`[Illustration] Primary model exhausted, falling back to ${FALLBACK_IMAGE_MODEL}`);
       currentModelName = FALLBACK_IMAGE_MODEL;
-      result = await attemptGeneration();
+      try {
+        result = await attemptGeneration();
+      } catch (fallbackErr) {
+        const fbMsg = (fallbackErr as Error).message?.toLowerCase() || '';
+        const fbIsRateLimit =
+          fbMsg.includes('rate limit') ||
+          fbMsg.includes('quota') ||
+          fbMsg.includes('429') ||
+          fbMsg.includes('resource exhausted') ||
+          fbMsg.includes('too many requests');
+        if (fbIsRateLimit) {
+          try {
+            const { flagImageRateLimited } = await import('@/lib/system-status');
+            await flagImageRateLimited(24, 'Daily image generation quota reached');
+            console.warn('[Illustration] Both models rate-limited — system flagged for 24h');
+          } catch (flagErr) {
+            console.error('[Illustration] Failed to flag rate limit:', flagErr);
+          }
+        }
+        throw fallbackErr;
+      }
     }
 
     // Check if blocked by safety

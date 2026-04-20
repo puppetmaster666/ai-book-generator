@@ -228,6 +228,17 @@ model PromoCodeUsage {
   @@index([ipAddress])
 }
 
+// Single-row key/value table for global system flags. Used so the site
+// can block new generations when image API daily quotas are exhausted.
+model SystemStatus {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  active    Boolean  @default(false)
+  message   String?
+  resetAt   DateTime?
+  updatedAt DateTime @updatedAt
+}
+
 model Notification {
   id        String   @id @default(cuid())
   userId    String

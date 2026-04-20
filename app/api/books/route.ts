@@ -139,6 +139,24 @@ export async function POST(request: NextRequest) {
       region: providedRegion,
     } = body;
 
+    // Server-side defense: if the site has hit its daily image quota,
+    // refuse any book type that requires image generation so we don't
+    // charge users for a generation that will fail
+    if (bookFormat === 'picture_book' || bookPreset === 'roast_comic' || bookPreset === 'comic_story' || bookPreset === 'childrens_picture' || bookPreset === 'adult_comic') {
+      const { getImageRateLimitStatus } = await import('@/lib/system-status');
+      const status = await getImageRateLimitStatus();
+      if (status.active) {
+        return NextResponse.json(
+          {
+            error: 'Daily image generation limit reached. Please try again in ~24 hours.',
+            rateLimited: true,
+            resetAt: status.resetAt,
+          },
+          { status: 503 }
+        );
+      }
+    }
+
     // Determine content rating: use provided value, or look up from preset, or default to 'general'
     let contentRating = providedContentRating || 'general';
     if (!providedContentRating && bookPreset && BOOK_PRESETS[bookPreset as BookPresetKey]) {
