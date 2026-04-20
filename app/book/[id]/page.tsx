@@ -256,7 +256,19 @@ export default function BookProgress({ params }: { params: Promise<{ id: string 
   const currentUserId = (session?.user as { id?: string })?.id;
   const currentUserEmail = session?.user?.email;
   const ADMIN_EMAILS = ['lhllparis@gmail.com'];
-  const isAdminUser = currentUserEmail && ADMIN_EMAILS.includes(currentUserEmail);
+  const [isDbAdmin, setIsDbAdmin] = useState(false);
+  const isAdminUser = !!(isDbAdmin || (currentUserEmail && ADMIN_EMAILS.includes(currentUserEmail)));
+
+  // Fetch admin status from DB (the hardcoded list is a legacy fallback)
+  useEffect(() => {
+    if (!session?.user) return;
+    fetch('/api/user')
+      .then(res => res.ok ? res.json() : null)
+      .then(data => {
+        if (data?.user?.isAdmin) setIsDbAdmin(true);
+      })
+      .catch(() => {});
+  }, [session]);
 
   // First: Load book and check if we need to redirect to visual generation page
   // This happens BEFORE any UI is shown
