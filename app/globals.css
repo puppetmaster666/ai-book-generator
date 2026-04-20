@@ -327,17 +327,29 @@ a, button {
   animation: roastSpin 20s linear infinite;
 }
 
-/* Full-section variant — slower, for the homepage roast showcase backdrop */
+/* Full-section variant — slower, for the homepage roast showcase backdrop.
+   Uses a large square (200vmax) centered on the parent so rotation never
+   exposes the edges. The translate(-50%) is part of the keyframe so the
+   element stays centered while spinning. */
 .roast-section-rays {
   position: absolute;
-  inset: -50%;
+  top: 50%;
+  left: 50%;
+  width: 200vmax;
+  height: 200vmax;
   background: repeating-conic-gradient(from 0deg, #facc15 0deg 15deg, #a3e635 15deg 30deg);
-  animation: roastSpin 60s linear infinite;
+  animation: roastSectionSpin 60s linear infinite;
+  transform-origin: center center;
 }
 
 @keyframes roastSpin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
+}
+
+@keyframes roastSectionSpin {
+  0% { transform: translate(-50%, -50%) rotate(0deg); }
+  100% { transform: translate(-50%, -50%) rotate(360deg); }
 }
 
 /* Inner vignette for depth */
