@@ -228,7 +228,7 @@ export async function GET(request: NextRequest) {
       count: p._count,
     }));
 
-    return NextResponse.json({
+    const statsResponse = NextResponse.json({
       overview: {
         totalUsers,
         totalBooks,
@@ -316,6 +316,8 @@ export async function GET(request: NextRequest) {
         }, {} as Record<string, { email: string; books: Array<{ id: string; title: string; authorName: string; status: string; bookFormat: string; genre: string; createdAt: Date; completedAt: Date | null }>; firstPurchase: Date; lastPurchase: Date }>)
       ),
     });
+    statsResponse.headers.set('Cache-Control', 'private, max-age=30');
+    return statsResponse;
   } catch (error) {
     console.error('Admin stats error:', error);
     return NextResponse.json(

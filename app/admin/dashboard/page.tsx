@@ -1325,10 +1325,12 @@ function AdminDashboardContent() {
       router.push('/login');
       return;
     }
-    fetchStats();
-    fetchEmailLogs();
-    fetchCampaigns();
-    fetchSiteSettings();
+    Promise.all([
+      fetchStats(),
+      fetchEmailLogs(),
+      fetchCampaigns(),
+      fetchSiteSettings(),
+    ]);
   }, [session, sessionStatus, router]);
 
   if (sessionStatus === 'loading' || isLoading) {

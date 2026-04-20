@@ -128,6 +128,13 @@ model Book {
   user                   User?          @relation(fields: [userId], references: [id])
   chapters               Chapter[]
   illustrations          Illustration[]
+
+  @@index([status])
+  @@index([paymentStatus])
+  @@index([createdAt])
+  @@index([userId])
+  @@index([isFeaturedSample])
+  @@index([paymentStatus, status])
 }
 
 model Chapter {
