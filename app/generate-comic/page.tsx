@@ -384,12 +384,14 @@ function GenerateComicContent() {
             return;
           }
 
-          // Detect failed generation
+          // Detect failed generation - show error banner but keep polling.
+          // The backend may retry automatically (reconcile / user retry) and
+          // flip status back to 'generating' → 'completed'. If we stop polling
+          // here, the page stays stuck even after the book actually finishes.
           if (book.status === 'failed') {
             setIsGenerating(false);
             setError(book.errorMessage || 'Generation failed. Please try again.');
-            clearInterval(pollInterval);
-            return;
+            // Intentionally NOT clearing pollInterval - keep watching for recovery
           }
 
           // Detect preview_complete
